@@ -1,12 +1,33 @@
+########
+"""
+This code is open source under the MIT license.
+
+Its purpose is to increase the workflow of creating Minecraft
+related renders and animations, by automating certain tasks.
+
+This addon for blender functions by operating on selected objects,
+which are expected to be Minecraft worlds exported from the game
+using the jMC2Obj program. Use on meshes not originating from there
+may have unexpected behavior or unwanted changes to materials.
+
+Source code available on github:
+https://github.com/TheDuckCow/MCprep.git
+
+WIP thread on blenderartists:
+http://www.blenderartists.org/forum/showthread.php?316151-ADDON-WIP-MCprep-for-Minecraft-Workflow
+
+"""
+
+########
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",
 	"version": (0, 5),
 	"blender": (2, 68, 2),
-	"location": "Select a Mesh/Lattice/Curve: Tool Shelf > AnimAll panel",
+	"location": "3D window toolshelf",
 	"description": "Speeds up the workflow of minecraft animations and imported minecraft worlds",
-	"warning": "proxy spawn uses a file duplication hack!",
-	"wiki_url": "theduckcow.com",
+	"warning": "proxy spawn uses a 'file duplication hack'! Addon is WIP",
+	"wiki_url": "https://github.com/TheDuckCow/MCprep.wiki.git",
 	"author": "Patrick W. Crawford"
 }
 
@@ -42,7 +63,7 @@ def randomizeMeshSawp(swap,variations):
 	randi=''
 	if swap == 'torch':
 		randomized = random.randint(0,variations-1)
-		print("## "+str(randomized))
+		#print("## "+str(randomized))
 		if randomized != 0: randi = ".{x}".format(x=randomized)
 	return swap+randi
 
@@ -62,6 +83,7 @@ def nameGeneralize(name):
 
 
 ########
+# Operator, sets up the materials for better rendering
 class materialChange(bpy.types.Operator):
 	"""Preps selected minecraft materials"""
 	bl_idname = "object.mc_mat_change"
@@ -165,6 +187,7 @@ class materialChange(bpy.types.Operator):
 
 
 ########
+# Operator, funtion swaps meshes/groups from library file
 class meshSwap(bpy.types.Operator):
 	"""Swap minecraft import for custom 3D models"""
 	bl_idname = "object.mc_meshswap"
@@ -193,6 +216,10 @@ class meshSwap(bpy.types.Operator):
 		# then the DEFAULT is relative. or perhaps that's already defined
 		# by blender (should funciton properly with the "make relative"
 		# function from the file menu)
+		libPathProp = context.scene.MCprep_library_path
+		
+		
+		"""
 		direc = None
 		genPath = os.path.splitext(bpy.data.filepath)[0] #format: ['/some/path/blendfilename','blend']
 		while genPath[-1] != '/':
@@ -202,13 +229,22 @@ class meshSwap(bpy.types.Operator):
 		while genPath[-1] != '/':
 			genPath = genPath[:-1]
 		path2 = genPath[:-1] + '/assets/' #dir one higher check
-
-		if os.path.isdir(path1):
-			direc = path1+'asset_meshSwap.blend/'
-		else:
+		"""
+		libPath = libPathProp
+		if not(os.path.isdir(libPathProp)):
+			#extract actual path from the relative one
+			libPath = bpy.path.abspath(libPath)
+			
+			#the above jsut strips off the first / but won't
+			# deal with correcting the relative ../../ ect paths.
+		
+		direc = libPath+'asset_meshSwap.blend/'
+		print(direc)
+		if not os.path.exists(direc[:-1]):
 			print('No assets library!')
 			#popup window
-			return
+			#nolib_warning(bpy.types.Menu)
+			return {'CANCELLED'}
 		
 		
 		###
@@ -227,7 +263,7 @@ class meshSwap(bpy.types.Operator):
 			# generalize name to do work on duplicated meshes,
 			# need both stripped and original name!
 			swapGen = nameGeneralize(swap)
-			print(">> ",swapGen,' ',swap)
+			#print(">> ",swapGen,' ',swap)
 			
 			#special cases, for "extra" mesh pieces we don't want around afterwards
 			#another to get rid of: special case TOPS of blocks..
@@ -247,7 +283,7 @@ class meshSwap(bpy.types.Operator):
 			toSwapObj = bpy.data.objects[swap] #the object that would be created above...
 			objSwapList = bpy.data.meshes[swap] #the mesh that would be created above...
 			
-			print('## mesh swapping: ',swap)
+			#print('## mesh swapping: ',swap)
 			
 			worldMatrix = toSwapObj.matrix_world.copy() #set once per object
 			polyList = objSwapList.polygons.values() #returns LIST of faces.
@@ -370,7 +406,7 @@ class meshSwap(bpy.types.Operator):
 			
 			#join meshes together
 			if not grouped and (len(dupedObj) >0):
-				print(len(dupedObj))
+				#print(len(dupedObj))
 				# ERROR HERE if don't do the len(dupedObj) thing.
 				bpy.context.scene.objects.active = dupedObj[0]
 				for d in dupedObj:
@@ -384,6 +420,7 @@ class meshSwap(bpy.types.Operator):
 
 
 #######
+# Class for updating the duplicated proxy spawn files
 class proxyUpdate(bpy.types.Operator):
 	"""Updates all proxy spawn files to be consistent"""
 	bl_idname = "object.proxy_update"
@@ -411,6 +448,19 @@ class WIP(bpy.types.Menu):
 
 
 #######
+# pop-up declaring some button is WIP still =D
+class nolib_warning(bpy.types.Menu):
+	bl_label = "library_not_found_warning"
+	bl_idname = "view3D.nolib_warning"
+
+	# Set the menu operators and draw functions
+	def draw(self, context):
+		layout = self.layout
+
+		row1 = layout.row()
+		row1.label(text="Library file {x} not found")  
+
+#######
 # panel for these declared tools
 class MCpanel(bpy.types.Panel):
 	"""MCprep addon panel"""
@@ -432,24 +482,8 @@ class MCpanel(bpy.types.Panel):
 		
 		#image_settings = rd.image_settings
 		#file_format = image_settings.file_format
-		col.prop(context.scene,"library_path",text="")
-		
-		
-		
-		
-		#rd = context.scene.render
-		#layout.prop(rd, "filepath", text="")
-		
-
-		#rd = context.scene.render
-		#image_settings = rd.image_settings
-		#file_format = image_settings.file_format
-		#col.prop(rd, "library_path", text="")
-
-		#split0 = layout.split()
-		
+		col.prop(context.scene,"MCprep_library_path",text="")
 		# + naming convention
-		
 		# naming convention.. e.g. {x} for "asset" in any name/seciton of name
 		
 		
@@ -473,7 +507,7 @@ class MCpanel(bpy.types.Panel):
 		#update spawn files
 		col2.operator("object.proxy_update", text="Update Spawn Proxies")
 		#label + warning sign
-		col2.label(text="Update proxies after editing library!", icon='ERROR')
+		#col2.label(text="Update proxies after editing library!", icon='ERROR')
 		#perhaps try to have it only show warning if detected inconsistent timestamps
 
 
@@ -486,9 +520,10 @@ def register():
 	
 	bpy.utils.register_class(WIP)
 	bpy.utils.register_class(MCpanel)
+	bpy.utils.register_class(nolib_warning)
 	
 	#properties
-	bpy.types.Scene.library_path = bpy.props.StringProperty(
+	bpy.types.Scene.MCprep_library_path = bpy.props.StringProperty(
 		name="",
 		description="Location of asset library",
 		default="//assets/",subtype="DIR_PATH",
@@ -502,9 +537,10 @@ def unregister():
 	
 	bpy.utils.unregister_class(WIP)
 	bpy.utils.unregister_class(MCpanel)
+	bpy.utils.unregister_class(nolib_warning)
 	
 	#properties
-	del bpy.types.Scene.library_path
+	del bpy.types.Scene.MCprep_library_path
 
 
 if __name__ == "__main__":
