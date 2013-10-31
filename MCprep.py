@@ -36,6 +36,36 @@ import bpy,os,mathutils,random,math
 
 
 ########
+# Get the lists of either hard coded or library parsed lists for functions
+def getListData():
+	
+	# ideally in long run, will do check for specific names of materials/existing
+	# groups in the assets file.
+	
+	
+	# lists for material prep
+	reflective = [ 'glass', 'glass_pane_side','ice']
+	water = ['water']
+	solid = ['sand','dirt','dirt_grass_side','dispenser_front','furnace_top','redstone_block',
+				'gold_block','yourFace']
+	emit= ['redstone_block','redstone_lamp_on','glowstone']
+	
+	# lists for meshSwap
+	## groupSwapList has a higher precedence;
+	## if same object type is in both group and mesh swap list, group will be used
+	groupSwapList = ['redstone_torch_on','redstone_lamp_on','torch']
+	meshSwapList = ['tall_grass','flower_red','flower_yellow','cobweb','redstone_lamp_on',
+					'redstone_lamp_off','dead_shrub','sapling_oak','redstone_wire_off',
+					'wheat','redstone_torch_off','rails','rails_powered_off','ladder']
+	
+	TOSUPPORT = ['vines','bed...','ironbars...'] #does nothing
+	
+	
+	return [meshSwapList,groupSwapList,reflective,water,solid,emit]
+
+
+
+########
 # add object instance not working, so workaround function:
 def addGroupInstance(groupName,loc):
 	scene = bpy.context.scene
@@ -44,6 +74,9 @@ def addGroupInstance(groupName,loc):
 	ob.dupli_group = bpy.data.groups.get(groupName)
 	ob.location = loc
 	scene.objects.link(ob)
+	ob.select = True
+	
+
 
 ########
 # check if a face is on the boundary between two blocks (local coordinates)
@@ -96,17 +129,13 @@ class materialChange(bpy.types.Operator):
 		objList = context.selected_objects
 		
 		# defines lists for materials with special default settings.
-		reflective = [ 'glass', 'glass_pane_side','ice']
-		water = ['water']
-		solid = ['sand','dirt','dirt_grass_side','dispenser_front','furnace_top','redstone_block',
-				'gold_block','yourFace']
-		emit= ['redstone_block','redstone_lamp_on','glowstone']
+		[meshSwapList,groupSwapList,reflective,water,solid,emit] = getListData()
 		
 		
 		for obj in objList:
 			
 			#DEBUG
-			print('## {x}'.format(x=obj.name))
+			#print('## {x}'.format(x=obj.name))
 			
 			#ignore non mesh selected objects
 			if obj.type != 'MESH': continue
@@ -208,38 +237,16 @@ class meshSwap(bpy.types.Operator):
 			objList.append(obj.name)
 		
 			
-		# filename = os.path.join(os.path.dirname(bpy.data.filepath),
-		# >> might be a fix for this.....
-		
-		# Getting library file. hacky as**.
-		# We SHOULD BE GETTING PATH FROM THE UI panel.
-		# then the DEFAULT is relative. or perhaps that's already defined
-		# by blender (should funciton properly with the "make relative"
-		# function from the file menu)
+		# get library path from property/UI panel
 		libPathProp = context.scene.MCprep_library_path
-		
-		
-		"""
-		direc = None
-		genPath = os.path.splitext(bpy.data.filepath)[0] #format: ['/some/path/blendfilename','blend']
-		while genPath[-1] != '/':
-			genPath = genPath[:-1]
-		path1 = genPath[:-1]+ '/assets/' #same dir check
-		genPath=genPath[:-1] #getting rid of that last '/'
-		while genPath[-1] != '/':
-			genPath = genPath[:-1]
-		path2 = genPath[:-1] + '/assets/' #dir one higher check
-		"""
 		libPath = libPathProp
 		if not(os.path.isdir(libPathProp)):
 			#extract actual path from the relative one
 			libPath = bpy.path.abspath(libPath)
-			
-			#the above jsut strips off the first / but won't
-			# deal with correcting the relative ../../ ect paths.
 		
+		# naming convention!
 		direc = libPath+'asset_meshSwap.blend/'
-		print(direc)
+		#print(direc)
 		if not os.path.exists(direc[:-1]):
 			print('No assets library!')
 			#popup window
@@ -247,43 +254,40 @@ class meshSwap(bpy.types.Operator):
 			return {'CANCELLED'}
 		
 		
-		###
 		# Now get a list of all objects in this blend file, and all groups
-		# these lists below are temporary, but would be created automatically by the above
-		meshSwapList = ['tall_grass','flower_red','flower_yellow','cobweb','redstone_lamp_on',
-						'redstone_lamp_off','dead_shrub','sapling_oak','redstone_wire_off',
-						'wheat']
-		groupSwapList = ['redstone_torch_on','redstone_lamp_on','torch']
-		TOSUPPORT = ['vines','bed...','ironbars...'] #does nothing
+		[meshSwapList,groupSwapList,reflective,water,solid,emit] = getListData()
+		
+		#first go through and separate materials/faces of specific one into one mesh. I've got
+		# that already, so moving on.
+		### HERE use equivalent of UI "p" ? seperate by materials
 		
 		
 		#primary loop, for each OBJECT needing swapping //was material
 		for swap in objList:
 			
+			#first check if swap has already happened:
+			#base["MCswapped"] << how to CHECK if property already exists? can't use try,
+			#				since "accessing" the property creates it if it doens't already exist
+			
 			# generalize name to do work on duplicated meshes,
 			# need both stripped and original name!
 			swapGen = nameGeneralize(swap)
-			#print(">> ",swapGen,' ',swap)
 			
 			#special cases, for "extra" mesh pieces we don't want around afterwards
-			#another to get rid of: special case TOPS of blocks..
-			if swapGen == 'torch_flame': #make sure torch is one fo the imported groups!
+			#another to get rid of: special case e.g. blocks with different material sides,
+			#onl use swap based on one material object and delete the others
+			if swapGen == 'torch_flame': #make sure torch is one of the imported groups!
 				bpy.ops.object.select_all(action='DESELECT')
 				bpy.data.objects[swap].select = True
 				bpy.ops.object.delete()
 			
 			
+			#just selecting mesh with same name accordinly.. ALSO only if in objList
 			if not (swapGen in meshSwapList or swapGen in groupSwapList): continue		
-			#SHORTCUT: just selecting mesh with same name accordinly.. ALSO only if in objList
-			# shoudl also check different for
 			
-			#first go through and separate materials/faces of specific one into one mesh. I've got
-			# that already, so moving on.
 			#now you have object that has just that material. Known.
 			toSwapObj = bpy.data.objects[swap] #the object that would be created above...
 			objSwapList = bpy.data.meshes[swap] #the mesh that would be created above...
-			
-			#print('## mesh swapping: ',swap)
 			
 			worldMatrix = toSwapObj.matrix_world.copy() #set once per object
 			polyList = objSwapList.polygons.values() #returns LIST of faces.
@@ -312,8 +316,8 @@ class meshSwap(bpy.types.Operator):
 			### perhaps just programatically change the name here
 			
 			# removing duplicates and checking orientation
-			dupList = []	#where actual data is stored
-			checkList = []	#where cross check data is stored
+			dupList = []	#where actual blocks are to be added
+			rotList = []	#rotation of blocks
 			for setNum in range(0,len(facebook)):
 				
 				# LOCAL coordinates!!!
@@ -329,25 +333,56 @@ class meshSwap(bpy.types.Operator):
 					y = round(facebook[setNum][2][1]+b)
 					z = round(facebook[setNum][2][2]+c)
 				
-				#print(facebook[setNum][2][1]+0.5 - math.floor(facebook[setNum][2][1]+0.5))
-				
 				#check if height (that's the Y axis, since in local coords)
 				if facebook[setNum][2][1]+0.5 - math.floor(facebook[setNum][2][1]+0.5) < 0.3:
-					#continue if coord. is < 1/3 of block height
+					#continue if coord. is < 1/3 of block height, to do with torch's base in wrong cube.
 					continue
 				
 				# rotation value (second append value: 0 means nothing, rest 1-4.
-				if not [[x,y,z],0] in dupList: #not generalized, should be also 0-> 1,2,3,4
-					dupList.append([[x,y,z],0])
-				
-				####
-				# HERE DO THE STUFF FOR  ROTATION, set =1,2,3 or 4 (0 un rotated)
-				# set is dupList.append([1]), i.e. that second value.
-				####
+				if not [x,y,z] in dupList:
+					# append location
+					dupList.append([x,y,z])
+					
+					# check differece from rounding, this gets us the rotation!
+					x_diff = x-facebook[setNum][2][0]
+					#print(facebook[setNum][2][0],x,x_diff)
+					z_diff = z-facebook[setNum][2][2]
+					#print(facebook[setNum][2][2],z,z_diff)
+					
+					
+					## rotations are handled on an object-to-object basis
+					# append rotation
+					print(x_diff,z_diff)
+					if swapGen in ['torch','redstone_torch_off','redstone_torch_on']:
+						if (x_diff>.2 and x_diff < 0.3):
+							rotList.append(1)
+						elif (z_diff>.2 and z_diff < 0.3):	
+							rotList.append(2)
+						elif (x_diff<-.2 and x_diff > -0.3):	
+							rotList.append(3)
+						elif (z_diff<-.2 and z_diff > -0.3):
+							rotList.append(4)
+						else:
+							rotList.append(0)
+					elif swapGen in ['ladder']:		# still need to fix/work out
+						print("also here")
+						if (x_diff > 0.3):
+							rotList.append(7)
+						elif (z_diff > 0.3):	
+							rotList.append(6)
+						elif (z_diff < -0.3):
+							print("right here!")	
+							rotList.append(5)
+						else:
+							rotList.append(0)
+					else:
+						rotList.append(0)
+					
 			
 			
 			#import: guaranteed to have same name as "appendObj" for the first instant afterwards
 			grouped = False # used to check if to join or not
+			base = None #need to initialize to something, though this obj no used
 			if swapGen in groupSwapList:
 				#special cases, make another list for this? number of variants can vary..
 				if swapGen == "torch":
@@ -360,13 +395,15 @@ class meshSwap(bpy.types.Operator):
 				grouped = True
 			else:
 				bpy.ops.wm.link_append(directory=direc+'Object/', filename=swapGen, link=False)
+				base = bpy.context.selected_objects[0]
+				base["MCswapped"] = "True"
+				bpy.ops.object.select_all(action='DESELECT')
 
 			
-			# duplicating and moving
+			# duplicating, rotating and moving
 			dupedObj = []
-			for set in dupList:
-				loc = toSwapObj.matrix_world*mathutils.Vector(set[0]) #local to global
-				
+			for (set,rot) in zip(dupList,rotList):
+				loc = toSwapObj.matrix_world*mathutils.Vector(set) #local to global
 				if grouped:
 					# definition for randimization, defined at top!
 					randGroup = randomizeMeshSawp(swapGen,3)
@@ -378,30 +415,43 @@ class meshSwap(bpy.types.Operator):
 					
 				else:
 					#sets location of current selection, imported object or group from above
-					bpy.context.selected_objects[0].location = mathutils.Vector(loc) #hackish....
-					dupedObj.append(bpy.context.selected_objects[0])
+					base.select = True		# select the base object
 					bpy.ops.object.duplicate(linked=False, mode='TRANSLATION')
+					bpy.context.selected_objects[-1].location = mathutils.Vector(loc) #hackish....
+					dupedObj.append(bpy.context.selected_objects[-1])
+					base.select = False
+					
 				
-				#rotation/translation for on walls
+				#rotation/translation for on walls, assumes last added object still selected
 				x,y,offset,rotValue,z = 0,0,0.28,0.436332,0.12
-				if set[1] == 1:
-					x = offset
+				if rot == 1:
+					x = -offset
 					bpy.ops.transform.translate(value=(x, y, z))
 					bpy.ops.transform.rotate(value=rotValue, axis=(0, 1, 0))
-				if set[1] == 2:
+				elif rot == 2:
 					y = offset
 					bpy.ops.transform.translate(value=(x, y, z))
 					bpy.ops.transform.rotate(value=rotValue, axis=(1, 0, 0))
-				if set[1] == 3:
-					x = -offset
+				elif rot == 3:
+					x = offset
 					bpy.ops.transform.translate(value=(x, y, z))
 					bpy.ops.transform.rotate(value=-rotValue, axis=(0, 1, 0))
-				if set[1] == 4:
+				elif rot == 4:
 					y = -offset
 					bpy.ops.transform.translate(value=(x, y, z))
 					bpy.ops.transform.rotate(value=-rotValue, axis=(1, 0, 0))
+				elif rot == 5:
+					bpy.ops.transform.rotate(value=math.pi,axis=(0,0,1))
+				elif rot == 6:
+					bpy.ops.transform.rotate(value=2*math.pi,axis=(0,0,1))
+				elif rot == 7:
+					bpy.ops.transform.rotate(value=-math.pi,axis=(0,0,1))
 				
-			if not grouped: bpy.ops.object.delete() # as there is one extra..
+			
+				bpy.ops.object.select_all(action='DESELECT')
+			if not grouped:
+				base.select = True
+				bpy.ops.object.delete() # the original copy used for duplication
 			
 			
 			#join meshes together
@@ -411,10 +461,11 @@ class meshSwap(bpy.types.Operator):
 				bpy.context.scene.objects.active = dupedObj[0]
 				for d in dupedObj:
 					d.select = True
-				bpy.ops.object.join()
+				
+				bpy.ops.object.join() #SKIPPING FOR NOW, in case this is the cause for weird random error
 			
 			#deselect? or try to reselect everything that was selected previoulsy
-
+			bpy.ops.object.select_all(action='DESELECT')
 		
 		return {'FINISHED'}
 
