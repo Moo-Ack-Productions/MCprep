@@ -229,6 +229,12 @@ class meshSwap(bpy.types.Operator):
 		## debug, restart check
 		print('###################################')
 		
+		
+		# get some scene information
+		toLink = context.scene.MCprep_linkGroup
+		groupAppendLayer = context.scene.MCprep_groupAppendLayer
+		activeLayers = list(context.scene.layers)
+		
 		selList = context.selected_objects
 		objList = []
 		for obj in selList:
@@ -384,15 +390,27 @@ class meshSwap(bpy.types.Operator):
 			grouped = False # used to check if to join or not
 			base = None #need to initialize to something, though this obj no used
 			if swapGen in groupSwapList:
+				
+				# if group not linked, then put appended group data onto the user indentified layer
+				if (not toLink) and (groupAppendLayer!=0):
+					x = [False]*20
+					x[groupAppendLayer-1] = True
+					context.scene.layers = x
+					print(x)
+				
 				#special cases, make another list for this? number of variants can vary..
 				if swapGen == "torch":
-					bpy.ops.wm.link_append(directory=direc+'Group/', filename=swapGen+".1", link=True)
+					bpy.ops.wm.link_append(directory=direc+'Group/', filename=swapGen+".1", link=toLink)
 					bpy.ops.object.delete()
-					bpy.ops.wm.link_append(directory=direc+'Group/', filename=swapGen+".2", link=True)
+					bpy.ops.wm.link_append(directory=direc+'Group/', filename=swapGen+".2", link=toLink)
 					bpy.ops.object.delete()
-				bpy.ops.wm.link_append(directory=direc+'Group/', filename=swapGen, link=True) #make prop!
+				bpy.ops.wm.link_append(directory=direc+'Group/', filename=swapGen, link=toLink)
 				bpy.ops.object.delete()
 				grouped = True
+				
+				# if activated a different layer, go back to the original ones
+				context.scene.layers = activeLayers
+				
 			else:
 				bpy.ops.wm.link_append(directory=direc+'Object/', filename=swapGen, link=False)
 				base = bpy.context.selected_objects[0]
@@ -533,10 +551,17 @@ class MCpanel(bpy.types.Panel):
 		
 		#image_settings = rd.image_settings
 		#file_format = image_settings.file_format
+		col.label(text="Path to assets")
 		col.prop(context.scene,"MCprep_library_path",text="")
+		col.prop(context.scene,"MCprep_groupAppendLayer",text="")
 		# + naming convention
 		# naming convention.. e.g. {x} for "asset" in any name/seciton of name
 		
+		col.label(text="File naming convention")
+		col.prop(context.scene,"MCprep_nameConvention",text="")
+		
+		split = layout.split()
+		col = split.column(align=True)
 		
 		
 		
@@ -547,6 +572,8 @@ class MCpanel(bpy.types.Panel):
 		col.operator("object.mc_meshswap", text="Mesh Swap", icon='IMPORT')
 		split = layout.split()
 		col = split.column(align=True)
+		col.label(text="Link groups")
+		col.prop(context.scene,"MCprep_linkGroup")
 		
 		#spawn (makes UI pulldown)
 		split2 = layout.split()
@@ -577,8 +604,21 @@ def register():
 	bpy.types.Scene.MCprep_library_path = bpy.props.StringProperty(
 		name="",
 		description="Location of asset library",
-		default="//assets/",subtype="DIR_PATH",
-		)
+		default="//assets/",subtype="DIR_PATH",)
+	bpy.types.Scene.MCprep_linkGroup = bpy.props.BoolProperty(
+		name="Link library groups",
+		description="Links groups imported, otherwise groups are appended",
+		default=True)
+	bpy.types.Scene.MCprep_nameConvention = bpy.props.StringProperty(
+		name="Asset file naming convention",
+		description="The convention used for how to search for asset files in the library path",
+		default="asset_{x}.blend")
+	bpy.types.Scene.MCprep_groupAppendLayer = bpy.props.IntProperty(
+		name="Group Append Layer",
+		description="When groups are appended instead of linked, the objects part of the group will be palced in this layer, 0 means same as active layer, otherwise sets the the given layer number",
+		min=0,
+		max=20,
+		default=20)
 
 
 def unregister():
