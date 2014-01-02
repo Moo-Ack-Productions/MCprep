@@ -1,3 +1,4 @@
+
 ########
 """
 This code is open source under the MIT license.
@@ -37,6 +38,7 @@ import bpy,os,mathutils,random,math
 
 ########
 # Get the lists of either hard coded or library parsed lists for functions
+# this should be a dictionary, not a function! can update fairly easily, track references..
 def getListData():
 	
 	# ideally in long run, will do check for specific names of materials/existing
@@ -56,12 +58,16 @@ def getListData():
 	groupSwapList = ['redstone_torch_on','redstone_lamp_on','torch']
 	meshSwapList = ['tall_grass','flower_red','flower_yellow','cobweb','redstone_lamp_on',
 					'redstone_lamp_off','dead_shrub','sapling_oak','redstone_wire_off',
-					'wheat','redstone_torch_off','rails','rails_powered_off','ladder']
+					'wheat','redstone_torch_off','rails','rails_powered_off','ladder',
+					'mushroom_red','mushroom_brown']
 	
 	TOSUPPORT = ['vines','bed...','ironbars...'] #does nothing
 	
+	# anything listed here will have their position varied slightly from exactly center on the block
+	variance = ['tall_grass','flower_red','flower_yellow']
 	
-	return [meshSwapList,groupSwapList,reflective,water,solid,emit]
+	
+	return [meshSwapList,groupSwapList,reflective,water,solid,emit,variance]
 
 
 
@@ -129,7 +135,7 @@ class materialChange(bpy.types.Operator):
 		objList = context.selected_objects
 		
 		# defines lists for materials with special default settings.
-		[meshSwapList,groupSwapList,reflective,water,solid,emit] = getListData()
+		[meshSwapList,groupSwapList,reflective,water,solid,emit,variance] = getListData()
 		
 		
 		for obj in objList:
@@ -152,7 +158,7 @@ class materialChange(bpy.types.Operator):
 				newName = mat.name+'_tex' # add exception to skip? with warning?
 				texList = mat.texture_slots.values()
 			except:
-				print('\tissue: no active material on object')
+				print('\tissue: '+obj.name+' has no active material')
 				continue
 			
 			
@@ -162,7 +168,7 @@ class materialChange(bpy.types.Operator):
 					continue #this skips this process, not added to matList, no doulbe mesh swapping
 				bpy.data.textures[texList[0].name].name = newName
 			except:
-				print('\tissue: material '+mat.name+' has no texture slot. skipping...')
+				print('\tiwarning: material '+mat.name+' has no texture slot. skipping...')
 				continue
 			
 			######
@@ -261,7 +267,7 @@ class meshSwap(bpy.types.Operator):
 		
 		
 		# Now get a list of all objects in this blend file, and all groups
-		[meshSwapList,groupSwapList,reflective,water,solid,emit] = getListData()
+		[meshSwapList,groupSwapList,reflective,water,solid,emit,variance] = getListData()
 		
 		#first go through and separate materials/faces of specific one into one mesh. I've got
 		# that already, so moving on.
@@ -293,6 +299,9 @@ class meshSwap(bpy.types.Operator):
 			
 			#now you have object that has just that material. Known.
 			toSwapObj = bpy.data.objects[swap] #the object that would be created above...
+			
+			#procedurally getting the "mesh" from the object, instead of assuming name..
+			#objSwapList =  // rawr. meshes not accessible through the object. huh.
 			objSwapList = bpy.data.meshes[swap] #the mesh that would be created above...
 			
 			worldMatrix = toSwapObj.matrix_world.copy() #set once per object
@@ -358,7 +367,6 @@ class meshSwap(bpy.types.Operator):
 					
 					## rotations are handled on an object-to-object basis
 					# append rotation
-					print(x_diff,z_diff)
 					if swapGen in ['torch','redstone_torch_off','redstone_torch_on']:
 						if (x_diff>.2 and x_diff < 0.3):
 							rotList.append(1)
@@ -391,12 +399,13 @@ class meshSwap(bpy.types.Operator):
 			base = None #need to initialize to something, though this obj no used
 			if swapGen in groupSwapList:
 				
+				print(">>",toLink,groupAppendLayer,swapGen)
+				
 				# if group not linked, then put appended group data onto the user indentified layer
 				if (not toLink) and (groupAppendLayer!=0):
 					x = [False]*20
 					x[groupAppendLayer-1] = True
 					context.scene.layers = x
-					print(x)
 				
 				#special cases, make another list for this? number of variants can vary..
 				if swapGen == "torch":
@@ -464,6 +473,15 @@ class meshSwap(bpy.types.Operator):
 					bpy.ops.transform.rotate(value=2*math.pi,axis=(0,0,1))
 				elif rot == 7:
 					bpy.ops.transform.rotate(value=-math.pi,axis=(0,0,1))
+				
+				
+				# extra variance to break up regularity, e.g. for tall grass
+				if swapGen in variance:
+					x = (random.random()-0.5)*0.75 	# 0.75 makes it so it can't go compeltely into another spot..
+					y = (random.random()-0.5)*0.75
+					z = (random.random()/2-0.5)*0.8	# restriction guarentees it will never go Up (+z value)
+					bpy.ops.transform.translate(value=(x, y, z))
+				
 				
 			
 				bpy.ops.object.select_all(action='DESELECT')
