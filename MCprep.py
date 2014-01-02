@@ -47,10 +47,10 @@ def getListData():
 	
 	# lists for material prep
 	reflective = [ 'glass', 'glass_pane_side','ice']
-	water = ['water']
+	water = ['water','water_flowing']
 	solid = ['sand','dirt','dirt_grass_side','dispenser_front','furnace_top','redstone_block',
 				'gold_block','yourFace']
-	emit= ['redstone_block','redstone_lamp_on','glowstone']
+	emit= ['redstone_block','redstone_lamp_on','glowstone','lava','lava_flowing']
 	
 	# lists for meshSwap
 	## groupSwapList has a higher precedence;
@@ -122,6 +122,43 @@ def nameGeneralize(name):
 
 
 ########
+# gets all materials on input list of objects
+def getObjectMaterials(objList):
+	matList = []
+	
+	#loop over every object, adding each material if not alraedy added
+	for obj in objList:
+		#must be a mesh, e.g. lamps or cameras don't have 'materials'
+		if obj.type != 'MESH': continue
+		
+		objectsMaterials = obj.material_slots
+		for materialID in objectsMaterials:
+			if materialID.material not in matList:
+				matList.append(materialID.material)
+	
+	return matList
+
+
+########
+# gets all textures on input list of materials
+# currently not used, also some issue in getting NoneTypes (line if textureID.texture in..)
+def getMaterialTextures(matList):
+	if len(matList)==0: return []
+	texList = []
+	
+	# loop over every material, adding each texture slot
+	for mat in matList:
+		materialTextures = mat.texture_slots
+		print("###",materialTextures)
+		if len(materialTextures)==0: return []
+		for textureID in materialTextures:
+			if textureID.texture not in texList:
+				texList.append(textureID.texture)
+	
+	return texList
+
+
+########
 # Operator, sets up the materials for better rendering
 class materialChange(bpy.types.Operator):
 	"""Preps selected minecraft materials"""
@@ -137,23 +174,11 @@ class materialChange(bpy.types.Operator):
 		# defines lists for materials with special default settings.
 		[meshSwapList,groupSwapList,reflective,water,solid,emit,variance] = getListData()
 		
+		# gets the list of materials (without repetition) in the selected object list
+		matList = getObjectMaterials(objList)
+		#texList = getMaterialTextures(matList)
 		
-		for obj in objList:
-			
-			#DEBUG
-			#print('## {x}'.format(x=obj.name))
-			
-			#ignore non mesh selected objects
-			if obj.type != 'MESH': continue
-			
-			
-			###
-			# Get materials
-			# ultimately should put all materials into a LIST
-			# then exit loop, and loop through MATERIALS to change
-			
-			#check that operation has not already been done to material:
-			mat = obj.active_material
+		for mat in matList:
 			try:
 				newName = mat.name+'_tex' # add exception to skip? with warning?
 				texList = mat.texture_slots.values()
@@ -184,37 +209,51 @@ class materialChange(bpy.types.Operator):
 				#check if already linked (though nothing happens if it is anyways right?)
 				# avoid having duplicates where possible...
 			else:
-				#mat = obj.material_slots[0] #assumes 1 material per object,
-				#not ture if all joined together!
-				bpy.data.materials[mat.name].use_transparent_shadows = True #all materials receive trans
-				bpy.data.materials[mat.name].specular_intensity = 0
+				# section for pre-set default materials, given no library material
+				
+				# supports changing all texture slots!
+				# bpy.context.selected_objects[0].material_slots[0].material.texture_slots[0].texture
+				# e.g. gets the first texture from the first selected objec
+				# function above shows how to get
+				
 				for index in range(1,len(texList)):
 					mat.texture_slots.clear(index) #clear out unnecessary texture slots?
-						
-				####
-				#changing the actual changes for the default materials
+					## NNNOOO don't do that... if anything, just disable...
+					## or make option to disable all but first slot.
 				
+				####
+				#changing the actual settings for the default materials
+				
+				# general name, so that lava.001 material is recognized and given emit, for example
+				matGen = nameGeneralize(mat.name)
+				
+				mat.use_transparent_shadows = True #all materials receive trans
+				mat.specular_intensity = 0
+				
+				# .. should remove direct bpy.data references where possible, hazard...
 				bpy.data.textures[newName].use_interpolation = False
 				bpy.data.textures[newName].filter_type = 'BOX'
 				bpy.data.textures[newName].filter_size = 0
-				bpy.data.materials[mat.name].texture_slots[0].use_map_color_diffuse = True
-				bpy.data.materials[mat.name].texture_slots[0].diffuse_color_factor = 1
+				mat.texture_slots[0].use_map_color_diffuse = True
+				mat.texture_slots[0].diffuse_color_factor = 1
 				mat.use_textures[1] = False
 		
-				if not mat.name in solid: #ie alpha is on unless turned off, "safe programming"
+				if not matGen in solid: #ie alpha is on unless turned off, "safe programming"
 					bpy.data.textures[newName].use_alpha = True
-					bpy.data.materials[mat.name].texture_slots[0].use_map_alpha = True
-					bpy.data.materials[mat.name].use_transparency = True
-					bpy.data.materials[mat.name].alpha = 0
-					bpy.data.materials[mat.name].texture_slots[0].alpha_factor = 1
+					mat.texture_slots[0].use_map_alpha = True
+					mat.use_transparency = True
+					mat.alpha = 0
+					mat.texture_slots[0].alpha_factor = 1
 					
-				if mat.name in reflective:
-					bpy.data.materials[mat.name].alpha=0.3
-					bpy.data.materials[mat.name].raytrace_mirror.use = True
-					bpy.data.materials[mat.name].raytrace_mirror.reflect_factor = 0.3
+				if matGen in reflective:
+					mat.alpha=0.3
+					mat.raytrace_mirror.use = True
+					mat.raytrace_mirror.reflect_factor = 0.3
 				
-				if mat.name in emit:
-					bpy.data.materials[mat.name].emit = 1
+				if matGen in emit:
+					mat.emit = 1
+				else:
+					mat.emit = 0
 			
 
 		return {'FINISHED'}
@@ -224,7 +263,7 @@ class materialChange(bpy.types.Operator):
 ########
 # Operator, funtion swaps meshes/groups from library file
 class meshSwap(bpy.types.Operator):
-	"""Swap minecraft import for custom 3D models"""
+	"""Swap minecraft imports for custom 3D models in the meshSwap blend file"""
 	bl_idname = "object.mc_meshswap"
 	bl_label = "MCprep meshSwap"
 	bl_options = {'REGISTER', 'UNDO'}
@@ -260,7 +299,7 @@ class meshSwap(bpy.types.Operator):
 		direc = libPath+'asset_meshSwap.blend/'
 		#print(direc)
 		if not os.path.exists(direc[:-1]):
-			print('No assets library!')
+			print('meshSwap asset not found! Check/set library path')
 			#popup window
 			#nolib_warning(bpy.types.Menu)
 			return {'CANCELLED'}
@@ -274,20 +313,19 @@ class meshSwap(bpy.types.Operator):
 		### HERE use equivalent of UI "p" ? seperate by materials
 		
 		
-		#primary loop, for each OBJECT needing swapping //was material
+		#primary loop, for each OBJECT needing swapping
 		for swap in objList:
 			
 			#first check if swap has already happened:
 			#base["MCswapped"] << how to CHECK if property already exists? can't use try,
 			#				since "accessing" the property creates it if it doens't already exist
 			
-			# generalize name to do work on duplicated meshes,
-			# need both stripped and original name!
+			# generalize name to do work on duplicated meshes, but keep original
 			swapGen = nameGeneralize(swap)
 			
 			#special cases, for "extra" mesh pieces we don't want around afterwards
-			#another to get rid of: special case e.g. blocks with different material sides,
-			#onl use swap based on one material object and delete the others
+			#get rid of: special case e.g. blocks with different material sides,
+			#only use swap based on one material object and delete the others
 			if swapGen == 'torch_flame': #make sure torch is one of the imported groups!
 				bpy.ops.object.select_all(action='DESELECT')
 				bpy.data.objects[swap].select = True
@@ -507,9 +545,23 @@ class meshSwap(bpy.types.Operator):
 
 
 #######
+# Class for spawning/proxying a new asset for animation
+class proxySpawn(bpy.types.Operator):
+	"""Spawns in selected asset and proxies it ready for animation -- WIP"""
+	bl_idname = "object.proxy_spawn"
+	bl_label = "Proxy Spawn"
+	bl_options = {'REGISTER', 'UNDO'}
+	
+	def execute(self, context):
+		print("hello world")
+		
+		return {'FINISHED'}
+
+
+#######
 # Class for updating the duplicated proxy spawn files
 class proxyUpdate(bpy.types.Operator):
-	"""Updates all proxy spawn files to be consistent"""
+	"""Updates all proxy spawn files to be consistent -- WIP"""
 	bl_idname = "object.proxy_update"
 	bl_label = "Proxy Update"
 	bl_options = {'REGISTER', 'UNDO'}
@@ -598,7 +650,7 @@ class MCpanel(bpy.types.Panel):
 		col2 = split2.column(align=True)
 		col2.label(text="Spawn proxy character")
 		col2.menu("view3D.wip_warning", text="-select-")		 #meh, try to put on sme line as below
-		col2.operator("mesh.primitive_cube_add", text="Proxy Spawn") #put on same line as above
+		col2.operator("object.proxy_spawn", text="Proxy Spawn") #put on same line as above
 		
 		#update spawn files
 		col2.operator("object.proxy_update", text="Update Spawn Proxies")
@@ -613,6 +665,7 @@ def register():
 	bpy.utils.register_class(materialChange)
 	bpy.utils.register_class(meshSwap)
 	bpy.utils.register_class(proxyUpdate)
+	bpy.utils.register_class(proxySpawn)
 	
 	bpy.utils.register_class(WIP)
 	bpy.utils.register_class(MCpanel)
@@ -629,7 +682,7 @@ def register():
 		default=True)
 	bpy.types.Scene.MCprep_nameConvention = bpy.props.StringProperty(
 		name="Asset file naming convention",
-		description="The convention used for how to search for asset files in the library path",
+		description="The convention used for how to search for asset files in the library path, such as 'asset_{x}.blend' will find asset_meshSwap.blend",
 		default="asset_{x}.blend")
 	bpy.types.Scene.MCprep_groupAppendLayer = bpy.props.IntProperty(
 		name="Group Append Layer",
@@ -643,6 +696,8 @@ def unregister():
 	bpy.utils.unregister_class(materialChange)
 	bpy.utils.unregister_class(meshSwap)
 	bpy.utils.unregister_class(proxyUpdate)
+	bpy.utils.unregister_class(proxySpawn)
+	
 	
 	bpy.utils.unregister_class(WIP)
 	bpy.utils.unregister_class(MCpanel)
@@ -655,17 +710,3 @@ def unregister():
 if __name__ == "__main__":
 	register()
 
-
-
-"""
-try: import webbrowser
-except: webbrowser = None
-
-if webbrowser:
-	webbrowser.open(self.__URL__)
-else:
-	raise Exception("Operator requires a full Python installation")
-
-return ('FINISHED',)
-
-"""
