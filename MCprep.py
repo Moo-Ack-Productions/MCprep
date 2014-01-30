@@ -55,7 +55,7 @@ def getListData():
 	# lists for meshSwap
 	## groupSwapList has a higher precedence;
 	## if same object type is in both group and mesh swap list, group will be used
-	groupSwapList = ['redstone_torch_on','redstone_lamp_on','torch']
+	groupSwapList = ['redstone_torch_on','redstone_lamp_on','torch','endercrystal','fire']
 	meshSwapList = ['tall_grass','flower_red','flower_yellow','cobweb','redstone_lamp_on',
 					'redstone_lamp_off','dead_shrub','sapling_oak','redstone_wire_off',
 					'wheat','redstone_torch_off','rails','rails_powered_off','ladder',
@@ -64,7 +64,7 @@ def getListData():
 	TOSUPPORT = ['vines','bed...','ironbars...'] #does nothing
 	
 	# anything listed here will have their position varied slightly from exactly center on the block
-	variance = ['tall_grass','flower_red','flower_yellow']
+	variance = ['tall_grass']  # NOT flowers, they shouldn't go "under" at all
 	
 	
 	return [meshSwapList,groupSwapList,reflective,water,solid,emit,variance]
@@ -159,7 +159,7 @@ def getMaterialTextures(matList):
 
 
 ########
-# Operator, sets up the materials for better rendering
+# Operator, sets up the materials for better Blender Internal rendering
 class materialChange(bpy.types.Operator):
 	"""Preps selected minecraft materials"""
 	bl_idname = "object.mc_mat_change"
@@ -258,6 +258,30 @@ class materialChange(bpy.types.Operator):
 
 		return {'FINISHED'}
 
+
+
+########
+# Operator, sets up the materials for better cycles rendering
+class materialChangeCycles(bpy.types.Operator):
+	"""Preps selected minecraft materials"""
+	bl_idname = "object.mc_mat_change"
+	bl_label = "MCprep mats"
+	bl_options = {'REGISTER', 'UNDO'}
+	
+	def execute(self, context):
+		
+		print("Placeholder for setting up cycles material nodes")
+		print("Should restructure the operator to share starting point")
+		print("in the way of library material checking, object grabbing etc")
+		# enable nodes
+		# etc...
+		
+		
+		######
+		# Check for library material of same name, make true or false statement.
+		libraryMaterial = False
+		
+		return {'FINISHED'}
 
 
 ########
@@ -515,9 +539,9 @@ class meshSwap(bpy.types.Operator):
 				
 				# extra variance to break up regularity, e.g. for tall grass
 				if swapGen in variance:
-					x = (random.random()-0.5)*0.75 	# 0.75 makes it so it can't go compeltely into another spot..
-					y = (random.random()-0.5)*0.75
-					z = (random.random()/2-0.5)*0.8	# restriction guarentees it will never go Up (+z value)
+					x = (random.random()-0.5)*0.5 	# values LOWER than *1.0 make it less variable
+					y = (random.random()-0.5)*0.5
+					z = (random.random()/2-0.5)*0.7	# restriction guarentees it will never go Up (+z value)
 					bpy.ops.transform.translate(value=(x, y, z))
 				
 				
@@ -709,4 +733,3 @@ def unregister():
 
 if __name__ == "__main__":
 	register()
-
