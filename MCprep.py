@@ -39,6 +39,7 @@ import bpy,os,mathutils,random,math
 ########
 # Get the lists of either hard coded or library parsed lists for functions
 # this should be a dictionary, not a function! can update fairly easily, track references..
+# but like fo serious, make this a dictionary object with lists....
 def getListData():
 	
 	# ideally in long run, will do check for specific names of materials/existing
@@ -59,9 +60,11 @@ def getListData():
 	meshSwapList = ['tall_grass','flower_red','flower_yellow','cobweb','redstone_lamp_on',
 					'redstone_lamp_off','dead_shrub','sapling_oak','redstone_wire_off',
 					'wheat','redstone_torch_off','rails','rails_powered_off','ladder',
-					'mushroom_red','mushroom_brown']
+					'mushroom_red','mushroom_brown','vines','lilypad']
+	edgeBlocks = ['vines']	# these blocks are on edges, and also require rotation ... should be looked into
 	
-	TOSUPPORT = ['vines','bed...','ironbars...'] #does nothing
+	TOSUPPORT = ['bed...','ironbars...'] #does nothing
+	
 	
 	# anything listed here will have their position varied slightly from exactly center on the block
 	variance = ['tall_grass']  # NOT flowers, they shouldn't go "under" at all
@@ -411,9 +414,11 @@ class meshSwap(bpy.types.Operator):
 					z = round(facebook[setNum][2][2]+c)
 				
 				#check if height (that's the Y axis, since in local coords)
+				# this HACK IS JUST FOR TORCHES... messes up things like redstone, lilypads..
 				if facebook[setNum][2][1]+0.5 - math.floor(facebook[setNum][2][1]+0.5) < 0.3:
 					#continue if coord. is < 1/3 of block height, to do with torch's base in wrong cube.
-					continue
+					if swapGen not in ['lilypad','redstone_wire_off']:
+						continue
 				
 				# rotation value (second append value: 0 means nothing, rest 1-4.
 				if not [x,y,z] in dupList:
