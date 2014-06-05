@@ -7,3 +7,10 @@ The forum WIP thread for the development of this addon is found below:
 http://www.blenderartists.org/forum/showthread.php?316151-ADDON-WIP-MCprep-for-Minecraft-Workflow
 
 This addon is made to work with an asset library directory, from which models and groups are linked or imported from. A version of this library is being set up still for others to use.
+
+Demo Usage
+======
+
+With a currently lacking usage documentation, the video will show what the intended results of this script are:
+https://www.youtube.com/watch?v=Swz6T4Zzfek
+
