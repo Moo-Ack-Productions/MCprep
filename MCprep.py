@@ -23,8 +23,8 @@ http://www.blenderartists.org/forum/showthread.php?316151-ADDON-WIP-MCprep-for-M
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",
-	"version": (0, 5),
-	"blender": (2, 68, 2),
+	"version": (1, 01),
+	"blender": (2, 71, 0),
 	"location": "3D window toolshelf",
 	"description": "Speeds up the workflow of minecraft animations and imported minecraft worlds",
 	"warning": "proxy spawn uses a 'file duplication hack'! Addon is WIP",
