@@ -60,10 +60,11 @@ def getListData():
 	meshSwapList = ['tall_grass','flower_red','flower_yellow','cobweb','redstone_lamp_on',
 					'redstone_lamp_off','dead_shrub','sapling_oak','redstone_wire_off',
 					'wheat','redstone_torch_off','rails','rails_powered_off','ladder',
-					'mushroom_red','mushroom_brown','vines','lilypad']
+					'mushroom_red','mushroom_brown','vines','lilypad','azure',
+					'stained_clay_brown','stained_clay_dark_gray']
 	edgeBlocks = ['vines']	# these blocks are on edges, and also require rotation ... should be looked into
 	
-	TOSUPPORT = ['bed...','ironbars...'] #does nothing
+	TOSUPPORT = ['bed...','ironbars...','ladder'] #does nothing
 	
 	
 	# anything listed here will have their position varied slightly from exactly center on the block
@@ -152,7 +153,7 @@ def getMaterialTextures(matList):
 	# loop over every material, adding each texture slot
 	for mat in matList:
 		materialTextures = mat.texture_slots
-		print("###",materialTextures)
+		#print("###",materialTextures)
 		if len(materialTextures)==0: return []
 		for textureID in materialTextures:
 			if textureID.texture not in texList:
@@ -287,6 +288,27 @@ class materialChangeCycles(bpy.types.Operator):
 		return {'FINISHED'}
 
 
+
+########
+# Operator, funtion swaps meshes/groups from library file
+class meshSwap(bpy.types.Operator):
+	"""Swap minecraft imports for custom 3D models in the meshSwap blend file"""
+	bl_idname = "object.mc_meshswap"
+	bl_label = "MCprep meshSwap"
+	bl_options = {'REGISTER', 'UNDO'}
+	
+	
+	def execute(self, context):
+		
+		## debug, restart check
+		print('###################################')
+	
+	
+		return {'FINISHED'}
+		
+
+
+
 ########
 # Operator, funtion swaps meshes/groups from library file
 class meshSwap(bpy.types.Operator):
@@ -385,11 +407,36 @@ class meshSwap(bpy.types.Operator):
 				l = [tmp2[0],tmp2[1],tmp2[2]] #to make value unlinked to mesh
 				facebook.append([n,g,l]) # g is global, l is local
 			
+			# NOTE, I did comparison test: the above code IS fine, 
+			# same result for partially successful and completely unsuccessful trials
 			
 			bpy.ops.object.select_all(action='DESELECT')
-			toSwapObj.select = True
-			bpy.ops.object.delete() #Hey! The values of facebook are unchanged, so it's NOT linked..?
+
+			"""
 			
+			August 4, 2014 - 1:51 am
+			R.I.P. the bug that plagued my aniamtions since the dawn of this addon.
+			
+			This bug lived a long life, it went many places - and saw many imported worlds.
+			And while it may have seemed to exist soley for the purpose of my demise, it was
+			a test of my character, and through it I have grown stronger and wiser.
+			
+			The original line, which caused this issue that needed only commenting out to fix:
+				
+				bpy.ops.object.delete() #Hey! The values of facebook are unchanged, so it's NOT linked..?
+			
+			Note how I had even questioned the deletion of this object when first written, but found it
+			strange that the values linked to it remained unchanged given the objects absence.
+			
+			As I now understand, blender has an internal memory garbage collector, and sometimes it
+			takes shorter or longer for deleted obejct data to be removed from the gargage. And hence,
+			the variance in being how long it took before the meshSwap object ob.worldMatrix many
+			lines hereafter would go awry, for at the point where meshes began to transoform in odd
+			ways, the original object had finally, and truly, been removed.
+			
+			Also, note to self: this function is still a hell of a mess. Do something about it.
+			
+			"""
 			
 			### NOTE: NAMING ISSUES: IF there already was another mesh of the same name before importing,
 			### the imported mesh REPLACES the old one. That's a problem. except in my special case.
@@ -414,11 +461,14 @@ class meshSwap(bpy.types.Operator):
 					z = round(facebook[setNum][2][2]+c)
 				
 				#check if height (that's the Y axis, since in local coords)
+				
+				
 				# this HACK IS JUST FOR TORCHES... messes up things like redstone, lilypads..
 				if facebook[setNum][2][1]+0.5 - math.floor(facebook[setNum][2][1]+0.5) < 0.3:
 					#continue if coord. is < 1/3 of block height, to do with torch's base in wrong cube.
 					if swapGen not in ['lilypad','redstone_wire_off']:
 						continue
+				
 				
 				# rotation value (second append value: 0 means nothing, rest 1-4.
 				if not [x,y,z] in dupList:
@@ -433,6 +483,7 @@ class meshSwap(bpy.types.Operator):
 					
 					
 					## rotations are handled on an object-to-object basis
+					
 					# append rotation
 					if swapGen in ['torch','redstone_torch_off','redstone_torch_on']:
 						if (x_diff>.2 and x_diff < 0.3):
@@ -446,20 +497,24 @@ class meshSwap(bpy.types.Operator):
 						else:
 							rotList.append(0)
 					elif swapGen in ['ladder']:		# still need to fix/work out
-						print("also here")
+						print('also here')
 						if (x_diff > 0.3):
 							rotList.append(7)
 						elif (z_diff > 0.3):	
 							rotList.append(6)
 						elif (z_diff < -0.3):
-							print("right here!")	
+							print('right here!')	
 							rotList.append(5)
 						else:
 							rotList.append(0)
 					else:
 						rotList.append(0)
 					
+					
 			
+			#NOTE: did check here, even STILL a good and a bad trial have the same result,
+			# SO ISSUE IS PAST THIS POINT
+			for a in dupList:print(a)
 			
 			#import: guaranteed to have same name as "appendObj" for the first instant afterwards
 			grouped = False # used to check if to join or not
@@ -489,11 +544,16 @@ class meshSwap(bpy.types.Operator):
 				
 			else:
 				bpy.ops.wm.link_append(directory=direc+'Object/', filename=swapGen, link=False)
+				
+				### NOTICE: IF THERE IS A DISCREPENCY BETWEEN ASSETS FILE AND WHAT IT SAYS SHOULD BE IN FILE
+				### EG NAME OF MESH TO SWAP CHANGED,  INDEX ERROR IS THROWN HERE
+				### >> MAKE a more graceful error indication.
 				base = bpy.context.selected_objects[0]
 				base["MCswapped"] = "True"
 				bpy.ops.object.select_all(action='DESELECT')
 
 			
+			print("### > trans")
 			# duplicating, rotating and moving
 			dupedObj = []
 			for (set,rot) in zip(dupList,rotList):
@@ -501,8 +561,8 @@ class meshSwap(bpy.types.Operator):
 				if grouped:
 					# definition for randimization, defined at top!
 					randGroup = randomizeMeshSawp(swapGen,3)
+					
 					# The built in method fails, bpy.ops.object.group_instance_add(...)
-					# ZZusing custom def instead
 					#UPDATE: I reported the bug, and they fixed it nearly instantly =D
 					# but it was recommended to do the below anyways.
 					addGroupInstance(randGroup,loc)
@@ -518,6 +578,7 @@ class meshSwap(bpy.types.Operator):
 				
 				#rotation/translation for on walls, assumes last added object still selected
 				x,y,offset,rotValue,z = 0,0,0.28,0.436332,0.12
+				
 				if rot == 1:
 					x = -offset
 					bpy.ops.transform.translate(value=(x, y, z))
@@ -540,7 +601,6 @@ class meshSwap(bpy.types.Operator):
 					bpy.ops.transform.rotate(value=2*math.pi,axis=(0,0,1))
 				elif rot == 7:
 					bpy.ops.transform.rotate(value=-math.pi,axis=(0,0,1))
-				
 				
 				# extra variance to break up regularity, e.g. for tall grass
 				if swapGen in variance:
@@ -566,6 +626,10 @@ class meshSwap(bpy.types.Operator):
 					d.select = True
 				
 				bpy.ops.object.join() #SKIPPING FOR NOW, in case this is the cause for weird random error
+			
+			bpy.ops.object.select_all(action='DESELECT')
+			toSwapObj.select = True
+			bpy.ops.object.delete()
 			
 			#deselect? or try to reselect everything that was selected previoulsy
 			bpy.ops.object.select_all(action='DESELECT')
@@ -637,7 +701,6 @@ class MCpanel(bpy.types.Panel):
 	bl_region_type = 'TOOLS'
 
 	def draw(self, context):
-		#MCprep = context.scene.object.mc_meshswap
 		
 		layout = self.layout
 
@@ -669,6 +732,8 @@ class MCpanel(bpy.types.Panel):
 		
 		#below should actually just call a popup window
 		col.operator("object.mc_meshswap", text="Mesh Swap", icon='IMPORT')
+		#col.operator("object.mc_meshswapOLD", text="Mesh Swap OLD", icon='IMPORT')
+		
 		split = layout.split()
 		col = split.column(align=True)
 		col.label(text="Link groups")
@@ -693,8 +758,11 @@ class MCpanel(bpy.types.Panel):
 def register():
 	bpy.utils.register_class(materialChange)
 	bpy.utils.register_class(meshSwap)
+	#bpy.utils.register_class(meshSwapOLD)
+	
 	bpy.utils.register_class(proxyUpdate)
 	bpy.utils.register_class(proxySpawn)
+	
 	
 	bpy.utils.register_class(WIP)
 	bpy.utils.register_class(MCpanel)
@@ -724,6 +792,8 @@ def register():
 def unregister():
 	bpy.utils.unregister_class(materialChange)
 	bpy.utils.unregister_class(meshSwap)
+	#bpy.utils.unregister_class(meshSwapOLD)
+	
 	bpy.utils.unregister_class(proxyUpdate)
 	bpy.utils.unregister_class(proxySpawn)
 	
@@ -734,6 +804,9 @@ def unregister():
 	
 	#properties
 	del bpy.types.Scene.MCprep_library_path
+	del bpy.types.Scene.MCprep_linkGroup
+	del bpy.types.Scene.MCprep_nameConvention
+	del bpy.types.Scene.MCprep_groupAppendLayer
 
 
 if __name__ == "__main__":
