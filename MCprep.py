@@ -35,6 +35,11 @@ bl_info = {
 import bpy,os,mathutils,random,math
 
 
+########################################################################################
+#	Below for precursor functions
+#	Thereafter for the class functions
+########################################################################################
+
 
 ########
 # Get the lists of either hard coded or library parsed lists for functions
@@ -71,7 +76,8 @@ def getListData():
 	variance = ['tall_grass']  # NOT flowers, they shouldn't go "under" at all
 	
 	
-	return [meshSwapList,groupSwapList,reflective,water,solid,emit,variance]
+	return {'meshSwapList':meshSwapList,'groupSwapList':groupSwapList,'reflective':reflective,
+			'water':water,'solid':solid,'emit':emit,'variance':variance}
 
 
 
@@ -86,7 +92,11 @@ def addGroupInstance(groupName,loc):
 	scene.objects.link(ob)
 	ob.select = True
 	
-
+########
+# resolves issues with badly named objects but proper material names
+def nameObjsFromMat():
+	for obj in boy.context.selected_objects:
+		obj.name = obj.active_object.active_material.name
 
 ########
 # check if a face is on the boundary between two blocks (local coordinates)
@@ -145,7 +155,7 @@ def getObjectMaterials(objList):
 
 ########
 # gets all textures on input list of materials
-# currently not used, also some issue in getting NoneTypes (line if textureID.texture in..)
+# currently not used, some issue in getting NoneTypes (line if textureID.texture in..)
 def getMaterialTextures(matList):
 	if len(matList)==0: return []
 	texList = []
@@ -162,6 +172,14 @@ def getMaterialTextures(matList):
 	return texList
 
 
+
+
+########################################################################################
+#	Above for precursor functions
+#	Below for the class functions
+########################################################################################
+
+
 ########
 # Operator, sets up the materials for better Blender Internal rendering
 class materialChange(bpy.types.Operator):
@@ -170,122 +188,130 @@ class materialChange(bpy.types.Operator):
 	bl_label = "MCprep mats"
 	bl_options = {'REGISTER', 'UNDO'}
 	
+	
+	## HERE functions for GENERAL material setup (cycles and BI)
+	def materialsInternal(self, mat):
+		
+		#legacy
+		# defines lists for materials with special default settings.
+		listData = getListData()
+		#[meshSwapList,groupSwapList,reflective,water,solid,emit,variance] = getListData()
+		
+		
+		try:
+			newName = mat.name+'_tex' # add exception to skip? with warning?
+			texList = mat.texture_slots.values()
+		except:
+			print('\tissue: '+obj.name+' has no active material')
+			return
+	   
+	   
+		### NOT generalized, ultimately will be looking for material in library blend
+		try:
+			if bpy.data.textures[texList[0].name].filter_type == 'BOX':
+				return #this skips this process, not added to matList, no double processing
+				# however... shouldn't NEED to do this!
+			bpy.data.textures[texList[0].name].name = newName
+		except:
+			print('\tiwarning: material '+mat.name+' has no texture slot. skipping...')
+			return
+	   
+		######
+		# Check for library material of same name, make true or false statement.
+		libraryMaterial = False
+	   
+		######
+		# Setting the materials, library linked or pre-set defaults
+		if libraryMaterial == True:
+			print("library linked/appended material")
+			print("not setup yet.")
+			#include boolean linked variable for import to disable this
+			#check if already linked (though nothing happens if it is anyways right?)
+			# avoid having duplicates where possible...
+		else:
+			# section for pre-set default materials, given no library material
+		   
+			# supports changing all texture slots!
+			# bpy.context.selected_objects[0].material_slots[0].material.texture_slots[0].texture
+			# e.g. gets the first texture from the first selected objec
+			# function above shows how to get
+		   
+			for index in range(1,len(texList)):
+				mat.texture_slots.clear(index) #clear out unnecessary texture slots?
+				## NNNOOO don't do that... if anything, just disable...
+				## or make option to disable all but first slot.
+		   
+			####
+			#changing the actual settings for the default materials
+		   
+			# general name, so that lava.001 material is recognized and given emit, for example
+			matGen = nameGeneralize(mat.name)
+		   
+			mat.use_transparent_shadows = True #all materials receive trans
+			mat.specular_intensity = 0
+		   
+			# .. should remove direct bpy.data references where possible, hazard...
+			bpy.data.textures[newName].use_interpolation = False
+			bpy.data.textures[newName].filter_type = 'BOX'
+			bpy.data.textures[newName].filter_size = 0
+			mat.texture_slots[0].use_map_color_diffuse = True
+			mat.texture_slots[0].diffuse_color_factor = 1
+			mat.use_textures[1] = False
+   
+			if not matGen in listData['solid']: #ie alpha is on unless turned off, "safe programming"
+				bpy.data.textures[newName].use_alpha = True
+				mat.texture_slots[0].use_map_alpha = True
+				mat.use_transparency = True
+				mat.alpha = 0
+				mat.texture_slots[0].alpha_factor = 1
+			   
+			if matGen in listData['reflective']:
+				mat.alpha=0.3
+				mat.raytrace_mirror.use = True
+				mat.raytrace_mirror.reflect_factor = 0.3
+		   
+			if matGen in listData['emit']:
+				mat.emit = 1
+			else:
+				mat.emit = 0
+	
+	
+	
+	### HERE function for default cycles materials
+	
+	### HERE function for linking/appending from asset scene
+	
+	
+	
 	def execute(self, context):
 		
 		#get list of selected objects
 		objList = context.selected_objects
 		
 		# defines lists for materials with special default settings.
-		[meshSwapList,groupSwapList,reflective,water,solid,emit,variance] = getListData()
+		#listData = getListData()
+		#[meshSwapList,groupSwapList,reflective,water,solid,emit,variance] = getListData()
 		
 		# gets the list of materials (without repetition) in the selected object list
 		matList = getObjectMaterials(objList)
 		#texList = getMaterialTextures(matList)
 		
 		for mat in matList:
-			try:
-				newName = mat.name+'_tex' # add exception to skip? with warning?
-				texList = mat.texture_slots.values()
-			except:
-				print('\tissue: '+obj.name+' has no active material')
-				continue
+			#check if linked material
 			
+			#if linked false:
+			# if BI enabled
+			if (True):
+				print('BI mat')
+				self.materialsInternal(mat)
+				
+			elif (False):
+				print('cycles mat')
 			
-			### NOT generalized, ultimately will be looking for material in library blend
-			try:
-				if bpy.data.textures[texList[0].name].filter_type == 'BOX':
-					continue #this skips this process, not added to matList, no doulbe mesh swapping
-				bpy.data.textures[texList[0].name].name = newName
-			except:
-				print('\tiwarning: material '+mat.name+' has no texture slot. skipping...')
-				continue
-			
-			######
-			# Check for library material of same name, make true or false statement.
-			libraryMaterial = False
-			
-			######
-			# Setting the materials, library linked or pre-set defaults
-			if libraryMaterial == True:
-				print("library linked/appended material")
-				print("not setup yet.")
-				#include boolean linked variable for import to disable this
-				#check if already linked (though nothing happens if it is anyways right?)
-				# avoid having duplicates where possible...
-			else:
-				# section for pre-set default materials, given no library material
-				
-				# supports changing all texture slots!
-				# bpy.context.selected_objects[0].material_slots[0].material.texture_slots[0].texture
-				# e.g. gets the first texture from the first selected objec
-				# function above shows how to get
-				
-				for index in range(1,len(texList)):
-					mat.texture_slots.clear(index) #clear out unnecessary texture slots?
-					## NNNOOO don't do that... if anything, just disable...
-					## or make option to disable all but first slot.
-				
-				####
-				#changing the actual settings for the default materials
-				
-				# general name, so that lava.001 material is recognized and given emit, for example
-				matGen = nameGeneralize(mat.name)
-				
-				mat.use_transparent_shadows = True #all materials receive trans
-				mat.specular_intensity = 0
-				
-				# .. should remove direct bpy.data references where possible, hazard...
-				bpy.data.textures[newName].use_interpolation = False
-				bpy.data.textures[newName].filter_type = 'BOX'
-				bpy.data.textures[newName].filter_size = 0
-				mat.texture_slots[0].use_map_color_diffuse = True
-				mat.texture_slots[0].diffuse_color_factor = 1
-				mat.use_textures[1] = False
-		
-				if not matGen in solid: #ie alpha is on unless turned off, "safe programming"
-					bpy.data.textures[newName].use_alpha = True
-					mat.texture_slots[0].use_map_alpha = True
-					mat.use_transparency = True
-					mat.alpha = 0
-					mat.texture_slots[0].alpha_factor = 1
-					
-				if matGen in reflective:
-					mat.alpha=0.3
-					mat.raytrace_mirror.use = True
-					mat.raytrace_mirror.reflect_factor = 0.3
-				
-				if matGen in emit:
-					mat.emit = 1
-				else:
-					mat.emit = 0
 			
 
 		return {'FINISHED'}
 
-
-
-########
-# Operator, sets up the materials for better cycles rendering
-class materialChangeCycles(bpy.types.Operator):
-	"""Preps selected minecraft materials"""
-	bl_idname = "object.mc_mat_change"
-	bl_label = "MCprep mats"
-	bl_options = {'REGISTER', 'UNDO'}
-	
-	def execute(self, context):
-		
-		print("Placeholder for setting up cycles material nodes")
-		print("Should restructure the operator to share starting point")
-		print("in the way of library material checking, object grabbing etc")
-		# enable nodes
-		# etc...
-		
-		
-		######
-		# Check for library material of same name, make true or false statement.
-		libraryMaterial = False
-		
-		return {'FINISHED'}
 
 
 
@@ -298,25 +324,11 @@ class meshSwap(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 	
 	
-	def execute(self, context):
-		
-		## debug, restart check
-		print('###################################')
+	#move things out here!
 	
-	
-		return {'FINISHED'}
-		
-
-
-
-########
-# Operator, funtion swaps meshes/groups from library file
-class meshSwap(bpy.types.Operator):
-	"""Swap minecraft imports for custom 3D models in the meshSwap blend file"""
-	bl_idname = "object.mc_meshswap"
-	bl_label = "MCprep meshSwap"
-	bl_options = {'REGISTER', 'UNDO'}
-	
+	#used for only occasionally refreshing the 3D scene while mesh swapping
+	counterObject = 0
+	countMax = 5
 	
 	def execute(self, context):
 		
@@ -329,12 +341,25 @@ class meshSwap(bpy.types.Operator):
 		groupAppendLayer = context.scene.MCprep_groupAppendLayer
 		activeLayers = list(context.scene.layers)
 		
+		#separate each material into a separate object
+		selList = context.selected_objects
+		for obj in selList:
+			bpy.ops.mesh.separate(type='MATERIAL')
+		
+		# now do type checking and fix any name discrepencies
 		selList = context.selected_objects
 		objList = []
 		for obj in selList:
 			#ignore non mesh selected objects
 			if obj.type != 'MESH': continue
+			
+			prevName = obj.name
+			try:bpy.data.meshes[prevName].name = obj.active_material.name
+			except: continue
+			obj.name = obj.active_material.name
+			bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
 			objList.append(obj.name)
+			print(obj.name)
 		
 			
 		# get library path from property/UI panel
@@ -355,15 +380,18 @@ class meshSwap(bpy.types.Operator):
 		
 		
 		# Now get a list of all objects in this blend file, and all groups
-		[meshSwapList,groupSwapList,reflective,water,solid,emit,variance] = getListData()
+		listData = getListData()
+		#[meshSwapList,groupSwapList,reflective,water,solid,emit,variance] = getListData()
 		
 		#first go through and separate materials/faces of specific one into one mesh. I've got
 		# that already, so moving on.
 		### HERE use equivalent of UI "p" ? seperate by materials
 		
+		# for each object in objList: bpy.ops.mesh.separate(type='MATERIAL')
 		
 		#primary loop, for each OBJECT needing swapping
 		for swap in objList:
+			
 			
 			#first check if swap has already happened:
 			#base["MCswapped"] << how to CHECK if property already exists? can't use try,
@@ -382,7 +410,7 @@ class meshSwap(bpy.types.Operator):
 			
 			
 			#just selecting mesh with same name accordinly.. ALSO only if in objList
-			if not (swapGen in meshSwapList or swapGen in groupSwapList): continue		
+			if not (swapGen in listData['meshSwapList'] or swapGen in listData['groupSwapList']): continue		
 			
 			#now you have object that has just that material. Known.
 			toSwapObj = bpy.data.objects[swap] #the object that would be created above...
@@ -481,7 +509,6 @@ class meshSwap(bpy.types.Operator):
 					z_diff = z-facebook[setNum][2][2]
 					#print(facebook[setNum][2][2],z,z_diff)
 					
-					
 					## rotations are handled on an object-to-object basis
 					
 					# append rotation
@@ -519,9 +546,9 @@ class meshSwap(bpy.types.Operator):
 			#import: guaranteed to have same name as "appendObj" for the first instant afterwards
 			grouped = False # used to check if to join or not
 			base = None #need to initialize to something, though this obj no used
-			if swapGen in groupSwapList:
+			if swapGen in listData['groupSwapList']:
 				
-				print(">>",toLink,groupAppendLayer,swapGen)
+				print(">> link group?",toLink,groupAppendLayer,swapGen)
 				
 				# if group not linked, then put appended group data onto the user indentified layer
 				if (not toLink) and (groupAppendLayer!=0):
@@ -548,15 +575,30 @@ class meshSwap(bpy.types.Operator):
 				### NOTICE: IF THERE IS A DISCREPENCY BETWEEN ASSETS FILE AND WHAT IT SAYS SHOULD BE IN FILE
 				### EG NAME OF MESH TO SWAP CHANGED,  INDEX ERROR IS THROWN HERE
 				### >> MAKE a more graceful error indication.
-				base = bpy.context.selected_objects[0]
-				base["MCswapped"] = "True"
+				try:
+					base = bpy.context.selected_objects[0]
+					base["MCswapped"] = "True"
+				except:
+					continue
 				bpy.ops.object.select_all(action='DESELECT')
 
 			
+			##### OPTION HERE TO SEGMENT INTO NEW FUNCTION
 			print("### > trans")
 			# duplicating, rotating and moving
 			dupedObj = []
 			for (set,rot) in zip(dupList,rotList):
+				
+				### HIGH COMPUTATION SECTION
+				#refresh the scene every once in awhile
+				self.counterObject+=1
+				if (self.counterObject > self.countMax):
+					self.counterObject = 0
+					#below technically a "hack", should use: bpy.data.scenes[0].update()
+					bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+				
+				
+				
 				loc = toSwapObj.matrix_world*mathutils.Vector(set) #local to global
 				if grouped:
 					# definition for randimization, defined at top!
@@ -603,8 +645,8 @@ class meshSwap(bpy.types.Operator):
 					bpy.ops.transform.rotate(value=-math.pi,axis=(0,0,1))
 				
 				# extra variance to break up regularity, e.g. for tall grass
-				if swapGen in variance:
-					x = (random.random()-0.5)*0.5 	# values LOWER than *1.0 make it less variable
+				if swapGen in listData['variance']:
+					x = (random.random()-0.5)*0.5	 # values LOWER than *1.0 make it less variable
 					y = (random.random()-0.5)*0.5
 					z = (random.random()/2-0.5)*0.7	# restriction guarentees it will never go Up (+z value)
 					bpy.ops.transform.translate(value=(x, y, z))
@@ -739,6 +781,7 @@ class MCpanel(bpy.types.Panel):
 		col.label(text="Link groups")
 		col.prop(context.scene,"MCprep_linkGroup")
 		
+		"""
 		#spawn (makes UI pulldown)
 		split2 = layout.split()
 		col2 = split2.column(align=True)
@@ -751,6 +794,31 @@ class MCpanel(bpy.types.Panel):
 		#label + warning sign
 		#col2.label(text="Update proxies after editing library!", icon='ERROR')
 		#perhaps try to have it only show warning if detected inconsistent timestamps
+		
+		"""
+
+########################################################################################
+#	Above for the class functions
+#	Below for extra classes/registration stuff
+########################################################################################
+
+
+
+
+# shows in header when run
+class notificationWIP(bpy.types.Operator):
+	bl_idname = "wm.mouse_position"
+	bl_label = "Mouse location"
+ 
+	def execute(self, context):
+		# rather then printing, use the report function,
+		# this way the message appears in the header,
+		self.report({'INFO'}, "Error / Not Implemented")
+		return {'FINISHED'}
+		
+	def invoke(self, context, event):
+		return self.execute(context)
+
 
 
 #######
@@ -765,6 +833,7 @@ def register():
 	
 	
 	bpy.utils.register_class(WIP)
+	bpy.utils.register_class(notificationWIP)
 	bpy.utils.register_class(MCpanel)
 	bpy.utils.register_class(nolib_warning)
 	
@@ -792,13 +861,13 @@ def register():
 def unregister():
 	bpy.utils.unregister_class(materialChange)
 	bpy.utils.unregister_class(meshSwap)
-	#bpy.utils.unregister_class(meshSwapOLD)
 	
 	bpy.utils.unregister_class(proxyUpdate)
 	bpy.utils.unregister_class(proxySpawn)
 	
 	
 	bpy.utils.unregister_class(WIP)
+	bpy.utils.unregister_class(notificationWIP)
 	bpy.utils.unregister_class(MCpanel)
 	bpy.utils.unregister_class(nolib_warning)
 	
