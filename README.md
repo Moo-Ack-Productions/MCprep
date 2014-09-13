@@ -31,6 +31,15 @@ Meshswap:
 - Step 1: Select the objects that can be meshSwapped. Note: I have not added direct functionality for adding more swappable object. Also note that if an object is not found or swappable, it will just be skipped - no harm done.
 - Step 2: Press meshswap.
 
+To add your own objects to meshswap (or groupswap):
+- Step 0: Uninstall the MCprep addon if it is there already.
+- Step 1: Check your imported world (e.g. , and see the name of the material for the object you want to setup. You might call it "glass plane", but the import might name the material "glass_plane", so you need to note that.
+- Step 2: Model you object in the meshSwap.blend file, or append it.
+- Step 3: Rename your object and your object's material to exactly match the previously noted name.
+- Step 4: In the *code*, meshswap.py file, look for "def getListData():" on line 48 currently, a get funciton.
+- Step 5: Add the exact name of your new object to the list "meshSwapList" (or "groupSwapList", if it is a group with that exact name to bring in particles/multiple objects, etc), use single quotes around it and commas between entires like the other entries of that list.
+- Step 6: Reinstall the addon.
+
 
 Additional Help
 ======
