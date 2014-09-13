@@ -35,6 +35,6 @@ Meshswap:
 Additional Help
 ======
 
-If you have troubles getting this addon to work, please contact me at TheDuckCow@live.com, and I will do my best to respond promptly to your questions. This addon is still heavily under construction, so this file may be out of date or largely incomplete.
+If you have troubles getting this addon to work, please contact me at TheDuckCow@live.com, and I will do my best to respond promptly to your questions. This addon is still heavily under construction, so this description may be out of date or largely incomplete.
 
 Moo-Ack!
