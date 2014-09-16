@@ -17,13 +17,20 @@ https://github.com/TheDuckCow/MCprep.git
 WIP thread on blenderartists:
 http://www.blenderartists.org/forum/showthread.php?316151-ADDON-WIP-MCprep-for-Minecraft-Workflow
 
+# KNOWN BUGS:
+-	if multiple objects with same material mesh swapped in one go
+	>> easy work around would be to auto join them together, but should be error'd...
+-	not all replacements for standard block replacements work, extra blocks appear
+-	sometimes cannot meshswap a second time if done once in a scene already, e.g. vine
+	appears to be due to stale, or kept data between op runs.
+
 """
 
 ########
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",
-	"version": (1, 1),
+	"version": (1, 2, 0),
 	"blender": (2, 71, 0),
 	"location": "3D window toolshelf",
 	"description": "Speeds up the workflow of minecraft animations and imported minecraft worlds",
@@ -67,17 +74,20 @@ def getListData():
 					'wheat','redstone_torch_off','rails','rails_powered_off','ladder',
 					'mushroom_red','mushroom_brown','vines','lilypad','azure',
 					'stained_clay_brown','stained_clay_dark_gray']
-	edgeBlocks = ['vines']	# these blocks are on edges, and also require rotation ... should be looked into
-	
-	TOSUPPORT = ['bed...','ironbars...','ladder'] #does nothing
+	edgeFlush = [] # blocks perfectly on edges, require rotation	
+	edgeFloat = ['vines','ladder','lilypad'] # blocks floating off edge into air, require rotation
+	torchlike = ['torch','redstone_torch_on','redstone_torch_off']
+	TOSUPPORT = ['bed...','ironbars...'] #does nothing
 	
 	
 	# anything listed here will have their position varied slightly from exactly center on the block
 	variance = ['tall_grass']  # NOT flowers, they shouldn't go "under" at all
 	
 	
-	return {'meshSwapList':meshSwapList,'groupSwapList':groupSwapList,'reflective':reflective,
-			'water':water,'solid':solid,'emit':emit,'variance':variance}
+	return {'meshSwapList':meshSwapList, 'groupSwapList':groupSwapList,
+			'reflective':reflective, 'water':water, 'solid':solid,
+			'emit':emit, 'variance':variance, 'edgeFlush':edgeFlush,
+			'edgeFloat':edgeFloat,'torchlike':torchlike}
 
 
 
@@ -98,6 +108,15 @@ def nameObjsFromMat():
 	for obj in boy.context.selected_objects:
 		obj.name = obj.active_object.active_material.name
 
+"""
+########
+# check if a face is on the boundary between two blocks (local coordinates)
+def onEdge(faceLoc):
+	for dim in faceLoc:
+		if (dim-int(dim) > 0.4 and dim-int(dim) <= 0.5):
+			return True
+	return False
+"""
 ########
 # check if a face is on the boundary between two blocks (local coordinates)
 def onEdge(faceLoc):
@@ -173,12 +192,10 @@ def getMaterialTextures(matList):
 
 
 
-
 ########################################################################################
 #	Above for precursor functions
 #	Below for the class functions
 ########################################################################################
-
 
 ########
 # Operator, sets up the materials for better Blender Internal rendering
@@ -192,11 +209,8 @@ class materialChange(bpy.types.Operator):
 	## HERE functions for GENERAL material setup (cycles and BI)
 	def materialsInternal(self, mat):
 		
-		#legacy
 		# defines lists for materials with special default settings.
 		listData = getListData()
-		#[meshSwapList,groupSwapList,reflective,water,solid,emit,variance] = getListData()
-		
 		
 		try:
 			newName = mat.name+'_tex' # add exception to skip? with warning?
@@ -205,113 +219,91 @@ class materialChange(bpy.types.Operator):
 			print('\tissue: '+obj.name+' has no active material')
 			return
 	   
-	   
-		### NOT generalized, ultimately will be looking for material in library blend
+		### Check material texture exists and set name
 		try:
-			if bpy.data.textures[texList[0].name].filter_type == 'BOX':
-				return #this skips this process, not added to matList, no double processing
-				# however... shouldn't NEED to do this!
+			#if bpy.data.textures[texList[0].name].filter_type == 'BOX':
+			#	return #to skip non pre-prepped mats, but shouldn't need to...
 			bpy.data.textures[texList[0].name].name = newName
 		except:
 			print('\tiwarning: material '+mat.name+' has no texture slot. skipping...')
 			return
+
+		# disable all but first slot, ensure first slot enabled
+		mat.use_textures[0] = True
+		for index in range(1,len(texList)):
+			mat.use_textures[index] = False
 	   
-		######
-		# Check for library material of same name, make true or false statement.
-		libraryMaterial = False
+		#generalizing the name, so that lava.001 material is recognized and given emit
+		matGen = nameGeneralize(mat.name)
 	   
-		######
-		# Setting the materials, library linked or pre-set defaults
-		if libraryMaterial == True:
-			print("library linked/appended material")
-			print("not setup yet.")
-			#include boolean linked variable for import to disable this
-			#check if already linked (though nothing happens if it is anyways right?)
-			# avoid having duplicates where possible...
+		mat.use_transparent_shadows = True #all materials receive trans
+		mat.specular_intensity = 0
+		mat.texture_slots[0].texture.use_interpolation = False
+		mat.texture_slots[0].texture.filter_type = 'BOX'
+		mat.texture_slots[0].texture.filter_size = 0
+		mat.texture_slots[0].use_map_color_diffuse = True
+		mat.texture_slots[0].diffuse_color_factor = 1
+		mat.use_textures[1] = False
+
+		if not matGen in listData['solid']: #ie alpha is on unless turned off
+			bpy.data.textures[newName].use_alpha = True
+			mat.texture_slots[0].use_map_alpha = True
+			mat.use_transparency = True
+			mat.alpha = 0
+			mat.texture_slots[0].alpha_factor = 1
+		   
+		if matGen in listData['reflective']:
+			mat.alpha=0.3
+			mat.raytrace_mirror.use = True
+			mat.raytrace_mirror.reflect_factor = 0.3
+	   
+		if matGen in listData['emit']:
+			mat.emit = 1
 		else:
-			# section for pre-set default materials, given no library material
-		   
-			# supports changing all texture slots!
-			# bpy.context.selected_objects[0].material_slots[0].material.texture_slots[0].texture
-			# e.g. gets the first texture from the first selected objec
-			# function above shows how to get
-		   
-			for index in range(1,len(texList)):
-				mat.texture_slots.clear(index) #clear out unnecessary texture slots?
-				## NNNOOO don't do that... if anything, just disable...
-				## or make option to disable all but first slot.
-		   
-			####
-			#changing the actual settings for the default materials
-		   
-			# general name, so that lava.001 material is recognized and given emit, for example
-			matGen = nameGeneralize(mat.name)
-		   
-			mat.use_transparent_shadows = True #all materials receive trans
-			mat.specular_intensity = 0
-		   
-			# .. should remove direct bpy.data references where possible, hazard...
-			bpy.data.textures[newName].use_interpolation = False
-			bpy.data.textures[newName].filter_type = 'BOX'
-			bpy.data.textures[newName].filter_size = 0
-			mat.texture_slots[0].use_map_color_diffuse = True
-			mat.texture_slots[0].diffuse_color_factor = 1
-			mat.use_textures[1] = False
-   
-			if not matGen in listData['solid']: #ie alpha is on unless turned off, "safe programming"
-				bpy.data.textures[newName].use_alpha = True
-				mat.texture_slots[0].use_map_alpha = True
-				mat.use_transparency = True
-				mat.alpha = 0
-				mat.texture_slots[0].alpha_factor = 1
-			   
-			if matGen in listData['reflective']:
-				mat.alpha=0.3
-				mat.raytrace_mirror.use = True
-				mat.raytrace_mirror.reflect_factor = 0.3
-		   
-			if matGen in listData['emit']:
-				mat.emit = 1
-			else:
-				mat.emit = 0
+			mat.emit = 0
 	
-	
-	
-	### HERE function for default cycles materials
+	### Function for default cycles materials
+	def materialsCycles(self, mat):
+		
+		# defines lists for materials with special default settings.
+		listData = getListData()
+		
+		# generalize name
+		matGen = nameGeneralize(mat.name)
+		
+		#enable nodes
+		
+		#set nodes
+		
+		#warning that nothing done to scale textures, must just use scaled
+		#up textures to look proper!
 	
 	### HERE function for linking/appending from asset scene
-	
-	
 	
 	def execute(self, context):
 		
 		#get list of selected objects
 		objList = context.selected_objects
-		
-		# defines lists for materials with special default settings.
-		#listData = getListData()
-		#[meshSwapList,groupSwapList,reflective,water,solid,emit,variance] = getListData()
-		
+
 		# gets the list of materials (without repetition) in the selected object list
 		matList = getObjectMaterials(objList)
-		#texList = getMaterialTextures(matList)
 		
 		for mat in matList:
-			#check if linked material
+			#check if linked material exists
+			render_engine = bpy.context.scene.render.engine
 			
 			#if linked false:
-			# if BI enabled
 			if (True):
-				print('BI mat')
-				self.materialsInternal(mat)
-				
-			elif (False):
-				print('cycles mat')
-			
-			
+				if (render_engine == 'BLENDER_RENDER'):
+					#print('BI mat')
+					self.materialsInternal(mat)
+				elif (render_engine == 'CYCLES'):
+					#print('cycles mat')
+					self.materialsCycles(mat)
+			else:
+				print('Get the linked material instead!')
 
 		return {'FINISHED'}
-
 
 
 
@@ -323,18 +315,16 @@ class meshSwap(bpy.types.Operator):
 	bl_label = "MCprep meshSwap"
 	bl_options = {'REGISTER', 'UNDO'}
 	
-	
-	#move things out here!
+	#move things out of here!
 	
 	#used for only occasionally refreshing the 3D scene while mesh swapping
-	counterObject = 0
-	countMax = 5
+	counterObject = 0	# used in count
+	countMax = 5		# count compared to this, frequency of refresh (number of objs)
 	
 	def execute(self, context):
 		
 		## debug, restart check
 		print('###################################')
-		
 		
 		# get some scene information
 		toLink = context.scene.MCprep_linkGroup
@@ -381,8 +371,6 @@ class meshSwap(bpy.types.Operator):
 		
 		# Now get a list of all objects in this blend file, and all groups
 		listData = getListData()
-		#[meshSwapList,groupSwapList,reflective,water,solid,emit,variance] = getListData()
-		
 		#first go through and separate materials/faces of specific one into one mesh. I've got
 		# that already, so moving on.
 		### HERE use equivalent of UI "p" ? seperate by materials
@@ -391,7 +379,6 @@ class meshSwap(bpy.types.Operator):
 		
 		#primary loop, for each OBJECT needing swapping
 		for swap in objList:
-			
 			
 			#first check if swap has already happened:
 			#base["MCswapped"] << how to CHECK if property already exists? can't use try,
@@ -416,7 +403,7 @@ class meshSwap(bpy.types.Operator):
 			toSwapObj = bpy.data.objects[swap] #the object that would be created above...
 			
 			#procedurally getting the "mesh" from the object, instead of assuming name..
-			#objSwapList =  // rawr. meshes not accessible through the object. huh.
+			#objSwapList =	// rawr. meshes not accessible through the object. huh.
 			objSwapList = bpy.data.meshes[swap] #the mesh that would be created above...
 			
 			worldMatrix = toSwapObj.matrix_world.copy() #set once per object
@@ -473,6 +460,7 @@ class meshSwap(bpy.types.Operator):
 			# removing duplicates and checking orientation
 			dupList = []	#where actual blocks are to be added
 			rotList = []	#rotation of blocks
+			
 			for setNum in range(0,len(facebook)):
 				
 				# LOCAL coordinates!!!
@@ -480,28 +468,40 @@ class meshSwap(bpy.types.Operator):
 				y = round(facebook[setNum][2][1]) #don't need (+0.5) -.5 structure
 				z = round(facebook[setNum][2][2])
 				
+				
+				# UNCOMMENT THE FOLLOWING LINES TO MAKE ROTATION THINGS WORK AGAIN
+				outsideBool = -1
+				if (swapGen in listData['edgeFloat']): outsideBool = 1
+				
 				if onEdge(facebook[setNum][2]): #check if face is on unit block boundary (local coord!)
-					a = -facebook[setNum][0][0] * 0.5 #x normal
-					b = -facebook[setNum][0][1] * 0.5 #y normal
-					c = -facebook[setNum][0][2] * 0.5 #z normal
+					a = facebook[setNum][0][0] * 0.4 * outsideBool #x normal
+					b = facebook[setNum][0][1] * 0.4 * outsideBool #y normal
+					c = facebook[setNum][0][2] * 0.4 * outsideBool #z normal
 					x = round(facebook[setNum][2][0]+a) 
 					y = round(facebook[setNum][2][1]+b)
 					z = round(facebook[setNum][2][2]+c)
-				
-				#check if height (that's the Y axis, since in local coords)
-				
+					#print("ON EDGE, BRO! line ~468, "+str(x) +","+str(y)+","+str(z)+", ")
+					#print([facebook[setNum][2][0], facebook[setNum][2][1], facebook[setNum][2][2]])
 				
 				# this HACK IS JUST FOR TORCHES... messes up things like redstone, lilypads..
+				
+				
+				#### TORCHES
 				if facebook[setNum][2][1]+0.5 - math.floor(facebook[setNum][2][1]+0.5) < 0.3:
 					#continue if coord. is < 1/3 of block height, to do with torch's base in wrong cube.
+					"""
+					print("TORCH HACK? line ~473")
 					if swapGen not in ['lilypad','redstone_wire_off']:
 						continue
-				
+					"""
+				print(" DUPLIST: ")
+				print([x,y,z], [facebook[setNum][2][0], facebook[setNum][2][1], facebook[setNum][2][2]])
 				
 				# rotation value (second append value: 0 means nothing, rest 1-4.
-				if not [x,y,z] in dupList:
+				if (not [x,y,z] in dupList) or (swapGen in listData['edgeFloat']):
 					# append location
 					dupList.append([x,y,z])
+					
 					
 					# check differece from rounding, this gets us the rotation!
 					x_diff = x-facebook[setNum][2][0]
@@ -523,34 +523,42 @@ class meshSwap(bpy.types.Operator):
 							rotList.append(4)
 						else:
 							rotList.append(0)
-					elif swapGen in ['ladder']:		# still need to fix/work out
+					elif swapGen in listData['edgeFloat']:	# needs fixing
 						print('also here')
-						if (x_diff > 0.3):
+						if (y-facebook[setNum][2][1] < 0):
+							rotList.append(8)
+							print('rotation ceiling')
+						elif (x_diff > 0.3):
 							rotList.append(7)
+							print('not to mention here!')
 						elif (z_diff > 0.3):	
-							rotList.append(6)
+							rotList.append(0)
+							print('left here!')
 						elif (z_diff < -0.3):
 							print('right here!')	
-							rotList.append(5)
+							rotList.append(6) 
 						else:
-							rotList.append(0)
+							rotList.append(5)
+							print('nothing to see here!')
+					elif swapGen in listData['edgeFlush']:
+						# actually 6 cases here, can need rotation below...
+						# currently not necessary, so not programmed..  
+						rotList.append(0)
 					else:
+						# no rotation from source file, must always append something
 						rotList.append(0)
 					
-					
-			
-			#NOTE: did check here, even STILL a good and a bad trial have the same result,
-			# SO ISSUE IS PAST THIS POINT
-			for a in dupList:print(a)
+			#for a in dupList:print(a)
 			
 			#import: guaranteed to have same name as "appendObj" for the first instant afterwards
 			grouped = False # used to check if to join or not
-			base = None #need to initialize to something, though this obj no used
+			base = None 	# need to initialize to something, though this obj no used
 			if swapGen in listData['groupSwapList']:
 				
 				print(">> link group?",toLink,groupAppendLayer,swapGen)
 				
-				# if group not linked, then put appended group data onto the user indentified layer
+				# GROUP LAYER APPENDING DOESN'T WORK CURRENTLY
+				# if group not linked, put appended group data onto the GUI field layer
 				if (not toLink) and (groupAppendLayer!=0):
 					x = [False]*20
 					x[groupAppendLayer-1] = True
@@ -589,15 +597,14 @@ class meshSwap(bpy.types.Operator):
 			dupedObj = []
 			for (set,rot) in zip(dupList,rotList):
 				
-				### HIGH COMPUTATION SECTION
+				### HIGH COMPUTATION/CRITICAL SECTION
 				#refresh the scene every once in awhile
 				self.counterObject+=1
 				if (self.counterObject > self.countMax):
 					self.counterObject = 0
 					#below technically a "hack", should use: bpy.data.scenes[0].update()
 					bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
-				
-				
+
 				
 				loc = toSwapObj.matrix_world*mathutils.Vector(set) #local to global
 				if grouped:
@@ -618,37 +625,47 @@ class meshSwap(bpy.types.Operator):
 					base.select = False
 					
 				
-				#rotation/translation for on walls, assumes last added object still selected
+				#rotation/translation for walls, assumes last added object still selected
 				x,y,offset,rotValue,z = 0,0,0.28,0.436332,0.12
 				
 				if rot == 1:
+					# torch rotation 1
 					x = -offset
 					bpy.ops.transform.translate(value=(x, y, z))
 					bpy.ops.transform.rotate(value=rotValue, axis=(0, 1, 0))
 				elif rot == 2:
+					# torch rotation 2
 					y = offset
 					bpy.ops.transform.translate(value=(x, y, z))
 					bpy.ops.transform.rotate(value=rotValue, axis=(1, 0, 0))
 				elif rot == 3:
+					# torch rotation 3
 					x = offset
 					bpy.ops.transform.translate(value=(x, y, z))
 					bpy.ops.transform.rotate(value=-rotValue, axis=(0, 1, 0))
 				elif rot == 4:
+					# torch rotation 4
 					y = -offset
 					bpy.ops.transform.translate(value=(x, y, z))
 					bpy.ops.transform.rotate(value=-rotValue, axis=(1, 0, 0))
 				elif rot == 5:
-					bpy.ops.transform.rotate(value=math.pi,axis=(0,0,1))
+					# edge block rotation 1
+					bpy.ops.transform.rotate(value=-math.pi/2,axis=(0,0,1))
 				elif rot == 6:
-					bpy.ops.transform.rotate(value=2*math.pi,axis=(0,0,1))
+					# edge block rotation 2
+					bpy.ops.transform.rotate(value=math.pi,axis=(0,0,1))
 				elif rot == 7:
-					bpy.ops.transform.rotate(value=-math.pi,axis=(0,0,1))
-				
+					# edge block rotation 3
+					bpy.ops.transform.rotate(value=math.pi/2,axis=(0,0,1))
+				elif rot==8:
+					# edge block rotation 4 (ceiling, not 'keep same')
+					bpy.ops.transform.rotate(value=math.pi/2,axis=(1,0,0))
+					
 				# extra variance to break up regularity, e.g. for tall grass
 				if swapGen in listData['variance']:
 					x = (random.random()-0.5)*0.5	 # values LOWER than *1.0 make it less variable
 					y = (random.random()-0.5)*0.5
-					z = (random.random()/2-0.5)*0.7	# restriction guarentees it will never go Up (+z value)
+					z = (random.random()/2-0.5)*0.7 # restriction guarentees it will never go Up (+z value)
 					bpy.ops.transform.translate(value=(x, y, z))
 				
 				
@@ -667,7 +684,7 @@ class meshSwap(bpy.types.Operator):
 				for d in dupedObj:
 					d.select = True
 				
-				bpy.ops.object.join() #SKIPPING FOR NOW, in case this is the cause for weird random error
+				bpy.ops.object.join()
 			
 			bpy.ops.object.select_all(action='DESELECT')
 			toSwapObj.select = True

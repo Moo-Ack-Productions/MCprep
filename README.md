@@ -41,6 +41,14 @@ To add your own objects to meshswap (or groupswap):
 - Step 6: Reinstall the addon.
 
 
+Known Bugs
+======
+- if multiple objects with same material mesh swapped in one go easy work around would be to auto join them together, but should be error'd...
+- not all replacements for standard block replacements work, extra blocks appear
+- sometimes cannot meshswap a second time if done once in a scene already, e.g. vine appears to be due to stale, or kept data between op runs.
+
+
+
 Additional Help
 ======
 
