@@ -73,7 +73,7 @@ def getListData():
 					'redstone_lamp_off','dead_shrub','sapling_oak','redstone_wire_off',
 					'wheat','redstone_torch_off','rails','rails_powered_off','ladder',
 					'mushroom_red','mushroom_brown','vines','lilypad','azure',
-					'stained_clay_brown','stained_clay_dark_gray']
+					'stained_clay_brown','stained_clay_dark_gray','dirt']
 	edgeFlush = [] # blocks perfectly on edges, require rotation	
 	edgeFloat = ['vines','ladder','lilypad'] # blocks floating off edge into air, require rotation
 	torchlike = ['torch','redstone_torch_on','redstone_torch_off']
@@ -366,6 +366,9 @@ class meshSwap(bpy.types.Operator):
 			print('meshSwap asset not found! Check/set library path')
 			#popup window
 			#nolib_warning(bpy.types.Menu)
+			#bpy.ops.error.message('INVOKE_DEFAULT',type='Error',
+			#						message = 'Asset library not found, check path')
+			bpy.ops.object.dialogue('INVOKE_DEFAULT')
 			return {'CANCELLED'}
 		
 		
@@ -739,19 +742,6 @@ class WIP(bpy.types.Menu):
 
 
 #######
-# pop-up declaring some button is WIP still =D
-class nolib_warning(bpy.types.Menu):
-	bl_label = "library_not_found_warning"
-	bl_idname = "view3D.nolib_warning"
-
-	# Set the menu operators and draw functions
-	def draw(self, context):
-		layout = self.layout
-
-		row1 = layout.row()
-		row1.label(text="Library file {x} not found")  
-
-#######
 # panel for these declared tools
 class MCpanel(bpy.types.Panel):
 	"""MCprep addon panel"""
@@ -790,8 +780,7 @@ class MCpanel(bpy.types.Panel):
 		col.operator("object.mc_mat_change", text="Prep Materials", icon='MATERIAL')
 		
 		#below should actually just call a popup window
-		col.operator("object.mc_meshswap", text="Mesh Swap", icon='IMPORT')
-		#col.operator("object.mc_meshswapOLD", text="Mesh Swap OLD", icon='IMPORT')
+		col.operator("object.mc_meshswap", text="Mesh Swap", icon='LINK_BLEND')
 		
 		split = layout.split()
 		col = split.column(align=True)
@@ -820,39 +809,37 @@ class MCpanel(bpy.types.Panel):
 ########################################################################################
 
 
-
-
-# shows in header when run
-class notificationWIP(bpy.types.Operator):
-	bl_idname = "wm.mouse_position"
-	bl_label = "Mouse location"
- 
+# WIP OK button general purpose
+class dialogue(bpy.types.Operator):
+	bl_idname = "object.dialogue"
+	bl_label = "dialogue"
+	message = "Library error, check path to assets has the meshSwap blend"
+	
 	def execute(self, context):
-		# rather then printing, use the report function,
-		# this way the message appears in the header,
-		self.report({'INFO'}, "Error / Not Implemented")
+		self.report({'INFO'}, self.message)
+		print(self.message)
 		return {'FINISHED'}
-		
+	
 	def invoke(self, context, event):
-		return self.execute(context)
-
-
+		wm = context.window_manager
+		return wm.invoke_popup(self, width=400, height=200)
+		#return wm.invoke_props_dialog(self)
+	
+	def draw(self, context):
+		self.layout.label(self.message)
 
 #######
 
 def register():
 	bpy.utils.register_class(materialChange)
 	bpy.utils.register_class(meshSwap)
-	#bpy.utils.register_class(meshSwapOLD)
-	
 	bpy.utils.register_class(proxyUpdate)
 	bpy.utils.register_class(proxySpawn)
 	
 	
+	bpy.utils.register_class(dialogue)
 	bpy.utils.register_class(WIP)
-	bpy.utils.register_class(notificationWIP)
 	bpy.utils.register_class(MCpanel)
-	bpy.utils.register_class(nolib_warning)
 	
 	#properties
 	bpy.types.Scene.MCprep_library_path = bpy.props.StringProperty(
@@ -878,15 +865,12 @@ def register():
 def unregister():
 	bpy.utils.unregister_class(materialChange)
 	bpy.utils.unregister_class(meshSwap)
-	
 	bpy.utils.unregister_class(proxyUpdate)
 	bpy.utils.unregister_class(proxySpawn)
 	
-	
+	bpy.utils.unregister_class(dialogue)
 	bpy.utils.unregister_class(WIP)
-	bpy.utils.unregister_class(notificationWIP)
 	bpy.utils.unregister_class(MCpanel)
-	bpy.utils.unregister_class(nolib_warning)
 	
 	#properties
 	del bpy.types.Scene.MCprep_library_path
@@ -897,3 +881,4 @@ def unregister():
 
 if __name__ == "__main__":
 	register()
+
