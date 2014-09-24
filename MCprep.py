@@ -81,7 +81,8 @@ def getListData():
 	
 	
 	# anything listed here will have their position varied slightly from exactly center on the block
-	variance = ['tall_grass']  # NOT flowers, they shouldn't go "under" at all
+	# can still vary flowers, make each element response also have a boolean z modification
+	variance = [ ['tall_grass',1] ]  # NOT flowers, they shouldn't go "under" at all
 	
 	
 	return {'meshSwapList':meshSwapList, 'groupSwapList':groupSwapList,
@@ -101,22 +102,8 @@ def addGroupInstance(groupName,loc):
 	ob.location = loc
 	scene.objects.link(ob)
 	ob.select = True
-	
-########
-# resolves issues with badly named objects but proper material names
-def nameObjsFromMat():
-	for obj in boy.context.selected_objects:
-		obj.name = obj.active_object.active_material.name
 
-"""
-########
-# check if a face is on the boundary between two blocks (local coordinates)
-def onEdge(faceLoc):
-	for dim in faceLoc:
-		if (dim-int(dim) > 0.4 and dim-int(dim) <= 0.5):
-			return True
-	return False
-"""
+
 ########
 # check if a face is on the boundary between two blocks (local coordinates)
 def onEdge(faceLoc):
@@ -665,10 +652,14 @@ class meshSwap(bpy.types.Operator):
 					bpy.ops.transform.rotate(value=math.pi/2,axis=(1,0,0))
 					
 				# extra variance to break up regularity, e.g. for tall grass
-				if swapGen in listData['variance']:
+				if [swapGen,1] in listData['variance']:
 					x = (random.random()-0.5)*0.5	 # values LOWER than *1.0 make it less variable
 					y = (random.random()-0.5)*0.5
 					z = (random.random()/2-0.5)*0.7 # restriction guarentees it will never go Up (+z value)
+					bpy.ops.transform.translate(value=(x, y, z))
+				elif [swapGen,0] in listData['variance']: # for non-z variance
+					x = (random.random()-0.5)*0.5	 # values LOWER than *1.0 make it less variable
+					y = (random.random()-0.5)*0.5
 					bpy.ops.transform.translate(value=(x, y, z))
 				
 				
