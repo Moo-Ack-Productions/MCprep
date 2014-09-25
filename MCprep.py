@@ -23,7 +23,7 @@ http://www.blenderartists.org/forum/showthread.php?316151-ADDON-WIP-MCprep-for-M
 -	not all replacements for standard block replacements work, extra blocks appear
 -	sometimes cannot meshswap a second time if done once in a scene already, e.g. vine
 	appears to be due to stale, or kept data between op runs.
-
+-	Sometimes mesh swap will not run if the MESH (not OBJECT) name is competely wrong
 """
 
 ########
@@ -69,26 +69,29 @@ def getListData():
 	## groupSwapList has a higher precedence;
 	## if same object type is in both group and mesh swap list, group will be used
 	groupSwapList = ['redstone_torch_on','redstone_lamp_on','torch','endercrystal','fire']
-	meshSwapList = ['tall_grass','flower_red','flower_yellow','cobweb','redstone_lamp_on',
+	meshSwapList = ['tall_grass','flower_red','flower_yellow','cobweb','redstone_torch_on',
 					'redstone_lamp_off','dead_shrub','sapling_oak','redstone_wire_off',
 					'wheat','redstone_torch_off','rails','rails_powered_off','ladder',
 					'mushroom_red','mushroom_brown','vines','lilypad','azure',
-					'stained_clay_brown','stained_clay_dark_gray','dirt']
-	edgeFlush = [] # blocks perfectly on edges, require rotation	
-	edgeFloat = ['vines','ladder','lilypad'] # blocks floating off edge into air, require rotation
+					'stained_clay_brown','stained_clay_dark_gray','dirt',
+					'double_plant_grass_bottom','cobweb']
+	# blocks perfectly on edges, require rotation	
+	edgeFlush = [] 	
+	# blocks floating off edge into air, require rotation
+	edgeFloat = ['vines','ladder','lilypad']
 	torchlike = ['torch','redstone_torch_on','redstone_torch_off']
-	TOSUPPORT = ['bed...','ironbars...'] #does nothing
+	#remove meshes not used for processing, for objects imported with extra meshes
+	removable = ['double_plant_grass_top','torch_flame']
 	
-	
-	# anything listed here will have their position varied slightly from exactly center on the block
-	# can still vary flowers, make each element response also have a boolean z modification
-	variance = [ ['tall_grass',1] ]  # NOT flowers, they shouldn't go "under" at all
+	# for varied positions from exactly center on the block, 1 for Z random too
+	variance = [ ['tall_grass',1], ['double_plant_grass_bottom',1],
+				['flower_yellow',0], ['flower_red',0] ]
 	
 	
 	return {'meshSwapList':meshSwapList, 'groupSwapList':groupSwapList,
 			'reflective':reflective, 'water':water, 'solid':solid,
 			'emit':emit, 'variance':variance, 'edgeFlush':edgeFlush,
-			'edgeFloat':edgeFloat,'torchlike':torchlike}
+			'edgeFloat':edgeFloat,'torchlike':torchlike,'removable':removable}
 
 
 
@@ -380,10 +383,11 @@ class meshSwap(bpy.types.Operator):
 			#special cases, for "extra" mesh pieces we don't want around afterwards
 			#get rid of: special case e.g. blocks with different material sides,
 			#only use swap based on one material object and delete the others
-			if swapGen == 'torch_flame': #make sure torch is one of the imported groups!
+			if swapGen in listData['removable']: #make sure torch is one of the imported groups!
 				bpy.ops.object.select_all(action='DESELECT')
 				bpy.data.objects[swap].select = True
 				bpy.ops.object.delete()
+				continue
 			
 			
 			#just selecting mesh with same name accordinly.. ALSO only if in objList
@@ -655,7 +659,7 @@ class meshSwap(bpy.types.Operator):
 				if [swapGen,1] in listData['variance']:
 					x = (random.random()-0.5)*0.5	 # values LOWER than *1.0 make it less variable
 					y = (random.random()-0.5)*0.5
-					z = (random.random()/2-0.5)*0.7 # restriction guarentees it will never go Up (+z value)
+					z = (random.random()/2-0.5)*0.6 # restriction guarentees it will never go Up (+z value)
 					bpy.ops.transform.translate(value=(x, y, z))
 				elif [swapGen,0] in listData['variance']: # for non-z variance
 					x = (random.random()-0.5)*0.5	 # values LOWER than *1.0 make it less variable
