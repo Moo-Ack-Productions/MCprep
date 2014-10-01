@@ -28,6 +28,7 @@ Setup materials:
 
 Meshswap:
 - Purpose: To automatically swap in extra assets such as 3D grass, light emitting torches and lamps, and so forth. Note that all the objects to be swapped in are in the blend file part of this download. Also note that swapping is done based on the name of the material. If you are unsure why your object is not swapping in, check the material name matches the counterpart object/material in the meshSwap.blend file. Note it can search for both appendable objects as well as groups, containing particles and so forth. Modifiers on the mesh in the original file will be brought over, so notice for example how the tall grass when replaced will be "pre-simulated" as it has displacement modifiers setup already with animation.
+- Step 0: Make sure the file path in the MCprep window points to a folder that has the asset_meshSwap.blend file!
 - Step 1: Select the objects that can be meshSwapped. Note: I have not added direct functionality for adding more swappable object. Also note that if an object is not found or swappable, it will just be skipped - no harm done.
 - Step 2: Press meshswap.
 
