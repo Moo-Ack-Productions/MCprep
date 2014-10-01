@@ -21,9 +21,9 @@ How to use this addon
 
 Setup materials:
 - Purpose: To automatically setup better, crisp materials for rendering Minecraft, low resolution textures
-- Step 1: I use jmc2obj, but Mineways or other such formats should be fine as well
-- Step 2: Import the world into blender (e.g. via import>obj)
-- Step 3: Select all, or select the objects that have the material you want. Materials can be all separate objects on the same object, it does not matter
+- Step 1: Export your world to an OBJ or other general 3D formats. I use jmc2obj, but Mineways or other such formats should be fine as well
+- Step 2: Import the world into blender (e.g. via import>obj, or whatever according format)
+- Step 3: Select all, or select the objects that have the material you want to fix. Materials can be all separate objects or the same object, it does not matter.
 - Step 4: Under the MCprep panl, press "Prep Materials"
 
 Meshswap:
