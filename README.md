@@ -1,3 +1,7 @@
+NOTICE
+======
+Known bug, this script currently does *not* wrok with official blender release 2.72b, last works with 2.71.
+
 MCprep
 ======
 
