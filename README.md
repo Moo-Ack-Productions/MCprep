@@ -1,16 +1,14 @@
-NOTICE
-======
-Known bug, this script currently does *not* wrok with official blender release 2.72b, last works with 2.71.
-
 MCprep
 ======
 
-This is a blender python addon to increase workflow for creating Minecraft renders and animations, by automatically setting up better materials, importing library models and groups, and setting up proxy characters for animation and default animations for regular features like grass and leaves.
+This is a blender python addon to increase workflow for creating Minecraft renders and animations, by automatically setting up better materials, importing library models and groups, and setting up proxy characters for animation and default animations for regular features like grass and leaves on imported 3D minecraft worlds. This addon assumes you have already imported the minecraft world. While the script should work for any world importer, it has been tested and developed based on the jmc2obj minecraft world to obj file converted.
 
 The forum WIP thread for the development of this addon is found below, though now also out of date:
 http://www.blenderartists.org/forum/showthread.php?316151-ADDON-WIP-MCprep-for-Minecraft-Workflow
 
-This addon is made to work with an asset library directory, from which models and groups are linked or imported from. A version of this library is being set up still for others to use.
+This addon is made to work with an asset library directory, from which models and groups are linked or imported from. This library blend file is included, but does not have all types of blocks generated yet. This will be improved in the future.
+
+This script is now compatible for both pre-2.71 (tested down to 2.69) and for 2.72+ official builds.
 
 Demo Usage
 ======
@@ -48,9 +46,9 @@ To add your own objects to meshswap (or groupswap):
 
 Known Bugs
 ======
-- if multiple objects with same material mesh swapped in one go easy work around would be to auto join them together, but should be error'd...
-- not all replacements for standard block replacements work, extra blocks appear
-- sometimes cannot meshswap a second time if done once in a scene already, e.g. vine appears to be due to stale, or kept data between op runs.
+- Torches on walls will create an extra torch "inside the wall"
+- Weird rotations of the set will cause meshswapping to not have the intended result. However, any scale or (global) translations goes!
+- The local coordiantes (edit-mode) of the mesh *must* have it's geometry centered on whole integers. That is, the center of a block (not it's base or side) should have a coordiante of x=#.000, y=#.00, z=#.00; imported from jmc2obj will be fine!
 
 
 
