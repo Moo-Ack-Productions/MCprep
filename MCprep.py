@@ -30,11 +30,11 @@ http://www.blenderartists.org/forum/showthread.php?316151-ADDON-WIP-MCprep-for-M
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",
-	"version": (1, 2, 0),
-	"blender": (2, 71, 0),
+	"version": (1, 3, 0),
+	"blender": (2, 72, 0),
 	"location": "3D window toolshelf",
 	"description": "Speeds up the workflow of minecraft animations and imported minecraft worlds",
-	"warning": "proxy spawn uses a 'file duplication hack'! Addon is WIP",
+	"warning": "",
 	"wiki_url": "https://github.com/TheDuckCow/MCprep.wiki.git",
 	"author": "Patrick W. Crawford"
 }
@@ -86,6 +86,21 @@ def getListData():
 	# for varied positions from exactly center on the block, 1 for Z random too
 	variance = [ ['tall_grass',1], ['double_plant_grass_bottom',1],
 				['flower_yellow',0], ['flower_red',0] ]
+	
+	########
+	
+	#attempt to LOAD information from an asset file...
+	meshSwapPath = bpy.context.scene.MCprep_meshswap_path
+	if not(os.path.isfile(meshSwapPath)):
+		#extract actual path from the relative one
+		meshSwapPath = bpy.path.abspath(meshSwapPath)
+	
+	
+	
+	
+	#print("#: ",meshSwapPath)
+	
+	#####
 	
 	
 	return {'meshSwapList':meshSwapList, 'groupSwapList':groupSwapList,
@@ -179,6 +194,26 @@ def getMaterialTextures(matList):
 				texList.append(textureID.texture)
 	
 	return texList
+
+
+########
+# For multiple version compatibility,
+# this function generalized appending/linking
+def bAppendLink(directory,name, toLink):
+	# blender post 2.71 changed to new append/link methods
+	version = bpy.data.version
+	
+	if (version[0] >= 2 and version[1] >= 72):
+		# NEW method of importing
+		if (toLink):
+			bpy.ops.wm.link(directory=directory, filename=name)
+		else:
+			bpy.ops.wm.append(directory=directory, filename=name)
+	else:
+		# OLD method of importing
+		bpy.ops.wm.link_append(directory=directory, filename=name, link=toLink)
+	
+
 
 
 
@@ -343,16 +378,13 @@ class meshSwap(bpy.types.Operator):
 		
 			
 		# get library path from property/UI panel
-		libPathProp = context.scene.MCprep_library_path
-		libPath = libPathProp
-		if not(os.path.isdir(libPathProp)):
+		direc = context.scene.MCprep_meshswap_path
+		if not(os.path.isdir(direc)):
 			#extract actual path from the relative one
-			libPath = bpy.path.abspath(libPath)
-		
-		# naming convention!
-		direc = libPath+'asset_meshSwap.blend/'
+			direc = bpy.path.abspath(direc)
+
 		#print(direc)
-		if not os.path.exists(direc[:-1]):
+		if not os.path.exists(direc):
 			print('meshSwap asset not found! Check/set library path')
 			#popup window
 			#nolib_warning(bpy.types.Menu)
@@ -560,11 +592,13 @@ class meshSwap(bpy.types.Operator):
 				
 				#special cases, make another list for this? number of variants can vary..
 				if swapGen == "torch":
-					bpy.ops.wm.link_append(directory=direc+'Group/', filename=swapGen+".1", link=toLink)
+					bAppendLink(direc+'/Group/', swapGen+".1", toLink)
 					bpy.ops.object.delete()
-					bpy.ops.wm.link_append(directory=direc+'Group/', filename=swapGen+".2", link=toLink)
+					bAppendLink(direc+'/Group/', swapGen+".2", toLink)
 					bpy.ops.object.delete()
-				bpy.ops.wm.link_append(directory=direc+'Group/', filename=swapGen, link=toLink)
+				
+				bAppendLink(direc+'/Group/', swapGen, toLink)
+				
 				bpy.ops.object.delete()
 				grouped = True
 				
@@ -572,7 +606,8 @@ class meshSwap(bpy.types.Operator):
 				context.scene.layers = activeLayers
 				
 			else:
-				bpy.ops.wm.link_append(directory=direc+'Object/', filename=swapGen, link=False)
+				
+				bAppendLink(direc+'/Object/',swapGen, False)
 				
 				### NOTICE: IF THERE IS A DISCREPENCY BETWEEN ASSETS FILE AND WHAT IT SAYS SHOULD BE IN FILE
 				### EG NAME OF MESH TO SWAP CHANGED,  INDEX ERROR IS THROWN HERE
@@ -664,11 +699,9 @@ class meshSwap(bpy.types.Operator):
 				elif [swapGen,0] in listData['variance']: # for non-z variance
 					x = (random.random()-0.5)*0.5	 # values LOWER than *1.0 make it less variable
 					y = (random.random()-0.5)*0.5
-					bpy.ops.transform.translate(value=(x, y, z))
-				
-				
-			
+					bpy.ops.transform.translate(value=(x, y, 0))	
 				bpy.ops.object.select_all(action='DESELECT')
+				
 			if not grouped:
 				base.select = True
 				bpy.ops.object.delete() # the original copy used for duplication
@@ -758,13 +791,10 @@ class MCpanel(bpy.types.Panel):
 		#image_settings = rd.image_settings
 		#file_format = image_settings.file_format
 		col.label(text="Path to assets")
-		col.prop(context.scene,"MCprep_library_path",text="")
-		col.prop(context.scene,"MCprep_groupAppendLayer",text="")
-		# + naming convention
-		# naming convention.. e.g. {x} for "asset" in any name/seciton of name
-		
-		col.label(text="File naming convention")
-		col.prop(context.scene,"MCprep_nameConvention",text="")
+		col.prop(context.scene,"MCprep_meshswap_path",text="")
+		col.prop(context.scene,"MCprep_material_path",text="")
+		#does nothing yet (correctly)
+		#col.prop(context.scene,"MCprep_groupAppendLayer",text="")
 		
 		split = layout.split()
 		col = split.column(align=True)
@@ -779,24 +809,11 @@ class MCpanel(bpy.types.Panel):
 		
 		split = layout.split()
 		col = split.column(align=True)
-		col.label(text="Link groups")
-		col.prop(context.scene,"MCprep_linkGroup")
-		
-		"""
-		#spawn (makes UI pulldown)
-		split2 = layout.split()
-		col2 = split2.column(align=True)
-		col2.label(text="Spawn proxy character")
-		col2.menu("view3D.wip_warning", text="-select-")		 #meh, try to put on sme line as below
-		col2.operator("object.proxy_spawn", text="Proxy Spawn") #put on same line as above
-		
-		#update spawn files
-		col2.operator("object.proxy_update", text="Update Spawn Proxies")
-		#label + warning sign
-		#col2.label(text="Update proxies after editing library!", icon='ERROR')
-		#perhaps try to have it only show warning if detected inconsistent timestamps
-		
-		"""
+		# doesn't properly work yet
+		#col.label(text="Link groups")
+		#col.prop(context.scene,"MCprep_linkGroup")
+
+
 
 ########################################################################################
 #	Above for the class functions
@@ -837,18 +854,18 @@ def register():
 	bpy.utils.register_class(MCpanel)
 	
 	#properties
-	bpy.types.Scene.MCprep_library_path = bpy.props.StringProperty(
-		name="",
-		description="Location of asset library",
-		default="//assets/",subtype="DIR_PATH",)
+	bpy.types.Scene.MCprep_meshswap_path = bpy.props.StringProperty(
+		name="Location of asset files",
+		description="Locaiton of meshswapping assets",
+		default="//asset_meshswap.blend",subtype="FILE_PATH")
+	bpy.types.Scene.MCprep_material_path = bpy.props.StringProperty(
+		name="Location of asset materials",
+		description="Locaiton of materials for linking",
+		default="//asset_materials.blend",subtype="FILE_PATH")
 	bpy.types.Scene.MCprep_linkGroup = bpy.props.BoolProperty(
 		name="Link library groups",
 		description="Links groups imported, otherwise groups are appended",
 		default=True)
-	bpy.types.Scene.MCprep_nameConvention = bpy.props.StringProperty(
-		name="Asset file naming convention",
-		description="The convention used for how to search for asset files in the library path, such as 'asset_{x}.blend' will find asset_meshSwap.blend",
-		default="asset_{x}.blend")
 	bpy.types.Scene.MCprep_groupAppendLayer = bpy.props.IntProperty(
 		name="Group Append Layer",
 		description="When groups are appended instead of linked, the objects part of the group will be palced in this layer, 0 means same as active layer, otherwise sets the the given layer number",
@@ -868,9 +885,9 @@ def unregister():
 	bpy.utils.unregister_class(MCpanel)
 	
 	#properties
-	del bpy.types.Scene.MCprep_library_path
+	del bpy.types.Scene.MCprep_meshswap_path
+	del bpy.types.Scene.MCprep_material_path
 	del bpy.types.Scene.MCprep_linkGroup
-	del bpy.types.Scene.MCprep_nameConvention
 	del bpy.types.Scene.MCprep_groupAppendLayer
 
 
