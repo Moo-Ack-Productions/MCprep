@@ -375,7 +375,7 @@ class meshSwap(bpy.types.Operator):
 			obj.data.name = obj.active_material.name
 			obj.name = obj.active_material.name
 			#bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
-			objList.append(obj.name)
+			objList.append(obj) # redundant, should just make it the same list as before
 			#print(obj.name)
 		
 			
@@ -385,10 +385,8 @@ class meshSwap(bpy.types.Operator):
 			#extract actual path from the relative one
 			direc = bpy.path.abspath(direc)
 
-		#print(direc)
+		#check library file exists
 		if not os.path.exists(direc):
-			#print('meshSwap asset not found! Check/set library path')
-
 			#bpy.ops.object.dialogue('INVOKE_DEFAULT') # DOES work! but less streamlined
 			self.report({'ERROR'}, "Mesh swap blend file not found!") # better, actual "error"
 			return {'CANCELLED'}
@@ -401,41 +399,37 @@ class meshSwap(bpy.types.Operator):
 			
 			#first check if swap has already happened:
 			# generalize name to do work on duplicated meshes, but keep original
-			swapGen = nameGeneralize(swap)
+			swapGen = nameGeneralize(swap.name)
 			
 			#special cases, for "extra" mesh pieces we don't want around afterwards
 			#get rid of: special case e.g. blocks with different material sides,
 			#only use swap based on one material object and delete the others
 			if swapGen in listData['removable']: #make sure torch is one of the imported groups!
 				bpy.ops.object.select_all(action='DESELECT')
-				bpy.data.objects[swap].select = True
+				swap.select = True
 				bpy.ops.object.delete()
 				continue
-			
 			
 			#just selecting mesh with same name accordinly.. ALSO only if in objList
 			if not (swapGen in listData['meshSwapList'] or swapGen in listData['groupSwapList']): continue		
 			
-			#now you have object that has just that material. Known.
-			toSwapObj = bpy.data.objects[swap] #the object that would be created above...
+			# object references, now slightly redundant. Should be good to delete
+			#toSwapObj = swap
+			#objSwapList = swap.data
 			
-			#procedurally getting the "mesh" from the object, instead of assuming name..
-			#objSwapList =	// rawr. meshes not accessible through the object. huh.
-			objSwapList = bpy.data.meshes[swap] #the mesh that would be created above...
-			
-			worldMatrix = toSwapObj.matrix_world.copy() #set once per object
-			polyList = objSwapList.polygons.values() #returns LIST of faces.
+			worldMatrix = swap.matrix_world.copy() #set once per object
+			polyList = swap.data.polygons.values() #returns LIST of faces.
 			#print(len(polyList)) # DON'T USE POLYLIST AFTER AFFECTING THE MESH
 			for poly in range(len(polyList)):
-				objSwapList.polygons[poly].select = False
+				swap.data.polygons[poly].select = False
 			
 			#loop through each face or "polygon" of mesh
 			facebook = [] #what? it's where I store the information of the obj's faces..
 			for polyIndex in range(0,len(polyList)):
-				gtmp = toSwapObj.matrix_world*mathutils.Vector(objSwapList.polygons[polyIndex].center)
+				gtmp = swap.matrix_world*mathutils.Vector(swap.data.polygons[polyIndex].center)
 				g = [gtmp[0],gtmp[1],gtmp[2]]
-				n = objSwapList.polygons[polyIndex].normal #currently not used!
-				tmp2 = objSwapList.polygons[polyIndex].center
+				n = swap.data.polygons[polyIndex].normal #currently not used!
+				tmp2 = swap.data.polygons[polyIndex].center
 				l = [tmp2[0],tmp2[1],tmp2[2]] #to make value unlinked to mesh
 				facebook.append([n,g,l]) # g is global, l is local
 			
@@ -635,7 +629,7 @@ class meshSwap(bpy.types.Operator):
 					bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
 
 				
-				loc = toSwapObj.matrix_world*mathutils.Vector(set) #local to global
+				loc = swap.matrix_world*mathutils.Vector(set) #local to global
 				if grouped:
 					# definition for randimization, defined at top!
 					randGroup = randomizeMeshSawp(swapGen,3)
@@ -649,18 +643,20 @@ class meshSwap(bpy.types.Operator):
 					#sets location of current selection, imported object or group from above
 					base.select = True		# select the base object
 					bpy.ops.object.duplicate(linked=False, mode='TRANSLATION')
-					bpy.context.selected_objects[-1].location = mathutils.Vector(loc) #hackish....
+					bpy.context.selected_objects[-1].location = mathutils.Vector(loc)
+					# next line hackish....
 					dupedObj.append(bpy.context.selected_objects[-1])
 					base.select = False
 				
+				#still hackish
 				obj = bpy.context.selected_objects[-1]	
 				# do extra transformations now as necessary
-				obj.rotation_euler = toSwapObj.rotation_euler
+				obj.rotation_euler = swap.rotation_euler
 				# special case of un-applied, 90(+/- 0.01)-0-0 rotation on source (y-up conversion)
-				if (toSwapObj.rotation_euler[0]>= math.pi/2-.01 and toSwapObj.rotation_euler[0]<= math.pi/2+.01
-					and toSwapObj.rotation_euler[1]==0 and toSwapObj.rotation_euler[2]==0):
+				if (swap.rotation_euler[0]>= math.pi/2-.01 and swap.rotation_euler[0]<= math.pi/2+.01
+					and swap.rotation_euler[1]==0 and swap.rotation_euler[2]==0):
 					obj.rotation_euler[0] -= math.pi/2
-				obj.scale = toSwapObj.scale
+				obj.scale = swap.scale
 				
 				
 				#rotation/translation for walls, assumes last added object still selected
@@ -739,7 +735,7 @@ class meshSwap(bpy.types.Operator):
 				bpy.ops.object.join()
 			
 			bpy.ops.object.select_all(action='DESELECT')
-			toSwapObj.select = True
+			swap.select = True
 			bpy.ops.object.delete()
 			
 			#deselect? or try to reselect everything that was selected previoulsy
