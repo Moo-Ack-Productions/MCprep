@@ -41,6 +41,9 @@ bl_info = {
 
 import bpy,os,mathutils,random,math
 
+#verbose
+#v = True 
+v = False
 
 ########################################################################################
 #	Below for precursor functions
@@ -255,7 +258,7 @@ class materialChange(bpy.types.Operator):
 			newName = mat.name+'_tex' # add exception to skip? with warning?
 			texList = mat.texture_slots.values()
 		except:
-			print('\tissue: '+obj.name+' has no active material')
+			if v:print('\tissue: '+obj.name+' has no active material')
 			return
 	   
 		### Check material texture exists and set name
@@ -264,7 +267,7 @@ class materialChange(bpy.types.Operator):
 			#	return #to skip non pre-prepped mats, but shouldn't need to...
 			bpy.data.textures[texList[0].name].name = newName
 		except:
-			print('\tiwarning: material '+mat.name+' has no texture slot. skipping...')
+			if v:print('\tiwarning: material '+mat.name+' has no texture slot. skipping...')
 			return
 
 		# disable all but first slot, ensure first slot enabled
@@ -340,7 +343,7 @@ class materialChange(bpy.types.Operator):
 					#print('cycles mat')
 					self.materialsCycles(mat)
 			else:
-				print('Get the linked material instead!')
+				if v:print('Get the linked material instead!')
 
 		return {'FINISHED'}
 
@@ -362,7 +365,7 @@ class meshSwap(bpy.types.Operator):
 	def execute(self, context):
 		
 		## debug, restart check
-		print('###################################')
+		if v:print('###################################')
 		
 		# get some scene information
 		toLink = context.scene.MCprep_linkGroup
@@ -416,6 +419,7 @@ class meshSwap(bpy.types.Operator):
 			#first check if swap has already happened:
 			# generalize name to do work on duplicated meshes, but keep original
 			swapGen = nameGeneralize(swap.name)
+			if v: print("Swapping '{x}', simplified name '{y}".format(x=swap.name, y=swapGen))
 			
 			#special cases, for "extra" mesh pieces we don't want around afterwards
 			#get rid of: special case e.g. blocks with different material sides,
@@ -521,8 +525,8 @@ class meshSwap(bpy.types.Operator):
 					if swapGen not in ['lilypad','redstone_wire_off']:
 						continue
 					"""
-				print(" DUPLIST: ")
-				print([x,y,z], [facebook[setNum][2][0], facebook[setNum][2][1], facebook[setNum][2][2]])
+				if v:print(" DUPLIST: ")
+				if v:print([x,y,z], [facebook[setNum][2][0], facebook[setNum][2][1], facebook[setNum][2][2]])
 				
 				# rotation value (second append value: 0 means nothing, rest 1-4.
 				if (not [x,y,z] in dupList) or (swapGen in listData['edgeFloat']):
@@ -581,7 +585,7 @@ class meshSwap(bpy.types.Operator):
 			base = None 	# need to initialize to something, though this obj no used
 			if swapGen in listData['groupSwapList']:
 				
-				print(">> link group?",toLink,groupAppendLayer,swapGen)
+				if v:print(">> link group?",toLink,groupAppendLayer,swapGen)
 				
 				# GROUP LAYER APPENDING DOESN'T WORK CURRENTLY
 				# if group not linked, put appended group data onto the GUI field layer
@@ -630,7 +634,7 @@ class meshSwap(bpy.types.Operator):
 
 			
 			##### OPTION HERE TO SEGMENT INTO NEW FUNCTION
-			print("### > trans")
+			if v:print("### > trans")
 			#self.counterObject = 0
 			# duplicating, rotating and moving
 			dupedObj = []
@@ -769,7 +773,7 @@ class solidifyPixels(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 	
 	def execute(self, context):
-		print("hello world, solidify those pixels!")
+		if v:print("hello world, solidify those pixels!")
 		self.report({'ERROR'}, "Feature not implemented yet")
 		return {'FINISHED'}
 
