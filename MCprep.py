@@ -96,8 +96,6 @@ def getListData():
 		meshSwapPath = bpy.path.abspath(meshSwapPath)
 	
 	
-	
-	
 	#print("#: ",meshSwapPath)
 	
 	#####
@@ -386,11 +384,9 @@ class meshSwap(bpy.types.Operator):
 		#print(direc)
 		if not os.path.exists(direc):
 			print('meshSwap asset not found! Check/set library path')
-			#popup window
-			#nolib_warning(bpy.types.Menu)
-			#bpy.ops.error.message('INVOKE_DEFAULT',type='Error',
-			#						message = 'Asset library not found, check path')
-			bpy.ops.object.dialogue('INVOKE_DEFAULT')
+
+			#bpy.ops.object.dialogue('INVOKE_DEFAULT') # DOES work!
+			self.report({'ERROR'}, "Mesh swap blend file not found!") # better, actual "error"
 			return {'CANCELLED'}
 		
 		
@@ -406,9 +402,6 @@ class meshSwap(bpy.types.Operator):
 		for swap in objList:
 			
 			#first check if swap has already happened:
-			#base["MCswapped"] << how to CHECK if property already exists? can't use try,
-			#				since "accessing" the property creates it if it doens't already exist
-			
 			# generalize name to do work on duplicated meshes, but keep original
 			swapGen = nameGeneralize(swap)
 			
@@ -550,22 +543,21 @@ class meshSwap(bpy.types.Operator):
 						else:
 							rotList.append(0)
 					elif swapGen in listData['edgeFloat']:	# needs fixing
-						print('also here')
 						if (y-facebook[setNum][2][1] < 0):
 							rotList.append(8)
-							print('rotation ceiling')
+							#print('rotation ceiling')
 						elif (x_diff > 0.3):
 							rotList.append(7)
-							print('not to mention here!')
+							#print('not to mention here!')
 						elif (z_diff > 0.3):	
 							rotList.append(0)
-							print('left here!')
+							#print('left here!')
 						elif (z_diff < -0.3):
-							print('right here!')	
-							rotList.append(6) 
+							rotList.append(6)
+							#print('right here!') 
 						else:
 							rotList.append(5)
-							print('nothing to see here!')
+							#print('nothing to see here!')
 					elif swapGen in listData['edgeFlush']:
 						# actually 6 cases here, can need rotation below...
 						# currently not necessary, so not programmed..  
@@ -614,14 +606,17 @@ class meshSwap(bpy.types.Operator):
 				### >> MAKE a more graceful error indication.
 				try:
 					base = bpy.context.selected_objects[0]
-					base["MCswapped"] = "True"
+					if base["MCprep_noSwap"] == "True":
+						print("DID WE MAKE IT HERE")
+						continue
 				except:
-					continue
+					base["MCprep_noSwap"] = "True"
 				bpy.ops.object.select_all(action='DESELECT')
 
 			
 			##### OPTION HERE TO SEGMENT INTO NEW FUNCTION
 			print("### > trans")
+			#self.counterObject = 0
 			# duplicating, rotating and moving
 			dupedObj = []
 			for (set,rot) in zip(dupList,rotList):
@@ -652,7 +647,16 @@ class meshSwap(bpy.types.Operator):
 					bpy.context.selected_objects[-1].location = mathutils.Vector(loc) #hackish....
 					dupedObj.append(bpy.context.selected_objects[-1])
 					base.select = False
-					
+				
+				obj = bpy.context.selected_objects[-1]	
+				# do extra transformations now as necessary
+				obj.rotation_euler = toSwapObj.rotation_euler
+				# special case of un-applied, 90(+/- 0.01)-0-0 rotation on source (y-up conversion)
+				if (toSwapObj.rotation_euler[0]>= math.pi/2-.01 and toSwapObj.rotation_euler[0]<= math.pi/2+.01
+					and toSwapObj.rotation_euler[1]==0 and toSwapObj.rotation_euler[2]==0):
+					obj.rotation_euler[0] -= math.pi/2
+				obj.scale = toSwapObj.scale
+				
 				
 				#rotation/translation for walls, assumes last added object still selected
 				x,y,offset,rotValue,z = 0,0,0.28,0.436332,0.12
@@ -660,47 +664,59 @@ class meshSwap(bpy.types.Operator):
 				if rot == 1:
 					# torch rotation 1
 					x = -offset
-					bpy.ops.transform.translate(value=(x, y, z))
-					bpy.ops.transform.rotate(value=rotValue, axis=(0, 1, 0))
+					obj.location += mathutils.Vector((x, y, z))
+					#bpy.ops.transform.rotate(value=rotValue, axis=(0, 1, 0))
+					obj.rotation_euler[1]+=rotValue
 				elif rot == 2:
 					# torch rotation 2
 					y = offset
-					bpy.ops.transform.translate(value=(x, y, z))
-					bpy.ops.transform.rotate(value=rotValue, axis=(1, 0, 0))
+					obj.location += mathutils.Vector((x, y, z))
+					#bpy.ops.transform.rotate(value=rotValue, axis=(1, 0, 0))
+					obj.rotation_euler[0]+=rotValue
 				elif rot == 3:
 					# torch rotation 3
 					x = offset
-					bpy.ops.transform.translate(value=(x, y, z))
-					bpy.ops.transform.rotate(value=-rotValue, axis=(0, 1, 0))
+					obj.location += mathutils.Vector((x, y, z))
+					#bpy.ops.transform.rotate(value=-rotValue, axis=(0, 1, 0))
+					obj.rotation_euler[1]+=rotValue
 				elif rot == 4:
 					# torch rotation 4
 					y = -offset
-					bpy.ops.transform.translate(value=(x, y, z))
-					bpy.ops.transform.rotate(value=-rotValue, axis=(1, 0, 0))
+					obj.location += mathutils.Vector((x, y, z))
+					#bpy.ops.transform.rotate(value=-rotValue, axis=(1, 0, 0))
+					obj.rotation_euler[0]+=rotValue
 				elif rot == 5:
 					# edge block rotation 1
-					bpy.ops.transform.rotate(value=-math.pi/2,axis=(0,0,1))
+					#bpy.ops.transform.rotate(value=-math.pi/2,axis=(0,0,1))
+					obj.rotation_euler[2]+= -math.pi/2
 				elif rot == 6:
 					# edge block rotation 2
-					bpy.ops.transform.rotate(value=math.pi,axis=(0,0,1))
+					#bpy.ops.transform.rotate(value=math.pi,axis=(0,0,1))
+					obj.rotation_euler[2]+= math.pi
 				elif rot == 7:
 					# edge block rotation 3
-					bpy.ops.transform.rotate(value=math.pi/2,axis=(0,0,1))
+					#bpy.ops.transform.rotate(value=math.pi/2,axis=(0,0,1))
+					obj.rotation_euler[2]+= math.pi/2
 				elif rot==8:
 					# edge block rotation 4 (ceiling, not 'keep same')
-					bpy.ops.transform.rotate(value=math.pi/2,axis=(1,0,0))
+					#bpy.ops.transform.rotate(value=math.pi/2,axis=(1,0,0))
+					obj.rotation_euler[0]+= math.pi/2
 					
 				# extra variance to break up regularity, e.g. for tall grass
 				if [swapGen,1] in listData['variance']:
-					x = (random.random()-0.5)*0.5	 # values LOWER than *1.0 make it less variable
+					x = (random.random()-0.5)*0.5
 					y = (random.random()-0.5)*0.5
 					z = (random.random()/2-0.5)*0.6 # restriction guarentees it will never go Up (+z value)
-					bpy.ops.transform.translate(value=(x, y, z))
+					obj.location += mathutils.Vector((x, y, z))
+					
 				elif [swapGen,0] in listData['variance']: # for non-z variance
 					x = (random.random()-0.5)*0.5	 # values LOWER than *1.0 make it less variable
 					y = (random.random()-0.5)*0.5
-					bpy.ops.transform.translate(value=(x, y, 0))	
+					obj.location += mathutils.Vector((x, y, 0))
 				bpy.ops.object.select_all(action='DESELECT')
+			
+			
+			### END CRITICAL SECTION
 				
 			if not grouped:
 				base.select = True
@@ -790,9 +806,15 @@ class MCpanel(bpy.types.Panel):
 		
 		#image_settings = rd.image_settings
 		#file_format = image_settings.file_format
-		col.label(text="Path to assets")
-		col.prop(context.scene,"MCprep_meshswap_path",text="")
-		col.prop(context.scene,"MCprep_material_path",text="")
+		
+		# make column/rows instead!!
+		row = col.row(align=True)
+		row.label(text="MeshSwap blend")
+		row.prop(context.scene,"MCprep_meshswap_path",text="")
+		
+		row = col.row(align=True)
+		row.label(text="Materials blend")
+		row.prop(context.scene,"MCprep_material_path",text="")
 		#does nothing yet (correctly)
 		#col.prop(context.scene,"MCprep_groupAppendLayer",text="")
 		
