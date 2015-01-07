@@ -604,6 +604,12 @@ class meshSwap(bpy.types.Operator):
 				### NOTICE: IF THERE IS A DISCREPENCY BETWEEN ASSETS FILE AND WHAT IT SAYS SHOULD BE IN FILE
 				### EG NAME OF MESH TO SWAP CHANGED,  INDEX ERROR IS THROWN HERE
 				### >> MAKE a more graceful error indication.
+				
+				try:
+					base = bpy.context.selected_objects[0]
+				except:
+					continue #in case nothing selected.. which happens even during selection?
+				"""
 				try:
 					base = bpy.context.selected_objects[0]
 					if base["MCprep_noSwap"] == "True":
@@ -611,6 +617,7 @@ class meshSwap(bpy.types.Operator):
 						continue
 				except:
 					base["MCprep_noSwap"] = "True"
+				"""
 				bpy.ops.object.select_all(action='DESELECT')
 
 			
@@ -796,18 +803,9 @@ class MCpanel(bpy.types.Panel):
 	def draw(self, context):
 		
 		layout = self.layout
-
 		split = layout.split()
 		col = split.column(align=True)
 		
-		
-		
-		#URL path
-		
-		#image_settings = rd.image_settings
-		#file_format = image_settings.file_format
-		
-		# make column/rows instead!!
 		row = col.row(align=True)
 		row.label(text="MeshSwap blend")
 		row.prop(context.scene,"MCprep_meshswap_path",text="")
@@ -820,12 +818,8 @@ class MCpanel(bpy.types.Panel):
 		
 		split = layout.split()
 		col = split.column(align=True)
-		
-		
-		
 		#for setting MC materials and looking in library
 		col.operator("object.mc_mat_change", text="Prep Materials", icon='MATERIAL')
-		
 		#below should actually just call a popup window
 		col.operator("object.mc_meshswap", text="Mesh Swap", icon='LINK_BLEND')
 		
