@@ -30,7 +30,7 @@ http://www.blenderartists.org/forum/showthread.php?316151-ADDON-WIP-MCprep-for-M
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",
-	"version": (1, 3, 1),
+	"version": (1, 3, 2),
 	"blender": (2, 72, 0),
 	"location": "3D window toolshelf",
 	"description": "Speeds up the workflow of minecraft animations and imported minecraft worlds",
@@ -88,13 +88,21 @@ def getListData():
 				['flower_yellow',0], ['flower_red',0] ]
 	
 	########
-	
+	"""
 	#attempt to LOAD information from an asset file...
 	meshSwapPath = bpy.context.scene.MCprep_meshswap_path
 	if not(os.path.isfile(meshSwapPath)):
 		#extract actual path from the relative one
 		meshSwapPath = bpy.path.abspath(meshSwapPath)
 	
+	
+	# load a single scene we know the name of.
+	#with bpy.data.libraries.load(meshSwapPath) as (data_from, data_to):
+	#	data_to.scenes = ["Scene"]
+	# load all meshes
+	with bpy.data.libraries.load(meshSwapPath) as (data_from, data_to):
+		data_to.meshes = data_from.meshes
+	"""
 	
 	#print("#: ",meshSwapPath)
 	
@@ -199,9 +207,17 @@ def getMaterialTextures(matList):
 # this function generalized appending/linking
 def bAppendLink(directory,name, toLink):
 	# blender post 2.71 changed to new append/link methods
-	version = bpy.data.version
 	
-	if (version[0] >= 2 and version[1] >= 72):
+	post272 = False
+	try:
+		version = bpy.data.version
+		post272 = True
+	except:
+		#  "version" didn't exist before 72!
+		pass
+	
+	#if (version[0] >= 2 and version[1] >= 72):
+	if post272:
 		# NEW method of importing
 		if (toLink):
 			bpy.ops.wm.link(directory=directory, filename=name)
