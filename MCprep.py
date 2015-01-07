@@ -30,7 +30,7 @@ http://www.blenderartists.org/forum/showthread.php?316151-ADDON-WIP-MCprep-for-M
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",
-	"version": (1, 3, 0),
+	"version": (1, 3, 1),
 	"blender": (2, 72, 0),
 	"location": "3D window toolshelf",
 	"description": "Speeds up the workflow of minecraft animations and imported minecraft worlds",
@@ -338,8 +338,7 @@ class meshSwap(bpy.types.Operator):
 	bl_label = "MCprep meshSwap"
 	bl_options = {'REGISTER', 'UNDO'}
 	
-	#move things out of here!
-	
+
 	#used for only occasionally refreshing the 3D scene while mesh swapping
 	counterObject = 0	# used in count
 	countMax = 5		# count compared to this, frequency of refresh (number of objs)
@@ -355,6 +354,8 @@ class meshSwap(bpy.types.Operator):
 		activeLayers = list(context.scene.layers)
 		
 		#separate each material into a separate object
+		#is this good practice? not sure what's better though
+		# could also recombine similar materials here, so happens just once.
 		selList = context.selected_objects
 		for obj in selList:
 			bpy.ops.mesh.separate(type='MATERIAL')
@@ -367,12 +368,15 @@ class meshSwap(bpy.types.Operator):
 			if obj.type != 'MESH': continue
 			
 			prevName = obj.name
-			try:bpy.data.meshes[prevName].name = obj.active_material.name
-			except: continue
+			# BELOW: previous way
+			#try:bpy.data.meshes[prevName].name = obj.active_material.name
+			#except: continue
+			# BELOW: new way
+			obj.data.name = obj.active_material.name
 			obj.name = obj.active_material.name
-			bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+			#bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
 			objList.append(obj.name)
-			print(obj.name)
+			#print(obj.name)
 		
 			
 		# get library path from property/UI panel
@@ -383,21 +387,15 @@ class meshSwap(bpy.types.Operator):
 
 		#print(direc)
 		if not os.path.exists(direc):
-			print('meshSwap asset not found! Check/set library path')
+			#print('meshSwap asset not found! Check/set library path')
 
-			#bpy.ops.object.dialogue('INVOKE_DEFAULT') # DOES work!
+			#bpy.ops.object.dialogue('INVOKE_DEFAULT') # DOES work! but less streamlined
 			self.report({'ERROR'}, "Mesh swap blend file not found!") # better, actual "error"
 			return {'CANCELLED'}
 		
-		
 		# Now get a list of all objects in this blend file, and all groups
 		listData = getListData()
-		#first go through and separate materials/faces of specific one into one mesh. I've got
-		# that already, so moving on.
-		### HERE use equivalent of UI "p" ? seperate by materials
-		
-		# for each object in objList: bpy.ops.mesh.separate(type='MATERIAL')
-		
+
 		#primary loop, for each OBJECT needing swapping
 		for swap in objList:
 			
@@ -752,29 +750,15 @@ class meshSwap(bpy.types.Operator):
 
 #######
 # Class for spawning/proxying a new asset for animation
-class proxySpawn(bpy.types.Operator):
-	"""Spawns in selected asset and proxies it ready for animation -- WIP"""
-	bl_idname = "object.proxy_spawn"
-	bl_label = "Proxy Spawn"
+class solidifyPixels(bpy.types.Operator):
+	"""Turns each pixel of active UV map/texture into a face -- WIP"""
+	bl_idname = "object.solidify_pixels"
+	bl_label = "Solidify Pixels"
 	bl_options = {'REGISTER', 'UNDO'}
 	
 	def execute(self, context):
-		print("hello world")
-		
-		return {'FINISHED'}
-
-
-#######
-# Class for updating the duplicated proxy spawn files
-class proxyUpdate(bpy.types.Operator):
-	"""Updates all proxy spawn files to be consistent -- WIP"""
-	bl_idname = "object.proxy_update"
-	bl_label = "Proxy Update"
-	bl_options = {'REGISTER', 'UNDO'}
-	
-	def execute(self, context):
-		print("hello world")
-		
+		print("hello world, solidify those pixels!")
+		self.report({'ERROR'}, "Feature not implemented yet")
 		return {'FINISHED'}
 
 
@@ -799,6 +783,7 @@ class MCpanel(bpy.types.Panel):
 	bl_label = "MCprep Panel"
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'TOOLS'
+	bl_category = "Tools" #or "Relations"?
 
 	def draw(self, context):
 		
@@ -822,6 +807,8 @@ class MCpanel(bpy.types.Panel):
 		col.operator("object.mc_mat_change", text="Prep Materials", icon='MATERIAL')
 		#below should actually just call a popup window
 		col.operator("object.mc_meshswap", text="Mesh Swap", icon='LINK_BLEND')
+		#the UV's pixels into actual 3D geometry (but same material, or modified to fit)
+		#col.operator("object.solidify_pixels", text="Solidify Pixels", icon='MOD_SOLIDIFY')
 		
 		split = layout.split()
 		col = split.column(align=True)
@@ -830,13 +817,7 @@ class MCpanel(bpy.types.Panel):
 		#col.prop(context.scene,"MCprep_linkGroup")
 
 
-
-########################################################################################
-#	Above for the class functions
-#	Below for extra classes/registration stuff
-########################################################################################
-
-
+#######
 # WIP OK button general purpose
 class dialogue(bpy.types.Operator):
 	bl_idname = "object.dialogue"
@@ -856,13 +837,18 @@ class dialogue(bpy.types.Operator):
 	def draw(self, context):
 		self.layout.label(self.message)
 
-#######
+
+########################################################################################
+#	Above for the class functions
+#	Below for registration stuff
+########################################################################################
+
+
 
 def register():
 	bpy.utils.register_class(materialChange)
 	bpy.utils.register_class(meshSwap)
-	bpy.utils.register_class(proxyUpdate)
-	bpy.utils.register_class(proxySpawn)
+	bpy.utils.register_class(solidifyPixels)
 	
 	
 	bpy.utils.register_class(dialogue)
@@ -872,11 +858,11 @@ def register():
 	#properties
 	bpy.types.Scene.MCprep_meshswap_path = bpy.props.StringProperty(
 		name="Location of asset files",
-		description="Locaiton of meshswapping assets",
+		description="Path to the blend file with assets to swap in/link",
 		default="//asset_meshswap.blend",subtype="FILE_PATH")
 	bpy.types.Scene.MCprep_material_path = bpy.props.StringProperty(
 		name="Location of asset materials",
-		description="Locaiton of materials for linking",
+		description="Path to the blend file with materials for linking",
 		default="//asset_materials.blend",subtype="FILE_PATH")
 	bpy.types.Scene.MCprep_linkGroup = bpy.props.BoolProperty(
 		name="Link library groups",
@@ -893,8 +879,7 @@ def register():
 def unregister():
 	bpy.utils.unregister_class(materialChange)
 	bpy.utils.unregister_class(meshSwap)
-	bpy.utils.unregister_class(proxyUpdate)
-	bpy.utils.unregister_class(proxySpawn)
+	bpy.utils.unregister_class(solidifyPixels)
 	
 	bpy.utils.unregister_class(dialogue)
 	bpy.utils.unregister_class(WIP)
