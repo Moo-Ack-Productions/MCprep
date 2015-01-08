@@ -17,13 +17,6 @@ https://github.com/TheDuckCow/MCprep.git
 WIP thread on blenderartists:
 http://www.blenderartists.org/forum/showthread.php?316151-ADDON-WIP-MCprep-for-Minecraft-Workflow
 
-# KNOWN BUGS:
--	if multiple objects with same material mesh swapped in one go
-	>> easy work around would be to auto join them together, but should be error'd...
--	not all replacements for standard block replacements work, extra blocks appear
--	sometimes cannot meshswap a second time if done once in a scene already, e.g. vine
-	appears to be due to stale, or kept data between op runs.
--	Sometimes mesh swap will not run if the MESH (not OBJECT) name is competely wrong
 """
 
 ########
@@ -35,7 +28,7 @@ bl_info = {
 	"location": "3D window toolshelf",
 	"description": "Speeds up the workflow of minecraft animations and imported minecraft worlds",
 	"warning": "",
-	"wiki_url": "https://github.com/TheDuckCow/MCprep.wiki.git",
+	"wiki_url": "https://github.com/TheDuckCow/MCprep",
 	"author": "Patrick W. Crawford"
 }
 
@@ -64,7 +57,9 @@ def getListData():
 				'gold_block','yourFace']
 	emit= ['redstone_block','redstone_lamp_on','glowstone','lava','lava_flowing']
 	
-	# lists for meshSwap
+	
+	
+	##### lists for meshSwap
 	added = [] # list for checking if item added to lists yet or not
 	groupSwapList = []
 	## if same object type is in both group and mesh swap list, group will be used
@@ -84,6 +79,7 @@ def getListData():
 	#torchlike = ['torch','redstone_torch_on','redstone_torch_off']
 	torchlike = []
 	#remove meshes not used for processing, for objects imported with extra meshes
+	# below is still hardcoded!
 	removable = ['double_plant_grass_top','torch_flame']
 	
 	# for varied positions from exactly center on the block, 1 for Z random too
@@ -156,14 +152,11 @@ def getListData():
 						torchlike.append(tmpName)
 					elif x=='removable':
 						removable.append(tmpName)
-				
 	
 	#print("#: ",meshSwapPath)
 	if v:print("groupSwapList: ",groupSwapList)
 	if v:print("meshSwapList: ",meshSwapList)
 	if v:print("edgeFloat: ",edgeFloat,", variance: ",variance,", torchlike: ",torchlike)
-	#####
-	
 	
 	return {'meshSwapList':meshSwapList, 'groupSwapList':groupSwapList,
 			'reflective':reflective, 'water':water, 'solid':solid,
