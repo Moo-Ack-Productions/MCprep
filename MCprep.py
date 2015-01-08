@@ -30,7 +30,7 @@ http://www.blenderartists.org/forum/showthread.php?316151-ADDON-WIP-MCprep-for-M
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",
-	"version": (1, 3, 2),
+	"version": (1, 3, 3),
 	"blender": (2, 72, 0),
 	"location": "3D window toolshelf",
 	"description": "Speeds up the workflow of minecraft animations and imported minecraft worlds",
@@ -57,11 +57,7 @@ v = False
 # but like fo serious, make this a dictionary object with lists....
 def getListData():
 	
-	# ideally in long run, will do check for specific names of materials/existing
-	# groups in the assets file.
-	
-	
-	# lists for material prep
+	# lists for material prep, hard coded
 	reflective = [ 'glass', 'glass_pane_side','ice']
 	water = ['water','water_flowing']
 	solid = ['sand','dirt','dirt_grass_side','dispenser_front','furnace_top','redstone_block',
@@ -69,46 +65,103 @@ def getListData():
 	emit= ['redstone_block','redstone_lamp_on','glowstone','lava','lava_flowing']
 	
 	# lists for meshSwap
-	## groupSwapList has a higher precedence;
+	added = [] # list for checking if item added to lists yet or not
+	groupSwapList = []
 	## if same object type is in both group and mesh swap list, group will be used
-	groupSwapList = ['redstone_torch_on','redstone_lamp_on','torch','endercrystal','fire']
-	meshSwapList = ['tall_grass','flower_red','flower_yellow','cobweb','redstone_torch_on',
-					'redstone_lamp_off','dead_shrub','sapling_oak','redstone_wire_off',
-					'wheat','redstone_torch_off','rails','rails_powered_off','ladder',
-					'mushroom_red','mushroom_brown','vines','lilypad','azure',
-					'stained_clay_brown','stained_clay_dark_gray','dirt',
-					'double_plant_grass_bottom','cobweb']
+	meshSwapList = []
+	# previous hard coded values, matches material names in import (not all)
+# 	meshSwapList = ['tall_grass','flower_red','flower_yellow','cobweb','redstone_torch_on',
+# 					'redstone_lamp_off','dead_shrub','sapling_oak','redstone_wire_off',
+# 					'wheat','redstone_torch_off','rails','rails_powered_off','ladder',
+# 					'mushroom_red','mushroom_brown','vines','lilypad','azure',
+# 					'stained_clay_brown','stained_clay_dark_gray','dirt',
+# 					'double_plant_grass_bottom','cobweb']
 	# blocks perfectly on edges, require rotation	
 	edgeFlush = [] 	
 	# blocks floating off edge into air, require rotation
-	edgeFloat = ['vines','ladder','lilypad']
-	torchlike = ['torch','redstone_torch_on','redstone_torch_off']
+	#edgeFloat = ['vines','ladder','lilypad']
+	edgeFloat = []
+	#torchlike = ['torch','redstone_torch_on','redstone_torch_off']
+	torchlike = []
 	#remove meshes not used for processing, for objects imported with extra meshes
 	removable = ['double_plant_grass_top','torch_flame']
 	
 	# for varied positions from exactly center on the block, 1 for Z random too
-	variance = [ ['tall_grass',1], ['double_plant_grass_bottom',1],
-				['flower_yellow',0], ['flower_red',0] ]
+	# 1= x,y,z random; 0= only x,y random; 2=rotation random only (vertical)
+	#variance = [ ['tall_grass',1], ['double_plant_grass_bottom',1],
+	#			['flower_yellow',0], ['flower_red',0] ]
+	variance = []
 	
 	########
-	"""
+	if v:print("Parsing library files")
 	#attempt to LOAD information from an asset file...
 	meshSwapPath = bpy.context.scene.MCprep_meshswap_path
 	if not(os.path.isfile(meshSwapPath)):
 		#extract actual path from the relative one
 		meshSwapPath = bpy.path.abspath(meshSwapPath)
 	
-	
-	# load a single scene we know the name of.
-	#with bpy.data.libraries.load(meshSwapPath) as (data_from, data_to):
-	#	data_to.scenes = ["Scene"]
-	# load all meshes
 	with bpy.data.libraries.load(meshSwapPath) as (data_from, data_to):
-		data_to.meshes = data_from.meshes
-	"""
+		data_to.objects = data_from.objects
+		data_to.groups = data_from.groups
+		
+	# now operate directly on the loaded data
+	# start with groups
+	for group in data_from.groups:
+		if group is not None:
+			groupSwapList.append(group.name)
+			added.append(group.name)	
+			
+			# here check properties for which additional category to put it in
+			for item in group.items():
+				try:
+					x = item[1].name #will NOT work if property UI
+					#continue
+				except:
+					tmpName = group.name
+					x = item[0] # the name of the property, [1] is the value
+					if x=='variance':
+						variance.append([tmpName,item[1]])
+					elif x=='edgeFloat':
+						edgeFloat.append(tmpName)
+					elif x=='edgeFlush':
+						edgeFlush.append(tmpName)
+					elif x=='torchlike':
+						torchlike.append(tmpName)
+					elif x=='removable':
+						removable.append(tmpName)
+	
+	# now add the objects
+	for object in data_from.objects:
+		if object is not None and len(object.users_group) ==0 and object.type == "MESH":
+			tmpName = nameGeneralize(object.name) #not ideal! but the name instance meshes..
+			meshSwapList.append(tmpName)
+			added.append(tmpName)
+			#meshSwapList.append(object.name)
+			#added.append(group.name)
+			
+			# here check properties for which additional category to put it in
+			for item in object.items():
+				try:
+					x = item[1].name #will NOT work if property UI
+					#continue
+				except:
+					x = item[0] # the name of the property, [1] is the value
+					if x=='variance':
+						variance.append([tmpName,item[1]])
+					elif x=='edgeFloat':
+						edgeFloat.append(tmpName)
+					elif x=='edgeFlush':
+						edgeFlush.append(tmpName)
+					elif x=='torchlike':
+						torchlike.append(tmpName)
+					elif x=='removable':
+						removable.append(tmpName)
+				
 	
 	#print("#: ",meshSwapPath)
-	
+	if v:print("groupSwapList: ",groupSwapList)
+	if v:print("meshSwapList: ",meshSwapList)
+	if v:print("edgeFloat: ",edgeFloat,", variance: ",variance,", torchlike: ",torchlike)
 	#####
 	
 	
@@ -395,13 +448,11 @@ class meshSwap(bpy.types.Operator):
 			obj.name = obj.active_material.name
 			#bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
 			objList.append(obj) # redundant, should just make it the same list as before
-			#print(obj.name)
 		
 			
 		# get library path from property/UI panel
 		direc = context.scene.MCprep_meshswap_path
 		if not(os.path.isdir(direc)):
-			#extract actual path from the relative one
 			direc = bpy.path.abspath(direc)
 
 		#check library file exists
@@ -416,10 +467,10 @@ class meshSwap(bpy.types.Operator):
 		#primary loop, for each OBJECT needing swapping
 		for swap in objList:
 			
-			#first check if swap has already happened:
+			#first check if swap has already happened: // not doing that yet
 			# generalize name to do work on duplicated meshes, but keep original
 			swapGen = nameGeneralize(swap.name)
-			if v: print("Swapping '{x}', simplified name '{y}".format(x=swap.name, y=swapGen))
+			
 			
 			#special cases, for "extra" mesh pieces we don't want around afterwards
 			#get rid of: special case e.g. blocks with different material sides,
@@ -432,6 +483,8 @@ class meshSwap(bpy.types.Operator):
 			
 			#just selecting mesh with same name accordinly.. ALSO only if in objList
 			if not (swapGen in listData['meshSwapList'] or swapGen in listData['groupSwapList']): continue		
+			
+			if v: print("Swapping '{x}', simplified name '{y}".format(x=swap.name, y=swapGen))
 			
 			# object references, now slightly redundant. Should be good to delete
 			#toSwapObj = swap
@@ -484,10 +537,6 @@ class meshSwap(bpy.types.Operator):
 			
 			"""
 			
-			### NOTE: NAMING ISSUES: IF there already was another mesh of the same name before importing,
-			### the imported mesh REPLACES the old one. That's a problem. except in my special case.
-			### perhaps just programatically change the name here
-			
 			# removing duplicates and checking orientation
 			dupList = []	#where actual blocks are to be added
 			rotList = []	#rotation of blocks
@@ -512,16 +561,13 @@ class meshSwap(bpy.types.Operator):
 					y = round(facebook[setNum][2][1]+b)
 					z = round(facebook[setNum][2][2]+c)
 					#print("ON EDGE, BRO! line ~468, "+str(x) +","+str(y)+","+str(z)+", ")
-					#print([facebook[setNum][2][0], facebook[setNum][2][1], facebook[setNum][2][2]])
-				
-				# this HACK IS JUST FOR TORCHES... messes up things like redstone, lilypads..
-				
+					#print([facebook[setNum][2][0], facebook[setNum][2][1], facebook[setNum][2][2]])	
 				
 				#### TORCHES
 				if facebook[setNum][2][1]+0.5 - math.floor(facebook[setNum][2][1]+0.5) < 0.3:
 					#continue if coord. is < 1/3 of block height, to do with torch's base in wrong cube.
 					"""
-					print("TORCH HACK? line ~473")
+					print("TORCH HACK? line ~570")
 					if swapGen not in ['lilypad','redstone_wire_off']:
 						continue
 					"""
@@ -543,7 +589,7 @@ class meshSwap(bpy.types.Operator):
 					## rotations are handled on an object-to-object basis
 					
 					# append rotation
-					if swapGen in ['torch','redstone_torch_off','redstone_torch_on']:
+					if swapGen in listData['torchlike']: # needs fixing
 						if (x_diff>.2 and x_diff < 0.3):
 							rotList.append(1)
 						elif (z_diff>.2 and z_diff < 0.3):	
@@ -554,7 +600,7 @@ class meshSwap(bpy.types.Operator):
 							rotList.append(4)
 						else:
 							rotList.append(0)
-					elif swapGen in listData['edgeFloat']:	# needs fixing
+					elif swapGen in listData['edgeFloat']:
 						if (y-facebook[setNum][2][1] < 0):
 							rotList.append(8)
 							#print('rotation ceiling')
@@ -572,13 +618,11 @@ class meshSwap(bpy.types.Operator):
 							#print('nothing to see here!')
 					elif swapGen in listData['edgeFlush']:
 						# actually 6 cases here, can need rotation below...
-						# currently not necessary, so not programmed..  
+						# currently not necessary/used, so not programmed..  
 						rotList.append(0)
 					else:
 						# no rotation from source file, must always append something
 						rotList.append(0)
-					
-			#for a in dupList:print(a)
 			
 			#import: guaranteed to have same name as "appendObj" for the first instant afterwards
 			grouped = False # used to check if to join or not
@@ -630,6 +674,7 @@ class meshSwap(bpy.types.Operator):
 				except:
 					base["MCprep_noSwap"] = "True"
 				"""
+				base["MCprep_noSwap"] = "True"
 				bpy.ops.object.select_all(action='DESELECT')
 
 			
@@ -773,6 +818,7 @@ class solidifyPixels(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 	
 	def execute(self, context):
+	
 		if v:print("hello world, solidify those pixels!")
 		self.report({'ERROR'}, "Feature not implemented yet")
 		return {'FINISHED'}
@@ -831,6 +877,9 @@ class MCpanel(bpy.types.Panel):
 		# doesn't properly work yet
 		#col.label(text="Link groups")
 		#col.prop(context.scene,"MCprep_linkGroup")
+		
+		#user prefs quick access
+		#col.operator("object.showprefs", text="User prefs", icon='PREFERENCES')
 
 
 #######
