@@ -14,6 +14,8 @@ Demo Usage
 ======
 
 With a currently lacking usage documentation, the video will show what the intended results of this script are:
+[![Alt text](/referenceThumnail.png?raw=true "Video Preview")](https://www.youtube.com/watch?v=Nax7iuCTovk)
+
 https://www.facebook.com/photo.php?v=737273036339269&l=2318416360725689976
 (Older, shows more than grass)
 https://www.youtube.com/watch?v=Swz6T4Zzfek
