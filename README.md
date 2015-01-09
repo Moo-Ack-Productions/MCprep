@@ -13,12 +13,12 @@ This script is now compatible for both pre-2.71 (tested down to 2.69) and for 2.
 Demo Usage
 ======
 
-With a currently lacking usage documentation, the video will show what the intended results of this script are:
+[Video demo of the addon:](https://www.youtube.com/watch?v=Nax7iuCTovk)
 [![Alt text](/referenceThumnail.png?raw=true "Video Preview")](https://www.youtube.com/watch?v=Nax7iuCTovk)
 
-https://www.facebook.com/photo.php?v=737273036339269&l=2318416360725689976
-(Older, shows more than grass)
-https://www.youtube.com/watch?v=Swz6T4Zzfek
+Older video demos:
+- https://www.facebook.com/photo.php?v=737273036339269&l=2318416360725689976
+- https://www.youtube.com/watch?v=Swz6T4Zzfek
 
 How to use this addon
 ======
