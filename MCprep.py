@@ -23,7 +23,7 @@ http://www.blenderartists.org/forum/showthread.php?316151-ADDON-WIP-MCprep-for-M
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",
-	"version": (1, 3, 4),
+	"version": (1, 3, 5),
 	"blender": (2, 72, 0),
 	"location": "3D window toolshelf",
 	"description": "Speeds up the workflow of minecraft animations and imported minecraft worlds",
@@ -435,6 +435,7 @@ class meshSwap(bpy.types.Operator):
 		# could also recombine similar materials here, so happens just once.
 		selList = context.selected_objects
 		for obj in selList:
+			bpy.ops.object.convert(target='MESH')
 			bpy.ops.mesh.separate(type='MATERIAL')
 		
 		# now do type checking and fix any name discrepencies
