@@ -14,6 +14,7 @@ Demo Usage
 ======
 
 [Video demo of the addon:](https://www.youtube.com/watch?v=Nax7iuCTovk)
+
 [![Alt text](/referenceThumnail.png?raw=true "Video Preview")](https://www.youtube.com/watch?v=Nax7iuCTovk)
 
 Older video demos:
