@@ -41,21 +41,14 @@ To add your own objects to meshswap (or groupswap):
 - **Step 1:** Check your imported world object and see the name of the material for the object you want to setup. You might think it is "glass plane", but if the importer names the material "glass_plane", you need to note this name down for step 3.
 - **Step 2:** Model you object in the meshSwap.blend file, or append it.
 - **Step 3:** Rename your object to exactly match the previously noted name. If you want to have a group swappable, then name the group to match the name above.  
-
-..* So the MATERIAL name as in the 3D imported world should match the OBJECT name of the model in the meshswap file to work  
-
-..* Note if both a group and an object have matching names, the script will prefer the group and meswap that over the object.  
+  * So the MATERIAL name as in the 3D imported world should match the OBJECT name of the model in the meshswap file to work  
+  * Note if both a group and an object have matching names, the script will prefer the group and meswap that over the object.  
 - **Step 4:** Add necessary properties to special blocks as needed. See the meshSwap file included for examples, but the properties to add are:  
-
-..* "varaince": Objects with this property when meshswapped will have some x/y variance added. If the property is set to 1, it will also have (only negative) z variance. If it is set to 0, it will only have xy variance.  
-
-..* "edgeFloat": objects like vines, ladders, and lillypads which float off the edge of other blocks.  
-
-..* "tochlike": objects that can have rotations like a torch on a wall. Objects with this property will be determined to be either on top of a block or placed on the side of another block according to the mesh.
-
-..* Note: there is no UI for adding properties to a group, so if you want to add a property to a group (say a torch which has a pre-animated light and particle system, as the included blend file does) you must go into python and add the property like so: bpy.groups['groupName']['propertyName'] = 1/0 (the value only matters for the variance property)
-
-..* Example: bpy.groups['torch']['torchlike'] = 1 will add the torchlike property to the torch group, allowing it to have correct rotaitons when meshSwapped in.
+  * "varaince": Objects with this property when meshswapped will have some x/y variance added. If the property is set to 1, it will also have (only negative) z variance. If it is set to 0, it will only have xy variance.  
+  * "edgeFloat": objects like vines, ladders, and lillypads which float off the edge of other blocks.  
+  * "tochlike": objects that can have rotations like a torch on a wall. Objects with this property will be determined to be either on top of a block or placed on the side of another block according to the mesh.
+  * Note: there is no UI for adding properties to a group, so if you want to add a property to a group (say a torch which has a pre-animated light and particle system, as the included blend file does) you must go into python and add the property like so: bpy.groups['groupName']['propertyName'] = 1/0 (the value only matters for the variance property)
+  * Example: bpy.groups['torch']['torchlike'] = 1 will add the torchlike property to the torch group, allowing it to have correct rotaitons when meshSwapped in.
 
 
 Known Bugs
