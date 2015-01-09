@@ -23,7 +23,7 @@ http://www.blenderartists.org/forum/showthread.php?316151-ADDON-WIP-MCprep-for-M
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",
-	"version": (1, 3, 3),
+	"version": (1, 3, 4),
 	"blender": (2, 72, 0),
 	"location": "3D window toolshelf",
 	"description": "Speeds up the workflow of minecraft animations and imported minecraft worlds",
@@ -35,7 +35,7 @@ bl_info = {
 import bpy,os,mathutils,random,math
 
 #verbose
-#v = True 
+v = True 
 v = False
 
 ########################################################################################
@@ -50,12 +50,15 @@ v = False
 # but like fo serious, make this a dictionary object with lists....
 def getListData():
 	
-	# lists for material prep, hard coded
+	# lists for material prep, hard coded for lack of library file
 	reflective = [ 'glass', 'glass_pane_side','ice']
 	water = ['water','water_flowing']
 	solid = ['sand','dirt','dirt_grass_side','dispenser_front','furnace_top','redstone_block',
 				'gold_block','yourFace']
 	emit= ['redstone_block','redstone_lamp_on','glowstone','lava','lava_flowing']
+	
+	
+	
 	
 	
 	
@@ -65,14 +68,14 @@ def getListData():
 	## if same object type is in both group and mesh swap list, group will be used
 	meshSwapList = []
 	# previous hard coded values, matches material names in import (not all)
-# 	meshSwapList = ['tall_grass','flower_red','flower_yellow','cobweb','redstone_torch_on',
-# 					'redstone_lamp_off','dead_shrub','sapling_oak','redstone_wire_off',
-# 					'wheat','redstone_torch_off','rails','rails_powered_off','ladder',
-# 					'mushroom_red','mushroom_brown','vines','lilypad','azure',
-# 					'stained_clay_brown','stained_clay_dark_gray','dirt',
-# 					'double_plant_grass_bottom','cobweb']
+#	meshSwapList = ['tall_grass','flower_red','flower_yellow','cobweb','redstone_torch_on',
+#					'redstone_lamp_off','dead_shrub','sapling_oak','redstone_wire_off',
+#					'wheat','redstone_torch_off','rails','rails_powered_off','ladder',
+#					'mushroom_red','mushroom_brown','vines','lilypad','azure',
+#					'stained_clay_brown','stained_clay_dark_gray','dirt',
+#					'double_plant_grass_bottom','cobweb']
 	# blocks perfectly on edges, require rotation	
-	edgeFlush = [] 	
+	edgeFlush = []	
 	# blocks floating off edge into air, require rotation
 	#edgeFloat = ['vines','ladder','lilypad']
 	edgeFloat = []
@@ -403,15 +406,24 @@ class meshSwap(bpy.types.Operator):
 	bl_label = "MCprep meshSwap"
 	bl_options = {'REGISTER', 'UNDO'}
 	
-
 	#used for only occasionally refreshing the 3D scene while mesh swapping
 	counterObject = 0	# used in count
 	countMax = 5		# count compared to this, frequency of refresh (number of objs)
 	
 	def execute(self, context):
-		
 		## debug, restart check
 		if v:print('###################################')
+		
+		# get library path from property/UI panel
+		direc = context.scene.MCprep_meshswap_path
+		if not(os.path.isdir(direc)):
+			direc = bpy.path.abspath(direc)
+		
+		#check library file exists
+		if not os.path.exists(direc):
+			#bpy.ops.object.dialogue('INVOKE_DEFAULT') # DOES work! but less streamlined
+			self.report({'ERROR'}, "Mesh swap blend file not found!") # better, actual "error"
+			return {'CANCELLED'}
 		
 		# get some scene information
 		toLink = context.scene.MCprep_linkGroup
@@ -426,33 +438,15 @@ class meshSwap(bpy.types.Operator):
 			bpy.ops.mesh.separate(type='MATERIAL')
 		
 		# now do type checking and fix any name discrepencies
-		selList = context.selected_objects
+		objList = context.selected_objects
 		objList = []
 		for obj in selList:
 			#ignore non mesh selected objects
 			if obj.type != 'MESH': continue
 			
-			prevName = obj.name
-			# BELOW: previous way
-			#try:bpy.data.meshes[prevName].name = obj.active_material.name
-			#except: continue
-			# BELOW: new way
 			obj.data.name = obj.active_material.name
 			obj.name = obj.active_material.name
-			#bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
 			objList.append(obj) # redundant, should just make it the same list as before
-		
-			
-		# get library path from property/UI panel
-		direc = context.scene.MCprep_meshswap_path
-		if not(os.path.isdir(direc)):
-			direc = bpy.path.abspath(direc)
-
-		#check library file exists
-		if not os.path.exists(direc):
-			#bpy.ops.object.dialogue('INVOKE_DEFAULT') # DOES work! but less streamlined
-			self.report({'ERROR'}, "Mesh swap blend file not found!") # better, actual "error"
-			return {'CANCELLED'}
 		
 		# Now get a list of all objects in this blend file, and all groups
 		listData = getListData()
@@ -464,24 +458,16 @@ class meshSwap(bpy.types.Operator):
 			# generalize name to do work on duplicated meshes, but keep original
 			swapGen = nameGeneralize(swap.name)
 			
-			
 			#special cases, for "extra" mesh pieces we don't want around afterwards
-			#get rid of: special case e.g. blocks with different material sides,
-			#only use swap based on one material object and delete the others
-			if swapGen in listData['removable']: #make sure torch is one of the imported groups!
+			if swapGen in listData['removable']:
 				bpy.ops.object.select_all(action='DESELECT')
 				swap.select = True
 				bpy.ops.object.delete()
 				continue
 			
 			#just selecting mesh with same name accordinly.. ALSO only if in objList
-			if not (swapGen in listData['meshSwapList'] or swapGen in listData['groupSwapList']): continue		
-			
+			if not (swapGen in listData['meshSwapList'] or swapGen in listData['groupSwapList']): continue
 			if v: print("Swapping '{x}', simplified name '{y}".format(x=swap.name, y=swapGen))
-			
-			# object references, now slightly redundant. Should be good to delete
-			#toSwapObj = swap
-			#objSwapList = swap.data
 			
 			worldMatrix = swap.matrix_world.copy() #set once per object
 			polyList = swap.data.polygons.values() #returns LIST of faces.
@@ -498,14 +484,9 @@ class meshSwap(bpy.types.Operator):
 				tmp2 = swap.data.polygons[polyIndex].center
 				l = [tmp2[0],tmp2[1],tmp2[2]] #to make value unlinked to mesh
 				facebook.append([n,g,l]) # g is global, l is local
-			
-			# NOTE, I did comparison test: the above code IS fine, 
-			# same result for partially successful and completely unsuccessful trials
-			
 			bpy.ops.object.select_all(action='DESELECT')
 
 			"""
-			
 			August 4, 2014 - 1:51 am
 			R.I.P. the bug that plagued my aniamtions since the dawn of this addon.
 			
@@ -527,7 +508,6 @@ class meshSwap(bpy.types.Operator):
 			ways, the original object had finally, and truly, been removed.
 			
 			Also, note to self: this function is still a hell of a mess. Do something about it.
-			
 			"""
 			
 			# removing duplicates and checking orientation
@@ -535,14 +515,11 @@ class meshSwap(bpy.types.Operator):
 			rotList = []	#rotation of blocks
 			
 			for setNum in range(0,len(facebook)):
-				
 				# LOCAL coordinates!!!
 				x = round(facebook[setNum][2][0]) #since center's are half ints.. 
 				y = round(facebook[setNum][2][1]) #don't need (+0.5) -.5 structure
 				z = round(facebook[setNum][2][2])
 				
-				
-				# UNCOMMENT THE FOLLOWING LINES TO MAKE ROTATION THINGS WORK AGAIN
 				outsideBool = -1
 				if (swapGen in listData['edgeFloat']): outsideBool = 1
 				
@@ -556,14 +533,12 @@ class meshSwap(bpy.types.Operator):
 					#print("ON EDGE, BRO! line ~468, "+str(x) +","+str(y)+","+str(z)+", ")
 					#print([facebook[setNum][2][0], facebook[setNum][2][1], facebook[setNum][2][2]])	
 				
-				#### TORCHES
+				#### TORCHES, hack removes duplicates while not removing "edge" floats
 				if facebook[setNum][2][1]+0.5 - math.floor(facebook[setNum][2][1]+0.5) < 0.3:
 					#continue if coord. is < 1/3 of block height, to do with torch's base in wrong cube.
-					"""
-					print("TORCH HACK? line ~570")
-					if swapGen not in ['lilypad','redstone_wire_off']:
+					if swapGen not in listData['edgeFloat']:
 						continue
-					"""
+					
 				if v:print(" DUPLIST: ")
 				if v:print([x,y,z], [facebook[setNum][2][0], facebook[setNum][2][1], facebook[setNum][2][2]])
 				
@@ -572,14 +547,11 @@ class meshSwap(bpy.types.Operator):
 					# append location
 					dupList.append([x,y,z])
 					
-					
 					# check differece from rounding, this gets us the rotation!
 					x_diff = x-facebook[setNum][2][0]
 					#print(facebook[setNum][2][0],x,x_diff)
 					z_diff = z-facebook[setNum][2][2]
 					#print(facebook[setNum][2][2],z,z_diff)
-					
-					## rotations are handled on an object-to-object basis
 					
 					# append rotation
 					if swapGen in listData['torchlike']: # needs fixing
@@ -596,22 +568,17 @@ class meshSwap(bpy.types.Operator):
 					elif swapGen in listData['edgeFloat']:
 						if (y-facebook[setNum][2][1] < 0):
 							rotList.append(8)
-							#print('rotation ceiling')
 						elif (x_diff > 0.3):
 							rotList.append(7)
-							#print('not to mention here!')
 						elif (z_diff > 0.3):	
 							rotList.append(0)
-							#print('left here!')
 						elif (z_diff < -0.3):
 							rotList.append(6)
-							#print('right here!') 
 						else:
 							rotList.append(5)
-							#print('nothing to see here!')
 					elif swapGen in listData['edgeFlush']:
 						# actually 6 cases here, can need rotation below...
-						# currently not necessary/used, so not programmed..  
+						# currently not necessary/used, so not programmed..	 
 						rotList.append(0)
 					else:
 						# no rotation from source file, must always append something
@@ -619,7 +586,7 @@ class meshSwap(bpy.types.Operator):
 			
 			#import: guaranteed to have same name as "appendObj" for the first instant afterwards
 			grouped = False # used to check if to join or not
-			base = None 	# need to initialize to something, though this obj no used
+			base = None		# need to initialize to something, though this obj no used
 			if swapGen in listData['groupSwapList']:
 				
 				if v:print(">> link group?",toLink,groupAppendLayer,swapGen)
@@ -724,50 +691,43 @@ class meshSwap(bpy.types.Operator):
 					# torch rotation 1
 					x = -offset
 					obj.location += mathutils.Vector((x, y, z))
-					#bpy.ops.transform.rotate(value=rotValue, axis=(0, 1, 0))
 					obj.rotation_euler[1]+=rotValue
 				elif rot == 2:
 					# torch rotation 2
 					y = offset
 					obj.location += mathutils.Vector((x, y, z))
-					#bpy.ops.transform.rotate(value=rotValue, axis=(1, 0, 0))
 					obj.rotation_euler[0]+=rotValue
 				elif rot == 3:
 					# torch rotation 3
 					x = offset
 					obj.location += mathutils.Vector((x, y, z))
-					#bpy.ops.transform.rotate(value=-rotValue, axis=(0, 1, 0))
-					obj.rotation_euler[1]+=rotValue
+					obj.rotation_euler[1]-=rotValue
 				elif rot == 4:
 					# torch rotation 4
 					y = -offset
 					obj.location += mathutils.Vector((x, y, z))
-					#bpy.ops.transform.rotate(value=-rotValue, axis=(1, 0, 0))
-					obj.rotation_euler[0]+=rotValue
+					obj.rotation_euler[0]-=rotValue
 				elif rot == 5:
 					# edge block rotation 1
-					#bpy.ops.transform.rotate(value=-math.pi/2,axis=(0,0,1))
 					obj.rotation_euler[2]+= -math.pi/2
 				elif rot == 6:
 					# edge block rotation 2
-					#bpy.ops.transform.rotate(value=math.pi,axis=(0,0,1))
 					obj.rotation_euler[2]+= math.pi
 				elif rot == 7:
 					# edge block rotation 3
-					#bpy.ops.transform.rotate(value=math.pi/2,axis=(0,0,1))
 					obj.rotation_euler[2]+= math.pi/2
 				elif rot==8:
 					# edge block rotation 4 (ceiling, not 'keep same')
-					#bpy.ops.transform.rotate(value=math.pi/2,axis=(1,0,0))
 					obj.rotation_euler[0]+= math.pi/2
 					
 				# extra variance to break up regularity, e.g. for tall grass
+				# first, xy and z variance
 				if [swapGen,1] in listData['variance']:
 					x = (random.random()-0.5)*0.5
 					y = (random.random()-0.5)*0.5
-					z = (random.random()/2-0.5)*0.6 # restriction guarentees it will never go Up (+z value)
+					z = (random.random()/2-0.5)*0.6
 					obj.location += mathutils.Vector((x, y, z))
-					
+				# now for just xy variance, base stays the same
 				elif [swapGen,0] in listData['variance']: # for non-z variance
 					x = (random.random()-0.5)*0.5	 # values LOWER than *1.0 make it less variable
 					y = (random.random()-0.5)*0.5
@@ -838,7 +798,7 @@ class MCpanel(bpy.types.Panel):
 	bl_label = "MCprep Panel"
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'TOOLS'
-	bl_category = "Tools" #or "Relations"?
+	bl_category = 'Tools' #or "Relations"?
 
 	def draw(self, context):
 		
@@ -917,7 +877,7 @@ def register():
 	bpy.types.Scene.MCprep_meshswap_path = bpy.props.StringProperty(
 		name="Location of asset files",
 		description="Path to the blend file with assets to swap in/link",
-		default="//asset_meshswap.blend",subtype="FILE_PATH")
+		default="//asset_meshSwap.blend",subtype="FILE_PATH")
 	bpy.types.Scene.MCprep_material_path = bpy.props.StringProperty(
 		name="Location of asset materials",
 		description="Path to the blend file with materials for linking",
