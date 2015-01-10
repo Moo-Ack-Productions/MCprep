@@ -435,7 +435,8 @@ class meshSwap(bpy.types.Operator):
 		# could also recombine similar materials here, so happens just once.
 		selList = context.selected_objects
 		for obj in selList:
-			bpy.ops.object.convert(target='MESH')
+			try: bpy.ops.object.convert(target='MESH')
+			except: pass
 			bpy.ops.mesh.separate(type='MATERIAL')
 		
 		# now do type checking and fix any name discrepencies
