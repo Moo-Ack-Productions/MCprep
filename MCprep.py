@@ -17,13 +17,24 @@ https://github.com/TheDuckCow/MCprep.git
 WIP thread on blenderartists:
 http://www.blenderartists.org/forum/showthread.php?316151-ADDON-WIP-MCprep-for-Minecraft-Workflow
 
+Self todo:
+- Make gScale (global scale) work
+- Make mineways imports work:
+
+* Must make a check box for jmc or minewayss, unfortunately
+* Torches in mineways are simpler, but e.g. grass not always perfectly squre.
+* continue renaming assets
+* Worlds are shifted off by 0.5 units. Preprocess this? ie do 
+another test where I check if things on boundary (after scaling)
+and then move as necessary. 
+
 """
 
 ########
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",
-	"version": (1, 3, 5),
+	"version": (1, 4, 1),
 	"blender": (2, 72, 0),
 	"location": "3D window toolshelf",
 	"description": "Speeds up the workflow of minecraft animations and imported minecraft worlds",
@@ -36,7 +47,7 @@ import bpy,os,mathutils,random,math
 
 #verbose
 v = True 
-v = False
+#v = False
 
 ########################################################################################
 #	Below for precursor functions
@@ -49,7 +60,8 @@ v = False
 # this should be a dictionary, not a function! can update fairly easily, track references..
 # but like fo serious, make this a dictionary object with lists....
 def getListData():
-	
+	global v
+
 	# lists for material prep, hard coded for lack of library file
 	reflective = [ 'glass', 'glass_pane_side','ice']
 	water = ['water','water_flowing']
@@ -280,8 +292,51 @@ def bAppendLink(directory,name, toLink):
 		bpy.ops.wm.link_append(directory=directory, filename=name, link=toLink)
 	
 
+########
+# If scale isn't set, try to guess the scale of the world
+# being meshswapped. Default is 1x1x1 m blocks, as in meshwap files.
+def estimateScale(faces):
+	global v
+	scale = 1
+	# Consider only sending a subset of all the faces, not many should be needed
+	# hash count, make a list where each entry is [ area count, number matched ]
+
+	guessList = []
+	countList = []
+
+	# iterate over all faces
+	for face in faces:
+		n = face.normal
+		if not (abs(n[0]) == 0 or abs(n[0]) == 1):
+			continue #catches any faces not flat or angled slightly
+
+		# ideally throw out/cancel also if the face isn't square.
+		a = face.area 	# shouldn't do area, but do height of a single face....
+		if a not in guessList:
+			guessList.append(a)
+			countList.append(1)
+		else:
+			countList[guessList.index(a)] += 1
+
+	if v:
+		for a in range(len(guessList)): print(guessList[a], countList[a])
+
+	return guessList[ countList.index(max(countList)) ]
 
 
+def offsetByHalf(obj):
+	if obj.type != 'MESH': return
+	bpy.ops.object.mode_set(mode='OBJECT')
+	active = bpy.context.active_object
+	bpy.context.scene.objects.active  = obj
+	bpy.ops.object.mode_set(mode='EDIT')
+	bpy.ops.mesh.select_all(action='SELECT')
+	bpy.ops.transform.translate(value=(0.5, 0.5, 0.5))
+	bpy.ops.object.mode_set(mode='OBJECT')
+	obj.location[0] -= .5
+	obj.location[1] -= .5
+	obj.location[2] -= .5
+	bpy.context.scene.objects.active  = active
 
 ########################################################################################
 #	Above for precursor functions
@@ -299,7 +354,7 @@ class materialChange(bpy.types.Operator):
 	
 	## HERE functions for GENERAL material setup (cycles and BI)
 	def materialsInternal(self, mat):
-		
+		global v
 		# defines lists for materials with special default settings.
 		listData = getListData()
 		
@@ -411,9 +466,10 @@ class meshSwap(bpy.types.Operator):
 	countMax = 5		# count compared to this, frequency of refresh (number of objs)
 	
 	def execute(self, context):
+		global v
 		## debug, restart check
 		if v:print('###################################')
-		
+
 		# get library path from property/UI panel
 		direc = context.scene.MCprep_meshswap_path
 		if not(os.path.isdir(direc)):
@@ -429,6 +485,7 @@ class meshSwap(bpy.types.Operator):
 		toLink = context.scene.MCprep_linkGroup
 		groupAppendLayer = context.scene.MCprep_groupAppendLayer
 		activeLayers = list(context.scene.layers)
+		doOffset = (bpy.context.scene.MCprep_exporter_type == "Mineways")
 		
 		#separate each material into a separate object
 		#is this good practice? not sure what's better though
@@ -449,9 +506,21 @@ class meshSwap(bpy.types.Operator):
 			obj.data.name = obj.active_material.name
 			obj.name = obj.active_material.name
 			objList.append(obj) # redundant, should just make it the same list as before
-		
+
 		# Now get a list of all objects in this blend file, and all groups
 		listData = getListData()
+
+		# global scale, WIP
+		gScale = 1
+		# faces = []
+		# for ob in objList:
+		# 	for poly in ob.data.polygons.values():
+		# 		faces.append(poly)
+
+		# # gScale = estimateScale(objList[0].data.polygons.values())
+		# gScale = estimateScale(faces)
+		if v: print("Using scale: ", gScale)
+		print(objList)
 
 		#primary loop, for each OBJECT needing swapping
 		for swap in objList:
@@ -471,6 +540,12 @@ class meshSwap(bpy.types.Operator):
 			if not (swapGen in listData['meshSwapList'] or swapGen in listData['groupSwapList']): continue
 			if v: print("Swapping '{x}', simplified name '{y}".format(x=swap.name, y=swapGen))
 			
+			# if mineways/necessary, offset mesh by a half. Do it on a per object basis.
+			if doOffset:
+				try:offsetByHalf(swap)
+				except: print("ERROR in offsetByHalf, verify swapped meshes for ",swap.name)
+
+
 			worldMatrix = swap.matrix_world.copy() #set once per object
 			polyList = swap.data.polygons.values() #returns LIST of faces.
 			#print(len(polyList)) # DON'T USE POLYLIST AFTER AFFECTING THE MESH
@@ -515,7 +590,7 @@ class meshSwap(bpy.types.Operator):
 			# removing duplicates and checking orientation
 			dupList = []	#where actual blocks are to be added
 			rotList = []	#rotation of blocks
-			
+
 			for setNum in range(0,len(facebook)):
 				# LOCAL coordinates!!!
 				x = round(facebook[setNum][2][0]) #since center's are half ints.. 
@@ -539,8 +614,8 @@ class meshSwap(bpy.types.Operator):
 				if facebook[setNum][2][1]+0.5 - math.floor(facebook[setNum][2][1]+0.5) < 0.3:
 					#continue if coord. is < 1/3 of block height, to do with torch's base in wrong cube.
 					if swapGen not in listData['edgeFloat']:
-						continue
-					
+						#continue
+						print("do nothing, this is for jmc2obj")	
 				if v:print(" DUPLIST: ")
 				if v:print([x,y,z], [facebook[setNum][2][0], facebook[setNum][2][1], facebook[setNum][2][2]])
 				
@@ -802,12 +877,19 @@ class MCpanel(bpy.types.Panel):
 	bl_region_type = 'TOOLS'
 	bl_category = 'Tools' #or "Relations"?
 
+	
+
 	def draw(self, context):
 		
 		layout = self.layout
 		split = layout.split()
 		col = split.column(align=True)
 		
+		row = col.row(align=True)
+		row.prop(context.scene,"MCprep_exporter_type", expand=True)
+
+		split = layout.split()
+		col = split.column(align=True)
 		row = col.row(align=True)
 		row.label(text="MeshSwap blend")
 		row.prop(context.scene,"MCprep_meshswap_path",text="")
@@ -824,6 +906,9 @@ class MCpanel(bpy.types.Panel):
 		col.operator("object.mc_mat_change", text="Prep Materials", icon='MATERIAL')
 		#below should actually just call a popup window
 		col.operator("object.mc_meshswap", text="Mesh Swap", icon='LINK_BLEND')
+		#col.prop(context.scene,"MCprep_export_type", expand=True)
+		
+
 		#the UV's pixels into actual 3D geometry (but same material, or modified to fit)
 		#col.operator("object.solidify_pixels", text="Solidify Pixels", icon='MOD_SOLIDIFY')
 		
@@ -864,22 +949,13 @@ class dialogue(bpy.types.Operator):
 ########################################################################################
 
 
-
 def register():
-	bpy.utils.register_class(materialChange)
-	bpy.utils.register_class(meshSwap)
-	bpy.utils.register_class(solidifyPixels)
-	
-	
-	bpy.utils.register_class(dialogue)
-	bpy.utils.register_class(WIP)
-	bpy.utils.register_class(MCpanel)
-	
-	#properties
+
+	# .properties
 	bpy.types.Scene.MCprep_meshswap_path = bpy.props.StringProperty(
 		name="Location of asset files",
 		description="Path to the blend file with assets to swap in/link",
-		default="//asset_meshSwap.blend",subtype="FILE_PATH")
+		default="//mcprep_meshSwap_jmc2obj.blend",subtype="FILE_PATH")
 	bpy.types.Scene.MCprep_material_path = bpy.props.StringProperty(
 		name="Location of asset materials",
 		description="Path to the blend file with materials for linking",
@@ -894,6 +970,22 @@ def register():
 		min=0,
 		max=20,
 		default=20)
+	bpy.types.Scene.MCprep_exporter_type = bpy.props.EnumProperty(
+		items = [('jmc2obj', 'jmc2obj', 'Select if exporter used was jmc2obj'),
+				('Mineways', 'Mineways', 'Select if exporter used was Mineways')],
+		name = "Exporter")
+	bpy.context.scene['MCprep_exporter_type'] = 0
+	#bpy.utils.register_class(item_set)
+
+	# classes
+	bpy.utils.register_class(materialChange)
+	bpy.utils.register_class(meshSwap)
+	bpy.utils.register_class(solidifyPixels)
+	
+	
+	bpy.utils.register_class(dialogue)
+	bpy.utils.register_class(WIP)
+	bpy.utils.register_class(MCpanel)
 
 
 def unregister():
@@ -910,6 +1002,7 @@ def unregister():
 	del bpy.types.Scene.MCprep_material_path
 	del bpy.types.Scene.MCprep_linkGroup
 	del bpy.types.Scene.MCprep_groupAppendLayer
+	del bpy.types.Scene.MCprep_export_type
 
 
 if __name__ == "__main__":

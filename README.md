@@ -55,8 +55,17 @@ To add your own objects to meshswap (or groupswap):
 Known Bugs
 ======
 - SOMETIMES UNDO (control/command z) MAY CRASH AFTER MESHSWAPPING, recommended to save before using to be safe but generally is fine.
-- Weird rotations of the set will cause meshswapping to not have the intended result. However, any scale or (global) translations goes!
-- The local coordiantes (edit-mode) of the mesh *must* have it's geometry centered on whole integers. That is, the center of a block (not it's base or side) should have a coordiante of x=#.000, y=#.00, z=#.00; imported from jmc2obj will be fine!
+- Currently assumes that the block size is 1x1x1, note that by default Mineways has a block size 0.1x0.1x0.1, please set it to 1m or 100cm on export. 
+- Both mineways and jmc2obj oddities:
+  - Redstone items like repeaters, dust, and so forth generally don't swap properly, and is a much more difficult problem to solve.
+  - Rails: for jmc2obj, all rails should at least be placed in the correc tposition, but not necessarily rotated correctly. For Mineways, materials have been combined so the addon is not able to distinguish between straight or curved rails - must do manual correction.
+- Mineways specific meshswap oddities:
+  - Mineways, unlike jmc2obj, replaces the face of a solid block with the object attached to it. For example, ladders and redstone dust when meshswapped will leave a hole in the block they were attached to. There is essentially nothing I can do about that.
+  - lilypads end up rotated and in block next to where they should be
+  - Torhes: all work fine, expect for one direction of a torch placed on a way (will be placed in the correct air space but oriented as if it were placed on top of a block and not on the side of one)
+  - Fire blocks will create two unnecessary adjecent blocks of fire.
+  - "On" redstone lamp is not swapping, off redstone lamp is however.
+  - If multiple torch-like objects are meshswapped at once (torches, rs torches on/off), too many torches are copied in.
 - The Materials blend does nothing yet. Working on it! Ultiamtely will let you have a library of materials to swap in.
 
 
