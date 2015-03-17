@@ -34,7 +34,7 @@ and then move as necessary.
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",
-	"version": (1, 4, 1),
+	"version": (1, 4, 2),
 	"blender": (2, 72, 0),
 	"location": "3D window toolshelf",
 	"description": "Speeds up the workflow of minecraft animations and imported minecraft worlds",
@@ -47,7 +47,7 @@ import bpy,os,mathutils,random,math
 
 #verbose
 v = True 
-#v = False
+v = False
 
 ########################################################################################
 #	Below for precursor functions
@@ -502,7 +502,7 @@ class meshSwap(bpy.types.Operator):
 		for obj in selList:
 			#ignore non mesh selected objects
 			if obj.type != 'MESH': continue
-			
+			if obj.active_material == None: continue
 			obj.data.name = obj.active_material.name
 			obj.name = obj.active_material.name
 			objList.append(obj) # redundant, should just make it the same list as before
@@ -974,7 +974,7 @@ def register():
 		items = [('jmc2obj', 'jmc2obj', 'Select if exporter used was jmc2obj'),
 				('Mineways', 'Mineways', 'Select if exporter used was Mineways')],
 		name = "Exporter")
-	bpy.context.scene['MCprep_exporter_type'] = 0
+	#bpy.context.scene['MCprep_exporter_type'] = 0
 	#bpy.utils.register_class(item_set)
 
 	# classes
