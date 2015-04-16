@@ -47,7 +47,8 @@ import bpy,os,mathutils,random,math
 
 #verbose
 v = True 
-v = False
+#v = False
+importedMats = False
 
 ########################################################################################
 #	Below for precursor functions
@@ -59,21 +60,47 @@ v = False
 # Get the lists of either hard coded or library parsed lists for functions
 # this should be a dictionary, not a function! can update fairly easily, track references..
 # but like fo serious, make this a dictionary object with lists....
+def getListDataMats():
+	global importedMats
+
+	reflective = [ 'glass', 'glass_pane_side','ice','ice_packed']
+	water = ['water','water_flowing']
+	# things are transparent by default to be safe, but if something is solid it is much
+	# better to make it solid (faster render and build times)
+	solid = ['sand','dirt','dirt_grass_side','dirt_grass_top','dispenser_front','furnace_top',
+			'redstone_block','gold_block','yourFace','stone','iron_ore','coal_ore',
+			'stone_brick']
+	emit= ['redstone_block','redstone_lamp_on','glowstone','lava','lava_flowing','fire']
+
+
+
+	######## CHANGE TO MATERIALS LIBRARY
+	if v and not importedMats:print("Parsing library file for materials")
+	#attempt to LOAD information from an asset file...
+	matLibPath = bpy.context.scene.MCprep_material_path
+	if not(os.path.isfile(matLibPath)):
+		#extract actual path from the relative one
+		matLibPath = bpy.path.abspath(matLibPath)
+
+
+	# WHAT IT SHOULD DO: check the NAME of the current material,
+	# and ONLY import that one if it's there. maybe split this into another function
+	# imported mats is a bool so we only attempt to load one time instead of like fifty.
+	if (os.path.isfile(matLibPath)) and not importedMats:
+		importedMats = True
+		if v:print("Material library found, reading in")
+		with bpy.data.libraries.load(matLibPath) as (data_from, data_to):
+			data_to.materials = data_from.materials
+
+		# now go through the new materials and change them for the old...?
+
+
+	return {'reflective':reflective, 'water':water, 'solid':solid,
+			'emit':emit}
+
 def getListData():
 	global v
 
-	# lists for material prep, hard coded for lack of library file
-	reflective = [ 'glass', 'glass_pane_side','ice']
-	water = ['water','water_flowing']
-	solid = ['sand','dirt','dirt_grass_side','dispenser_front','furnace_top','redstone_block',
-				'gold_block','yourFace']
-	emit= ['redstone_block','redstone_lamp_on','glowstone','lava','lava_flowing']
-	
-	
-	
-	
-	
-	
 	##### lists for meshSwap
 	added = [] # list for checking if item added to lists yet or not
 	groupSwapList = []
@@ -174,8 +201,7 @@ def getListData():
 	if v:print("edgeFloat: ",edgeFloat,", variance: ",variance,", torchlike: ",torchlike)
 	
 	return {'meshSwapList':meshSwapList, 'groupSwapList':groupSwapList,
-			'reflective':reflective, 'water':water, 'solid':solid,
-			'emit':emit, 'variance':variance, 'edgeFlush':edgeFlush,
+			'variance':variance, 'edgeFlush':edgeFlush,
 			'edgeFloat':edgeFloat,'torchlike':torchlike,'removable':removable}
 
 
@@ -297,6 +323,7 @@ def bAppendLink(directory,name, toLink):
 # being meshswapped. Default is 1x1x1 m blocks, as in meshwap files.
 def estimateScale(faces):
 	global v
+
 	scale = 1
 	# Consider only sending a subset of all the faces, not many should be needed
 	# hash count, make a list where each entry is [ area count, number matched ]
@@ -355,8 +382,9 @@ class materialChange(bpy.types.Operator):
 	## HERE functions for GENERAL material setup (cycles and BI)
 	def materialsInternal(self, mat):
 		global v
+
 		# defines lists for materials with special default settings.
-		listData = getListData()
+		listData = getListDataMats()	# for now, DON'T require we have list data
 		
 		try:
 			newName = mat.name+'_tex' # add exception to skip? with warning?
@@ -381,6 +409,7 @@ class materialChange(bpy.types.Operator):
 	   
 		#generalizing the name, so that lava.001 material is recognized and given emit
 		matGen = nameGeneralize(mat.name)
+		# also.... disable nodes!!
 	   
 		mat.use_transparent_shadows = True #all materials receive trans
 		mat.specular_intensity = 0
@@ -412,7 +441,7 @@ class materialChange(bpy.types.Operator):
 	def materialsCycles(self, mat):
 		
 		# defines lists for materials with special default settings.
-		listData = getListData()
+		listData = getListDataMats()
 		
 		# generalize name
 		matGen = nameGeneralize(mat.name)
@@ -427,13 +456,15 @@ class materialChange(bpy.types.Operator):
 	### HERE function for linking/appending from asset scene
 	
 	def execute(self, context):
-		
+		global importedMats
 		#get list of selected objects
 		objList = context.selected_objects
 
 		# gets the list of materials (without repetition) in the selected object list
 		matList = getObjectMaterials(objList)
-		
+
+		# set to false so it will import
+		importedMats = False
 		for mat in matList:
 			#check if linked material exists
 			render_engine = bpy.context.scene.render.engine
@@ -448,7 +479,8 @@ class materialChange(bpy.types.Operator):
 					self.materialsCycles(mat)
 			else:
 				if v:print('Get the linked material instead!')
-
+		# reset it so it can check for reimport again if necessary
+		importedMats = False
 		return {'FINISHED'}
 
 
