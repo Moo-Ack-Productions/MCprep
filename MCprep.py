@@ -440,14 +440,69 @@ class materialChange(bpy.types.Operator):
 	### Function for default cycles materials
 	def materialsCycles(self, mat):
 		
+		#if not mat.texture_slots[0].use:
+			# potentially return that this object didn't have texture slots to use?
+			# check second layers etc?
+			#return
+
 		# defines lists for materials with special default settings.
 		listData = getListDataMats()
 		
 		# generalize name
 		matGen = nameGeneralize(mat.name)
 		
+		mat.use_nodes = False # disable nodes first, to be safe
+
+		try:
+			imageTex = mat.texture_slots[0].texture.image
+		except:
+			return
+
 		#enable nodes
+		mat.use_nodes = True
+		nodes = mat.node_tree.nodes
+		links = mat.node_tree.links
+		nodes.clear()
+		nodeDiff = nodes.new('ShaderNodeBsdfDiffuse')
+		nodeGloss = nodes.new('ShaderNodeBsdfGlossy')
+		nodeTrans = nodes.new('ShaderNodeBsdfTransparent')
+		nodeMix1 = nodes.new('ShaderNodeMixShader')
+		nodeMix2 = nodes.new('ShaderNodeMixShader')
+		nodeTex = nodes.new('ShaderNodeTexImage')
+		nodeOut = nodes.new('ShaderNodeOutputMaterial')
 		
+		# set location and connect
+		nodeTex.location = (-400,0)
+		nodeGloss.location = (0,-150)
+		nodeDiff.location = (-200,-150)
+		nodeTrans.location = (-200,0)
+		nodeMix1.location = (0,0)
+		nodeMix2.location = (200,0)
+		nodeOut.location = (400,0)
+		links.new(nodeTex.outputs["Color"],nodeDiff.inputs[0])
+		links.new(nodeDiff.outputs["BSDF"],nodeMix1.inputs[2])
+		links.new(nodeTex.outputs["Alpha"],nodeMix1.inputs[0])
+		links.new(nodeTrans.outputs["BSDF"],nodeMix1.inputs[1])
+		links.new(nodeGloss.outputs["BSDF"],nodeMix2.inputs[2])
+		links.new(nodeMix1.outputs["Shader"],nodeMix2.inputs[1])
+		links.new(nodeMix2.outputs["Shader"],nodeOut.inputs[0])
+		nodeTex.image = imageTex
+
+		#set other default values, e.g. the mixes
+		nodeMix2.inputs[0].default_value = 0.1 # factor
+		nodeGloss.inputs[1].default_value = 0.1 # roughness
+
+		
+
+
+		#bpy.ops.node.add_node(type="ShaderNodeTexImage", use_transform=True)
+		#py.ops.transform.translate(value=(-226.042, 113.966, 0), constraint_axis=(False, False, False), constraint_orientation='GLOBAL', mirror=False, proportional='DISABLED', proportional_edit_falloff='SMOOTH', proportional_size=1, remove_on_cancel=True)
+
+		# select both 
+		# make connection
+		#bpy.ops.node.link_make(replace=False)
+
+
 		#set nodes
 		
 		#warning that nothing done to scale textures, must just use scaled
@@ -465,9 +520,11 @@ class materialChange(bpy.types.Operator):
 
 		# set to false so it will import
 		importedMats = False
+
+		#check if linked material exists
+		render_engine = bpy.context.scene.render.engine
+
 		for mat in matList:
-			#check if linked material exists
-			render_engine = bpy.context.scene.render.engine
 			
 			#if linked false:
 			if (True):
