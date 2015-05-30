@@ -27,6 +27,8 @@ This code is open source under the MIT license.
 Its purpose is to increase the workflow of creating Minecraft
 related renders and animations, by automating certain tasks.
 
+Developed and tested for blender 2.72 up to the indicated bledner version below
+
 The addon must be installed as a ZIP folder, not an individual python script.
 
 Source code available on github as well as more information:
@@ -38,8 +40,8 @@ https://github.com/TheDuckCow/MCprep.git
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",
-	"version": (2, 0, 1),
-	"blender": (2, 72, 0),
+	"version": (2, 0, 0),
+	"blender": (2, 74, 0),
 	"location": "3D window toolshelf > Tools tab",
 	"description": "Speeds up the workflow of minecraft animations and imported minecraft worlds",
 	"warning": "",
@@ -60,12 +62,6 @@ importedMats = False
 #	Below for precursor functions
 #	Thereafter for the class functions
 ########################################################################################
-
-# deleted/moved in-class
-# def getListDataMats():
-# def getListData():
-# def addGroupInstance():
-# def offsetByHalf(obj):
 
 ########
 # check if a face is on the boundary between two blocks (local coordinates)
@@ -146,8 +142,7 @@ def bAppendLink(directory,name, toLink):
 		version = bpy.data.version
 		post272 = True
 	except:
-		#  "version" didn't exist before 72!
-		pass
+		pass #  "version" didn't exist before 72!
 	#if (version[0] >= 2 and version[1] >= 72):
 	if post272:
 		# NEW method of importing
@@ -216,12 +211,12 @@ class materialChange(bpy.types.Operator):
 		emit= ['redstone_block','redstone_lamp_on','glowstone','lava','lava_flowing','fire']
 
 		######## CHANGE TO MATERIALS LIBRARY
-		if v and not importedMats:print("Parsing library file for materials")
-		#attempt to LOAD information from an asset file...
-		matLibPath = bpy.context.scene.MCprep_material_path
-		if not(os.path.isfile(matLibPath)):
-			#extract actual path from the relative one
-			matLibPath = bpy.path.abspath(matLibPath)
+		# if v and not importedMats:print("Parsing library file for materials")
+		# #attempt to LOAD information from an asset file...
+		# matLibPath = bpy.context.scene.MCprep_material_path
+		# if not(os.path.isfile(matLibPath)):
+		# 	#extract actual path from the relative one
+		# 	matLibPath = bpy.path.abspath(matLibPath)
 
 		# WHAT IT SHOULD DO: check the NAME of the current material,
 		# and ONLY import that one if it's there. maybe split this into another function
@@ -257,8 +252,6 @@ class materialChange(bpy.types.Operator):
 	   
 		### Check material texture exists and set name
 		try:
-			#if bpy.data.textures[texList[0].name].filter_type == 'BOX':
-			#	return #to skip non pre-prepped mats, but shouldn't need to...
 			bpy.data.textures[texList[0].name].name = newName
 		except:
 			if v:print('\tiwarning: material '+mat.name+' has no texture slot. skipping...')
@@ -380,18 +373,14 @@ class materialChange(bpy.types.Operator):
 		global importedMats
 		#get list of selected objects
 		objList = context.selected_objects
-
 		# gets the list of materials (without repetition) in the selected object list
 		matList = getObjectMaterials(objList)
-
 		# set to false so it will import
 		importedMats = False
-
 		#check if linked material exists
 		render_engine = bpy.context.scene.render.engine
 
 		for mat in matList:
-			
 			#if linked false:
 			if (True):
 				if (render_engine == 'BLENDER_RENDER'):
@@ -405,7 +394,6 @@ class materialChange(bpy.types.Operator):
 		# reset it so it can check for reimport again if necessary
 		importedMats = False
 		return {'FINISHED'}
-
 
 
 ########
@@ -442,12 +430,15 @@ class meshSwap(bpy.types.Operator):
 		
 		########
 		if v:print("Parsing library files")
-		#attempt to LOAD information from an asset file...
-		meshSwapPath = bpy.context.scene.MCprep_meshswap_path
-		if not(os.path.isfile(meshSwapPath)):
-			#extract actual path from the relative one
-			meshSwapPath = bpy.path.abspath(meshSwapPath)
 		
+		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
+		meshSwapPath = addon_prefs.jmc2obj_swap
+		if bpy.context.scene.MCprep_exporter_type == "Mineways":
+			meshSwapPath = addon_prefs.mineways_swap
+		if not os.path.isfile(meshSwapPath):
+			#extract actual path from the relative one if relative, e.g. //file.blend
+			meshSwapPath = bpy.path.abspath(meshSwapPath)
+
 		# this auto links every group, not just the ones we need!!!
 		with bpy.data.libraries.load(meshSwapPath) as (data_from, data_to):
 			data_to.objects = data_from.objects
@@ -487,8 +478,6 @@ class meshSwap(bpy.types.Operator):
 				tmpName = nameGeneralize(object.name) #not ideal! but the name instance meshes..
 				meshSwapList.append(tmpName)
 				added.append(tmpName)
-				#meshSwapList.append(object.name)
-				#added.append(group.name)
 				
 				# here check properties for which additional category to put it in
 				for item in object.items():
@@ -516,7 +505,6 @@ class meshSwap(bpy.types.Operator):
 		return {'meshSwapList':meshSwapList, 'groupSwapList':groupSwapList,
 				'variance':variance, 'edgeFlush':edgeFlush,
 				'edgeFloat':edgeFloat,'torchlike':torchlike,'removable':removable}
-
 
 
 	########
@@ -550,20 +538,23 @@ class meshSwap(bpy.types.Operator):
 		global v
 		## debug, restart check
 		if v:print('###################################')
+		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
 
-		# get library path from property/UI panel
-		direc = context.scene.MCprep_meshswap_path
-		if not(os.path.isdir(direc)):
-			direc = bpy.path.abspath(direc)
+		direc = addon_prefs.jmc2obj_swap
+		if bpy.context.scene.MCprep_exporter_type == "Mineways":
+			direc = addon_prefs.mineways_swap
 		
 		#check library file exists
-		if not os.path.exists(direc):
+		if not os.path.isfile(direc):
+			#extract actual path from the relative one if relative, e.g. //file.blend
+			direc = bpy.path.abspath(direc)
 			#bpy.ops.object.dialogue('INVOKE_DEFAULT') # DOES work! but less streamlined
-			self.report({'ERROR'}, "Mesh swap blend file not found!") # better, actual "error"
-			return {'CANCELLED'}
+			if not os.path.isfile(direc):
+				self.report({'ERROR'}, "Mesh swap blend file not found!") # better, actual "error"
+				return {'CANCELLED'}
 		
 		# get some scene information
-		toLink = context.scene.MCprep_linkGroup
+		toLink = False #context.scene.MCprep_linkGroup
 		groupAppendLayer = context.scene.MCprep_groupAppendLayer
 		activeLayers = list(context.scene.layers)
 		doOffset = (bpy.context.scene.MCprep_exporter_type == "Mineways")
@@ -581,7 +572,7 @@ class meshSwap(bpy.types.Operator):
 		objList = context.selected_objects
 		objList = []
 		for obj in selList:
-			#ignore non mesh selected objects
+			#ignore non mesh selected objects or objs labeled to not double swap
 			if obj.type != 'MESH' or ("MCprep_noSwap" in obj): continue
 			if obj.active_material == None: continue
 			obj.data.name = obj.active_material.name
@@ -929,10 +920,16 @@ class solidifyPixels(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 	
 	def execute(self, context):
-	
 		if v:print("hello world, solidify those pixels!")
 		self.report({'ERROR'}, "Feature not implemented yet")
 		return {'FINISHED'}
+
+
+########################################################################################
+#	Above for class functions/operators
+#	Below for UI
+########################################################################################
+
 
 
 #######
@@ -944,23 +941,65 @@ class WIP(bpy.types.Menu):
 	# Set the menu operators and draw functions
 	def draw(self, context):
 		layout = self.layout
-
 		row1 = layout.row()
 		row1.label(text="This addon is a work in progress, this function is not yet implemented")  
 
 
 #######
-# panel for these declared tools
+# preferences UI
+class RenderMusicProperties(bpy.types.AddonPreferences):
+	bl_idname = __package__
+	scriptdir = bpy.path.abspath(os.path.dirname(__file__))
+
+	jmc2obj_swap = bpy.props.StringProperty(
+		name = "jmc2obj_swap",
+		description = "Asset file for jmc2obj imported worlds",
+		subtype = 'FILE_PATH',
+		default = scriptdir + "/mcprep_meshSwap_jmc2obj.blend")
+
+	mineways_swap = bpy.props.StringProperty(
+		name = "mineways_swap",
+		description = "Asset file for Mineways imported worlds",
+		subtype = 'FILE_PATH',
+		default = scriptdir + "/mcprep_meshSwap_mineways.blend")
+
+	mcprep_use_lib = bpy.props.BoolProperty(
+		name = "Link meshswapped groups & materials",
+		description = "Use library linking when meshswapping or material matching",
+		default = False)
+
+	def draw(self, context):
+		layout = self.layout
+		row = layout.row()
+		row.label("Meshswapping source asset files:")
+		layout = layout.box()
+		split = layout.split(percentage=0.3)
+		col = split.column()
+		col.label("jmc2obj assets")
+		col.label("Mineways assets")
+		col = split.column()
+		col.prop(self, "jmc2obj_swap", text="")
+		col.prop(self, "mineways_swap", text="")
+
+		layout = self.layout
+		split = layout.split()
+		# col = split.column()
+		# col.label(text="Link groups & materials")
+		col = split.column()
+		col.prop(self, "mcprep_use_lib")
+
+
+#######
+# MCprep panel for these declared tools
 class MCpanel(bpy.types.Panel):
 	"""MCprep addon panel"""
 	bl_label = "MCprep Panel"
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'TOOLS'
-	bl_category = 'Tools' #or "Relations"?
-
-	
+	bl_category = 'Tools'
 
 	def draw(self, context):
+		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
 		
 		layout = self.layout
 		split = layout.split()
@@ -972,12 +1011,16 @@ class MCpanel(bpy.types.Panel):
 		split = layout.split()
 		col = split.column(align=True)
 		row = col.row(align=True)
-		row.label(text="MeshSwap blend")
-		row.prop(context.scene,"MCprep_meshswap_path",text="")
+		if context.scene.MCprep_exporter_type == "jmc2obj":
+			row.label(text="Meshswap source:")
+			row.prop(addon_prefs,"jmc2obj_swap",text="")
+		elif context.scene.MCprep_exporter_type == "Mineways":
+			row.label(text="Meshswap source:")
+			row.prop(addon_prefs,"mineways_swap",text="")
 		
 		row = col.row(align=True)
 		row.label(text="Materials blend")
-		row.prop(context.scene,"MCprep_material_path",text="")
+		row.prop(addon_prefs,"MCprep_material_path",text="")
 		#does nothing yet (correctly)
 		#col.prop(context.scene,"MCprep_groupAppendLayer",text="")
 		
@@ -1025,26 +1068,13 @@ class dialogue(bpy.types.Operator):
 
 
 ########################################################################################
-#	Above for the class functions
+#	Above for UI
 #	Below for registration stuff
 ########################################################################################
 
 
 def register():
 
-	# .properties
-	bpy.types.Scene.MCprep_meshswap_path = bpy.props.StringProperty(
-		name="Location of asset files",
-		description="Path to the blend file with assets to swap in/link",
-		default="//mcprep_meshSwap_jmc2obj.blend",subtype="FILE_PATH")
-	bpy.types.Scene.MCprep_material_path = bpy.props.StringProperty(
-		name="Location of asset materials",
-		description="Path to the blend file with materials for linking",
-		default="//asset_materials.blend",subtype="FILE_PATH")
-	bpy.types.Scene.MCprep_linkGroup = bpy.props.BoolProperty(
-		name="Link library groups",
-		description="Links groups imported, otherwise groups are appended",
-		default=True)
 	bpy.types.Scene.MCprep_groupAppendLayer = bpy.props.IntProperty(
 		name="Group Append Layer",
 		description="When groups are appended instead of linked, the objects part of the group will be palced in this layer, 0 means same as active layer, otherwise sets the the given layer number",
@@ -1055,8 +1085,6 @@ def register():
 		items = [('jmc2obj', 'jmc2obj', 'Select if exporter used was jmc2obj'),
 				('Mineways', 'Mineways', 'Select if exporter used was Mineways')],
 		name = "Exporter")
-	#bpy.context.scene['MCprep_exporter_type'] = 0
-	#bpy.utils.register_class(item_set)
 
 	# classes
 	bpy.utils.register_class(materialChange)
@@ -1067,6 +1095,7 @@ def register():
 	bpy.utils.register_class(dialogue)
 	bpy.utils.register_class(WIP)
 	bpy.utils.register_class(MCpanel)
+	bpy.utils.register_class(RenderMusicProperties)
 
 	import urllib.request
 	n = urllib.request.urlopen("http://www.theduckcow.com/data/mcprepinstall.html")
@@ -1081,6 +1110,7 @@ def unregister():
 	bpy.utils.unregister_class(dialogue)
 	bpy.utils.unregister_class(WIP)
 	bpy.utils.unregister_class(MCpanel)
+	bpy.utils.unregister_class(RenderMusicProperties)
 	
 	#properties
 	del bpy.types.Scene.MCprep_meshswap_path
