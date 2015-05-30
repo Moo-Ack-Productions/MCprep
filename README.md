@@ -56,10 +56,10 @@ Known Bugs
 ======
 - SOMETIMES UNDO (control/command z) MAY CRASH AFTER MESHSWAPPING, recommended to save before using to be safe but generally is fine.
 - Currently assumes that the block size is 1x1x1, note that by default Mineways has a block size 0.1x0.1x0.1, please set it to 1m or 100cm on export. 
-- Both mineways and jmc2obj oddities:
+- **Both mineways and jmc2obj oddities:**
   - Redstone items like repeaters, dust, and so forth generally don't swap properly, and is a much more difficult problem to solve.
   - Rails: for jmc2obj, all rails should at least be placed in the correc tposition, but not necessarily rotated correctly. For Mineways, materials have been combined so the addon is not able to distinguish between straight or curved rails - must do manual correction.
-- Mineways specific meshswap oddities:
+- **Mineways specific meshswap oddities:**
   - Mineways, unlike jmc2obj, replaces the face of a solid block with the object attached to it. For example, ladders and redstone dust when meshswapped will leave a hole in the block they were attached to. There is essentially nothing I can do about that.
   - lilypads end up rotated and in block next to where they should be
   - Torhes: all work fine, expect for one direction of a torch placed on a way (will be placed in the correct air space but oriented as if it were placed on top of a block and not on the side of one)
@@ -72,6 +72,6 @@ Known Bugs
 Additional Help
 ======
 
-If you have troubles getting this addon to work, please contact me at TheDuckCow@live.com, and I will do my best to respond promptly to your questions. This addon is still heavily under construction, so check back for updates (you can reference the version number and take last modified). Your feedback helps stabilize the addon and work better for everyone else!
+If you have troubles getting this addon to work, please contact me at TheDuckCow@live.com or [on twitter](https://twitter.com/TheDuckCow), and I will do my best to respond promptly to your questions. This addon is still heavily under construction, so check back for updates (you can reference the version number and take last modified). Your feedback helps stabilize the addon and work better for everyone else!
 
 Moo-Ack!
