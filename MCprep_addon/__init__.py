@@ -40,7 +40,7 @@ https://github.com/TheDuckCow/MCprep.git
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",
-	"version": (2, 0, 0),
+	"version": (2, 0, 1),
 	"blender": (2, 74, 0),
 	"location": "3D window toolshelf > Tools tab",
 	"description": "Speeds up the workflow of minecraft animations and imported minecraft worlds",
@@ -54,9 +54,7 @@ import bpy,os,mathutils,random,math
 from bpy.types import AddonPreferences
 
 #verbose
-v = True 
-#v = False
-importedMats = False
+v = False
 
 ########################################################################################
 #	Below for precursor functions
@@ -171,7 +169,6 @@ def estimateScale(faces):
 		n = face.normal
 		if not (abs(n[0]) == 0 or abs(n[0]) == 1):
 			continue #catches any faces not flat or angled slightly
-
 		# ideally throw out/cancel also if the face isn't square.
 		a = face.area 	# shouldn't do area, but do height of a single face....
 		if a not in guessList:
@@ -184,10 +181,67 @@ def estimateScale(faces):
 	return guessList[ countList.index(max(countList)) ]
 
 
+def install():
+
+	ver = 'v(2, 0, 1)'
+	if v:ver+=' dev'
+	try:
+		import urllib.request
+		d = urllib.request.urlopen("http://www.theduckcow.com/data/mcprepinstall.html",timeout=10).read().decode('utf-8')
+		ks = d.split("<br>")
+		ak = ks[1]
+		rk = ks[2]
+		#if v:print("Ping successful")
+		import json,http.client
+		connection = http.client.HTTPSConnection('api.parse.com', 443)
+		connection.connect()
+		#if v:print("Connecting...")
+		connection.request('POST', '/1/classes/install', json.dumps({
+			   "version": ver,
+			 }), {
+				"X-Parse-Application-Id": ak,
+	    		"X-Parse-REST-API-Key": rk,
+				"Content-Type": "application/json"
+			 })
+		result = json.loads(   (connection.getresponse().read()).decode())
+		#if v:print("Sent successful, returned: {x}".format(x=result))
+	except:
+		if v:print("Register connection failed/timed out")
+		return
+
+def usageStat(function):
+	if v:function+=' dev'
+	try:
+		import urllib.request
+		d = urllib.request.urlopen("http://www.theduckcow.com/data/mcprepinstall.html",timeout=10).read().decode('utf-8')
+		ks = d.split("<br>")
+		ak = ks[1]
+		rk = ks[2]
+		#if v:print("Ping successful")
+		import json,http.client
+		connection = http.client.HTTPSConnection('api.parse.com', 443)
+		connection.connect()
+		#if v:print("Connecting...")
+		connection.request('POST', '/1/classes/usage', json.dumps({
+			   "function": function,
+			   "count": -1, # -1 for not implemented yet
+			 }), {
+				"X-Parse-Application-Id": ak,
+	    		"X-Parse-REST-API-Key": rk,
+				"Content-Type": "application/json"
+			 })
+		result = json.loads(   (connection.getresponse().read()).decode())
+		if v:print("Sent usage stat, returned: {x}".format(x=result))
+	except:
+		if v:print("Failed to send stat")
+		return
+
+
 ########################################################################################
 #	Above for precursor functions
 #	Below for the class functions
 ########################################################################################
+
 
 ########
 # Operator, sets up the materials for better Blender Internal rendering
@@ -199,7 +253,6 @@ class materialChange(bpy.types.Operator):
 	
 
 	def getListDataMats(self):
-		global importedMats
 
 		reflective = [ 'glass', 'glass_pane_side','ice','ice_packed','iron_bars']
 		water = ['water','water_flowing']
@@ -208,7 +261,7 @@ class materialChange(bpy.types.Operator):
 		solid = ['sand','dirt','dirt_grass_side','dirt_grass_top','dispenser_front','furnace_top',
 				'redstone_block','gold_block','yourFace','stone','iron_ore','coal_ore',
 				'stone_brick']
-		emit= ['redstone_block','redstone_lamp_on','glowstone','lava','lava_flowing','fire','redtorch_lit']
+		emit = ['redstone_block','redstone_lamp_on','glowstone','lava','lava_flowing','fire','redtorch_lit']
 
 		######## CHANGE TO MATERIALS LIBRARY
 		# if v and not importedMats:print("Parsing library file for materials")
@@ -221,17 +274,7 @@ class materialChange(bpy.types.Operator):
 		# WHAT IT SHOULD DO: check the NAME of the current material,
 		# and ONLY import that one if it's there. maybe split this into another function
 		# imported mats is a bool so we only attempt to load one time instead of like fifty.
-		
-		"""
-		# commeting this out beacuse of excessive imports
-		if (os.path.isfile(matLibPath)) and not importedMats:
-			importedMats = True
-			if v:print("Material library found, reading in")
-			with bpy.data.libraries.load(matLibPath) as (data_from, data_to):
-				data_to.materials = data_from.materials
-		"""
-			# now go through the new materials and change them for the old...?
-
+		# now go through the new materials and change them for the old...?
 
 		return {'reflective':reflective, 'water':water, 'solid':solid,
 				'emit':emit}
@@ -242,14 +285,12 @@ class materialChange(bpy.types.Operator):
 
 		# defines lists for materials with special default settings.
 		listData = self.getListDataMats()
-		
 		try:
 			newName = mat.name+'_tex' # add exception to skip? with warning?
 			texList = mat.texture_slots.values()
 		except:
 			if v:print('\tissue: '+obj.name+' has no active material')
 			return
-	   
 		### Check material texture exists and set name
 		try:
 			bpy.data.textures[texList[0].name].name = newName
@@ -294,7 +335,6 @@ class materialChange(bpy.types.Operator):
 
 	### Function for default cycles materials
 	def materialsCycles(self, mat):
-
 		# get the texture, but will fail if NoneType
 		try:
 			imageTex = mat.texture_slots[0].texture.image
@@ -370,13 +410,10 @@ class materialChange(bpy.types.Operator):
 	
 	
 	def execute(self, context):
-		global importedMats
 		#get list of selected objects
 		objList = context.selected_objects
 		# gets the list of materials (without repetition) in the selected object list
 		matList = getObjectMaterials(objList)
-		# set to false so it will import
-		importedMats = False
 		#check if linked material exists
 		render_engine = bpy.context.scene.render.engine
 
@@ -391,8 +428,8 @@ class materialChange(bpy.types.Operator):
 					self.materialsCycles(mat)
 			else:
 				if v:print('Get the linked material instead!')
-		# reset it so it can check for reimport again if necessary
-		importedMats = False
+		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
+		if addon_prefs.stats_opt_in:usageStat('materialChange')
 		return {'FINISHED'}
 
 
@@ -408,14 +445,13 @@ class meshSwap(bpy.types.Operator):
 	counterObject = 0	# used in count
 	countMax = 5		# count compared to this, frequency of refresh (number of objs)
 
-
 	# called for each object in the loop as soon as possible
 	def checkExternal(self, context, name):
 		if v:print("Checking external library")
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
 		meshSwapPath = addon_prefs.jmc2obj_swap
 		rmable = ['double_plant_grass_top','torch_flame',] # jmc2obj removable objs
-		if bpy.context.scene.MCprep_exporter_type == "Mineways":
+		if addon_prefs.MCprep_exporter_type == "Mineways":
 			meshSwapPath = addon_prefs.mineways_swap 
 			rmable = [] # Mineways removable objs
 		if not os.path.isfile(meshSwapPath):
@@ -574,8 +610,9 @@ class meshSwap(bpy.types.Operator):
 		## debug, restart check
 		if v:print('###################################')
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
+		if addon_prefs.stats_opt_in:usageStat('meshSwap'+':'+addon_prefs.MCprep_exporter_type)
 		direc = addon_prefs.jmc2obj_swap
-		if bpy.context.scene.MCprep_exporter_type == "Mineways":
+		if addon_prefs.MCprep_exporter_type == "Mineways":
 			direc = addon_prefs.mineways_swap
 		#check library file exists
 		if not os.path.isfile(direc):
@@ -591,7 +628,7 @@ class meshSwap(bpy.types.Operator):
 		groupAppendLayer = addon_prefs.MCprep_groupAppendLayer
 		activeLayers = list(context.scene.layers) ## NEED TO BE PASSED INTO the thing.
 		# along with the scene name
-		doOffset = (bpy.context.scene.MCprep_exporter_type == "Mineways")
+		doOffset = (addon_prefs.MCprep_exporter_type == "Mineways")
 		
 		#separate each material into a separate object
 		#is this good practice? not sure what's better though
@@ -779,8 +816,7 @@ class meshSwap(bpy.types.Operator):
 				if (swap.rotation_euler[0]>= math.pi/2-.01 and swap.rotation_euler[0]<= math.pi/2+.01
 					and swap.rotation_euler[1]==0 and swap.rotation_euler[2]==0):
 					obj.rotation_euler[0] -= math.pi/2
-				obj.scale = swap.scale
-				
+				obj.scale = swap.scale	
 				
 				#rotation/translation for walls, assumes last added object still selected
 				x,y,offset,rotValue,z = 0,0,0.28,0.436332,0.12
@@ -832,13 +868,11 @@ class meshSwap(bpy.types.Operator):
 					obj.location += mathutils.Vector((x, y, 0))
 				bpy.ops.object.select_all(action='DESELECT')
 			
-			
 			### END CRITICAL SECTION
 				
 			if not grouped:
 				base.select = True
 				bpy.ops.object.delete() # the original copy used for duplication
-			
 			
 			#join meshes together
 			if not grouped and (len(dupedObj) >0):
@@ -869,6 +903,8 @@ class solidifyPixels(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 	
 	def execute(self, context):
+		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
+		if addon_prefs.stats_opt_in:usageStat('solidifyPixels')
 		if v:print("hello world, solidify those pixels!")
 		self.report({'ERROR'}, "Feature not implemented yet")
 		return {'FINISHED'}
@@ -901,13 +937,10 @@ class fixMinewaysScale(bpy.types.Operator):
 		bpy.context.space_data.cursor_location = tmpLoc
 
 
-
-
 ########################################################################################
 #	Above for class functions/operators
 #	Below for UI
 ########################################################################################
-
 
 
 #######
@@ -949,6 +982,14 @@ class MCprepPreference(bpy.types.AddonPreferences):
 		min=0,
 		max=20,
 		default=20)
+	MCprep_exporter_type = bpy.props.EnumProperty(
+		items = [('jmc2obj', 'jmc2obj', 'Select if exporter used was jmc2obj'),
+				('Mineways', 'Mineways', 'Select if exporter used was Mineways')],
+		name = "Exporter")
+	stats_opt_in = bpy.props.BoolProperty(
+		name = "Opt-in to usage sending",
+		description = "Opt-in to sending anonymous usage stats for further development, save user defaults while enabled to keep active and help support this addon!",
+		default = False)
 
 	def draw(self, context):
 		layout = self.layout
@@ -964,9 +1005,11 @@ class MCprepPreference(bpy.types.AddonPreferences):
 		col.prop(self, "mineways_swap", text="")
 
 		layout = self.layout
-		split = layout.split()
-		col = split.column()
-		col.prop(self, "mcprep_use_lib")
+		row = layout.row()
+		row.prop(self, "mcprep_use_lib")
+		layout = self.layout
+		row = layout.row()
+		row.prop(self,"stats_opt_in",text="Opt into anonymous usage tracking",icon='ERROR')
 
 
 #######
@@ -985,15 +1028,15 @@ class MCpanel(bpy.types.Panel):
 		split = layout.split()
 		col = split.column(align=True)
 		row = col.row(align=True)
-		row.prop(context.scene,"MCprep_exporter_type", expand=True)
+		row.prop(addon_prefs,"MCprep_exporter_type", expand=True)
 
 		split = layout.split()
 		col = split.column(align=True)
 		row = col.row(align=True)
-		if context.scene.MCprep_exporter_type == "jmc2obj":
+		if addon_prefs.MCprep_exporter_type == "jmc2obj":
 			row.label(text="Meshswap source:")
 			row.prop(addon_prefs,"jmc2obj_swap",text="")
-		elif context.scene.MCprep_exporter_type == "Mineways":
+		elif addon_prefs.MCprep_exporter_type == "Mineways":
 			row.label(text="Meshswap source:")
 			row.prop(addon_prefs,"mineways_swap",text="")
 		
@@ -1022,13 +1065,12 @@ class MCpanel(bpy.types.Panel):
 		row.prop(addon_prefs,"MCprep_groupAppendLayer",text="Append layer")
 		if addon_prefs.mcprep_use_lib == True:
 			row.enabled = False
-		if context.scene.MCprep_exporter_type == "Mineways":
+		if addon_prefs.MCprep_exporter_type == "Mineways":
 			split = layout.split(percentage=0.8)
 			col = split.column(align=True)
 			col.label (text="Ensure block size is 1x1x1, not .1x.1.x1", icon='ERROR')
 			# Attempt AutoFix, another button
 			col.operator("object.fixmeshswapsize", text="Auto Fix")
-
 		layout = self.layout # clear out the box formatting
 
 
@@ -1060,42 +1102,28 @@ class dialogue(bpy.types.Operator):
 
 
 def register():
-
-	bpy.types.Scene.MCprep_exporter_type = bpy.props.EnumProperty(
-		items = [('jmc2obj', 'jmc2obj', 'Select if exporter used was jmc2obj'),
-				('Mineways', 'Mineways', 'Select if exporter used was Mineways')],
-		name = "Exporter")
-
-	# classes
 	bpy.utils.register_class(materialChange)
 	bpy.utils.register_class(meshSwap)
 	bpy.utils.register_class(solidifyPixels)
+	bpy.utils.register_class(fixMinewaysScale)
 	
 	bpy.utils.register_class(dialogue)
 	bpy.utils.register_class(WIP)
 	bpy.utils.register_class(MCprepPreference)
 	bpy.utils.register_class(MCpanel)
-	bpy.utils.register_class(fixMinewaysScale)
-
-	import urllib.request
-	n = urllib.request.urlopen("http://www.theduckcow.com/data/mcprepinstall.html")
-	print("register complete")
+	install()
+	if v:print("MCprep register complete")
 
 def unregister():
 	bpy.utils.unregister_class(materialChange)
 	bpy.utils.unregister_class(meshSwap)
 	bpy.utils.unregister_class(solidifyPixels)
+	bpy.utils.unregister_class(fixMinewaysScale)
 	
 	bpy.utils.unregister_class(dialogue)
 	bpy.utils.unregister_class(WIP)
 	bpy.utils.unregister_class(MCprepPreference)
 	bpy.utils.unregister_class(MCpanel)
-	bpy.utils.unregister_class(fixMinewaysScale)
-	
-	#properties
-	del bpy.types.Scene.MCprep_export_type
-
 
 if __name__ == "__main__":
 	register()
-
