@@ -23,6 +23,7 @@ Demo Usage
 [![Alt text](/referenceThumnail.png?raw=true "Video Preview")](https://www.youtube.com/watch?v=Nax7iuCTovk)
 
 Older video demos:
+- [Cycles Materials Upate (most recent)](https://www.youtube.com/watch?v=MRuPRnfdzfI)
 - https://www.facebook.com/photo.php?v=737273036339269&l=2318416360725689976
 - https://www.youtube.com/watch?v=Swz6T4Zzfek
 
