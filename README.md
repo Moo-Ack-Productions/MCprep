@@ -83,6 +83,6 @@ Future Plans
 Additional Help
 ======
 
-If you have troubles getting this addon to work, please contact me at TheDuckCow@live.com or [on twitter](https://twitter.com/TheDuckCow), and I will do my best to respond promptly to your questions. This addon is still heavily under construction, so check back for updates (you can reference the version number and take last modified). Your feedback helps stabilize the addon and make it work better for everyone else!
+If you have troubles getting this addon to work, please contact me at support@TheDuckCow.com or [on twitter](https://twitter.com/TheDuckCow), and I will do my best to respond promptly to your questions. This addon is still heavily under construction, so check back for updates (you can reference the version number and take last modified). Your feedback helps stabilize the addon and make it work better for everyone else!
 
 Moo-Ack!
