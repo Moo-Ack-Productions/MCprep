@@ -3,6 +3,8 @@ TO INSTALL MCprep
 
 [Go to the releases page and download the addon](https://github.com/TheDuckCow/MCprep/releases), it should remain a zip folder. In blender, go to preferences, then the addons tab, and at the bottom of the window install from file. Select the .zip file. **NOTE:** _Blender may not automatically enable the addon. If the MCprep addon is not already shown in the window after installing, search for it at left and then ensure the checkbox is enabled. Save user preferences to keep it enabled next time blender opens._
 
+(if you like the addon, [please consider donating](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=59S8LS6BBDEN4) for the quality continued development!)
+
 About MCprep
 ======
 
@@ -76,9 +78,11 @@ Known Bugs
 
 Future Plans
 ======
-- Create a "solidify pixels" operator, where single-faced planes are converted into properly subdivided and extruded 3D planes according to the active texture, removing transparent areas accordingly.
+- Create a "solidify pixels" operator, where single-faced planes are converted into properly subdivided and extruded 3D planes according to the active texture, removing transparent areas accordingly. Should be able to apply to arbitrary objects
 - Expand the set of meshswappable objects, currently it is quite limited. 
+- Add the ability to shift-A add objects in the library like other objects, not just via meshswapping
 - Create a "match external material" operator, where all materials in the set of selected objects are checked against an external library, and if any have matching names, the external material will overwrite the local one. This would allow one to quickly cycles between different styles, e.g. texture packs.
+- Create a "Spawn Rig" button, working for both linked rigs as well as appended rigs. Have built-in, self included rigs for animating and the option to install additional rigs. Involve the community on this one!
 
 
 Additional Help
