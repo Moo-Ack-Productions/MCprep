@@ -3,7 +3,7 @@ TO INSTALL MCprep
 
 [Go to the releases page and download the addon](https://github.com/TheDuckCow/MCprep/releases), it should remain a zip folder. In blender, go to preferences, then the addons tab, and at the bottom of the window install from file. Select the .zip file. **NOTE:** _Blender may not automatically enable the addon. If the MCprep addon is not already shown in the window after installing, search for it at left and then ensure the checkbox is enabled. Save user preferences to keep it enabled next time blender opens._
 
-(if you like the addon, [please consider donating](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=59S8LS6BBDEN4) for the quality continued development!)
+(if you like the addon, [please consider donating](http://bit.ly/donate2TheDuckCow) for the quality continued development!)
 
 About MCprep
 ======
