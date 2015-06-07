@@ -40,7 +40,7 @@ https://github.com/TheDuckCow/MCprep.git
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",
-	"version": (2, 0, 1),
+	"version": (2, 0, 2),
 	"blender": (2, 74, 0),
 	"location": "3D window toolshelf > Tools tab",
 	"description": "Speeds up the workflow of minecraft animations and imported minecraft worlds",
@@ -54,7 +54,9 @@ import bpy,os,mathutils,random,math
 from bpy.types import AddonPreferences
 
 #verbose
-v = False
+v = True
+
+ver = 'v(2, 0, 2)'
 
 ########################################################################################
 #	Below for precursor functions
@@ -78,6 +80,10 @@ def onEdge(faceLoc):
 def randomizeMeshSawp(swap,variations):
 	randi=''
 	if swap == 'torch':
+		randomized = random.randint(0,variations-1)
+		#print("## "+str(randomized))
+		if randomized != 0: randi = ".{x}".format(x=randomized)
+	elif swap == 'Torch':
 		randomized = random.randint(0,variations-1)
 		#print("## "+str(randomized))
 		if randomized != 0: randi = ".{x}".format(x=randomized)
@@ -182,48 +188,56 @@ def estimateScale(faces):
 
 
 def install():
-
-	ver = 'v(2, 0, 1)'
-	if v:ver+=' dev'
+	vr = ver
 	try:
+		pydir = bpy.path.abspath(os.path.dirname(__file__))
+		if os.path.isfile(pydir+"/optin") or os.path.isfile(pydir+"/optout"):
+			# this means it has already installed once, don't count as another
+			return
+		else:
+			f = open(pydir+"/optout.txt", 'w') # make new file, empty
+			f.close()
 		import urllib.request
 		d = urllib.request.urlopen("http://www.theduckcow.com/data/mcprepinstall.html",timeout=10).read().decode('utf-8')
 		ks = d.split("<br>")
 		ak = ks[1]
 		rk = ks[2]
-		#if v:print("Ping successful")
 		import json,http.client
 		connection = http.client.HTTPSConnection('api.parse.com', 443)
 		connection.connect()
-		#if v:print("Connecting...")
-		connection.request('POST', '/1/classes/install', json.dumps({
-			   "version": ver,
+		d = ''
+		if v:d="_dev"
+		if v:vr+=' dev'
+		connection.request('POST', '/1/classes/install'+d, json.dumps({
+			   "version": vr,
 			 }), {
 				"X-Parse-Application-Id": ak,
 	    		"X-Parse-REST-API-Key": rk,
 				"Content-Type": "application/json"
 			 })
 		result = json.loads(   (connection.getresponse().read()).decode())
-		#if v:print("Sent successful, returned: {x}".format(x=result))
 	except:
-		if v:print("Register connection failed/timed out")
+		# if v:print("Register connection failed/timed out")
 		return
 
 def usageStat(function):
-	if v:function+=' dev'
+	vr = ver
+	if v:vr+=' dev'
+	if v:print("Running USAGE STATS for: {x}".format(x=function))
 	try:
 		import urllib.request
 		d = urllib.request.urlopen("http://www.theduckcow.com/data/mcprepinstall.html",timeout=10).read().decode('utf-8')
 		ks = d.split("<br>")
 		ak = ks[1]
 		rk = ks[2]
-		#if v:print("Ping successful")
 		import json,http.client
 		connection = http.client.HTTPSConnection('api.parse.com', 443)
 		connection.connect()
-		#if v:print("Connecting...")
-		connection.request('POST', '/1/classes/usage', json.dumps({
+		d = ''
+		if v:d="_dev"
+		connection.request('POST', '/1/classes/usage'+d, json.dumps({
 			   "function": function,
+			   "version":vr,
 			   "count": -1, # -1 for not implemented yet
 			 }), {
 				"X-Parse-Application-Id": ak,
@@ -236,6 +250,101 @@ def usageStat(function):
 		if v:print("Failed to send stat")
 		return
 
+def checkOptin():
+	pydir = bpy.path.abspath(os.path.dirname(__file__))
+	if os.path.isfile(pydir+"/optin"):
+		return True
+	else:
+		return False
+
+def tracking(set='disable'):
+	if v:print("Setting the tracking file:")
+	pydir = bpy.path.abspath(os.path.dirname(__file__))
+	# print("pydir: {x}".format(x = pydir))
+
+	if set=='disable' or set==False:
+		print("Attempting to disbale")
+		if os.path.isfile(pydir+"/optout"):
+			# print("already optout")
+			return # already disabled
+		elif os.path.isfile(pydir+"/optin"):
+			os.rename(pydir+"/optin",pydir+"/optout")
+			# print("renamed optin to optout")
+		else:
+			# f = open(pydir+"/optout.txt", 'w') # make new file, empty
+			# f.close()
+			# print("Created new optout file")
+			# DON'T create a file.. only do this in the install script so it
+			# knows if this has been enabeld before or not
+			return
+	elif set=='enable' or set==True:
+		print("Attempting to enable")
+		if os.path.isfile(pydir+"/optin"):
+			# technically should check the sanity of this file
+			# print("File already there, tracking enabled")
+			return
+		elif os.path.isfile(pydir+"/optout"):
+			# check if ID has already been created. if note, do that
+			# print("rename file if it exists")
+			os.rename(pydir+"/optout",pydir+"/optin")
+		else:
+			# create the file and ID
+			# print("Create new optin file")
+			f = open(pydir+"/optin", 'w') # make new file, empty
+			f.close()
+
+def checkForUpdate():
+	addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
+	if addon_prefs.checked_update:
+		return addon_prefs.update_avaialble
+	else:
+		addon_prefs.checked_update = True
+		import urllib.request
+		d = urllib.request.urlopen("http://www.theduckcow.com/data/mcprepinstall.html",timeout=10).read().decode('utf-8')
+		vtmp1 = d.split('(')
+		vtmp1 = vtmp1[1].split(')')[0]
+		vtmp2 = ver.split('(')
+		vtmp2 = vtmp2[1].split(')')[0]
+		if vtmp1 != vtmp2:
+			if v:print("MCprep not outdated")
+			# create the text file etc.
+			addon_prefs.update_avaialble = True
+			return True
+		else:
+			if v:print("MCprep is outdated")
+			addon_prefs.update_avaialble = False
+			return False
+
+########
+# Toggle optin/optout for analytics
+class toggleOptin(bpy.types.Operator):
+	"""Toggle anonymous usage tracking to help the developers, disabled by default. The only data tracked is what functions are used, and the timestamp of the addon installation"""
+	bl_idname = "object.mc_toggleoptin"
+	bl_label = "Toggle opt-in for analytics tracking"
+
+	def execute(self, context):
+		if checkOptin():
+			tracking(set='disable')
+			usageStat('opt-out')
+		else:
+			tracking(set='enable')
+			usageStat('opt-in')
+		return {'FINISHED'}
+
+########
+# Toggle optin/optout for analytics
+class openreleasepage(bpy.types.Operator):
+	"""Go to the MCprep page to get the most recent release and instructions"""
+	bl_idname = "object.mcprep_openreleasepage"
+	bl_label = "Open the MCprep release page"
+
+	def execute(self, context):
+		try:
+			import webbrowser
+			webbrowser.open("https://github.com/TheDuckCow/MCprep/releases")
+		except:
+			pass
+		return {'FINISHED'}
 
 ########################################################################################
 #	Above for precursor functions
@@ -380,8 +489,8 @@ class materialChange(bpy.types.Operator):
 
 		# the above are all default nodes. Now see if in specific lists
 		if matGen in listData['reflective']:
-			nodeMix2.inputs[0].default_value = 0.2  # mix factor
-			nodeGloss.inputs[1].default_value = 0.01 # roughness
+			nodeMix2.inputs[0].default_value = 0.3  # mix factor
+			nodeGloss.inputs[1].default_value = 0.005 # roughness
 		if matGen in listData['emit']:
 			# add an emit node, insert it before the first mix node
 			nodeMixEmitDiff = nodes.new('ShaderNodeMixShader')
@@ -428,8 +537,7 @@ class materialChange(bpy.types.Operator):
 					self.materialsCycles(mat)
 			else:
 				if v:print('Get the linked material instead!')
-		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
-		if addon_prefs.stats_opt_in:usageStat('materialChange')
+		if checkOptin():usageStat('materialChange')
 		return {'FINISHED'}
 
 
@@ -444,18 +552,28 @@ class meshSwap(bpy.types.Operator):
 	#used for only occasionally refreshing the 3D scene while mesh swapping
 	counterObject = 0	# used in count
 	countMax = 5		# count compared to this, frequency of refresh (number of objs)
+	
+
+	@classmethod
+	def poll(cls, context):
+		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
+		return addon_prefs.MCprep_exporter_type != "(choose)"
+
 
 	# called for each object in the loop as soon as possible
 	def checkExternal(self, context, name):
 		if v:print("Checking external library")
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
-		meshSwapPath = addon_prefs.jmc2obj_swap
-		rmable = ['double_plant_grass_top','torch_flame',] # jmc2obj removable objs
-		if addon_prefs.MCprep_exporter_type == "Mineways":
-			meshSwapPath = addon_prefs.mineways_swap 
+		
+		meshSwapPath = addon_prefs.meshswap_path
+		rmable = []
+		if addon_prefs.MCprep_exporter_type == "jmc2obj":
+			rmable = ['double_plant_grass_top','torch_flame','cactus_side','cactus_bottom']
+		elif addon_prefs.MCprep_exporter_type == "Mineways":
 			rmable = [] # Mineways removable objs
-		if not os.path.isfile(meshSwapPath):
-			meshSwapPath = bpy.path.abspath(meshSwapPath)
+		else:
+			# need to select one of the exporters!
+			return {'CANCELLED'}
 		# delete unnecessary ones first
 		if name in rmable:
 			removable = True
@@ -497,7 +615,7 @@ class meshSwap(bpy.types.Operator):
 				context.scene.layers = x
 			
 			#special cases, make another list for this? number of variants can vary..
-			if name == "torch":
+			if name == "torch" or name == "Torch":
 				bAppendLink(meshSwapPath+'/Group/', name+".1", toLink)
 				bpy.ops.object.delete()
 				bAppendLink(meshSwapPath+'/Group/', name+".2", toLink)
@@ -510,6 +628,7 @@ class meshSwap(bpy.types.Operator):
 			grouped = True
 			# set properties
 			for item in bpy.data.groups[name].items():
+				print("GROUP PROPS:",item)
 				try:
 					x = item[1].name #will NOT work if property UI
 				except:
@@ -522,6 +641,7 @@ class meshSwap(bpy.types.Operator):
 						edgeFlush = True
 					elif x=='torchlike':
 						torchlike = True
+						if v:print("recognized torchlike")
 					elif x=='removable':
 						removable = True
 		elif groupSwap:
@@ -592,8 +712,10 @@ class meshSwap(bpy.types.Operator):
 
 	def offsetByHalf(self,obj):
 		if obj.type != 'MESH': return
-		bpy.ops.object.mode_set(mode='OBJECT')
-		active = bpy.context.active_object
+		# bpy.ops.object.mode_set(mode='OBJECT')
+		if v:print("doing offset")
+		# bpy.ops.mesh.select_all(action='DESELECT')
+		active = bpy.context.active_object #preserve current active
 		bpy.context.scene.objects.active  = obj
 		bpy.ops.object.mode_set(mode='EDIT')
 		bpy.ops.mesh.select_all(action='SELECT')
@@ -602,7 +724,7 @@ class meshSwap(bpy.types.Operator):
 		obj.location[0] -= .5
 		obj.location[1] -= .5
 		obj.location[2] -= .5
-		bpy.context.scene.objects.active  = active
+		bpy.context.scene.objects.active = active
 
 
 	def execute(self, context):
@@ -610,10 +732,9 @@ class meshSwap(bpy.types.Operator):
 		## debug, restart check
 		if v:print('###################################')
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
-		if addon_prefs.stats_opt_in:usageStat('meshSwap'+':'+addon_prefs.MCprep_exporter_type)
-		direc = addon_prefs.jmc2obj_swap
-		if addon_prefs.MCprep_exporter_type == "Mineways":
-			direc = addon_prefs.mineways_swap
+		if checkOptin():usageStat('meshSwap'+':'+addon_prefs.MCprep_exporter_type)
+		direc = addon_prefs.meshswap_path
+		
 		#check library file exists
 		if not os.path.isfile(direc):
 			#extract actual path from the relative one if relative, e.g. //file.blend
@@ -629,7 +750,7 @@ class meshSwap(bpy.types.Operator):
 		activeLayers = list(context.scene.layers) ## NEED TO BE PASSED INTO the thing.
 		# along with the scene name
 		doOffset = (addon_prefs.MCprep_exporter_type == "Mineways")
-		
+		print("offset?",doOffset)
 		#separate each material into a separate object
 		#is this good practice? not sure what's better though
 		# could also recombine similar materials here, so happens just once.
@@ -678,8 +799,9 @@ class meshSwap(bpy.types.Operator):
 			if v: print("Swapping '{x}', simplified name '{y}".format(x=swap.name, y=swapGen))
 			# if mineways/necessary, offset mesh by a half. Do it on a per object basis.
 			if doOffset:
-				try:offsetByHalf(swap)
-				except: print("ERROR in offsetByHalf, verify swapped meshes for ",swap.name)
+				self.offsetByHalf(swap)
+				# try:offsetByHalf(swap)
+				# except: print("ERROR in offsetByHalf, verify swapped meshes for ",swap.name)
 
 			worldMatrix = swap.matrix_world.copy() #set once per object
 			polyList = swap.data.polygons.values() #returns LIST of faces.
@@ -691,9 +813,11 @@ class meshSwap(bpy.types.Operator):
 			for polyIndex in range(0,len(polyList)):
 				gtmp = swap.matrix_world*mathutils.Vector(swap.data.polygons[polyIndex].center)
 				g = [gtmp[0],gtmp[1],gtmp[2]]
-				n = swap.data.polygons[polyIndex].normal #currently not used!
+				n = swap.data.polygons[polyIndex].normal
 				tmp2 = swap.data.polygons[polyIndex].center
 				l = [tmp2[0],tmp2[1],tmp2[2]] #to make value unlinked to mesh
+				if swap.data.polygons[polyIndex].area < 0.016 and swap.data.polygons[polyIndex].area > 0.015:
+					continue # hack for not having too many torches show up, both jmc2obj and Mineways
 				facebook.append([n,g,l]) # g is global, l is local
 			bpy.ops.object.select_all(action='DESELECT')
 			
@@ -716,16 +840,15 @@ class meshSwap(bpy.types.Operator):
 					x = round(facebook[setNum][2][0]+a) 
 					y = round(facebook[setNum][2][1]+b)
 					z = round(facebook[setNum][2][2]+c)
-					#print("ON EDGE, BRO! line ~468, "+str(x) +","+str(y)+","+str(z)+", ")
+					print("ON EDGE, BRO! line, "+str(x) +","+str(y)+","+str(z))
 					#print([facebook[setNum][2][0], facebook[setNum][2][1], facebook[setNum][2][2]])	
 				
 				#### TORCHES, hack removes duplicates while not removing "edge" floats
-				# do an jmc2obj check here??
-				if facebook[setNum][2][1]+0.5 - math.floor(facebook[setNum][2][1]+0.5) < 0.3:
-					#continue if coord. is < 1/3 of block height, to do with torch's base in wrong cube.
-					if not swapProps['edgeFloat']:
-						#continue
-						print("do nothing, this is for jmc2obj")	
+				# if facebook[setNum][2][1]+0.5 - math.floor(facebook[setNum][2][1]+0.5) < 0.3:
+				# 	#continue if coord. is < 1/3 of block height, to do with torch's base in wrong cube.
+				# 	if not swapProps['edgeFloat']:
+				# 		#continue
+				# 		print("do nothing, this is for jmc2obj")	
 				if v:print(" DUPLIST: ")
 				if v:print([x,y,z], [facebook[setNum][2][0], facebook[setNum][2][1], facebook[setNum][2][2]])
 				
@@ -739,35 +862,73 @@ class meshSwap(bpy.types.Operator):
 					z_diff = z-facebook[setNum][2][2]
 					#print(facebook[setNum][2][2],z,z_diff)
 					
-					# append rotation
-					if swapProps['torchlike']: # needs fixing
-						if (x_diff>.2 and x_diff < 0.3):
-							rotList.append(1)
-						elif (z_diff>.2 and z_diff < 0.3):	
-							rotList.append(2)
-						elif (x_diff<-.2 and x_diff > -0.3):	
-							rotList.append(3)
-						elif (z_diff<-.2 and z_diff > -0.3):
-							rotList.append(4)
+					# append rotation, exporter dependent
+					if addon_prefs.MCprep_exporter_type == "jmc2obj":
+						if swapProps['torchlike']: # needs fixing
+							if (x_diff>.1 and x_diff < 0.4):
+								rotList.append(1)
+							elif (z_diff>.1 and z_diff < 0.4):	
+								rotList.append(2)
+							elif (x_diff<-.1 and x_diff > -0.4):	
+								rotList.append(3)
+							elif (z_diff<-.1 and z_diff > -0.4):
+								rotList.append(4)
+							else:
+								rotList.append(0)
+						elif swapProps['edgeFloat']:
+							if (y-facebook[setNum][2][1] < 0):
+								rotList.append(8)
+							elif (x_diff > 0.3):
+								rotList.append(7)
+							elif (z_diff > 0.3):	
+								rotList.append(0)
+							elif (z_diff < -0.3):
+								rotList.append(6)
+							else:
+								rotList.append(5)
+						elif swapProps['edgeFlush']:
+							# actually 6 cases here, can need rotation below...
+							# currently not necessary/used, so not programmed..	 
+							rotList.append(0)
 						else:
 							rotList.append(0)
-					elif swapProps['edgeFloat']:
-						if (y-facebook[setNum][2][1] < 0):
-							rotList.append(8)
-						elif (x_diff > 0.3):
-							rotList.append(7)
-						elif (z_diff > 0.3):	
+					elif addon_prefs.MCprep_exporter_type == "Mineways":
+						if v:print("checking:",x_diff,z_diff)
+						if swapProps['torchlike']: # needs fixing
+							if v:print("recognized it's a torchlike obj..")
+							if (x_diff>.1 and x_diff < 0.6):
+								rotList.append(1)
+								print("rot 1?")	
+							elif (z_diff>.1 and z_diff < 0.6):	
+								rotList.append(2)
+								print("rot 2?")	
+							elif (x_diff<-.1 and x_diff > -0.6):
+								print("rot 3?")	
+								rotList.append(3)
+							elif (z_diff<-.1 and z_diff > -0.6):
+								rotList.append(4)
+								print("rot 4?")	
+							else:
+								rotList.append(0)
+								print("rot 0?")	
+						elif swapProps['edgeFloat']:
+							if (y-facebook[setNum][2][1] < 0):
+								rotList.append(8)
+							elif (x_diff > 0.3):
+								rotList.append(7)
+							elif (z_diff > 0.3):	
+								rotList.append(0)
+							elif (z_diff < -0.3):
+								rotList.append(6)
+							else:
+								rotList.append(5)
+						elif swapProps['edgeFlush']:
+							# actually 6 cases here, can need rotation below...
+							# currently not necessary/used, so not programmed..	 
 							rotList.append(0)
-						elif (z_diff < -0.3):
-							rotList.append(6)
 						else:
-							rotList.append(5)
-					elif swapProps['edgeFlush']:
-						# actually 6 cases here, can need rotation below...
-						# currently not necessary/used, so not programmed..	 
-						rotList.append(0)
+							rotList.append(0)
 					else:
-						# no rotation from source file, must always append something
 						rotList.append(0)
 
 			##### OPTION HERE TO SEGMENT INTO NEW FUNCTION
@@ -875,7 +1036,7 @@ class meshSwap(bpy.types.Operator):
 				bpy.ops.object.delete() # the original copy used for duplication
 			
 			#join meshes together
-			if not grouped and (len(dupedObj) >0):
+			if not grouped and (len(dupedObj) >0) and addon_prefs.mcprep_meshswapjoin:
 				#print(len(dupedObj))
 				# ERROR HERE if don't do the len(dupedObj) thing.
 				bpy.context.scene.objects.active = dupedObj[0]
@@ -888,8 +1049,21 @@ class meshSwap(bpy.types.Operator):
 			swap.select = True
 			bpy.ops.object.delete()
 			
-			#deselect? or try to reselect everything that was selected previoulsy
+			#Try to reselect everything that was selected previoulsy + new objects
+			for d in dupedObj:
+				try:
+					d.select = True # if this works, then..
+					selList.append(d)
+				except:
+					pass
 			bpy.ops.object.select_all(action='DESELECT')
+
+		# final reselection
+		for d in selList:
+			try:
+				d.select = True
+			except:
+				pass
 		
 		return {'FINISHED'}
 
@@ -904,16 +1078,16 @@ class solidifyPixels(bpy.types.Operator):
 	
 	def execute(self, context):
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
-		if addon_prefs.stats_opt_in:usageStat('solidifyPixels')
+		if checkOptin():usageStat('solidifyPixels')
 		if v:print("hello world, solidify those pixels!")
 		self.report({'ERROR'}, "Feature not implemented yet")
 		return {'FINISHED'}
 
 
 class fixMinewaysScale(bpy.types.Operator):
-	"""Try to fix object scaling of world imports for meshSwapping"""
+	"""Quick upscaling of Mineways import by 10 for meshswapping"""
 	bl_idname = "object.fixmeshswapsize"
-	bl_label = "Solidify Pixels"
+	bl_label = "Mineways quick upscale"
 	bl_options = {'REGISTER', 'UNDO'}
 
 	def execute(self, context):
@@ -931,7 +1105,7 @@ class fixMinewaysScale(bpy.types.Operator):
 
 		bpy.ops.transform.resize(value=(10, 10, 10))
 		bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-		bpy.ops.transform.resize(value=(.1, .1, .1))
+		# bpy.ops.transform.resize(value=(.1, .1, .1))
 		#bpy.ops.object.select_all(action='DESELECT')
 		bpy.context.space_data.pivot_point = tmp
 		bpy.context.space_data.cursor_location = tmpLoc
@@ -962,16 +1136,11 @@ class MCprepPreference(bpy.types.AddonPreferences):
 	bl_idname = __package__
 	scriptdir = bpy.path.abspath(os.path.dirname(__file__))
 
-	jmc2obj_swap = bpy.props.StringProperty(
-		name = "jmc2obj_swap",
-		description = "Asset file for jmc2obj imported worlds",
+	meshswap_path = bpy.props.StringProperty(
+		name = "meshswap_path",
+		description = "Asset file for meshswapable objects and groups",
 		subtype = 'FILE_PATH',
-		default = scriptdir + "/mcprep_meshSwap_jmc2obj.blend")
-	mineways_swap = bpy.props.StringProperty(
-		name = "mineways_swap",
-		description = "Asset file for Mineways imported worlds",
-		subtype = 'FILE_PATH',
-		default = scriptdir + "/mcprep_meshSwap_mineways.blend")
+		default = scriptdir + "/mcprep_meshSwap.blend")
 	mcprep_use_lib = bpy.props.BoolProperty(
 		name = "Link meshswapped groups & materials",
 		description = "Use library linking when meshswapping or material matching",
@@ -983,42 +1152,60 @@ class MCprepPreference(bpy.types.AddonPreferences):
 		max=20,
 		default=20)
 	MCprep_exporter_type = bpy.props.EnumProperty(
-		items = [('jmc2obj', 'jmc2obj', 'Select if exporter used was jmc2obj'),
+		items = [('(choose)', '(choose)', 'Select your exporter'),
+				('jmc2obj', 'jmc2obj', 'Select if exporter used was jmc2obj'),
 				('Mineways', 'Mineways', 'Select if exporter used was Mineways')],
 		name = "Exporter")
-	stats_opt_in = bpy.props.BoolProperty(
-		name = "Opt-in to usage sending",
-		description = "Opt-in to sending anonymous usage stats for further development, save user defaults while enabled to keep active and help support this addon!",
+	checked_update = bpy.props.BoolProperty(
+		name = "mcprep_updatecheckbool",
+		description = "Has an update for MCprep been checked for already",
 		default = False)
+	update_avaialble = bpy.props.BoolProperty(
+		name = "mcprep_update",
+		description = "True if an update is available",
+		default = False)
+	mcprep_meshswapjoin = bpy.props.BoolProperty(
+		name = "mcprep_meshswapjoin",
+		description = "Join individuals objects together during meshswapping",
+		default = True)
 
 	def draw(self, context):
 		layout = self.layout
 		row = layout.row()
-		row.label("Meshswapping source asset files:")
+		row.label("Meshswap")
 		layout = layout.box()
 		split = layout.split(percentage=0.3)
 		col = split.column()
-		col.label("jmc2obj assets")
-		col.label("Mineways assets")
+		col.label("Exporter:")
 		col = split.column()
-		col.prop(self, "jmc2obj_swap", text="")
-		col.prop(self, "mineways_swap", text="")
+		col.prop(self, "MCprep_exporter_type", text="")
+		split = layout.split(percentage=0.3)
+		col = split.column()
+		col.label("Meshwap assets")
+		col = split.column()
+		col.prop(self, "meshswap_path", text="")
+
 
 		layout = self.layout
 		row = layout.row()
 		row.prop(self, "mcprep_use_lib")
 		layout = self.layout
 		row = layout.row()
-		row.prop(self,"stats_opt_in",text="Opt into anonymous usage tracking",icon='ERROR')
+
+		if checkOptin():
+			row.operator("object.mc_toggleoptin", text="to opt OUT of anonymous usage tracking", icon='SCRIPT')
+		else:
+			row.operator("object.mc_toggleoptin", text="Opt into of anonymous usage tracking", icon='ERROR')
 
 
 #######
 # MCprep panel for these declared tools
 class MCpanel(bpy.types.Panel):
 	"""MCprep addon panel"""
-	bl_label = "MCprep Panel"
+	bl_label = "MCprep"
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'TOOLS'
+	bl_context = "objectmode"
 	bl_category = 'Tools'
 
 	def draw(self, context):
@@ -1026,28 +1213,22 @@ class MCpanel(bpy.types.Panel):
 		
 		layout = self.layout
 		split = layout.split()
-		col = split.column(align=True)
+		col = split.row(align=True)
 		row = col.row(align=True)
 		row.prop(addon_prefs,"MCprep_exporter_type", expand=True)
 
-		split = layout.split()
-		col = split.column(align=True)
-		row = col.row(align=True)
-		if addon_prefs.MCprep_exporter_type == "jmc2obj":
-			row.label(text="Meshswap source:")
-			row.prop(addon_prefs,"jmc2obj_swap",text="")
-		elif addon_prefs.MCprep_exporter_type == "Mineways":
-			row.label(text="Meshswap source:")
-			row.prop(addon_prefs,"mineways_swap",text="")
 		
 		split = layout.split()
 		col = split.column(align=True)
-		#for setting MC materials and looking in library
-		col.operator("object.mc_mat_change", text="Prep Materials", icon='MATERIAL')
-		#below should actually just call a popup window
-		col.operator("object.mc_meshswap", text="Mesh Swap", icon='LINK_BLEND')
-		#col.prop(context.scene,"MCprep_export_type", expand=True)
 
+		col.operator("object.mc_mat_change", text="Prep Materials", icon='MATERIAL')
+		# col = split.row(align=True)
+		col.operator("object.mc_meshswap", text="Mesh Swap", icon='LINK_BLEND')
+		if addon_prefs.MCprep_exporter_type == "(choose)":
+			split = layout.split()
+			row = split.row(align=True)
+			row.label(text="Select an exporter above",icon='ERROR')
+			
 		#the UV's pixels into actual 3D geometry (but same material, or modified to fit)
 		#col.operator("object.solidify_pixels", text="Solidify Pixels", icon='MOD_SOLIDIFY')
 		
@@ -1057,21 +1238,41 @@ class MCpanel(bpy.types.Panel):
 		layout = layout.box()
 
 		split = layout.split(percentage=0.8)
-		col = split.column(align=True)
-		col.prop(addon_prefs,"mcprep_use_lib",text="Link groups")
+		row = split.column(align=True)
+		row.prop(addon_prefs,"mcprep_meshswapjoin",text="Join same blocks together")
+		row.prop(addon_prefs,"mcprep_use_lib",text="Link groups")
+		
+		# if addon_prefs.mcprep_use_lib == True:
+		# 	row.enabled = False
 		split = layout.split()
 		col = split.column(align=True)
 		row = col.row(align=True)
 		row.prop(addon_prefs,"MCprep_groupAppendLayer",text="Append layer")
 		if addon_prefs.mcprep_use_lib == True:
 			row.enabled = False
+		
+		split = layout.split()
+		row = split.row(align=True)
+		row.label(text="Meshswap source:")
+		row.prop(addon_prefs,"meshswap_path",text="")
+
 		if addon_prefs.MCprep_exporter_type == "Mineways":
 			split = layout.split(percentage=0.8)
 			col = split.column(align=True)
-			col.label (text="Ensure block size is 1x1x1, not .1x.1.x1", icon='ERROR')
+			col.label (text="Check block size is")
+			col.label (text="1x1x1, not .1x.1.x.1")
 			# Attempt AutoFix, another button
-			col.operator("object.fixmeshswapsize", text="Auto Fix")
+			col.operator("object.fixmeshswapsize", text="Quick upscale from 0.1")
+		
 		layout = self.layout # clear out the box formatting
+		split = layout.split()
+		row = split.row(align=True)
+		if checkForUpdate():
+			row.label (text="Update available!", icon='ERROR')
+			split = layout.split()
+			row = split.row(align=True)
+			row.operator("object.mcprep_openreleasepage", text="Get it now")
+
 
 
 #######
@@ -1111,6 +1312,8 @@ def register():
 	bpy.utils.register_class(WIP)
 	bpy.utils.register_class(MCprepPreference)
 	bpy.utils.register_class(MCpanel)
+	bpy.utils.register_class(toggleOptin)
+	bpy.utils.register_class(openreleasepage)
 	install()
 	if v:print("MCprep register complete")
 
@@ -1124,6 +1327,8 @@ def unregister():
 	bpy.utils.unregister_class(WIP)
 	bpy.utils.unregister_class(MCprepPreference)
 	bpy.utils.unregister_class(MCpanel)
+	bpy.utils.unregister_class(toggleOptin)
+	bpy.utils.unregister_class(openreleasepage)
 
 if __name__ == "__main__":
 	register()
