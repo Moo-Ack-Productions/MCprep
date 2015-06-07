@@ -9,7 +9,7 @@ While this addon is released as open source software, the assets are being relea
 
 Models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow) and [SilverC16](http://youtube.com/user/silverC16).
 
-If you like the addon, [please consider donating](http://bit.ly/donate2TheDuckCow) for the continued quality development! [Share this addon](https://twitter.com/intent/tweet?text=Make+easier+Minecraft+renders+using+the+MCprep+addon+bit.ly/MCprep+by+@TheDuckCow) so others can benefit from it!
+**If you like the addon, [please consider donating](http://bit.ly/donate2TheDuckCow) for the continued quality development! [Share this addon](https://twitter.com/intent/tweet?text=Make+easier+Minecraft+renders+using+the+MCprep+addon+bit.ly/MCprep+by+@TheDuckCow) so others can benefit from it!**
 
 About MCprep
 ======
