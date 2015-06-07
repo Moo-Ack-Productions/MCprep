@@ -54,7 +54,7 @@ import bpy,os,mathutils,random,math
 from bpy.types import AddonPreferences
 
 #verbose
-v = True
+v = False
 
 ver = 'v(2, 0, 2)'
 
@@ -187,6 +187,8 @@ def estimateScale(faces):
 	return guessList[ countList.index(max(countList)) ]
 
 
+########
+# Analytics functions
 def install():
 	vr = ver
 	try:
@@ -195,7 +197,7 @@ def install():
 			# this means it has already installed once, don't count as another
 			return
 		else:
-			f = open(pydir+"/optout.txt", 'w') # make new file, empty
+			f = open(pydir+"/optout", 'w') # make new file, empty
 			f.close()
 		import urllib.request
 		d = urllib.request.urlopen("http://www.theduckcow.com/data/mcprepinstall.html",timeout=10).read().decode('utf-8')
@@ -224,8 +226,48 @@ def usageStat(function):
 	vr = ver
 	if v:vr+=' dev'
 	if v:print("Running USAGE STATS for: {x}".format(x=function))
+	
 	try:
+		count = -1
+		# first grab/increment the text file's count
+		pydir = bpy.path.abspath(os.path.dirname(__file__))
+		if os.path.isfile(pydir+"/optin"):
+			f = open(pydir+"/optin", 'r')
+			ln = f.read()
+			f.close()
+			# fcns = ln.split('\n')
+			# for entry in fcns:
+			if function in ln:
+				if v:print("found function, checking num")
+				i0 = ln.index(function)
+				i = i0+len(function)+1
+				start = ln[:i]
+				if '\n' in ln[i:]:
+					if v:print("not end of file")
+					i2 = ln[i:].index('\n') # -1 or not?
+					print("pre count++:"+ln[i:][:i2]+",{a} {b}".format(a=i,b=i2))
+					count = int(ln[i:][:i2])+1
+					if v:print("fnct count: "+str(count))
+					ln = start+str(count)+ln[i:][i2:]
+				else:
+					if v:print("end of file adding")
+					count = int(ln[i:])+1
+					if v:print("fnt count: "+str(count))
+					ln = start+str(count)+'\n'
+				f = open(pydir+"/optin", 'w')
+				f.write(ln)
+				f.close()
+			else:
+				if v:print("adding function")
+				count = 1
+				ln+="{x}:1\n".format(x=function)
+				f = open(pydir+"/optin", 'w')
+				f.write(ln)
+				f.close()
+
+
 		import urllib.request
+
 		d = urllib.request.urlopen("http://www.theduckcow.com/data/mcprepinstall.html",timeout=10).read().decode('utf-8')
 		ks = d.split("<br>")
 		ak = ks[1]
@@ -238,7 +280,7 @@ def usageStat(function):
 		connection.request('POST', '/1/classes/usage'+d, json.dumps({
 			   "function": function,
 			   "version":vr,
-			   "count": -1, # -1 for not implemented yet
+			   "count": count, # -1 for not implemented yet/error
 			 }), {
 				"X-Parse-Application-Id": ak,
 	    		"X-Parse-REST-API-Key": rk,
@@ -259,61 +301,65 @@ def checkOptin():
 
 def tracking(set='disable'):
 	if v:print("Setting the tracking file:")
-	pydir = bpy.path.abspath(os.path.dirname(__file__))
-	# print("pydir: {x}".format(x = pydir))
+	try:
+		pydir = bpy.path.abspath(os.path.dirname(__file__))
+		# print("pydir: {x}".format(x = pydir))
 
-	if set=='disable' or set==False:
-		print("Attempting to disbale")
-		if os.path.isfile(pydir+"/optout"):
-			# print("already optout")
-			return # already disabled
-		elif os.path.isfile(pydir+"/optin"):
-			os.rename(pydir+"/optin",pydir+"/optout")
-			# print("renamed optin to optout")
-		else:
-			# f = open(pydir+"/optout.txt", 'w') # make new file, empty
-			# f.close()
-			# print("Created new optout file")
-			# DON'T create a file.. only do this in the install script so it
-			# knows if this has been enabeld before or not
-			return
-	elif set=='enable' or set==True:
-		print("Attempting to enable")
-		if os.path.isfile(pydir+"/optin"):
-			# technically should check the sanity of this file
-			# print("File already there, tracking enabled")
-			return
-		elif os.path.isfile(pydir+"/optout"):
-			# check if ID has already been created. if note, do that
-			# print("rename file if it exists")
-			os.rename(pydir+"/optout",pydir+"/optin")
-		else:
-			# create the file and ID
-			# print("Create new optin file")
-			f = open(pydir+"/optin", 'w') # make new file, empty
-			f.close()
+		if set=='disable' or set==False:
+			if os.path.isfile(pydir+"/optout"):
+				# print("already optout")
+				return # already disabled
+			elif os.path.isfile(pydir+"/optin"):
+				os.rename(pydir+"/optin",pydir+"/optout")
+				# print("renamed optin to optout")
+			else:
+				# f = open(pydir+"/optout.txt", 'w') # make new file, empty
+				# f.close()
+				# print("Created new optout file")
+				# DON'T create a file.. only do this in the install script so it
+				# knows if this has been enabeld before or not
+				return
+		elif set=='enable' or set==True:
+			if os.path.isfile(pydir+"/optin"):
+				# technically should check the sanity of this file
+				# print("File already there, tracking enabled")
+				return
+			elif os.path.isfile(pydir+"/optout"):
+				# check if ID has already been created. if note, do that
+				# print("rename file if it exists")
+				os.rename(pydir+"/optout",pydir+"/optin")
+			else:
+				# create the file and ID
+				# print("Create new optin file")
+				f = open(pydir+"/optin", 'w') # make new file, empty
+				f.close()
+	except:
+		pass
 
 def checkForUpdate():
 	addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
-	if addon_prefs.checked_update:
-		return addon_prefs.update_avaialble
-	else:
-		addon_prefs.checked_update = True
-		import urllib.request
-		d = urllib.request.urlopen("http://www.theduckcow.com/data/mcprepinstall.html",timeout=10).read().decode('utf-8')
-		vtmp1 = d.split('(')
-		vtmp1 = vtmp1[1].split(')')[0]
-		vtmp2 = ver.split('(')
-		vtmp2 = vtmp2[1].split(')')[0]
-		if vtmp1 != vtmp2:
-			if v:print("MCprep not outdated")
-			# create the text file etc.
-			addon_prefs.update_avaialble = True
-			return True
+	try:
+		if addon_prefs.checked_update:
+			return addon_prefs.update_avaialble
 		else:
-			if v:print("MCprep is outdated")
-			addon_prefs.update_avaialble = False
-			return False
+			addon_prefs.checked_update = True
+			import urllib.request
+			d = urllib.request.urlopen("http://www.theduckcow.com/data/mcprepinstall.html",timeout=10).read().decode('utf-8')
+			vtmp1 = d.split('(')
+			vtmp1 = vtmp1[1].split(')')[0]
+			vtmp2 = ver.split('(')
+			vtmp2 = vtmp2[1].split(')')[0]
+			if vtmp1 != vtmp2:
+				if v:print("MCprep not outdated")
+				# create the text file etc.
+				addon_prefs.update_avaialble = True
+				return True
+			else:
+				if v:print("MCprep is outdated")
+				addon_prefs.update_avaialble = False
+				return False
+	except:
+		pass
 
 ########
 # Toggle optin/optout for analytics
@@ -332,7 +378,7 @@ class toggleOptin(bpy.types.Operator):
 		return {'FINISHED'}
 
 ########
-# Toggle optin/optout for analytics
+# quickly open release webpage for update
 class openreleasepage(bpy.types.Operator):
 	"""Go to the MCprep page to get the most recent release and instructions"""
 	bl_idname = "object.mcprep_openreleasepage"
@@ -363,14 +409,29 @@ class materialChange(bpy.types.Operator):
 
 	def getListDataMats(self):
 
-		reflective = [ 'glass', 'glass_pane_side','ice','ice_packed','iron_bars']
-		water = ['water','water_flowing']
+		reflective = [ 'glass', 'glass_pane_side','ice','ice_packed','iron_bars','door_iron_top','door_iron_bottom',
+						'diamond_block','iron_block','gold_block','emerald_block','iron_trapdoor','glass_*',
+						'Iron_Door','Glass_Pane','Glass','Stained_Glass_Pane','Iron_Trapdoor','Block_of_Iron',
+						'Block_of_Diamond','Stained_Glass','Block_of_Gold','Block_of_Emerald','Packed_Ice',
+						'Ice']
+		water = ['water','water_flowing','Stationary_Water']
 		# things are transparent by default to be safe, but if something is solid it is much
 		# better to make it solid (faster render and build times)
 		solid = ['sand','dirt','dirt_grass_side','dirt_grass_top','dispenser_front','furnace_top',
-				'redstone_block','gold_block','yourFace','stone','iron_ore','coal_ore',
-				'stone_brick']
-		emit = ['redstone_block','redstone_lamp_on','glowstone','lava','lava_flowing','fire','redtorch_lit']
+				'redstone_block','gold_block','stone','iron_ore','coal_ore','wool_*','stained_clay_*',
+				'stone_brick','cobblestone','plank_*','log_*','farmland_wet','farmland_dry',
+				'cobblestone_mossy','nether_brick','gravel','*_ore','red_sand','dirt_podzol_top',
+				'stone_granite_smooth','stone_granite','stone_diorite','stone_diorite_smooth','stone_andesite',
+				'stone_andesite_smooth','brick','snow','hardened_clay','sandstone_side','sandstone_side_carved',
+				'sandstone_side_smooth','sandstone_top','red_sandstone_top','red_sandstone_normal','bedrock',
+				'dirt_mycelium_top','stone_brick_mossy','stone_brick_cracked','stone_brick_circle',
+				'stone_slab_side','stone_slab_top','netherrack','soulsand','*_block','endstone',
+				'Grass_Block','Dirt','Stone_Slab','Stone','Oak_Wood_Planks','Wooden_Slab','Sand','Carpet',
+				'Wool','Stained_Clay','Gravel','Sandstone','*_Fence','Wood','Acacia/Dark_Oak_Wood','Farmland',
+				'Brick','Snow','Bedrock','Netherrack','Soul_Sand','End_Stone']
+		emit = ['redstone_block','redstone_lamp_on','glowstone','lava','lava_flowing','fire',
+				'sea_lantern',
+				'Glowstone','Redstone_Lamp_(on)','Stationary_Lava','Fire','Sea_Lantern','Block_of_Redstone']
 
 		######## CHANGE TO MATERIALS LIBRARY
 		# if v and not importedMats:print("Parsing library file for materials")
@@ -388,6 +449,21 @@ class materialChange(bpy.types.Operator):
 		return {'reflective':reflective, 'water':water, 'solid':solid,
 				'emit':emit}
 	
+	# helper function for expanding wildcard naming for generalized materials
+	# maximum 1 wildcard *
+	def checklist(self,matName,alist):
+		if matName in alist:
+			return True
+		else:
+			for name in alist:
+				if '*' in name:
+					x = name.split('*')
+					if x[0] != '' and x[0] in matName:
+						return True
+					elif x[1] != '' and x[1] in matName:
+						return True
+			return False
+
 	## HERE functions for GENERAL material setup (cycles and BI)
 	def materialsInternal(self, mat):
 		global v
@@ -425,19 +501,22 @@ class materialChange(bpy.types.Operator):
 		mat.texture_slots[0].diffuse_color_factor = 1
 		mat.use_textures[1] = False
 
-		if not matGen in listData['solid']: #ie alpha is on unless turned off
+		if not self.checklist(matGen,listData['solid']): #ie alpha is on unless turned off
 			bpy.data.textures[newName].use_alpha = True
 			mat.texture_slots[0].use_map_alpha = True
 			mat.use_transparency = True
 			mat.alpha = 0
 			mat.texture_slots[0].alpha_factor = 1
 		   
-		if matGen in listData['reflective']:
-			mat.alpha=0.3
+		if self.checklist(matGen,listData['reflective']):
+			mat.alpha=0.15
 			mat.raytrace_mirror.use = True
 			mat.raytrace_mirror.reflect_factor = 0.3
+		else:
+			mat.raytrace_mirror.use = False
+			mat.alpha=0
 	   
-		if matGen in listData['emit']:
+		if self.checklist(matGen,listData['emit']):
 			mat.emit = 1
 		else:
 			mat.emit = 0
@@ -488,10 +567,10 @@ class materialChange(bpy.types.Operator):
 		nodeGloss.inputs[1].default_value = 0.1 # roughness
 
 		# the above are all default nodes. Now see if in specific lists
-		if matGen in listData['reflective']:
+		if self.checklist(matGen,listData['reflective']):
 			nodeMix2.inputs[0].default_value = 0.3  # mix factor
 			nodeGloss.inputs[1].default_value = 0.005 # roughness
-		if matGen in listData['emit']:
+		if self.checklist(matGen,listData['emit']):
 			# add an emit node, insert it before the first mix node
 			nodeMixEmitDiff = nodes.new('ShaderNodeMixShader')
 			nodeEmit = nodes.new('ShaderNodeEmission')
@@ -508,14 +587,20 @@ class materialChange(bpy.types.Operator):
 			nodeMixEmitDiff.inputs[0].default_value = 0.9
 			nodeEmit.inputs[1].default_value = 2.5
 			# emit value
-		if matGen in listData['water']:
+		if self.checklist(matGen,listData['water']):
 			# setup the animation??
 			nodeMix2.inputs[0].default_value = 0.2
 			nodeGloss.inputs[1].default_value = 0.01 # copy of reflective for now
-		if matGen in listData['solid']:
+		if self.checklist(matGen,listData['solid']):
 			#links.remove(nodeTrans.outputs["BSDF"],nodeMix1.inputs[1])
 			## ^ need to get right format to remove link, need link object, not endpoints
 			nodeMix1.inputs[0].default_value = 0 # no transparency
+		if nodeTex.image.source =='SEQUENCE':
+			nodeTex.image_user.use_cyclic = True
+			nodeTex.image_user.use_auto_refresh = True
+			intlength = mat.texture_slots[0].texture.image_user.frame_duration
+			nodeTex.image_user.frame_duration = intlength
+
 	
 	
 	def execute(self, context):
@@ -568,7 +653,8 @@ class meshSwap(bpy.types.Operator):
 		meshSwapPath = addon_prefs.meshswap_path
 		rmable = []
 		if addon_prefs.MCprep_exporter_type == "jmc2obj":
-			rmable = ['double_plant_grass_top','torch_flame','cactus_side','cactus_bottom']
+			rmable = ['double_plant_grass_top','torch_flame','cactus_side','cactus_bottom','book',
+						'enchant_table_side','enchant_table_bottom','door_iron_top','door_wood_top']
 		elif addon_prefs.MCprep_exporter_type == "Mineways":
 			rmable = [] # Mineways removable objs
 		else:
@@ -584,7 +670,8 @@ class meshSwap(bpy.types.Operator):
 		edgeFlush = False # blocks perfectly on edges, require rotation	
 		edgeFloat = False # floating off edge into air, require rotation ['vines','ladder','lilypad']
 		torchlike = False # ['torch','redstone_torch_on','redstone_torch_off']
-		removable = False # property not even setup yet!
+		removable = False # to be removed, hard coded.
+		doorlike = False # appears like a door.
 		# for varied positions from exactly center on the block, 1 for Z random too
 		# 1= x,y,z random; 0= only x,y random; 2=rotation random only (vertical)
 		#variance = [ ['tall_grass',1], ['double_plant_grass_bottom',1],
@@ -628,7 +715,7 @@ class meshSwap(bpy.types.Operator):
 			grouped = True
 			# set properties
 			for item in bpy.data.groups[name].items():
-				print("GROUP PROPS:",item)
+				if v:print("GROUP PROPS:",item)
 				try:
 					x = item[1].name #will NOT work if property UI
 				except:
@@ -637,11 +724,12 @@ class meshSwap(bpy.types.Operator):
 						variance = [tmpName,item[1]]
 					elif x=='edgeFloat':
 						edgeFloat = True
+					elif x=='doorlike':
+						doorlike = True
 					elif x=='edgeFlush':
 						edgeFlush = True
 					elif x=='torchlike':
 						torchlike = True
-						if v:print("recognized torchlike")
 					elif x=='removable':
 						removable = True
 		elif groupSwap:
@@ -657,6 +745,8 @@ class meshSwap(bpy.types.Operator):
 						variance = [tmpName,item[1]]
 					elif x=='edgeFloat':
 						edgeFloat = True
+					elif x=='doorlike':
+						doorlike = True
 					elif x=='edgeFlush':
 						edgeFlush = True
 					elif x=='torchlike':
@@ -683,6 +773,8 @@ class meshSwap(bpy.types.Operator):
 						variance = [True,item[1]]
 					elif x=='edgeFloat':
 						edgeFloat = True
+					elif x=='doorlike':
+						doorlike = True
 					elif x=='edgeFlush':
 						edgeFlush = True
 					elif x=='torchlike':
@@ -695,7 +787,7 @@ class meshSwap(bpy.types.Operator):
 		if v:print("edgeFloat: ",edgeFloat,", variance: ",variance,", torchlike: ",torchlike)
 		return {'meshSwap':meshSwap, 'groupSwap':groupSwap,'variance':variance,
 				'edgeFlush':edgeFlush,'edgeFloat':edgeFloat,'torchlike':torchlike,
-				'removable':removable,'object':importedObj}
+				'removable':removable,'object':importedObj,'doorlike':doorlike}
 
 
 	########
@@ -750,7 +842,6 @@ class meshSwap(bpy.types.Operator):
 		activeLayers = list(context.scene.layers) ## NEED TO BE PASSED INTO the thing.
 		# along with the scene name
 		doOffset = (addon_prefs.MCprep_exporter_type == "Mineways")
-		print("offset?",doOffset)
 		#separate each material into a separate object
 		#is this good practice? not sure what's better though
 		# could also recombine similar materials here, so happens just once.
@@ -779,7 +870,7 @@ class meshSwap(bpy.types.Operator):
 		# # gScale = estimateScale(objList[0].data.polygons.values())
 		# gScale = estimateScale(faces)
 		if v: print("Using scale: ", gScale)
-		print(objList)
+		if v:print(objList)
 
 		#primary loop, for each OBJECT needing swapping
 		for swap in objList:
@@ -840,7 +931,7 @@ class meshSwap(bpy.types.Operator):
 					x = round(facebook[setNum][2][0]+a) 
 					y = round(facebook[setNum][2][1]+b)
 					z = round(facebook[setNum][2][2]+c)
-					print("ON EDGE, BRO! line, "+str(x) +","+str(y)+","+str(z))
+					#print("ON EDGE, BRO! line, "+str(x) +","+str(y)+","+str(z))
 					#print([facebook[setNum][2][0], facebook[setNum][2][1], facebook[setNum][2][2]])	
 				
 				#### TORCHES, hack removes duplicates while not removing "edge" floats
@@ -890,6 +981,17 @@ class meshSwap(bpy.types.Operator):
 							# actually 6 cases here, can need rotation below...
 							# currently not necessary/used, so not programmed..	 
 							rotList.append(0)
+						elif swapProps['doorlike']:
+							if (y-facebook[setNum][2][1] < 0):
+								rotList.append(8)
+							elif (x_diff > 0.3):
+								rotList.append(7)
+							elif (z_diff > 0.3):	
+								rotList.append(0)
+							elif (z_diff < -0.3):
+								rotList.append(6)
+							else:
+								rotList.append(5)
 						else:
 							rotList.append(0)
 					elif addon_prefs.MCprep_exporter_type == "Mineways":
@@ -898,19 +1000,19 @@ class meshSwap(bpy.types.Operator):
 							if v:print("recognized it's a torchlike obj..")
 							if (x_diff>.1 and x_diff < 0.6):
 								rotList.append(1)
-								print("rot 1?")	
+								#print("rot 1?")	
 							elif (z_diff>.1 and z_diff < 0.6):	
 								rotList.append(2)
-								print("rot 2?")	
+								#print("rot 2?")	
 							elif (x_diff<-.1 and x_diff > -0.6):
-								print("rot 3?")	
+								#print("rot 3?")	
 								rotList.append(3)
 							elif (z_diff<-.1 and z_diff > -0.6):
 								rotList.append(4)
-								print("rot 4?")	
+								#print("rot 4?")	
 							else:
 								rotList.append(0)
-								print("rot 0?")	
+								#print("rot 0?")	
 						elif swapProps['edgeFloat']:
 							if (y-facebook[setNum][2][1] < 0):
 								rotList.append(8)
@@ -926,6 +1028,17 @@ class meshSwap(bpy.types.Operator):
 							# actually 6 cases here, can need rotation below...
 							# currently not necessary/used, so not programmed..	 
 							rotList.append(0)
+						elif swapProps['doorlike']:
+							if (y-facebook[setNum][2][1] < 0):
+								rotList.append(8)
+							elif (x_diff > 0.3):
+								rotList.append(7)
+							elif (z_diff > 0.3):	
+								rotList.append(0)
+							elif (z_diff < -0.3):
+								rotList.append(6)
+							else:
+								rotList.append(5)
 						else:
 							rotList.append(0)
 					else:
@@ -1193,9 +1306,9 @@ class MCprepPreference(bpy.types.AddonPreferences):
 		row = layout.row()
 
 		if checkOptin():
-			row.operator("object.mc_toggleoptin", text="to opt OUT of anonymous usage tracking", icon='SCRIPT')
+			row.operator("object.mc_toggleoptin", text="Press to opt OUT of anonymous usage tracking", icon='CANCEL')
 		else:
-			row.operator("object.mc_toggleoptin", text="Opt into of anonymous usage tracking", icon='ERROR')
+			row.operator("object.mc_toggleoptin", text="Press to opt into of anonymous usage tracking", icon='HAND')
 
 
 #######

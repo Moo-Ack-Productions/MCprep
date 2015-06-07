@@ -7,7 +7,7 @@ CREDIT
 ======
 While this addon is released as open source software, the assets are being released as [Creative Commons Attributions, CC-BY](https://creativecommons.org/licenses/by/3.0/us/). If you use MeshSwap, **please credit the creators** by [linking to this page](https://github.com/TheDuckCow/MCprep) wherever your project may appear.
 
-Models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow) and [SilverC16](https://twitter.com/SilverC16).
+Models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow) and [SilverC16](yhttp://outube.com/user/silverC16 ).
 
 If you like the addon, [please consider donating](http://bit.ly/donate2TheDuckCow) for the continued quality development! [Share this addon](https://twitter.com/intent/tweet?text=Make+easier+Minecraft+renders+using+the+MCprep+addon+bit.ly/MCprep+by+@TheDuckCow) so others can benefit from it!
 
