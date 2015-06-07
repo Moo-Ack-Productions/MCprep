@@ -3,9 +3,6 @@ TO INSTALL MCprep
 
 [Go to the releases page and download the addon](https://github.com/TheDuckCow/MCprep/releases), it should remain a zip folder. In blender, go to preferences, then the addons tab, and at the bottom of the window install from file. Select the .zip file. **NOTE:** _Blender may not automatically enable the addon. If the MCprep addon is not already shown in the window after installing, search for it at left and then ensure the checkbox is enabled. Save user preferences to keep it enabled next time blender opens._
 
-<<<<<<< HEAD
-(if you like the addon, [please consider donating](http://bit.ly/donate2TheDuckCow) for the quality continued development!)
-=======
 CREDIT
 ======
 While this addon is released as open source software, the assets are being released as [Creative Commons Attributions, CC-BY](https://creativecommons.org/licenses/by/3.0/us/). If you use MeshSwap, **please credit the creators** by [linking to this page](https://github.com/TheDuckCow/MCprep) wherever your project may appear.
@@ -13,7 +10,6 @@ While this addon is released as open source software, the assets are being relea
 Models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow) and [SilverC16](yhttp://outube.com/user/silverC16 ).
 
 If you like the addon, [please consider donating](http://bit.ly/donate2TheDuckCow) for the continued quality development! [Share this addon](https://twitter.com/intent/tweet?text=Make+easier+Minecraft+renders+using+the+MCprep+addon+bit.ly/MCprep+by+@TheDuckCow) so others can benefit from it!
->>>>>>> dev
 
 About MCprep
 ======
@@ -87,11 +83,7 @@ Known Bugs
 Future Plans
 ======
 - Create a "solidify pixels" operator, where single-faced planes are converted into properly subdivided and extruded 3D planes according to the active texture, removing transparent areas accordingly. Should be able to apply to arbitrary objects
-<<<<<<< HEAD
-- Expand the set of meshswappable objects, currently it is quite limited. 
-=======
 - Continue adding mroe blocks for meshswapping
->>>>>>> dev
 - Add the ability to shift-A add objects in the library like other objects, not just via meshswapping
 - Create a "match external material" operator, where all materials in the set of selected objects are checked against an external library, and if any have matching names, the external material will overwrite the local one. This would allow one to quickly cycles between different styles, e.g. texture packs.
 - Create a "Spawn Rig" button, working for both linked rigs as well as appended rigs. Have built-in, self included rigs for animating and the option to install additional rigs. Involve the community on this one!
