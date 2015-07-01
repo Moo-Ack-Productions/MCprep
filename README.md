@@ -7,17 +7,26 @@ CREDIT
 ======
 While this addon is released as open source software, the assets are being released as [Creative Commons Attributions, CC-BY](https://creativecommons.org/licenses/by/3.0/us/). If you use MeshSwap, **please credit the creators** by [linking to this page](https://github.com/TheDuckCow/MCprep) wherever your project may appear.
 
-Models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow) and [SilverC16](http://youtube.com/user/silverC16).
+Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow) and [SilverC16](http://youtube.com/user/silverC16).
+
+Rig models credits below, provided with explicit permission:
+- Fancy Feet Steve rig: [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) ([Rig link](http://bit.ly/MinecraftRig))
+- Creeper rig: [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) (MCprep exclusive)
+- Horse rig: [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) ([Rig link](http://www.blendswap.com/blends/view/73064))
+- Guardian rig: [Trainguy9512](https://www.youtube.com/channel/UCktn­etC2h25hMTk1tIz7IQ) ([Rig link](http://www.blendswap.com/blends/view/79729))
+- Skeleton Rig: [Trainguy9512](https://www.youtube.com/channel/UCktn­etC2h25hMTk1tIz7IQ) ([Rig link](http://www.blendswap.com/blends/view/79628))
+- Wolf Rig: [Trainguy9512](https://www.youtube.com/channel/UCktn­etC2h25hMTk1tIz7IQ) ([Rig link](http://www.blendswap.com/blends/view/79495))
+- Chicken Rig: [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html))
+
+Thank you to all the contributors to this project! It will continue to grow and cover more assets in the near future.
 
 **If you like the addon, [please consider donating](http://bit.ly/donate2TheDuckCow) for the continued quality development! [Share this addon](https://twitter.com/intent/tweet?text=Make+easier+Minecraft+renders+using+the+MCprep+addon+bit.ly/MCprep+by+@TheDuckCow) so others can benefit from it!**
+
 
 About MCprep
 ======
 
-This is a blender python addon to increase workflow for creating Minecraft renders and animations, by automatically setting up better materials, importing library models and groups, and setting up proxy characters for animation and default animations for regular features like grass and leaves on imported 3D minecraft worlds. This addon assumes you have already imported the minecraft world. While the script should work for any world importer, it has been tested and developed based on the jmc2obj minecraft world to obj file converted.
-
-The forum WIP thread for the development of this addon is found below, though now also out of date:
-http://www.blenderartists.org/forum/showthread.php?316151-ADDON-WIP-MCprep-for-Minecraft-Workflow
+This is a blender python addon to increase workflow for creating Minecraft renders and animations, by automatically setting up better materials, importing library models and groups, and setting up proxy characters for animation and default animations for regular features like grass and leaves on imported 3D minecraft worlds. This addon assumes you have already imported the minecraft world. While the script should work for any world importer, it has been tested and developed based on the jmc2obj minecraft world to obj file converted. The addon now also comes with built-in rigs, including characters and mobs, and allows you to quickly place them into your worlds.
 
 This addon is made to work with an asset library directory, from which models and groups are linked or imported from. This library blend file is included, but does not have all types of blocks generated yet. This will be improved in the future.
 
@@ -51,6 +60,19 @@ How to use this addon
 - **Step 1:** Select the objects that you wish to be meshSwapped. Swappable objects are determined *automatically* based on the contents of the blend file selected above. If an object is not found or swappable, it will just be skipped - no harm done by "overselecting" (so select all objects to make sure everything that can be swapped gets swapped!)
 - **Step 2:** Press Mesh Swap (there will be a small delay, meshswapping large areas such as fields of grass may take awhile).
 
+**Mob Spawner (new!)**
+- **Purpose:**
+- **Step 0:** Make sure the mob spawner path is a directory with valid blend files setup for linkining (addon preferences > MCprep). By default, this path will already be setup and valid pointing to the included rigs with this release, as defined in the credits section above
+- **Step 1:** Either press the "mob spawner" button in the MCprep panel, or go to the shift-a menu: armature > mob spawner > [mob name] to instantly append or link in a rig.
+- **Step 2:** Check the redo last menu for additional settings, such as relocation of the rig, library linking, and even changing which rig to spawn. These are the following options:
+  - mcmob_type: Change the mob spawned, e.g. from a creeper to a wolf
+  - Relocation: Change where the spawned rig appears. 
+  - Library Link mob:
+    - Cursor (default): Place the rig at the cursor's location
+    - Origin: Move the rig to the origin
+    - Offset root: Move the rig to the origin, but offset the root bone to the cursor's location (note: doesn't work with all rigs correctly right now, will be improved in the future)
+  - Clear pose: clear to pose to rest. If false, the initial pose will be that found in the rig's source blend file.
+
 To add your own objects to meshswap (or groupswap):
 - **Step 1:** Check your imported world object and see the name of the material for the object you want to setup. You might think it is "glass plane", but if the importer names the material "glass_plane", you need to note this name down for step 3.
 - **Step 2:** Model you object in the mcprep_meshSwap.blend file, or append it.
@@ -64,6 +86,13 @@ To add your own objects to meshswap (or groupswap):
   * **Note:** there is no UI for adding properties to a group, so if you want to add a property to a group (say a torch which has a pre-animated light and particle system, as the included blend file does) you must go into the python consol and add the property like so:  <code>bpy.data.groups['groupName']['propertyName'] = 1</code>  (the value only matters for the variance property)
   * **Example:** <code>bpy.data.groups['torch']['torchlike'] = 1</code> will add the torchlike property to the torch group, allowing it to have correct rotaitons when meshSwapped in.
 
+To add your own rigs to the Mob Spawner:
+- **Step 1:** Make your rig, or download one you want to use!
+- **Step 2:** Make sure all elements of the rig, ie all armatures, body parts, and extra objects, are added to a single group inside your rig file. The name of this group is what will appear under the shift-a menu, and typically matches the name of the file if there is just one rig per blend file.
+- **Step 3:** Optional but useful, rename the root bone of the rig to one of [MAIN, root, base], used for relocation. Additionally, make the armature for animation named [name].arma where [name] exactly matches the name of the group. This is used for auto-proxying of the armature and relocation methods.
+- **Step 4:** In the Blender Preferences > Addon > MCprep preferences panel, set "Select/Install Mobs" filepath to the blend file you want to install, then press "Install file for mob spawning"!
+- **Alternative:** To specify a different, custom folder in a location of your choosing for mob spawning, simply change the "Rig Folder" path to your choosing, under blender preferences > addon > MCprep. Save user preferences to keep this change for future blender sessions.
+- Note: all groups inside installed blend files will appear for mob spawning. A large number of rigs will currently slow down the shift-A menu displaying the spawnable rigs (will be improved in the future). Note that after installing a blend file, you do *not* need to save user preferences to use it in future blender sessions.
 
 Known Bugs
 ======
