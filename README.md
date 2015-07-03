@@ -1,7 +1,10 @@
 TO INSTALL MCprep
 ======
 
-[Go to the releases page and download the addon](https://github.com/TheDuckCow/MCprep/releases), it should remain a zip folder. In blender, go to preferences, then the addons tab, and at the bottom of the window install from file. Select the .zip file. **NOTE:** _Blender may not automatically enable the addon. If the MCprep addon is not already shown in the window after installing, search for it at left and then ensure the checkbox is enabled. Save user preferences to keep it enabled next time blender opens._
+[Go to the releases page and download the addon](https://github.com/TheDuckCow/MCprep/releases), it should remain a zip folder. In blender, go to preferences, then the addons tab, and at the bottom of the window install from file. Select the .zip file. **NOTE:** _Blender may not automatically enable the addon. If the MCprep addon is not already shown in the window after installing, search for it at left and then ensure the checkbox is enabled_ **Save user preferences** to keep it enabled next time blender opens.
+
+*The preferences panel should look like this after installing the zip file*
+[Alt text](/visuals/install.png?raw=true "Meshswap options")
 
 CREDIT
 ======
@@ -10,13 +13,32 @@ While this addon is released as open source software, the assets are being relea
 Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow) and [SilverC16](http://youtube.com/user/silverC16).
 
 Rig models credits below, provided with explicit permission:
-- Fancy Feet Steve rig: [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) ([Rig link](http://bit.ly/MinecraftRig))
-- Creeper rig: [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) (MCprep exclusive)
-- Horse rig: [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) ([Rig link](http://www.blendswap.com/blends/view/73064))
-- Guardian rig: [Trainguy9512](https://www.youtube.com/channel/UCktn­etC2h25hMTk1tIz7IQ) ([Rig link](http://www.blendswap.com/blends/view/79729))
-- Skeleton Rig: [Trainguy9512](https://www.youtube.com/channel/UCktn­etC2h25hMTk1tIz7IQ) ([Rig link](http://www.blendswap.com/blends/view/79628))
-- Wolf Rig: [Trainguy9512](https://www.youtube.com/channel/UCktn­etC2h25hMTk1tIz7IQ) ([Rig link](http://www.blendswap.com/blends/view/79495))
-- Chicken Rig: [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html))
+- PLAYER-LIKE RIGS
+  - Fancy Feet Steve: [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) ([Rig link](http://bit.ly/MinecraftRig))
+  - Fancy Feet Alex: Modified by [Jeremy Putnam](http://www.blendswap.com/user/lorddon) (MCprep exclusive)
+  - Villager: [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) ([Rig link](http://www.blendswap.com/blends/view/73063))
+- PASSIVE RIGS
+  - Bat: [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) (MCprep exclusive)
+  - Chicken: [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html))
+  - Cow: [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html))
+  - Slime: [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) (MCprep exclusive)
+  - Squid: [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html))
+  - Pig: [Trainguy9512](https://www.youtube.com/channel/UCktn­etC2h25hMTk1tIz7IQ) (No direct link yet)
+- HOSTILE RIGS
+  - Creeper: [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) (MCprep exclusive)
+  - Enderman: [Trainguy9512](https://www.youtube.com/channel/UCktn­etC2h25hMTk1tIz7IQ) ([Rig link](http://www.blendswap.com/blends/view/79750))
+  - Endermite: [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html))
+  - Guardian rig: [Trainguy9512](https://www.youtube.com/channel/UCktn­etC2h25hMTk1tIz7IQ) ([Rig link](http://www.blendswap.com/blends/view/79729))
+  - Skeleton Rig: [Trainguy9512](https://www.youtube.com/channel/UCktn­etC2h25hMTk1tIz7IQ) ([Rig link](http://www.blendswap.com/blends/view/79495))
+- FRIENDLY RIGS (e.g. tamable or utility)
+  - Horse: [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) ([Rig link](http://www.blendswap.com/blends/view/73064))
+  - Wolf: [Trainguy9512](https://www.youtube.com/channel/UCktn­etC2h25hMTk1tIz7IQ) ([Rig link](http://www.blendswap.com/blends/view/79628))
+  - Iron Golem: [Trainguy9512](https://www.youtube.com/channel/UCktn­etC2h25hMTk1tIz7IQ) ([Rig link](http://www.blendswap.com/blends/view/79455))
+  - Snow Golem: [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html))
+- CUSTOM RIGS:
+  - None yet! But in the future, may include non-standard rigs.
+
+*If you use any of these rigs in your animation, give credit to the according creator or by directly referring back to this readme file which contains all the credits.*
 
 Thank you to all the contributors to this project! It will continue to grow and cover more assets in the near future.
 
@@ -37,7 +59,7 @@ Demo Usage
 
 [Video demo of the addon:](https://www.youtube.com/watch?v=Nax7iuCTovk)
 
-[![Alt text](/referenceThumnail.png?raw=true "Video Preview")](https://www.youtube.com/watch?v=Nax7iuCTovk)
+[![Alt text](/visuals/referenceThumnail.png?raw=true "Video Preview")](https://www.youtube.com/watch?v=Nax7iuCTovk)
 
 Older video demos:
 - [Cycles Materials Upate (most recent)](https://www.youtube.com/watch?v=MRuPRnfdzfI)
@@ -46,6 +68,8 @@ Older video demos:
 
 How to use this addon
 ======
+
+
 
 **Setup materials:**
 - **Purpose:** To automatically setup better, crisp materials for rendering Minecraft, low resolution textures. It works for both Blender internal as well as cycles. It will even selectively turn 'shiny' materials into reflecting materials accordingly as well as 'bright' materials into emitting materials. Currently, the list of these materials is hardcoded in.
@@ -73,6 +97,9 @@ How to use this addon
     - Offset root: Move the rig to the origin, but offset the root bone to the cursor's location (note: doesn't work with all rigs correctly right now, will be improved in the future)
   - Clear pose: clear to pose to rest. If false, the initial pose will be that found in the rig's source blend file.
 
+*Meshswap Options*
+[Alt text](/visuals/spawnOptions.png?raw=true "Meshswap options")
+
 To add your own objects to meshswap (or groupswap):
 - **Step 1:** Check your imported world object and see the name of the material for the object you want to setup. You might think it is "glass plane", but if the importer names the material "glass_plane", you need to note this name down for step 3.
 - **Step 2:** Model you object in the mcprep_meshSwap.blend file, or append it.
@@ -93,6 +120,10 @@ To add your own rigs to the Mob Spawner:
 - **Step 4:** In the Blender Preferences > Addon > MCprep preferences panel, set "Select/Install Mobs" filepath to the blend file you want to install, then press "Install file for mob spawning"!
 - **Alternative:** To specify a different, custom folder in a location of your choosing for mob spawning, simply change the "Rig Folder" path to your choosing, under blender preferences > addon > MCprep. Save user preferences to keep this change for future blender sessions.
 - Note: all groups inside installed blend files will appear for mob spawning. A large number of rigs will currently slow down the shift-A menu displaying the spawnable rigs (will be improved in the future). Note that after installing a blend file, you do *not* need to save user preferences to use it in future blender sessions.
+
+
+*Sometimes you may need to reload a rig cache, click this button if the correct rigs aren't appearing*
+[Alt text](/visuals/reloadRigCache.png?raw=true "Reload cache")
 
 Known Bugs
 ======

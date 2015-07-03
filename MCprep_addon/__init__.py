@@ -40,9 +40,9 @@ https://github.com/TheDuckCow/MCprep.git
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",
-	"version": (2, 1, 0),
+	"version": (2, 1, 1),
 	"blender": (2, 74, 0),
-	"location": "3D window toolshelf > Tools tab",
+	"location": "3D window toolshelf > MCprep tab",
 	"description": "Speeds up the workflow of minecraft animations and imported minecraft worlds",
 	"warning": "",
 	"wiki_url": "https://github.com/TheDuckCow/MCprep",
@@ -52,10 +52,11 @@ bl_info = {
 
 import bpy,os,mathutils,random,math
 from bpy.types import AddonPreferences
+from bpy_extras.io_utils import ImportHelper
 
 #verbose
 v = False
-ver = 'v(2, 1, 0)'
+ver = 'v(2, 1, 1)'
 
 ########################################################################################
 #	Below for precursor functions
@@ -407,6 +408,12 @@ class materialChange(bpy.types.Operator):
 	bl_idname = "object.mc_mat_change"
 	bl_label = "MCprep mats"
 	bl_options = {'REGISTER', 'UNDO'}
+
+	useReflections = bpy.props.BoolProperty(
+		name = "Use reflections",
+		description = "Allow appropraite materials to be rendered reflective",
+		default = True
+		)
 	
 
 	def getListDataMats(self):
@@ -510,7 +517,7 @@ class materialChange(bpy.types.Operator):
 			mat.alpha = 0
 			mat.texture_slots[0].alpha_factor = 1
 		   
-		if self.checklist(matGen,listData['reflective']):
+		if self.useReflections and self.checklist(matGen,listData['reflective']):
 			mat.alpha=0.15
 			mat.raytrace_mirror.use = True
 			mat.raytrace_mirror.reflect_factor = 0.3
@@ -569,7 +576,7 @@ class materialChange(bpy.types.Operator):
 		nodeGloss.inputs[1].default_value = 0.1 # roughness
 
 		# the above are all default nodes. Now see if in specific lists
-		if self.checklist(matGen,listData['reflective']):
+		if self.useReflections and self.checklist(matGen,listData['reflective']):
 			nodeMix2.inputs[0].default_value = 0.3  # mix factor
 			nodeGloss.inputs[1].default_value = 0.005 # roughness
 		if self.checklist(matGen,listData['emit']):
@@ -1228,66 +1235,139 @@ class fixMinewaysScale(bpy.types.Operator):
 		bpy.context.space_data.pivot_point = tmp
 		bpy.context.space_data.cursor_location = tmpLoc
 
+
+
 ########
 # For proxy spawner, getting list of usable rigs
 def getRigList(): #consider passing in rigpath... but 
 	addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
+
 	# test the link path first!
 	rigpath = addon_prefs.mcrig_path
 	blendFiles = []
 	pathlist = []
 	riglist = []
+	dirList = []
 
-	#from os import listdir
-	#from os.path import isfile, join
-	onlyfiles = [ f for f in os.listdir(rigpath) if os.path.isfile(os.path.join(rigpath,f)) ]
-	for f in onlyfiles:
-		# only get listing of .blend files
-		if f.split('.')[-1] == 'blend':
-			pathlist.append(rigpath+f)
-	for rigPath in pathlist:
-		with bpy.data.libraries.load(rigPath) as (data_from, data_to):
-			for name in data_from.groups:
-				if name in bpy.data.groups:
-					if v:print("Already grouped in this one. maybe should append the same way/rename?")
-					riglist.append( ('//'+':/:'+name,name,"Spawn a {x} rig (local)".format(x=name)) ) # still append the group name, more of an fyi
-				else:
-					riglist.append( (rigPath+':/:'+name,name,"Spawn a {x} rig".format(x=name)) )
+	# check if cache file exists
+	rigCache = os.path.join(rigpath,"rigcache")
+	if not os.path.isfile(rigCache):
+	
+		return updateRigList() # updates and returns the result
 
-	# setup template
-	rigListExample = [('blend/creeper', '#Creeper', '#Description'),
-				('blend/steve', '#Steve', '#Description'),
-				('blend/dawg', '#Dawg', '#Description')]
+	else:
+		# load the cache file
+		f = open(rigCache,'r')
+		ln = f.read()
+		f.close()
+		riglist = []
 
-	return riglist # for debugging, return rigListExample
+		entries = ln.split("\n")
+		#print("########################################")
+		#print("READING CACHE")
+		for a in entries:
+			#print(a)
+			tmp = a.split("\t")
+			try:
+				#print(tmp[0])
+				#print(tmp[1])
+				#print(tmp[2])
+				riglist.append( (tmp[0],tmp[1],tmp[2]) )
+			except:
+				pass # e.g. at the end of the file, extra lines.
+
+		# convert into the right format
+		# setup template
+		rigListExample = [('blend/creeper', '#Creeper', '#Description'),
+					('blend/steve', '#Steve', '#Description'),
+					('blend/dawg', '#Dawg', '#Description')]
+		#print("########")
+		#print(riglist)
+		return riglist # for debugging, return rigListExample
+
+
+
+def updateRigList():
+	addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
+
+	# test the link path first!
+	rigpath = addon_prefs.mcrig_path
+	blendFiles = []
+	pathlist = []
+	riglist = []
+	dirList = []
+
+	# check if cache file exists
+	rigCache = os.path.join(rigpath,"rigcache")
+	# if not os.path.isfile(rigCache): # ALWAYS load it here
+	# iterate through all folders
+	if len(os.listdir(rigpath)) < 1:
+		self.report({'ERROR'}, "Rig sub-folders not found")
+		return {'CANCELLED'}
+	for catgry in os.listdir(rigpath):
+		it = os.path.join(rigpath,catgry) # make a full path
+		#print("dir: ",it)
+		if os.path.isdir(it) and it[0] != ".": # ignore hidden or structural files
+			pathlist = []
+			dirList.append(it)
+			onlyfiles = [ f for f in os.listdir(it) if os.path.isfile(os.path.join(it,f)) ]
+			#print("Through all files.., it:", it)
+			for f in onlyfiles:
+				# only get listing of .blend files
+				if f.split('.')[-1] == 'blend':
+					pathlist.append(os.path.join(it,f))
+					#print("found blend: ",os.path.join(it,f))
+			for rigPath in pathlist:
+				with bpy.data.libraries.load(rigPath) as (data_from, data_to):
+					for name in data_from.groups:
+						#if name in bpy.data.groups:
+						#	if v:print("Already grouped in this one. maybe should append the same way/rename?")
+						#	riglist.append( ('//'+':/:'+name+':/:'+catgry,name,"Spawn a {x} rig (local)".format(x=name)) ) # still append the group name, more of an fyi
+						#else:
+						#	riglist.append( (rigPath+':/:'+name+':/:'+catgry,name,"Spawn a {x} rig".format(x=name)) )
+						riglist.append( (rigPath+':/:'+name+':/:'+catgry,name,"Spawn a {x} rig".format(x=name)) )
+	# save the file
+	f = open(rigCache,'w')
+	for tm in riglist:
+		#print("did it write?")
+		f.write("{x}\t{y}\t{z}\n".format(x=tm[0],y=tm[1],z=tm[2]))
+		#print( "{x}\t{y}\t{z}\n".format(x=tm[0],y=tm[1],z=tm[2]) )
+	f.close()
+	return riglist
+
+
+
+#######
+# Class for spawning/proxying a new asset for animation
+class spawnRealoadCache(bpy.types.Operator):
+	"""Force reload the mob spawner rigs, use after manually adding rigs to folders"""
+	bl_idname = "object.mc_reloadcache"
+	bl_label = "Reload the rig cache"
+
+	def execute(self,context):
+		updateRigList()
+		return {'FINISHED'}
+
+
 
 #######
 # Class for spawning/proxying a new asset for animation
 class mobSpawner(bpy.types.Operator):
-	"""Instantly spawn any group rig found in the rigs folder. Check the addon preferences to change the path or add new rigs."""
+	"""Instantly spawn any group rig found in the rigs folder"""
 	bl_idname = "object.mcprep_mobspawner"
 	bl_label = "Mob Spawner"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	# side ntoe, make function for trying to reconnect groups to the primary folder?
-	# issue is that if we move the blend file elsewhere and have library linking, even
-	# though paths passed in are absolute, it turns it into relative and messes up
-	# as soon as it's moved - but we still know where the directory SHOULD be
-	# (and maybe have it auto-duphack the model copies if there aren't enough, etc)
-
 	# properties, will appear in redo-last menu
-	
-
 	def riglist_enum(self, context):
 		return getRigList()
 
-	mcmob_type = bpy.props.EnumProperty(items=riglist_enum) # needs to be defined after riglist_enum
-	
+	mcmob_type = bpy.props.EnumProperty(items=riglist_enum, name="Mob Type") # needs to be defined after riglist_enum
 	relocation = bpy.props.EnumProperty(
 		items = [('None', 'Cursor', 'No relocation'),
 				('Clear', 'Origin', 'Move the rig to the origin'),
 				('Offset', 'Offset root', 'Offset the root bone to curse while moving the rest pose to the origin')],
-		name = "relocation")
+		name = "Relocation")
 	toLink = bpy.props.BoolProperty(
 		name = "Library Link mob",
 		description = "Library link instead of append the group",
@@ -1298,11 +1378,6 @@ class mobSpawner(bpy.types.Operator):
 		description = "Clear the pose to rest position",
 		default = True 
 		)
-	# clear location
-		# offset "main" bone from world (only I would use this, really. include it, off by default)
-	# link or append
-		# >> use same append layer if any!
-	# >> shift-d related, make new proxy/make new animation layer/link animation/copy only current pose etc 
 	
 	if v:print("mcmob_type: ",mcmob_type)
 
@@ -1316,7 +1391,13 @@ class mobSpawner(bpy.types.Operator):
 
 	def execute(self, context):
 		
-		[path,name] = self.mcmob_type.split(':/:')
+		try:
+			[path,name,category] = self.mcmob_type.split(':/:')
+		except:
+			if v:print("Error: No rigs found!")
+			self.report({'ERROR'}, "No mobs found in folder!")
+			return {'CANCELLED'}
+
 		if checkOptin():usageStat('mobSpawner'+':'+name) # want to also pass in the kind!
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
 
@@ -1340,6 +1421,55 @@ class mobSpawner(bpy.types.Operator):
 					bpy.ops.object.proxy_make(object=name+'.arma') # this brings up a menu, should do automatically.
 					# this would be "good convention", but don't force it - let it also search through
 					# and proxy every arma, regardless of name
+					# settings!
+
+
+					if self.relocation == "Offset":
+						# do the offset stuff, set active etc
+						#bpy.ops.object.mode_set(mode='OBJECT')
+						bpy.ops.transform.translate(value=(-gl[0],-gl[1],-gl[2]))
+					
+					#bpy.ops.object.select_all(action='DESELECT')
+					act = context.active_object
+					bpy.context.scene.objects.active = ob
+					if v:print("ACTIVE obj = {x}".format(x=ob.name))
+					bpy.ops.object.mode_set(mode='POSE')
+					if self.clearPose:
+						if v:print("clear the stuff!")
+						bpy.ops.pose.select_all(action='SELECT')
+						bpy.ops.pose.rot_clear()
+						bpy.ops.pose.scale_clear()
+						bpy.ops.pose.loc_clear()
+						# preserve original selection? keep all selected
+					if self.relocation == "Offset":
+						tmp=0
+						#bpy.ops.pose.select_all(action='DESELECT')
+						for nam in ["MAIN","root","base"]:
+							if v:print("We are here right?")
+							if nam in ob.pose.bones and tmp==0:
+
+								# this method doesn't work because, even though we are in POSE
+								# mode, the context for the operator is defined at the start,
+								# so acts as if in object mode.. which isn't helpful at all.
+								# ob.pose.bones[nam].bone.select = True
+								# bpy.ops.view3d.snap_selected_to_cursor(use_offset=True)
+								# #ob.pose.bones[nam].bone.select = False
+								# tmp=1 # to end loop early
+
+
+								# these transforms.. are so weird. what. but it works..
+								# but not for all, some rigs are different. need some kind
+								# of transform to consider in, global vs local etc.
+								ob.pose.bones[nam].location[0] = cl[0]
+								ob.pose.bones[nam].location[1] = cl[1]
+								ob.pose.bones[nam].location[2] = -cl[2]
+								tmp=1
+						if tmp==0:
+							print("This addon works better when the root bone's name is 'MAIN'")
+
+
+					# copied from below, should be the same
+
 				except:
 					print("Spawner works better if the armature's name is {x}.arma".format(x=name))
 					# self report?
@@ -1355,25 +1485,24 @@ class mobSpawner(bpy.types.Operator):
 			# OOORR do append the group, then remove the group but keep the individual objects
 			# that way we know we don't append in too many objects (e.g. parents pulling in children/vice versa)
 
-			# also issue of "undo/redo"... groups stay linked/ as groups even if this happens!
-
-
-			# not doing append layers anymore!
-			#groupAppendLayer = addon_prefs.MCprep_groupAppendLayer
-			#if groupSwap and name not in bpy.data.groups:
-			# if group not linked, put appended group data onto the GUI field layer
-			# activeLayers = list(context.scene.layers)
-			# if (groupAppendLayer!=0):
-			# 	x = [False]*20
-			# 	x[groupAppendLayer-1] = True
-			# 	context.scene.layers = x				
+			# also issue of "undo/redo"... groups stay linked/ as groups even if this happens!	
 
 
 			if path != '//': #ie not yet linked in.
 				sel = bpy.context.selected_objects # capture state before, technically also copy
 				bpy.ops.object.select_all(action='DESELECT')
+				# consider taking pre-exisitng group names and giving them a temp name to name back at the end
+				print(path+'/Group/',name)
 				bAppendLink(path+'/Group/',name, False)
-				grp_added = context.selected_objects[0].users_group[0] # to be safe, grab the group from one of the objects
+				
+				try:
+					g1 = context.selected_objects[0]  # THE FOLLOWING is a common fail-point.
+					grp_added = g1.users_group[0] # to be safe, grab the group from one of the objects
+				except:
+					# this is more likely to fail but serves as a fallback
+					if v:print("Mob spawn: Had to go to fallback group name grab")
+					grp_added = bpy.data.groups[name]
+				
 				gl = grp_added.dupli_offset # if rig not centered in original file, assume its group is
 				cl = bpy.context.space_data.cursor_location
 
@@ -1455,6 +1584,20 @@ class mobSpawner(bpy.types.Operator):
 							# for a in addedObjs:
 							# 	a.select=True
 							break #end the for loop, only one thing to offset!
+						elif ob.type == "ARMATURE" and self.clearPose:
+							# just general armature, still clear pose if appropriate
+							#bpy.ops.object.select_all(action='DESELECT')
+							act = context.active_object
+							bpy.context.scene.objects.active = ob
+							if v:print("ACTIVE obj = {x}".format(x=ob.name))
+							bpy.ops.object.mode_set(mode='POSE')
+							if v:print("clear the stuff!")
+							bpy.ops.pose.select_all(action='SELECT')
+							bpy.ops.pose.rot_clear()
+							bpy.ops.pose.scale_clear()
+							bpy.ops.pose.loc_clear()
+							bpy.ops.object.mode_set(mode='OBJECT')
+							bpy.context.scene.objects.active = act
 
 				# now do the extra options, e.g. the offsets
 				if self.relocation == "Clear":
@@ -1478,41 +1621,44 @@ class mobSpawner(bpy.types.Operator):
 
 #######
 # Install mob window (popup)
-class installMob(bpy.types.Operator):
+class installMob(bpy.types.Operator, ImportHelper):
 	"""Install custom rigs for the mob spawner, all groups in selected blend file will become individually spawnable"""
 	bl_idname = "object.mcmob_install_menu"
 	bl_label = "Install new mob"
 
-	mcmob_install_new_path = bpy.props.StringProperty(
-		name = "mcmob_install_new_path",
-		description = "Select blend file to install for mob spawning",
-		subtype = 'FILE_PATH',
-		default = "//")
-
-	# def invoke(self, context, event):
-	#     return context.window_manager.invoke_props_dialog(self)
-
-	# well, this would have been useful if it showed the filebrowser when clicking the icon, but it doesn't.
-	# hence, we need to show a path in the filebrowser. clear it after.
-	# def draw(self, context):
-	#     layout = self.layout
-	#     row = layout.row()
-	#     row.label("Select blend file to install")
-	#     row = layout.row()
-	#     row.prop(self, "mcmob_install_new_path")
-	#     row = layout.row()
-		#col.operator(// install new mob).path_install = self.mcmob_install_new_path
-
-	def execute(self, context):
+	filename_ext = ".blend"
+	filter_glob = bpy.props.StringProperty(
+			default="*.blend",
+			options={'HIDDEN'},
+			)
+	fileselectparams = "use_filter_blender"
+	# property for which folder it goes in
+	# blaaaaaa default to custom I guess
+	def getCategories(self, context):
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
-		if v:print("attempting to install {x}".format(x=self.mcmob_install_new_path))
+		ret = []
+		onlyfiles = [ f for f in os.listdir(addon_prefs.mcrig_path) if os.path.isdir(os.path.join(addon_prefs.mcrig_path,f)) ]
+		for a in onlyfiles:
+			if a==".DS_Store":continue
+			ret.append(  (a, a.title(), "{x} mob".format(x=a.title()))  )
+		return ret
+
+
+	mob_category = bpy.props.EnumProperty(
+		items = getCategories,
+		name = "Mob Category")
+	#[('custom', 'Custom', 'Custom mob'),('passive', 'Passive', 'Passive mob')]
+
+	def installBlend(self, context, filepath):
+		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
 
 		#check blend input file exists
-		newrig = self.mcmob_install_new_path
+		newrig = filepath
 		drpath = addon_prefs.mcrig_path
 		if not os.path.isfile(newrig):
 			newrig = bpy.path.abspath(newrig)
 			if not os.path.isfile(newrig):
+				if v:print("Error: Rig blend file not found!")
 				self.report({'ERROR'}, "Rig blend file not found!")
 				return {'CANCELLED'}
 
@@ -1520,18 +1666,58 @@ class installMob(bpy.types.Operator):
 		if not os.path.isdir(drpath):
 			drpath = bpy.path.abspath(drpath)
 			if not os.path.isdir(drpath):
+				if v:print("Error: Rig directory is not valid!")
 				self.report({'ERROR'}, "Rig directory is not valid!")
 				return {'CANCELLED'}
 		
+		# check the file with a quick look for any groups, any error return failed
+		with bpy.data.libraries.load(newrig) as (data_from, data_to):
+			if len(data_from.groups) < 1:
+				if v:print("Error: no groups found in blend file!")
+				self.report({'ERROR'}, "No groups found in blend file!")
+				return {'CANCELLED'}
+
 		# copy this file to the rig folder
 		import shutil
 		filename = (newrig).split('/')[-1]
-		shutil.copyfile(newrig, drpath+filename)
-		self.report({'INFO'}, "Mob-file Installed") #Successfully, do checking of the file!
-
-		addon_prefs.mcmob_install_new_path = "//" # clear the path after install, to show it's not like a saved thing.
+		# path:rig folder / category / blend file
+		shutil.copyfile(newrig, os.path.join(os.path.join(drpath,self.mob_category) , filename))
+		# reload the cache
+		updateRigList()
+		self.report({'INFO'}, "Mob-file Installed")
 
 		return {'FINISHED'}
+
+	def execute(self, context):
+		# addon_prefs.mcmob_install_new_path = "//" # clear the path after install, to show it's not like a saved thing.
+		# self.filepath = "//"
+		return self.installBlend(context,self.filepath)
+		#return {'FINISHED'}
+
+
+
+#######
+# Class for spawning/proxying a new asset for animation
+class openRigFolder(bpy.types.Operator):
+	"""Open the rig folder for mob spawning"""
+	bl_idname = "object.mc_openrigpath"
+	bl_label = "Open rig folder"
+
+	def execute(self,context):
+		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
+		import subprocess
+		try:
+			# windows... untested
+			subprocess.Popen('explorer "{x}"'.format(x=addon_prefs.mcrig_path))
+		except:
+			try:
+				# mac... works on Yosemite minimally
+				subprocess.call(["open", addon_prefs.mcrig_path])
+			except:
+				self.report({'ERROR'}, "Didn't open folder, navigate to it manually")
+				return {'CANCELLED'}
+		return {'FINISHED'}
+
 
 
 #######
@@ -1563,8 +1749,7 @@ class mobSpawnerMenu(bpy.types.Menu):
 	bl_idname = "mcmob_spawn_menu"
 
 	def draw(self, context):
-		#addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
-		bpy.context.scene.mcRigListGlobal
+
 		layout = self.layout
 		rigitems = getRigList()
 		if v:print("RIG ITEMS length:"+str(len(rigitems)))
@@ -1632,16 +1817,6 @@ class MCprepPreference(bpy.types.AddonPreferences):
 		name = "mcprep_meshswapjoin",
 		description = "Join individuals objects together during meshswapping",
 		default = True)
-	mcprep_riglink = bpy.props.BoolProperty( # is this actually being used over the other liblink option?
-		name = "mcprep_riglink",
-		description = "Link and proxy rigs as opposed to directly appending from rig library",
-		default = False)
-	mcmob_install_new_path = bpy.props.StringProperty(
-		name = "mcmob_install_new_path",
-		description = "Select blend file to install for mob spawning",
-		subtype = 'FILE_PATH',
-		default = "//")
-		# TRY to make it so only blend files and folders are displayed in file-browser!
 
 	def draw(self, context):
 		layout = self.layout
@@ -1672,10 +1847,10 @@ class MCprepPreference(bpy.types.AddonPreferences):
 		col = split.column()
 		col.label("Select/install mobs")
 		col = split.column()
-		col.prop(self, "mcmob_install_new_path", text="")
+		col.operator("object.mcmob_install_menu", text="Install file for mob spawning")
 		col = split.column()
-		col.operator("object.mcmob_install_menu", text="Install file for mob spawning").mcmob_install_new_path = self.mcmob_install_new_path
-		
+		col.operator("object.mc_openrigpath", text="Open rig folder")
+
 		# misc settings
 		layout = self.layout
 		row = layout.row()
@@ -1698,15 +1873,16 @@ class MCprepPreference(bpy.types.AddonPreferences):
 		row.label("Don't forget to save user preferences!")
 
 
+
 #######
 # MCprep panel for these declared tools
 class MCpanel(bpy.types.Panel):
 	"""MCprep addon panel"""
-	bl_label = "MCprep"
+	bl_label = "World Imports"
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'TOOLS'
 	bl_context = "objectmode"
-	bl_category = 'Tools'
+	bl_category = "MCprep"
 
 	def draw(self, context):
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
@@ -1727,7 +1903,6 @@ class MCpanel(bpy.types.Panel):
 		col.label("MCprep tools")
 		col.operator("object.mc_mat_change", text="Prep Materials", icon='MATERIAL')
 		col.operator("object.mc_meshswap", text="Mesh Swap", icon='LINK_BLEND')
-		col.operator("object.mcprep_mobspawner", text="Mob Spawner", icon='POSE_HLT')
 		#the UV's pixels into actual 3D geometry (but same material, or modified to fit)
 		#col.operator("object.solidify_pixels", text="Solidify Pixels", icon='MOD_SOLIDIFY')
 		split = layout.split()
@@ -1775,12 +1950,68 @@ class MCpanel(bpy.types.Panel):
 		layout = self.layout # clear out the box formatting
 		split = layout.split()
 		row = split.row(align=True)
-		if checkForUpdate():
+		if checkForUpdate() and not v:
 			row.label (text="Update ready!", icon='ERROR')
 			split = layout.split()
 			row = split.row(align=True)
 			row.operator("object.mcprep_openreleasepage", text="Get it now", icon="HAND")
 
+
+#######
+# MCprep panel for mob spawning
+class MCpanelSpawn(bpy.types.Panel):
+	"""MCprep addon panel"""
+	bl_label = "Mob Spawner"
+	bl_space_type = 'VIEW_3D'
+	bl_region_type = 'TOOLS'
+	bl_context = "objectmode"
+	bl_category = "MCprep"
+
+	def draw(self, context):
+		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
+		
+		layout = self.layout
+		layout.label("Spawn generic rig:")
+		split = layout.split()
+		col = split.column(align=True)
+		row = col.row(align=True)
+		row.operator("object.mcprep_mobspawner", text="Mob Spawner", icon='POSE_HLT')
+		row.operator("object.mc_reloadcache", icon='LOOP_BACK', text='')
+		row = col.row(align=True)
+		row.operator("object.mc_openrigpath", text="Open folder", icon='FILE_FOLDER')
+
+		# here for the automated rest of them
+		rigitems = getRigList()
+		catlabel = ""
+		split = layout.split()
+		col = split.column(align=True)
+		for n in range(len(rigitems)):
+			# do some kind of check for if no rigs found
+			if False:
+				layout.label(text="No rigs found", icon='ERROR')
+			tmp = rigitems[n][0].split(":/:")
+			if tmp[-1] != catlabel:
+				
+				if catlabel !="":
+					col.operator("object.mcmob_install_menu","Install {x}".format(x=catlabel),icon="PLUS").mob_category = catlabel
+				catlabel = tmp[-1]
+				split = layout.split()
+				col = split.column(align=True)
+				col.label(text="{x} mobs".format(x=catlabel.title()))
+			#credit = tmp[0].split(" - ")[-1].split(".")[0]  # looks too messy to have in the button itself,
+			# maybe place in the redo last menu
+			#tx = "{x}  (by {y})".format(x=rigitems[n][1],y=credit)
+			col.operator("object.mcprep_mobspawner", text=rigitems[n][1].title()).mcmob_type = rigitems[n][0]
+		col.operator("object.mcmob_install_menu","Install {x}".format(x=catlabel),icon="PLUS").mob_category = catlabel # the last one
+
+		layout = self.layout # clear out the box formatting
+		split = layout.split()
+		row = split.row(align=True)
+		if checkForUpdate() and not v:
+			row.label (text="Update ready!", icon='ERROR')
+			split = layout.split()
+			row = split.row(align=True)
+			row.operator("object.mcprep_openreleasepage", text="Get it now", icon="HAND")
 
 
 #######
@@ -1846,11 +2077,6 @@ def addon_filter_items(self, context):
 
 def register():
 
-
-	bpy.types.Scene.mcRigListGlobal = bpy.props.EnumProperty(
-		items = [('', '', 'Load rigs in the MCprep panel')],
-		name = "Global mob rig list")
-
 	bpy.types.Scene.mcprep_showsettings = bpy.props.BoolProperty(
 		name = "mcprep_showsettings",
 		description = "Show extra settings in the MCprep panel",
@@ -1862,6 +2088,8 @@ def register():
 	bpy.utils.register_class(solidifyPixels)
 	bpy.utils.register_class(fixMinewaysScale)
 	bpy.utils.register_class(installMob)
+	bpy.utils.register_class(openRigFolder)
+	bpy.utils.register_class(spawnRealoadCache)
 	
 	bpy.utils.register_class(dialogue)
 	bpy.utils.register_class(WIP)
@@ -1871,6 +2099,7 @@ def register():
 	bpy.types.INFO_MT_armature_add.append(draw_mobspawner)
 
 	bpy.utils.register_class(MCpanel)
+	bpy.utils.register_class(MCpanelSpawn)
 	bpy.utils.register_class(MCprepPreference)
 	#bpy.utils.register_manual_map(ops_manual_map)
 	
@@ -1887,11 +2116,14 @@ def unregister():
 	bpy.utils.unregister_class(solidifyPixels)
 	bpy.utils.unregister_class(fixMinewaysScale)
 	bpy.utils.unregister_class(installMob)
+	bpy.utils.unregister_class(openRigFolder)
+	bpy.utils.unregister_class(spawnRealoadCache)
 	
 	bpy.utils.unregister_class(dialogue)
 	bpy.utils.unregister_class(WIP)
 	bpy.utils.unregister_class(MCprepPreference)
 	bpy.utils.unregister_class(MCpanel)
+	bpy.utils.unregister_class(MCpanelSpawn)
 	bpy.utils.unregister_class(mobSpawnerMenu)
 	bpy.types.INFO_MT_armature_add.remove(draw_mobspawner)
 	bpy.utils.unregister_class(showMCprefs)
@@ -1900,7 +2132,6 @@ def unregister():
 	bpy.utils.unregister_class(toggleOptin)
 	bpy.utils.unregister_class(openreleasepage)
 
-	del bpy.types.Scene.mcRigListGlobal
 	del bpy.types.Scene.mcprep_showsettings
 
 if __name__ == "__main__":
