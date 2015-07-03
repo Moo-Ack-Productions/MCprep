@@ -6,6 +6,19 @@ TO INSTALL MCprep
 *The preferences panel should look like this after installing the zip file*
 ![Install MCprep](/visuals/install.png?raw=true)
 
+Demo Usage
+======
+
+[Video demo of the addon:](https://www.youtube.com/watch?v=Nax7iuCTovk)
+
+[![Alt text](/visuals/referenceThumnail.png?raw=true "Video Preview")](https://www.youtube.com/watch?v=Nax7iuCTovk)
+
+Other video demos:
+- [Cycles Materials Upate (most recent)](https://www.youtube.com/watch?v=MRuPRnfdzfI)
+- [Grass field meshswapping](https://www.facebook.com/photo.php?v=737273036339269&l=2318416360725689976)
+- [Pre-release trailer, materials & meshswapping demo](https://www.youtube.com/watch?v=Nax7iuCTovk)
+
+
 CREDIT
 ======
 While this addon is released as open source software, the assets are being released as [Creative Commons Attributions, CC-BY](https://creativecommons.org/licenses/by/3.0/us/). If you use MeshSwap, **please credit the creators** by [linking to this page](https://github.com/TheDuckCow/MCprep) wherever your project may appear.
@@ -54,21 +67,9 @@ This addon is made to work with an asset library directory, from which models an
 
 This script is now compatible for both pre-2.71 (tested down to 2.69) and for 2.72+ official builds, up to blender 2.74.
 
-Demo Usage
-======
-
-[Video demo of the addon:](https://www.youtube.com/watch?v=Nax7iuCTovk)
-
-[![Alt text](/visuals/referenceThumnail.png?raw=true "Video Preview")](https://www.youtube.com/watch?v=Nax7iuCTovk)
-
-Older video demos:
-- [Cycles Materials Upate (most recent)](https://www.youtube.com/watch?v=MRuPRnfdzfI)
-- https://www.facebook.com/photo.php?v=737273036339269&l=2318416360725689976
-- https://www.youtube.com/watch?v=Swz6T4Zzfek
 
 How to use this addon
 ======
-
 
 
 **Setup materials:**
@@ -78,11 +79,17 @@ How to use this addon
 - **Step 3:** Select all, or select the objects that have the material you want to fix. Materials can be all separate objects or the same object, it does not matter.
 - **Step 4:** Under the MCprep panl, press "Prep Materials".
 
+
 **Meshswap:**
 - **Purpose:** To automatically swap in extra assets such as 3D grass, light emitting torches and lamps, and so forth. Note that all the objects to be swapped in are in the blend file part of this download. Also note that swapping is done based on the name of the material. If you are unsure why your object is not swapping in, check the material name matches the counterpart object/material in the meshSwap.blend file. Note it can search for both appendable objects as well as groups, containing particles and so forth. Modifiers on the mesh in the original file will be brought over, so notice for example how the tall grass when replaced will be "pre-simulated" as it has displacement modifiers setup already with animation.
 - **Step 0:** Set the MeshSwap blend path to the "mcprep_meshSwap.blend" or custom blend file, and make sure the world export has blocks of size 1m (100cm).
 - **Step 1:** Select the objects that you wish to be meshSwapped. Swappable objects are determined *automatically* based on the contents of the blend file selected above. If an object is not found or swappable, it will just be skipped - no harm done by "overselecting" (so select all objects to make sure everything that can be swapped gets swapped!)
 - **Step 2:** Press Mesh Swap (there will be a small delay, meshswapping large areas such as fields of grass may take awhile).
+
+*Settup your jmc2obj and Mineways worlds in this fashion for best results.*
+![Exporter setups](/visuals/exporterSettings.png?raw=true)
+
+*Note jmc2obj is preferred because of how the obj materials are exported, Mineways has more limitations.*
 
 **Mob Spawner (new!)**
 - **Purpose:**
@@ -128,7 +135,8 @@ To add your own rigs to the Mob Spawner:
 Known Bugs
 ======
 - SOMETIMES UNDO (control/command z) MAY CRASH AFTER MESHSWAPPING, recommended to save before using to be safe but generally is fine.
-- Currently assumes that the block size is 1x1x1, note that by default Mineways has a block size 0.1x0.1x0.1, please set it to 1m or 100cm on export or use the upscale function.
+- Currently meshwapassumes that the block size is 1x1x1, note that by default Mineways has a block size 0.1x0.1x0.1, please set it to 1m or 100cm on export or use the upscale function.
+- Motion blur glithces on wind-swaying elements, e.g. grass: This is a bug with blender, where solidify plus the displacement modifiers and split edges modifiers can create bad motion blur effects. The easy fix is to remove split edges and let the grass be shaded smoothly instead.
 - **Both mineways and jmc2obj oddities:**
   - Redstone items like repeaters, dust, and so forth generally don't swap properly, and is a much more difficult problem to solve.
   - Rails: for jmc2obj, all rails should at least be placed in the correct position, but not necessarily rotated correctly.
@@ -146,7 +154,6 @@ Future Plans
 - Continue adding mroe blocks for meshswapping
 - Add the ability to shift-A add objects in the library like other objects, not just via meshswapping
 - Create a "match external material" operator, where all materials in the set of selected objects are checked against an external library, and if any have matching names, the external material will overwrite the local one. This would allow one to quickly cycles between different styles, e.g. texture packs.
-- Create a "Spawn Rig" button, working for both linked rigs as well as appended rigs. Have built-in, self included rigs for animating and the option to install additional rigs. Involve the community on this one!
 
 
 Additional Help
