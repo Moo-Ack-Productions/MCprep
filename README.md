@@ -1,10 +1,10 @@
 TO INSTALL MCprep
 ======
 
-[Go to the releases page and download the addon](https://github.com/TheDuckCow/MCprep/releases), it should remain a zip folder. In blender, go to preferences, then the addons tab, and at the bottom of the window install from file. Select the .zip file. **NOTE:** _Blender may not automatically enable the addon. If the MCprep addon is not already shown in the window after installing, search for it at left and then ensure the checkbox is enabled_ **Save user preferences** to keep it enabled next time blender opens.
+[Go to the releases page and download the addon](https://github.com/TheDuckCow/MCprep/releases), it should remain a zip folder. In blender, go to preferences, then the addons tab, and at the bottom of the window install from file. Select the .zip file. **NOTE:** _Blender may not automatically enable the addon. If the MCprep addon is not already shown in the window after installing, search for it at left and then ensure the checkbox is enabled._ **Save user preferences** to keep it enabled next time blender opens.
 
 *The preferences panel should look like this after installing the zip file*
-[Alt text](/visuals/install.png?raw=true "Meshswap options")
+![Install MCprep](/visuals/install.png?raw=true)
 
 CREDIT
 ======
@@ -98,7 +98,7 @@ How to use this addon
   - Clear pose: clear to pose to rest. If false, the initial pose will be that found in the rig's source blend file.
 
 *Meshswap Options*
-[Alt text](/visuals/spawnOptions.png?raw=true "Meshswap options")
+![Meshswap options](/visuals/spawnOptions.png?raw=true)
 
 To add your own objects to meshswap (or groupswap):
 - **Step 1:** Check your imported world object and see the name of the material for the object you want to setup. You might think it is "glass plane", but if the importer names the material "glass_plane", you need to note this name down for step 3.
@@ -123,7 +123,7 @@ To add your own rigs to the Mob Spawner:
 
 
 *Sometimes you may need to reload a rig cache, click this button if the correct rigs aren't appearing*
-[Alt text](/visuals/reloadRigCache.png?raw=true "Reload cache")
+![Reload rig cache](/visuals/reloadRigCache.png?raw=true)
 
 Known Bugs
 ======
