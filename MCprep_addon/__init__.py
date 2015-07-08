@@ -40,7 +40,7 @@ https://github.com/TheDuckCow/MCprep.git
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",
-	"version": (2, 1, 1),
+	"version": (2, 1, 2),
 	"blender": (2, 74, 0),
 	"location": "3D window toolshelf > MCprep tab",
 	"description": "Speeds up the workflow of minecraft animations and imported minecraft worlds",
@@ -55,8 +55,8 @@ from bpy.types import AddonPreferences
 from bpy_extras.io_utils import ImportHelper
 
 #verbose
-v = False
-ver = 'v(2, 1, 1)'
+v = True
+ver = 'v(2, 1, 2)'
 
 ########################################################################################
 #	Below for precursor functions

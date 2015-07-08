@@ -18,10 +18,14 @@ Other video demos:
 - [Grass field meshswapping](https://www.facebook.com/photo.php?v=737273036339269&l=2318416360725689976)
 - [Pre-release trailer, materials & meshswapping demo](https://www.youtube.com/watch?v=Nax7iuCTovk)
 
+*Mob spawner animation, for pizzaz*
+![Mob spawner gif](/visuals/spawner-gif.gif?raw=true)
+
+
 
 CREDIT
 ======
-While this addon is released as open source software, the assets are being released as [Creative Commons Attributions, CC-BY](https://creativecommons.org/licenses/by/3.0/us/). If you use MeshSwap, **please credit the creators** by [linking to this page](https://github.com/TheDuckCow/MCprep) wherever your project may appear.
+While this addon is released as open source software, the assets are being released as [Creative Commons Attributions, CC-BY](https://creativecommons.org/licenses/by/3.0/us/). If you use MeshSwap, **please credit the creators** by linking to this page wherever your project may appear: [http://github.com/TheDuckCow/MCprep](https://github.com/TheDuckCow/MCprep)
 
 Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow) and [SilverC16](http://youtube.com/user/silverC16).
 
@@ -34,7 +38,6 @@ Rig models credits below, provided with explicit permission:
   - Bat: [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) (MCprep exclusive)
   - Chicken: [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html))
   - Cow: [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html))
-  - Slime: [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) (MCprep exclusive)
   - Squid: [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html))
   - Pig: [Trainguy9512](https://www.youtube.com/channel/UCktn­etC2h25hMTk1tIz7IQ) (No direct link yet)
 - HOSTILE RIGS
@@ -43,6 +46,7 @@ Rig models credits below, provided with explicit permission:
   - Endermite: [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html))
   - Guardian rig: [Trainguy9512](https://www.youtube.com/channel/UCktn­etC2h25hMTk1tIz7IQ) ([Rig link](http://www.blendswap.com/blends/view/79729))
   - Skeleton Rig: [Trainguy9512](https://www.youtube.com/channel/UCktn­etC2h25hMTk1tIz7IQ) ([Rig link](http://www.blendswap.com/blends/view/79495))
+  - Slime: [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) (MCprep exclusive)
 - FRIENDLY RIGS (e.g. tamable or utility)
   - Horse: [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) ([Rig link](http://www.blendswap.com/blends/view/73064))
   - Wolf: [Trainguy9512](https://www.youtube.com/channel/UCktn­etC2h25hMTk1tIz7IQ) ([Rig link](http://www.blendswap.com/blends/view/79628))
@@ -82,7 +86,7 @@ How to use this addon
 
 **Meshswap:**
 - **Purpose:** To automatically swap in extra assets such as 3D grass, light emitting torches and lamps, and so forth. Note that all the objects to be swapped in are in the blend file part of this download. Also note that swapping is done based on the name of the material. If you are unsure why your object is not swapping in, check the material name matches the counterpart object/material in the meshSwap.blend file. Note it can search for both appendable objects as well as groups, containing particles and so forth. Modifiers on the mesh in the original file will be brought over, so notice for example how the tall grass when replaced will be "pre-simulated" as it has displacement modifiers setup already with animation.
-- **Step 0:** Set the MeshSwap blend path to the "mcprep_meshSwap.blend" or custom blend file, and make sure the world export has blocks of size 1m (100cm).
+- **Step 0:** By default this is already done for you; set the MeshSwap blend path to the "mcprep_meshSwap.blend" or custom blend file, and make sure the world export has blocks of size 1m (100cm).
 - **Step 1:** Select the objects that you wish to be meshSwapped. Swappable objects are determined *automatically* based on the contents of the blend file selected above. If an object is not found or swappable, it will just be skipped - no harm done by "overselecting" (so select all objects to make sure everything that can be swapped gets swapped!)
 - **Step 2:** Press Mesh Swap (there will be a small delay, meshswapping large areas such as fields of grass may take awhile).
 
@@ -93,16 +97,17 @@ How to use this addon
 
 **Mob Spawner (new!)**
 - **Purpose:**
-- **Step 0:** Make sure the mob spawner path is a directory with valid blend files setup for linkining (addon preferences > MCprep). By default, this path will already be setup and valid pointing to the included rigs with this release, as defined in the credits section above
+- **Step 0:** By default this is already done for you; make sure the mob spawner path is a directory with valid blend files setup for linkining (addon preferences > MCprep). When installed, this path will already be setup and valid pointing to the included rigs with this release, as defined in the credits section above. This rigs are place in the addon's local directory provided by blender and will not be placed anywhere else on the user's machine.
 - **Step 1:** Either press the "mob spawner" button in the MCprep panel, or go to the shift-a menu: armature > mob spawner > [mob name] to instantly append or link in a rig.
 - **Step 2:** Check the redo last menu for additional settings, such as relocation of the rig, library linking, and even changing which rig to spawn. These are the following options:
   - mcmob_type: Change the mob spawned, e.g. from a creeper to a wolf
   - Relocation: Change where the spawned rig appears. 
-  - Library Link mob:
     - Cursor (default): Place the rig at the cursor's location
     - Origin: Move the rig to the origin
     - Offset root: Move the rig to the origin, but offset the root bone to the cursor's location (note: doesn't work with all rigs correctly right now, will be improved in the future)
-  - Clear pose: clear to pose to rest. If false, the initial pose will be that found in the rig's source blend file.
+  - Library Link mob: If disbaled, the group is appended (the groups is not kept so it can be appended multiple tiems), if enabled, the rig will be linked in and armatures auto-proxied.
+    - Be careful! If the blend file moves, the libraries will likely get broken unless a custom rigs folder is used with a local-relative path.
+  - Clear pose: clear to pose to rest. If false, the initial pose will be that found in the rig's source blend file. Note: some rigs have animations already setup, clear pose in the future will also automatically clear an action and remove the pre-aniamted figures.
 
 *Meshswap Options*
 ![Meshswap options](/visuals/spawnOptions.png?raw=true)
