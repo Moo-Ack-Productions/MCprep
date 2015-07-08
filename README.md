@@ -11,7 +11,7 @@ Demo Usage
 
 
 *[Mob spawner demo](https://www.youtube.com/watch?v=C3YoZx-seFE)*
-[![Mob spawner gif](/visuals/spawner-gif.gif](https://www.youtube.com/watch?v=C3YoZx-seFE)
+[![Mob spawner gif](/visuals/spawner-gif.gif)](https://www.youtube.com/watch?v=C3YoZx-seFE)
 
 *[Pre-release demo, materials & meshswapping demo](https://www.youtube.com/watch?v=Nax7iuCTovk)*
 [![Alt text](/visuals/referenceThumnail.png?raw=true "Video Preview")](https://www.youtube.com/watch?v=Nax7iuCTovk)
