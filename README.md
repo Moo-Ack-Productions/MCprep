@@ -9,17 +9,16 @@ TO INSTALL MCprep
 Demo Usage
 ======
 
-[Video demo of the addon:](https://www.youtube.com/watch?v=Nax7iuCTovk)
 
+*[Mob spawner demo](https://www.youtube.com/watch?v=C3YoZx-seFE)*
+[![Mob spawner gif](/visuals/spawner-gif.gif](https://www.youtube.com/watch?v=C3YoZx-seFE)
+
+*[Pre-release demo, materials & meshswapping demo](https://www.youtube.com/watch?v=Nax7iuCTovk)*
 [![Alt text](/visuals/referenceThumnail.png?raw=true "Video Preview")](https://www.youtube.com/watch?v=Nax7iuCTovk)
 
 Other video demos:
-- [Cycles Materials Upate (most recent)](https://www.youtube.com/watch?v=MRuPRnfdzfI)
+- [Cycles Materials Upate](https://www.youtube.com/watch?v=MRuPRnfdzfI)
 - [Grass field meshswapping](https://www.facebook.com/photo.php?v=737273036339269&l=2318416360725689976)
-- [Pre-release trailer, materials & meshswapping demo](https://www.youtube.com/watch?v=Nax7iuCTovk)
-
-*Mob spawner animation, for pizzaz*
-![Mob spawner gif](/visuals/spawner-gif.gif?raw=true)
 
 
 
