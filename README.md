@@ -3,11 +3,11 @@ TO INSTALL MCprep
 
 [Go to the releases page and download the addon](https://github.com/TheDuckCow/MCprep/releases), it should remain a zip folder. In blender, go to preferences, then the addons tab, and at the bottom of the window install from file. Select the .zip file. **NOTE:** _Blender may not automatically enable the addon. If the MCprep addon is not already shown in the window after installing, search for it at left and then ensure the checkbox is enabled._ **Save user preferences** to keep it enabled next time blender opens.
 
-*The preferences panel should look like this after installing the zip file*
-![Install MCprep](/visuals/install.png?raw=true)
-
 Again, please download on the release page, **not** by clicking download zip at right.
 ![Install MCprep](/visuals/whereToDownload.jpg?raw=true)
+
+*The preferences panel should look like this after installing the zip file*
+![Install MCprep](/visuals/install.png?raw=true)
 
 **If you like the addon, [please consider donating](http://bit.ly/donate2TheDuckCow) for the continued quality development! [Share this addon](https://twitter.com/intent/tweet?text=Make+easier+Minecraft+renders+using+the+MCprep+addon+bit.ly/MCprep+by+@TheDuckCow) so others can benefit from it!**
 
