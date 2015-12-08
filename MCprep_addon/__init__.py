@@ -40,8 +40,8 @@ https://github.com/TheDuckCow/MCprep.git
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",
-	"version": (2, 1, 2),
-	"blender": (2, 75, 0),
+	"version": (2, 1, 3),
+	"blender": (2, 76, 0),
 	"location": "3D window toolshelf > MCprep tab",
 	"description": "Speeds up the workflow of minecraft animations and imported minecraft worlds",
 	"warning": "",
@@ -52,7 +52,7 @@ bl_info = {
 
 #verbose
 v = True
-ver = 'v(2, 1, 2)'
+ver = 'v(2, 1, 3)'
 
 import bpy,os,mathutils,random,math
 from bpy.types import AddonPreferences
@@ -730,11 +730,11 @@ class meshSwap(bpy.types.Operator):
 			
 			#special cases, make another list for this? number of variants can vary..
 			if name == "torch" or name == "Torch":
-				bAppendLink(meshSwapPath+'/Group/', name+".1", toLink)
+				bAppendLink(os.path.join(meshSwapPath,'Group'), name+".1", toLink)
 				bpy.ops.object.delete()
-				bAppendLink(meshSwapPath+'/Group/', name+".2", toLink)
+				bAppendLink(os.path.join(meshSwapPath,'Group'), name+".2", toLink)
 				bpy.ops.object.delete()
-			bAppendLink(meshSwapPath+'/Group/', name, toLink)
+			bAppendLink(os.path.join(meshSwapPath,'Group'), name, toLink)
 			bpy.ops.object.delete()
 			grouped = True
 			# if activated a different layer, go back to the original ones
@@ -781,7 +781,7 @@ class meshSwap(bpy.types.Operator):
 					elif x=='removable':
 						removable = True
 		else:
-			bAppendLink(meshSwapPath+'/Object/',name, False)
+			bAppendLink(os.path.join(meshSwapPath,'Object'),name, False)
 			### NOTICE: IF THERE IS A DISCREPENCY BETWEEN ASSETS FILE AND WHAT IT SAYS SHOULD
 			### BE IN FILE, EG NAME OF MESH TO SWAP CHANGED,  INDEX ERROR IS THROWN HERE
 			### >> MAKE a more graceful error indication.
@@ -1461,7 +1461,7 @@ class mobSpawner(bpy.types.Operator):
 		if self.toLink:
 			if path != '//':
 				path = bpy.path.abspath(path)
-				bAppendLink(path+'/Group/',name, True)
+				bAppendLink(os.path.join(path,'Group'),name, True)
 				# proxy any and all armatures
 				# here should do all that jazz with hacking by copying files, checking nth number
 				#probably consists of checking currently linked libraries, checking if which
@@ -1537,8 +1537,8 @@ class mobSpawner(bpy.types.Operator):
 				sel = bpy.context.selected_objects # capture state before, technically also copy
 				bpy.ops.object.select_all(action='DESELECT')
 				# consider taking pre-exisitng group names and giving them a temp name to name back at the end
-				if v:print(path+'/Group/',name)
-				bAppendLink(path+'/Group/',name, False)
+				if v:print(os.path.join(path,'Group'),name)
+				bAppendLink(os.path.join(path,'Group'),name, False)
 				
 				try:
 					g1 = context.selected_objects[0]  # THE FOLLOWING is a common fail-point.
