@@ -123,7 +123,7 @@ How to use this addon
     - Be careful! If the blend file moves, the libraries will likely get broken unless a custom rigs folder is used with a local-relative path.
   - Clear pose: clear to pose to rest. If false, the initial pose will be that found in the rig's source blend file. Note: some rigs have animations already setup, clear pose in the future will also automatically clear an action and remove the pre-aniamted figures.
 
-*Meshswap Options*
+*Mob Spawner Options*
 ![Meshswap options](/visuals/spawnOptions.png?raw=true)
 
 To add your own objects to meshswap (or groupswap):
