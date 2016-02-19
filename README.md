@@ -18,10 +18,12 @@ Demo Usage
 
 
 *[Mob spawner demo](https://www.youtube.com/watch?v=C3YoZx-seFE)*
-[![Mob spawner gif](/visuals/spawner-gif.gif)](https://www.youtube.com/watch?v=C3YoZx-seFE)
+ 
+ [![Mob spawner gif](/visuals/spawner-gif.gif)](https://www.youtube.com/watch?v=C3YoZx-seFE)
 
 *[Pre-release demo, materials & meshswapping demo](https://www.youtube.com/watch?v=Nax7iuCTovk)*
-[![Alt text](/visuals/meshswap.demo.gif "Meshswap Preview")](https://www.youtube.com/watch?v=Nax7iuCTovk)
+ 
+ [![Alt text](/visuals/meshswap.demo.gif "Meshswap Preview")](https://www.youtube.com/watch?v=Nax7iuCTovk)
 
 Other video demos:
 - [Cycles Materials Upate](https://www.youtube.com/watch?v=MRuPRnfdzfI)
