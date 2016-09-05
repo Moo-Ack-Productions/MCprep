@@ -32,6 +32,7 @@ import math
 from . import conf
 from . import util
 from . import spawner # remove once UIlist for mobs implemented
+from . import addon_updater_ops
 
 # do this here??
 
@@ -46,40 +47,24 @@ preview_collections = {} # move to conf..
 
 
 
-#######
-# Show MCprep preferences
+
 class showMCprefs(bpy.types.Operator):
 	"""Show MCprep preferences"""
 	bl_idname = "object.mcprep_preferences"
 	bl_label = "Show MCprep preferences"
 
 	def execute(self,context):
-		bpy.ops.screen.userpref_show # doesn't work unless is set as an operator button directly!!! sigh
+		bpy.ops.screen.userpref_show('INVOKE_AREA')
 		bpy.data.window_managers["WinMan"].addon_search = "MCprep"
 		#bpy.ops.wm.addon_expand(module="MCprep_addon") # just toggles not sets it, not helpful. need to SET it to expanded
 		return {'FINISHED'}
 
 
-#######
-# Show MCprep preferences
-class spawnPathReset(bpy.types.Operator):
-	"""Reset the spawn path to the default specified in the addon preferences panel"""
-	bl_idname = "object.mcprep_spawnpathreset"
-	bl_label = "Reset spawn path"
 
-	def execute(self,context):
-		
-		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
-		context.scene.mcrig_path = addon_prefs.mcrig_path
-		updateRigList()
-		return {'FINISHED'}
-
-
-
-########################################################################################
+# -----------------------------------------------------------------------------
 #	Above for class functions/operators
 #	Below for UI
-########################################################################################
+# -----------------------------------------------------------------------------
 
 
 
@@ -155,12 +140,12 @@ class MCprepPreference(bpy.types.AddonPreferences):
 		name = "meshswap_path",
 		description = "Asset file for meshswapable objects and groups",
 		subtype = 'FILE_PATH',
-		default = scriptdir + "/mcprep_meshSwap.blend")
+		default = scriptdir + "/MCprep_resources/default_mcprep/mcprep_meshSwap.blend")
 	mcrig_path = bpy.props.StringProperty(
 		name = "mcrig_path",
 		description = "Folder for rigs to spawn in, default for new blender instances",
 		subtype = 'DIR_PATH',
-		default = scriptdir + "/rigs/")
+		default = scriptdir + "/MCprep_resources/default_mcprep/rigs/")
 	mcprep_use_lib = bpy.props.BoolProperty(
 		name = "Link meshswapped groups & materials",
 		description = "Use library linking when meshswapping or material matching",
@@ -176,18 +161,47 @@ class MCprepPreference(bpy.types.AddonPreferences):
 				('jmc2obj', 'jmc2obj', 'Select if exporter used was jmc2obj'),
 				('Mineways', 'Mineways', 'Select if exporter used was Mineways')],
 		name = "Exporter")
-	checked_update = bpy.props.BoolProperty(
-		name = "mcprep_updatecheckbool",
-		description = "Has an update for MCprep been checked for already",
-		default = False)
-	update_avaialble = bpy.props.BoolProperty(
-		name = "mcprep_update",
-		description = "True if an update is available",
-		default = False)
 	mcprep_meshswapjoin = bpy.props.BoolProperty(
 		name = "mcprep_meshswapjoin",
 		description = "Join individuals objects together during meshswapping",
 		default = True)
+
+	# addon updater preferences
+
+	auto_check_update = bpy.props.BoolProperty(
+		name = "Auto-check for Update",
+		description = "If enabled, auto-check for updates using an interval",
+		default = True,
+		)
+	
+	updater_intrval_months = bpy.props.IntProperty(
+		name='Months',
+		description = "Number of months between checking for updates",
+		default=0,
+		min=0
+		)
+	updater_intrval_days = bpy.props.IntProperty(
+		name='Days',
+		description = "Number of days between checking for updates",
+		default=14,
+		min=0,
+		)
+	updater_intrval_hours = bpy.props.IntProperty(
+		name='Hours',
+		description = "Number of hours between checking for updates",
+		default=0,
+		min=0,
+		max=23
+		)
+	updater_intrval_minutes = bpy.props.IntProperty(
+		name='Minutes',
+		description = "Number of minutes between checking for updates",
+		default=0,
+		min=0,
+		max=59
+		)
+
+
 
 	def draw(self, context):
 		layout = self.layout
@@ -239,14 +253,15 @@ class MCprepPreference(bpy.types.AddonPreferences):
 		# 	col.operator("object.mc_toggleoptin", text="Opt into of anonymous usage tracking", icon='HAND')
 		#row = layout.row()
 		col = split.column()
-		col.operator("object.mcprep_openreleasepage", text="MCprep page for instructions and updates", icon="WORLD")
+		col.operator("wm.url_open", text="MCprep page for instructions and updates", icon="WORLD").url = "https://github.com/TheDuckCow/MCprep/releases"
 		row = layout.row()
 		row.label("Don't forget to save user preferences!")
 
+		# updater draw function
+		addon_updater_ops.update_settings_ui(self,context)
 
 
-#######
-# MCprep panel for these declared tools
+
 class MCpanel(bpy.types.Panel):
 	"""MCprep addon panel"""
 	bl_label = "World Imports"
@@ -257,6 +272,9 @@ class MCpanel(bpy.types.Panel):
 
 	def draw(self, context):
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
+
+		# check for update in background thread if appropraite
+		addon_updater_ops.check_for_update_background(context)
 		
 		layout = self.layout
 		split = layout.split()
@@ -272,8 +290,8 @@ class MCpanel(bpy.types.Panel):
 		col = split.column(align=True)
 
 		col.label("MCprep tools")
-		col.operator("object.mc_mat_change", text="Prep Materials", icon='MATERIAL')
-		col.operator("object.mc_meshswap", text="Mesh Swap", icon='LINK_BLEND')
+		col.operator("object.mcprep_mat_change", text="Prep Materials", icon='MATERIAL')
+		col.operator("object.mcprep_meshswap", text="Mesh Swap", icon='LINK_BLEND')
 		#the UV's pixels into actual 3D geometry (but same material, or modified to fit)
 		#col.operator("object.solidify_pixels", text="Solidify Pixels", icon='MOD_SOLIDIFY')
 		split = layout.split()
@@ -316,6 +334,11 @@ class MCpanel(bpy.types.Panel):
 		layout = self.layout # clear out the box formatting
 		split = layout.split()
 		row = split.row(align=True)
+
+		# show update ready if available
+		addon_updater_ops.update_notice_box_ui(self, context)
+
+
 		if conf.update_ready==True:# checkForUpdate(): # and not v: # for dev testing, don't show?
 			row.label (text="Update ready!", icon='ERROR')
 			split = layout.split()
@@ -335,6 +358,9 @@ class MCpanelSpawn(bpy.types.Panel):
 	bl_category = "MCprep"
 
 	def draw(self, context):
+
+		# check for update if appropraite
+		addon_updater_ops.check_for_update_background(context)
 		
 		layout = self.layout
 		layout.label("Spawn rig folder")
@@ -418,20 +444,10 @@ class dialogue(bpy.types.Operator):
 	def invoke(self, context, event):
 		wm = context.window_manager
 		return wm.invoke_popup(self, width=400, height=200)
-		#return wm.invoke_props_dialog(self)
 	
 	def draw(self, context):
 		self.layout.label(self.message)
 
-
-####
-# This allows you to right click on a button and link to the manual
-def ops_manual_map():
-	url_manual_prefix = "https://github.com/TheDuckCow/MCprep"
-	url_manual_mapping = (
-		("bpy.ops.mesh.add_object", "Modeling/Objects"),
-		)
-	return url_manual_prefix, url_manual_mapping
 
 
 # -----------------------------------------------------------------------------

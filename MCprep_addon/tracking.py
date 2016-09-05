@@ -1,255 +1,468 @@
-# ##### BEGIN MIT LICENSE BLOCK #####
+# ##### BEGIN GPL LICENSE BLOCK #####
 #
-# Copyright (c) 2016 Patrick W. Crawford
-# 
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-# 
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-# 
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
+#  This program is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU General Public License
+#  as published by the Free Software Foundation; either version 2
+#  of the License, or (at your option) any later version.
 #
-# ##### END MIT LICENSE BLOCK #####
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software Foundation,
+#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# ##### END GPL LICENSE BLOCK #####
+
+# -----------------------------------------------------------------------------
+# Structure plan
+# -----------------------------------------------------------------------------
 
 """
-This code is open source under the MIT license.
-Its purpose is to increase the workflow of creating Minecraft
-related renders and animations, by automating certain tasks.
+Key funcitonality:
+- Send notice when first installing the addon and enabling (first time only)
+-- (Try to get unique identifier to prevent doubling?)
+x Track when functions are used
+-- Track how often used, just keep local number/count usage
+-- keep unique ID for user... could scramble timestamp first installed+userpath?
+-- could do sneaky parsing of other blender folders to see if addon found & has pre-existing ID
+-- (relative only pathing ofc)
+xx Try to send in background when using
+-- and if failed save to file & set flag to try again later
+- Feedback form?? >> direct emails to support@theduckcow.com could do
+- Consideirng both google analytics pinging as well as DB pushes? one or the other
+- when asking to enable tracking, second popup to say hey, advanced too?
+-- open advanced settings, fields for more details/could also be in that conditional popup
+- Request for feedback? popup also after some interval if not used?
 
-Developed and tested for blender 2.72 up to the indicated blender version below
+Things to track/push
+- when installed (by default, agreed to on download)
+- FORCE them to agree to terms of use in addon panel before doing anything???
+(personal thing/specific to this addon)
+- track date.. different from submission timestamp potentially
+- addon version
+- additional tracking (optional):
+-- blender version
+xx OS running
+-- optional profiler info? e.g. tick your age range, # eyars experince w/ blender, etc
 
-The addon must be installed as a ZIP folder, not an individual python script.
-
-Source code available on github as well as more information:
-https://github.com/TheDuckCow/MCprep.git
 
 """
 
-########
-# Analytics functions
-def install():
-	vr = ver
-	try:
-		pydir = bpy.path.abspath(os.path.dirname(__file__))
-		if os.path.isfile(pydir+"/optin") or os.path.isfile(pydir+"/optout"):
-			# this means it has already installed once, don't count as another
-			return
+
+"""data testing dump
+
+curl -X POST -d '{"timestamp":0,"version":"v2.9.9","blender":"2.77","status":"New install"}' 'https://mcprep-1aa04.firebaseio.com/1/track/install_dev.json'
+
+"""
+
+import os
+import json
+import requests
+import http.client
+import platform
+import threading
+from datetime import datetime
+import bpy
+
+
+# -----------------------------------------------------------------------------
+# global vars
+# -----------------------------------------------------------------------------
+
+
+idname = "mcprep"
+
+
+# -----------------------------------------------------------------------------
+# primary class implementation
+# -----------------------------------------------------------------------------
+
+
+class Singleton_tracking(object):
+
+	def __init__(self):
+		self._verbose = False
+		self._enable_tracking = False
+		self._appurl = ""
+		self._failsafe = False
+		self._dev = False
+		self._port = 443
+		self._background = False
+		self._bg_thread = []
+		self._version = ""
+		self._addon = __package__.lower()
+		self._tracker_json = os.path.join(os.path.dirname(__file__),
+							os.pardir,self._addon+"_tracker.json")
+		print(self._tracker_json)
+		self.json = {}
+
+
+	# -------------------------------------------------------------------------
+	# Getters and setters
+	# -------------------------------------------------------------------------
+
+	@property
+	def enable_tracking(self):
+		return self._enable_tracking
+	@enable_tracking.setter
+	def enable_tracking(self, value):
+		self._enable_tracking = bool(value)
+		self.enable_tracking(False, value)
+
+	@property
+	def verbose(self):
+		return self._verbose
+	@verbose.setter
+	def verbose(self, value):
+		try:
+			self._verbose = bool(value)
+		except:
+			raise ValueError("Verbose must be a boolean value")
+
+	@property
+	def appurl(self):
+		return self._appurl
+	@appurl.setter
+	def appurl(self, value):
+		if value[-1] == "/":
+			value = value[:-1]
+		self._appurl = value
+
+	@property
+	def failsafe(self):
+		return self._failsafe
+	@failsafe.setter
+	def failsafe(self, value):
+		try:
+			self._failsafe = bool(value)
+		except:
+			raise ValueError("failsafe must be a boolean value")
+
+	@property
+	def dev(self):
+		return self._dev
+	@dev.setter
+	def dev(self, value):
+		try:
+			self._dev = bool(value)
+		except:
+			raise ValueError("background must be a boolean value")
+
+	@property
+	def background(self):
+		return self._background
+	@background.setter
+	def background(self, value):
+		try:
+			self._background = bool(value)
+		except:
+			raise ValueError("background must be a boolean value")
+
+	@property
+	def version(self):
+		return self._version
+	@version.setter
+	def version(self, value):
+		self._version = value
+
+
+
+
+	# number/settings for frequency use before ask for enable tracking
+
+	# 
+
+	# -------------------------------------------------------------------------
+	# Public functions
+	# -------------------------------------------------------------------------
+
+	def enable_tracking(self, toggle=True, enable=True):
+		# respect toggle primarily
+		if toggle == True:
+			self._enable_tracking != self._enable_tracking
 		else:
-			f = open(pydir+"/optout", 'w') # make new file, empty
-			f.close()
-		import urllib.request
-		d = urllib.request.urlopen("http://www.theduckcow.com/data/mcprepinstall.html",timeout=10).read().decode('utf-8')
-		ks = d.split("<br>")
-		ak = ks[1]
-		rk = ks[2]
-		import json,http.client
-		connection = http.client.HTTPSConnection('api.parse.com', 443)
-		connection.connect()
-		d = ''
-		if v:d="_dev"
-		if v:vr+=' dev'
-		connection.request('POST', '/1/classes/install'+d, json.dumps({
-			   "version": vr,
-			 }), {
-				"X-Parse-Application-Id": ak,
-				"X-Parse-REST-API-Key": rk,
-				"Content-Type": "application/json"
-			 })
-		result = json.loads(   (connection.getresponse().read()).decode())
-	except:
-		# if v:print("Register connection failed/timed out")
+			self._enable_tracking = enable
+
+		# update static json
+		self.json["enable_tracking"] = self._enable_tracking
+		self.save_tracker_json()
+
+		
+
+	def initialize(self, appurl, version):
+
+		self._appurl = appurl
+		self._version = version
+		# load the enable_tracking-preference (ie in or out)
+
+		# load or create the tracker data
+		self.set_tracker_json()
+
+		
+
+
 		return
 
-def usageStat(function):
-	vr = ver
-	if v:vr+=' dev'
-	if v:print("Running USAGE STATS for: {x}".format(x=function))
-	
-	try:
-		count = -1
-		# first grab/increment the text file's count
-		pydir = bpy.path.abspath(os.path.dirname(__file__))
-		if os.path.isfile(pydir+"/optin"):
-			f = open(pydir+"/optin", 'r')
-			ln = f.read()
-			f.close()
-			# fcns = ln.split('\n')
-			# for entry in fcns:
-			if function in ln:
-				if v:print("found function, checking num")
-				i0 = ln.index(function)
-				i = i0+len(function)+1
-				start = ln[:i]
-				if '\n' in ln[i:]:
-					if v:print("not end of file")
-					i2 = ln[i:].index('\n') # -1 or not?
-					if v:print("pre count++:"+ln[i:][:i2]+",{a} {b}".format(a=i,b=i2))
-					count = int(ln[i:][:i2])+1
-					if v:print("fnct count: "+str(count))
-					ln = start+str(count)+ln[i:][i2:]
-				else:
-					if v:print("end of file adding")
-					count = int(ln[i:])+1
-					if v:print("fnt count: "+str(count))
-					ln = start+str(count)+'\n'
-				f = open(pydir+"/optin", 'w')
-				f.write(ln)
-				f.close()
-			else:
-				if v:print("adding function")
-				count = 1
-				ln+="{x}:1\n".format(x=function)
-				f = open(pydir+"/optin", 'w')
-				f.write(ln)
-				f.close()
+		# create the local file
+		# push into BG push update info if true
+		# create local cache file locaitons
+		# including search for previous
+
+	# interface request, either launches on main or background
+	def request(self, method, path, payload, background=False, callback=None):
+		if method not in ["POST","PUT","GET"]:
+			raise ValueError("Method must be POST, PUT, or GET")
 
 
-		import urllib.request
-
-		d = urllib.request.urlopen("http://www.theduckcow.com/data/mcprepinstall.html",timeout=10).read().decode('utf-8')
-		ks = d.split("<br>")
-		ak = ks[1]
-		rk = ks[2]
-		import json,http.client
-		connection = http.client.HTTPSConnection('api.parse.com', 443)
-		connection.connect()
-		d = ''
-		if v:d="_dev"
-		connection.request('POST', '/1/classes/usage'+d, json.dumps({
-			   "function": function,
-			   "version":vr,
-			   "count": count, # -1 for not implemented yet/error
-			 }), {
-				"X-Parse-Application-Id": ak,
-				"X-Parse-REST-API-Key": rk,
-				"Content-Type": "application/json"
-			 })
-		result = json.loads(   (connection.getresponse().read()).decode())
-		if v:print("Sent usage stat, returned: {x}".format(x=result))
-	except:
-		if v:print("Failed to send stat")
-		return
-
-def checkOptin():
-	pydir = bpy.path.abspath(os.path.dirname(__file__))
-	if os.path.isfile(pydir+"/optin"):
-		return True
-	else:
-		return False
-
-def tracking(set='disable'):
-	if v:print("Setting the tracking file:")
-	try:
-		pydir = bpy.path.abspath(os.path.dirname(__file__))
-		# print("pydir: {x}".format(x = pydir))
-
-		if set=='disable' or set==False:
-			if os.path.isfile(pydir+"/optout"):
-				# print("already optout")
-				return # already disabled
-			elif os.path.isfile(pydir+"/optin"):
-				os.rename(pydir+"/optin",pydir+"/optout")
-				# print("renamed optin to optout")
-			else:
-				# f = open(pydir+"/optout.txt", 'w') # make new file, empty
-				# f.close()
-				# print("Created new opt-out file")
-				# DON'T create a file.. only do this in the install script so it
-				# knows if this has been enabled before or not
-				return
-		elif set=='enable' or set==True:
-			if os.path.isfile(pydir+"/optin"):
-				# technically should check the sanity of this file
-				# print("File already there, tracking enabled")
-				return
-			elif os.path.isfile(pydir+"/optout"):
-				# check if ID has already been created. if note, do that
-				# print("rename file if it exists")
-				os.rename(pydir+"/optout",pydir+"/optin")
-			else:
-				# create the file and ID
-				# print("Create new optin file")
-				f = open(pydir+"/optin", 'w') # make new file, empty
-				f.close()
-	except:
-		pass
-
-def checkForUpdate():
-	addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
-	try:
-		if addon_prefs.checked_update:
-			return addon_prefs.update_avaialble
+		if background==False:
+			return self.raw_request(method, path, payload, callback)
+			
 		else:
-			addon_prefs.checked_update = True
-			import urllib.request
-			d = urllib.request.urlopen("http://www.theduckcow.com/data/mcprepinstall.html",timeout=10).read().decode('utf-8')
-			vtmp1 = d.split('(')
-			vtmp1 = vtmp1[1].split(')')[0]
-			vtmp2 = ver.split('(')
-			vtmp2 = vtmp2[1].split(')')[0]
-			if vtmp1 != vtmp2:
-				if v:print("MCprep not outdated")
-				# create the text file etc.
-				addon_prefs.update_avaialble = True
-				return True
-			else:
-				if v:print("MCprep is outdated")
-				addon_prefs.update_avaialble = False
-				return False
-	except:
-		pass
+			# launch the daemon
 
-########
-# Toggle optin/optout for analytics
-class toggleOptin(bpy.types.Operator):
+			# if self._async_checking == True:
+			# 	return
+			if self._verbose: print("Starting background thread")
+			bg_thread = threading.Thread(target=self.raw_request, args=(method, path, payload, callback))
+			bg_thread.daemon = True
+			#self._bg_threads.append(bg_thread)
+			bg_thread.start()
+
+			return "Thread launched"
+
+	# raw request, may be in background thread or main
+	def raw_request(self, method, path, payload, callback=None):
+		# convert url into domain
+		url = self._appurl.split("//")[1]
+		url = url.split("/")[0]
+
+		connection = http.client.HTTPSConnection(url, self._port)
+		try:
+			connection.connect()
+		except:
+			print("Connection not made, verify connectivity")
+			return {'status':'NO_CONNECTION'}
+		connection.request(method, path, payload)
+
+		raw = connection.getresponse().read()
+		resp = json.loads( raw.decode() )
+		if self._verbose:print("Response: "+str(resp))	
+
+		if callback != None:
+			if self._verbose:print("Running callback")
+			callback(resp)
+
+		return resp
+
+
+
+	def set_tracker_json(self):
+		if self._tracker_json == None:
+			raise ValueError("tracker_json is not defined")
+
+		if os.path.isfile(self._tracker_json):
+			with open(self._tracker_json) as data_file:
+				self.json = json.load(data_file)
+				if self._verbose:print("Read in json settings from tracker file")
+		else:
+			# set data structure
+			self.json = {
+				"install_date":None,
+				"install_id":None,
+				"enable_tracking":False,
+				"functions":{}
+			}
+			self.save_tracker_json()
+
+		# update any other properties if necessary from json
+		self._enable_tracking = self.json["enable_tracking"]
+
+
+	def save_tracker_json(self):
+
+		jpath = self._tracker_json
+		outf = open(jpath,'w')
+		data_out = json.dumps(self.json,indent=4)
+		outf.write(data_out)
+		outf.close()
+		if self._verbose:
+			print("Wrote out json settings to file, with the contents:")
+			print(self.json)
+
+
+	# def tracking(set='disable'):
+
+	# def checkenable_tracking(): # ie has initial install check been done?
+	# ^ similar as above, maybe unnecessary
+
+	# def usageStat(function): # actually run push; function is key for what was ran/what to record
+		# allow more complex info?
+
+
+
+# -----------------------------------------------------------------------------
+# Create the Singleton instance
+# -----------------------------------------------------------------------------
+
+
+
+Tracker = Singleton_tracking()
+
+
+
+# -----------------------------------------------------------------------------
+# Operators
+# -----------------------------------------------------------------------------
+
+
+
+class toggleenable_tracking(bpy.types.Operator):
 	"""Toggle anonymous usage tracking to help the developers, disabled by default. The only data tracked is what functions are used, and the timestamp of the addon installation"""
-	bl_idname = "object.mc_toggleoptin"
+	bl_idname = idname+".toggle_enable_tracking"
 	bl_label = "Toggle opt-in for analytics tracking"
+	options = {'REGISTER', 'UNDO'}
+
+	tracking = bpy.props.EnumProperty(
+		items = [('toggle', 'Toggle', 'Toggle operator use tracking'),
+				('enable', 'Enable', 'Enable operator use tracking'),
+				('disable', 'Disable', 'Disable operator use tracking (if already on)')],
+		name = "tracking")
 
 	def execute(self, context):
-		if checkOptin():
-			tracking(set='disable')
-			usageStat('opt-out')
+		if self.tracking == "toggle":
+			Tracker.enable_tracking(toggle=True)
+		elif self.tracking == "enable":
+			Tracker.enable_tracking(toggle=False, enable=True)
 		else:
-			tracking(set='enable')
-			usageStat('opt-in')
+			Tracker.enable_tracking(toggle=False, enable=False)
 		return {'FINISHED'}
 
 
 
-########
-# quickly open release webpage for update
-class openreleasepage(bpy.types.Operator):
-	"""Go to the MCprep page to get the most recent release and instructions"""
-	bl_idname = "object.mcprep_openreleasepage"
-	bl_label = "Open the MCprep release page"
+# -----------------------------------------------------------------------------
+# additional functions
+# -----------------------------------------------------------------------------
 
-	def execute(self, context):
+
+def trackInstalled(background=None):
+	# if already installed, skip
+	if Tracker.json["install_id"] != None: return
+
+	if Tracker.verbose: print("Tracking install")
+
+	# if no override set, use default
+	if background == None:
+		background = Tracker.background
+
+	def runInstall(background):
+
+		if Tracker.dev==True:
+			location = "/1/track/install_dev.json"
+		else:
+			location = "/1/track/install.json"
+		
+		payload = json.dumps({
+				"timestamp":str(datetime.now()),
+				"version":Tracker.version,
+				"blender":"2.77",
+				"status":"None",
+				"platform":platform.system()+":"+platform.release()
+			})
+
+		resp = Tracker.request('POST', location, payload, background, callback)
+
+	def callback(arg):
+		# assumes input is the server repsonse (dictionary format)
+		if type(arg) != type({'name':'ID'}):
+			return
+		elif "name" not in arg:
+			return
+
+		Tracker.json["install_id"] = arg["name"]
+		Tracker.save_tracker_json()
+
+	if Tracker.failsafe == True:
 		try:
-			import webbrowser
-			webbrowser.open("https://github.com/TheDuckCow/MCprep/releases")
+			runInstall(background)
 		except:
 			pass
-		return {'FINISHED'}
+	else:
+		runInstall(background)
+
+
+def trackUsage(function, param=None, background=None):
+	if Tracker.enable_tracking == False: return # skip if not opted in
+
+	if Tracker.verbose: print("Tracking usage: "+function +", param: "+str(param))
+
+	# if no override set, use default
+	if background == None:
+		background = Tracker.background
+
+	def runUsage(background):
+
+		if Tracker.dev==True:
+			location = "/1/track/usage_dev.json"
+		else:
+			location = "/1/track/usage.json"
+		
+		payload = json.dumps({
+				"timestamp":str(datetime.now()),
+				"version":Tracker.version,
+				"blender":"2.77",
+				"platform":platform.system()+":"+platform.release(),
+				"function":function,
+				"param":str(param),
+				"ID":Tracker.json["install_id"]
+			})
+
+		resp = Tracker.request('POST', location, payload, background)
+
+	if Tracker.failsafe == True:
+		try:
+			runUsage(background)
+		except:
+			pass
+	else:
+		runUsage(background)
 
 
 
-def register():
-	# start with custom icons
-	if conf.v:print("MCprep register complete")
+# -----------------------------------------------------------------------------
+# registration related
+# -----------------------------------------------------------------------------
+
+def register(bl_info):
+	Tracker.initialize(
+		appurl = "https://mcprep-1aa04.firebaseio.com/",
+		version = str(bl_info["version"])
+		)
+
+	Tracker.dev = True # used to define which server source, not just if's below
+
+	if Tracker.dev == True:
+		Tracker.verbose = True
+		Tracker.background = False
+		Tracker.failsafe = False
+		Tracker.enable_tracking = True
+	else:
+		Tracker.verbose = False
+		Tracker.background = True
+		Tracker.failsafe = True
+		Tracker.enable_tracking = False # users must accept to enable first
+	
+
+	# try running install
+	print("running tracker install")
+	trackInstalled()
 
 def unregister():
+	pass
 
-	if conf.v:print("MCprep register complete")
-	
+
+if __name__ == "__main__":
+	register({"bl_info":(2,99,0)})
+

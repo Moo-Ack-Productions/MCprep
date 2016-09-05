@@ -41,7 +41,7 @@ bl_info = {
 	"version": (2, 99, 1),
 	"blender": (2, 76, 0),
 	"location": "3D window toolshelf > MCprep tab",
-	"description": "Speeds up the workflow of minecraft animations and imported minecraft worlds",
+	"description": "Minecraft workflow addon for rendering and animation",
 	"warning": "",
 	"wiki_url": "https://github.com/TheDuckCow/MCprep",
 	"author": "Patrick W. Crawford <support@theduckcow.com>",
@@ -60,7 +60,7 @@ if "bpy" in locals():
 	importlib.reload(materials)
 	importlib.reload(meshswap)
 	importlib.reload(spawner)
-	# importlib.reload(tracking)
+	importlib.reload(tracking)
 	
 
 	conf.init()  #initialize global variables
@@ -68,29 +68,38 @@ if "bpy" in locals():
 
 else:
 	import bpy
-
 	from . import (
 		conf,
 		mcprep_ui,
 		materials,
 		meshswap,
 		spawner,
-		# tracking,
+		addon_updater_ops,
+		tracking
 	)
-
 	conf.init()  #initialize global variables
 	if conf.v:print("MCprep: Verbose is enabled")
 	if conf.vv:print("MCprep: Very Verbose is enabled")
+	# except:
+	# 	print("Importing errors occured")
+	# 	pass
 
 
 def register():
+	
+	# call error if modules not able to import, popup message
+	# if "conf" not in locals():
+	# 	raise ValueError("Addon not installed properly, you MUST install the MCprep zip file, NOT the __init__.py file. See http://bit.ly/MCprep")
 
 	bpy.utils.register_module(__name__)
 	mcprep_ui.register()
 	materials.register()
 	meshswap.register()
 	spawner.register()
-	# tracking.register()
+	tracking.register(bl_info)
+
+	# addon updater code and configurations
+	addon_updater_ops.register(bl_info)
 	
 
 def unregister():
@@ -100,7 +109,7 @@ def unregister():
 	materials.unregister()
 	meshswap.unregister()
 	spawner.unregister()
-	# tracking.unregister()
+	tracking.unregister()
 	
 
 

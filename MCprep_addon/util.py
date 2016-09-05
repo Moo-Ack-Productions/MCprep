@@ -22,7 +22,8 @@
 #
 # ##### END MIT LICENSE BLOCK #####
 
-
+import bpy
+from . import conf
 
 # -----------------------------------------------------------------------------
 # GENERAL SUPPORTING FUNCTIONS
@@ -30,26 +31,37 @@
 
 ####
 # strips out duplication ".001", ".002" from a name
+# def nameGeneralize(name):
+
+# 	# old way
+# 	# nameList = name.split(".")
+# 	# #check last item in list, to see if numeric type e.g. from .001
+# 	# try:
+# 	# 	x = int(nameList[-1])
+# 	# 	name = nameList[0]
+# 	# 	for a in nameList[1:-1]: name+='.'+a
+# 	# except:
+# 	# 	pass
+
+# 	try:
+# 		x = int(name[-3:])
+# 		name = name[0:-4]
+# 		return name
+# 	except:
+# 		if conf.vv:print("Error in name generalize, returning none:")
+# 		if conf.vv:print(name)
+# 		return None
+
 def nameGeneralize(name):
-
-	# old way
-	# nameList = name.split(".")
-	# #check last item in list, to see if numeric type e.g. from .001
-	# try:
-	# 	x = int(nameList[-1])
-	# 	name = nameList[0]
-	# 	for a in nameList[1:-1]: name+='.'+a
-	# except:
-	# 	pass
-
+	nameList = name.split(".")
+	#check last item in list, to see if numeric type e.g. from .001
 	try:
-		x = int(name[-3:])
-		name = name[0:-4]
-		return name
+		x = int(nameList[-1])
+		name = nameList[0]
+		for a in nameList[1:-1]: name+='.'+a
 	except:
-		if conf.vv:print("Error in name generalize, returning none")
-		return None
-
+		pass
+	return name
 
 ####
 # gets all materials on input list of objects
@@ -108,4 +120,16 @@ def bAppendLink(directory,name, toLink):
 	else:
 		# OLD method of importing
 		bpy.ops.wm.link_append(directory=directory, filename=name, link=toLink)
+
+
+########
+# check if a face is on the boundary between two blocks (local coordinates)
+def onEdge(faceLoc):
+	strLoc = [ str(faceLoc[0]).split('.')[1][0],
+				str(faceLoc[1]).split('.')[1][0],
+				str(faceLoc[2]).split('.')[1][0] ]
+	if (strLoc[0] == '5' or strLoc[1] == '5' or strLoc[2] == '5'):
+		return True
+	else:
+		return False
 

@@ -27,10 +27,13 @@
 import bpy
 import os
 import math
+import mathutils
+import random
 
 # addon imports
 from . import conf
 from . import util
+from . import tracking
 
 
 # -----------------------------------------------------------------------------
@@ -38,29 +41,38 @@ from . import util
 # -----------------------------------------------------------------------------
 
 
-####
-# Operator, function swaps meshes/groups from library file
+
 class meshSwap(bpy.types.Operator):
 	"""Swap minecraft objects from world imports for custom 3D models in the according meshSwap blend file"""
-	bl_idname = "object.mc_meshswap"
+	bl_idname = "object.mcprep_meshswap"
 	bl_label = "MCprep meshSwap"
 	bl_options = {'REGISTER', 'UNDO'}
 	
 	#used for only occasionally refreshing the 3D scene while mesh swapping
 	counterObject = 0	# used in count
 	countMax = 5		# count compared to this, frequency of refresh (number of objs)
-	
+
+	# properties for draw
+	# meshSwapPath = addon_prefs.meshswap_path
 
 	@classmethod
 	def poll(cls, context):
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
 		return addon_prefs.MCprep_exporter_type != "(choose)"
 
+	# force use UI
+	def invoke(self, context, event):
+		return context.window_manager.invoke_props_dialog(self)
+
+	def draw(self, context):
+		layout = self.layout
+		layout.label("Warning: may take a long time to process", icon="ERROR")
 
 	# called for each object in the loop as soon as possible
 	def checkExternal(self, context, name):
 		if conf.v:print("Checking external library")
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
+
 		
 		meshSwapPath = addon_prefs.meshswap_path
 		rmable = []
@@ -117,11 +129,11 @@ class meshSwap(bpy.types.Operator):
 			
 			#special cases, make another list for this? number of variants can vary..
 			if name == "torch" or name == "Torch":
-				bAppendLink(os.path.join(meshSwapPath,'Group'), name+".1", toLink)
+				util.bAppendLink(os.path.join(meshSwapPath,'Group'), name+".1", toLink)
 				bpy.ops.object.delete()
-				bAppendLink(os.path.join(meshSwapPath,'Group'), name+".2", toLink)
+				util.bAppendLink(os.path.join(meshSwapPath,'Group'), name+".2", toLink)
 				bpy.ops.object.delete()
-			bAppendLink(os.path.join(meshSwapPath,'Group'), name, toLink)
+			util.bAppendLink(os.path.join(meshSwapPath,'Group'), name, toLink)
 			bpy.ops.object.delete()
 			grouped = True
 			# if activated a different layer, go back to the original ones
@@ -168,7 +180,7 @@ class meshSwap(bpy.types.Operator):
 					elif x=='removable':
 						removable = True
 		else:
-			bAppendLink(os.path.join(meshSwapPath,'Object'),name, False)
+			util.bAppendLink(os.path.join(meshSwapPath,'Object'),name, False)
 			### NOTICE: IF THERE IS A DISCREPENCY BETWEEN ASSETS FILE AND WHAT IT SAYS SHOULD
 			### BE IN FILE, EG NAME OF MESH TO SWAP CHANGED,  INDEX ERROR IS THROWN HERE
 			### >> MAKE a more graceful error indication.
@@ -235,6 +247,10 @@ class meshSwap(bpy.types.Operator):
 
 
 	def execute(self, context):
+
+		# 
+		tracking.trackUsage("meshswap",None)
+
 		runcount = 0 # counter.. if zero by end, raise error that no selected objects matched
 		## debug, restart check
 		if conf.v:print('###################################')
@@ -289,7 +305,7 @@ class meshSwap(bpy.types.Operator):
 
 		#primary loop, for each OBJECT needing swapping
 		for swap in objList:
-			swapGen = nameGeneralize(swap.name)
+			swapGen = util.nameGeneralize(swap.name)
 			if conf.v:print("Simplified name: {x}".format(x=swapGen))
 			swapProps = self.checkExternal(context,swapGen) # IMPORTS, gets lists properties, etc
 			if swapProps == False: # error happened in swapProps, e.g. not a mesh or something
@@ -339,7 +355,7 @@ class meshSwap(bpy.types.Operator):
 				outsideBool = -1
 				if (swapProps['edgeFloat']): outsideBool = 1
 				
-				if onEdge(facebook[setNum][2]): #check if face is on unit block boundary (local coord!)
+				if util.onEdge(facebook[setNum][2]): #check if face is on unit block boundary (local coord!)
 					a = facebook[setNum][0][0] * 0.4 * outsideBool #x normal
 					b = facebook[setNum][0][1] * 0.4 * outsideBool #y normal
 					c = facebook[setNum][0][2] * 0.4 * outsideBool #z normal

@@ -32,15 +32,16 @@ import math
 # addon imports
 from . import conf
 from . import util
+from . import tracking
+
 
 
 # -----------------------------------------------------------------------------
-# Mesh swap class & functions
+# support functions
 # -----------------------------------------------------------------------------
 
 
-####
-# For proxy spawner, getting list of usable rigs
+
 def getRigList(): #consider passing in rigpath... but 
 
 	# test the link path first!
@@ -82,7 +83,6 @@ def getRigList(): #consider passing in rigpath... but
 		return riglist # for debugging, return rigListExample
 
 
-
 def updateRigList():
 	# test the link path first!
 	rigpath = bpy.path.abspath(bpy.context.scene.mcrig_path) #addon_prefs.mcrig_path
@@ -117,7 +117,7 @@ def updateRigList():
 				with bpy.data.libraries.load(rigPath) as (data_from, data_to):
 					for name in data_from.groups:
 						#if name in bpy.data.groups:
-						#	if v:print("Already grouped in this one. maybe should append the same way/rename?")
+						#	if conf.v:print("Already grouped in this one. maybe should append the same way/rename?")
 						#	riglist.append( ('//'+':/:'+name+':/:'+catgry,name,\
 							#"Spawn a {x} rig (local)".format(x=name)) )
 							## still append the group name, more of an fyi
@@ -147,8 +147,12 @@ def updateRigList():
 
 
 
-####
-# Class for spawning/proxying a new asset for animation
+# -----------------------------------------------------------------------------
+# class definitions
+# -----------------------------------------------------------------------------
+
+
+
 class spawnRealoadCache(bpy.types.Operator):
 	"""Force reload the mob spawner rigs, use after manually adding rigs to folders"""
 	bl_idname = "object.mc_reloadcache"
@@ -159,11 +163,8 @@ class spawnRealoadCache(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-
-####
-# Class for spawning/proxying a new asset for animation
 class mobSpawner(bpy.types.Operator):
-	"""Instantly spawn any group rig found in the rigs folder"""
+	"""Instantly spawn built-in or custom rigs into a scene"""
 	bl_idname = "object.mcprep_mobspawner"
 	bl_label = "Mob Spawner"
 	bl_options = {'REGISTER', 'UNDO'}
@@ -181,7 +182,7 @@ class mobSpawner(bpy.types.Operator):
 	toLink = bpy.props.BoolProperty(
 		name = "Library Link mob",
 		description = "Library link instead of append the group",
-		default = False #change back to false later
+		default = False
 		)
 	clearPose = bpy.props.BoolProperty(
 		name = "Clear Pose",
@@ -189,39 +190,43 @@ class mobSpawner(bpy.types.Operator):
 		default = True 
 		)
 
+
 	def proxySpawn(self):
-		if v:print("Attempting to do proxySpawn")
-		if v:print("Mob to spawn: ",self.mcmob_type)
+		if conf.v:print("Attempting to do proxySpawn")
+		if conf.v:print("Mob to spawn: ",self.mcmob_type)
 
 	def attemptScriptLoad(self,path):
 		# search for script that matches name of the blend file
+		# should also look into the blend if appropriate
 		if path[-5:]=="blend":
 			path = path[:-5]+"py"
 			#bpy.ops.script.python_file_run(filepath=path)
 			if not os.path.isfile(path):
 				return # no script found
-			if v:print("Script found, loading and running it")
+			if conf.v:print("Script found, loading and running it")
 			bpy.ops.text.open(filepath=path,internal=True)
 			text = bpy.data.texts[ path.split("/")[-1] ]
 			text.use_module = True
 			ctx = bpy.context.copy()
 			ctx['edit_text'] = text
 			bpy.ops.text.run_script(ctx)
-			if v:print("Ran the script")
+			if conf.v:print("Ran the script")
 
 
 	def execute(self, context):
 		
-		if checkOptin():usageStat('mobSpawner'+':'+name) # want to also pass in the kind!
+		# only sends tracking if opted in
+		tracking.trackUsage("mobSpawner",self.mcmob_type)
+
 		#addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
 
 		try:
 			[path,name,category] = self.mcmob_type.split(':/:')
-			if v:print("BEFORE path is",path)
+			if conf.v:print("BEFORE path is",path)
 			path = os.path.join(context.scene.mcrig_path,path)
-			if v:print("NOW path is",path)
+			if conf.v:print("NOW path is",path)
 		except:
-			if v:print("Error: No rigs found!")
+			if conf.v:print("Error: No rigs found!")
 			self.report({'ERROR'}, "No mobs found in folder!")
 			return {'CANCELLED'}
 
@@ -233,7 +238,7 @@ class mobSpawner(bpy.types.Operator):
 		if self.toLink:
 			if path != '//':
 				path = bpy.path.abspath(path)
-				bAppendLink(os.path.join(path,'Group'),name, True)
+				util.bAppendLink(os.path.join(path,'Group'),name, True)
 				# proxy any and all armatures
 				# here should do all that jazz with hacking by copying files, checking nth number
 				#probably consists of checking currently linked libraries, checking if which
@@ -251,10 +256,10 @@ class mobSpawner(bpy.types.Operator):
 					
 					act = context.active_object
 					bpy.context.scene.objects.active = ob
-					if v:print("ACTIVE obj = {x}".format(x=ob.name))
+					if conf.v:print("ACTIVE obj = {x}".format(x=ob.name))
 					bpy.ops.object.mode_set(mode='POSE')
 					if self.clearPose:
-						#if v:print("clear the stuff!")
+						#if conf.v:print("clear the stuff!")
 						bpy.ops.pose.select_all(action='SELECT')
 						bpy.ops.pose.rot_clear()
 						bpy.ops.pose.scale_clear()
@@ -262,7 +267,7 @@ class mobSpawner(bpy.types.Operator):
 					if self.relocation == "Offset":
 						tmp=0
 						for nam in ["MAIN","root","base"]:
-							if v:print("Attempting offset root")
+							if conf.v:print("Attempting offset root")
 							if nam in ob.pose.bones and tmp==0:
 
 								# this method doesn't work because, even though we are in POSE
@@ -281,20 +286,20 @@ class mobSpawner(bpy.types.Operator):
 								ob.pose.bones[nam].location[2] = -cl[2]
 								tmp=1
 						if tmp==0:
-							if v:print("This addon works better when the root bone's name is 'MAIN'")
+							if conf.v:print("This addon works better when the root bone's name is 'MAIN'")
 							elf.report({'INFO'}, "This addon works better when the root bone's name is 'MAIN'")
 
 					# copied from below, should be the same
 
 				except:
-					if v:print("Spawner works better if the armature's name is {x}.arma".format(x=name))
+					if conf.v:print("Spawner works better if the armature's name is {x}.arma".format(x=name))
 					self.report({'INFO'}, "Works better if armature's name = {x}.arma".format(x=name))
 					# self report?
 					pass
 
 			else:
 				# .... need to do the hack with multiple mobs!!!
-				if v:print("THIS IS THE LOCAL FILE.") #not sure what that means here
+				if conf.v:print("THIS IS THE LOCAL FILE.") #not sure what that means here
 		else:
 			# append the rig, the whole group.. though honestly ideally not, and just append the right objs
 			#idea: link in group, inevtiably need to make into this blend file but then get the remote's
@@ -309,15 +314,15 @@ class mobSpawner(bpy.types.Operator):
 				sel = bpy.context.selected_objects # capture state before, technically also copy
 				bpy.ops.object.select_all(action='DESELECT')
 				# consider taking pre-exisitng group names and giving them a temp name to name back at the end
-				if v:print(os.path.join(path,'Group'),name)
-				bAppendLink(os.path.join(path,'Group'),name, False)
+				if conf.v:print(os.path.join(path,'Group'),name)
+				util.bAppendLink(os.path.join(path,'Group'),name, False)
 				
 				try:
 					g1 = context.selected_objects[0]  # THE FOLLOWING is a common fail-point.
 					grp_added = g1.users_group[0] # to be safe, grab the group from one of the objects
 				except:
 					# this is more likely to fail but serves as a fallback
-					if v:print("Mob spawn: Had to go to fallback group name grab")
+					if conf.v:print("Mob spawn: Had to go to fallback group name grab")
 					grp_added = bpy.data.groups[name]
 				
 				gl = grp_added.dupli_offset # if rig not centered in original file, assume its group is
@@ -351,8 +356,8 @@ class mobSpawner(bpy.types.Operator):
 				if self.clearPose or self.relocation=="Offset":
 					#bpy.ops.object.select_all(action='DESELECT') # too soon?
 					for ob in addedObjs:
-						if ob.type == "ARMATURE" and nameGeneralize(ob.name)==name+'.arma':
-							if v:print("This is the one, ",ob.name)
+						if ob.type == "ARMATURE" and util.nameGeneralize(ob.name)==name+'.arma':
+							if conf.v:print("This is the one, ",ob.name)
 
 							if self.relocation == "Offset":
 								# do the offset stuff, set active etc
@@ -362,10 +367,10 @@ class mobSpawner(bpy.types.Operator):
 							#bpy.ops.object.select_all(action='DESELECT')
 							act = context.active_object
 							bpy.context.scene.objects.active = ob
-							if v:print("ACTIVE obj = {x}".format(x=ob.name))
+							if conf.v:print("ACTIVE obj = {x}".format(x=ob.name))
 							bpy.ops.object.mode_set(mode='POSE')
 							if self.clearPose:
-								if v:print("clear the stuff!")
+								if conf.v:print("clear the stuff!")
 
 								#ob.animation_data_clear()
 								if ob.animation_data:
@@ -380,7 +385,7 @@ class mobSpawner(bpy.types.Operator):
 								tmp=0
 								#bpy.ops.pose.select_all(action='DESELECT')
 								for nam in ["MAIN","root","base"]:
-									if v:print("We are here right?")
+									if conf.v:print("We are here right?")
 									if nam in ob.pose.bones and tmp==0:
 
 										# this method doesn't work because, even though we are in POSE
@@ -400,7 +405,7 @@ class mobSpawner(bpy.types.Operator):
 										ob.pose.bones[nam].location[2] = -cl[2]
 										tmp=1
 								if tmp==0:
-									if v:print("This addon works better when the root bone's name is 'MAIN'")
+									if conf.v:print("This addon works better when the root bone's name is 'MAIN'")
 									self.report({'INFO'}, "This addon works better when the root bone's name is 'MAIN'")
 
 							bpy.ops.object.mode_set(mode='OBJECT')
@@ -413,9 +418,9 @@ class mobSpawner(bpy.types.Operator):
 							#bpy.ops.object.select_all(action='DESELECT')
 							act = context.active_object
 							bpy.context.scene.objects.active = ob
-							if v:print("ACTIVE obj = {x}".format(x=ob.name))
+							if conf.v:print("ACTIVE obj = {x}".format(x=ob.name))
 							bpy.ops.object.mode_set(mode='POSE')
-							if v:print("clear the stuff!")
+							if conf.v:print("clear the stuff!")
 							bpy.ops.pose.select_all(action='SELECT')
 							bpy.ops.pose.rot_clear()
 							bpy.ops.pose.scale_clear()
@@ -441,7 +446,7 @@ class mobSpawner(bpy.types.Operator):
 				# here this means the group HAS already been appended.. recopy thsoe elements, or try re-appending?
 				# (yes, should try re-appending. may need to rename group)
 				self.report({'ERROR'}, "Group name already exists in local file")
-				if v:print("Group already appended/is here") #... so hack 'at it and rename it, append, and rename it back?
+				if conf.v:print("Group already appended/is here") #... so hack 'at it and rename it, append, and rename it back?
 
 		# if there is a script with this rig, attempt to run it
 		self.attemptScriptLoad(path)
@@ -450,10 +455,8 @@ class mobSpawner(bpy.types.Operator):
 
 
 
-####
-# Install mob window (popup)
 class installMob(bpy.types.Operator, ImportHelper):
-	"""Install custom rigs for the mob spawner, all groups in selected blend file will become individually spawnable"""
+	"""Install custom rig popup for the mob spawner, all groups in selected blend file will become individually spawnable"""
 	bl_idname = "object.mcmob_install_menu"
 	bl_label = "Install new mob"
 
@@ -489,21 +492,21 @@ class installMob(bpy.types.Operator, ImportHelper):
 		drpath = context.scene.mcrig_path #addon_prefs.mcrig_path
 		newrig = bpy.path.abspath(filepath)
 		if not os.path.isfile(newrig):
-			if v:print("Error: Rig blend file not found!")
+			if conf.v:print("Error: Rig blend file not found!")
 			self.report({'ERROR'}, "Rig blend file not found!")
 			return {'CANCELLED'}
 
 		# now check the rigs folder indeed exists
 		drpath = bpy.path.abspath(drpath)
 		if not os.path.isdir(drpath):
-			if v:print("Error: Rig directory is not valid!")
+			if conf.v:print("Error: Rig directory is not valid!")
 			self.report({'ERROR'}, "Rig directory is not valid!")
 			return {'CANCELLED'}
 		
 		# check the file with a quick look for any groups, any error return failed
 		with bpy.data.libraries.load(newrig) as (data_from, data_to):
 			if len(data_from.groups) < 1:
-				if v:print("Error: no groups found in blend file!")
+				if conf.v:print("Error: no groups found in blend file!")
 				self.report({'ERROR'}, "No groups found in blend file!")
 				return {'CANCELLED'}
 
@@ -544,9 +547,6 @@ class installMob(bpy.types.Operator, ImportHelper):
 		#return {'FINISHED'} returned in the sub functions
 
 
-
-####
-# Class for spawning/proxying a new asset for animation
 class openRigFolder(bpy.types.Operator):
 	"""Open the rig folder for mob spawning"""
 	bl_idname = "object.mc_openrigpath"
@@ -568,8 +568,6 @@ class openRigFolder(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-####
-# Show MCprep preferences
 class spawnPathReset(bpy.types.Operator):
 	"""Reset the spawn path to the default specified in the addon preferences panel"""
 	bl_idname = "object.mcprep_spawnpathreset"
@@ -583,16 +581,18 @@ class spawnPathReset(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-########################################################################################
+
+# -----------------------------------------------------------------------------
 #	Above for class functions/operators
 #	Below for UI
-########################################################################################
+# -----------------------------------------------------------------------------
 
 
 
 def register():
-	"register"
+	pass
 
 
 def unregister():
-	"unregister"
+	pass
+

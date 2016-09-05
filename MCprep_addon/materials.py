@@ -31,6 +31,7 @@ import math
 # addon imports
 from . import conf
 from . import util
+from . import tracking
 
 
 # -----------------------------------------------------------------------------
@@ -38,8 +39,7 @@ from . import util
 # -----------------------------------------------------------------------------
 
 
-####
-# Operator, sets up the materials for better Blender Internal rendering
+
 class MCPREP_materialChange(bpy.types.Operator):
 	"""Fixes materials and textures on selected objects for Minecraft rendering"""
 	bl_idname = "object.mcprep_mat_change" #"object.mc_mat_change"
@@ -48,7 +48,7 @@ class MCPREP_materialChange(bpy.types.Operator):
 
 	useReflections = bpy.props.BoolProperty(
 		name = "Use reflections",
-		description = "Allow appropraite materials to be rendered reflective",
+		description = "Allow appropriate materials to be rendered reflective",
 		default = True
 		)
 	
@@ -97,6 +97,7 @@ class MCPREP_materialChange(bpy.types.Operator):
 	# helper function for expanding wildcard naming for generalized materials
 	# maximum 1 wildcard *
 	def checklist(self,matName,alist):
+		print("WHHHAAATTT",matName,"##",alist)
 		if matName in alist:
 			return True
 		else:
@@ -124,7 +125,7 @@ class MCPREP_materialChange(bpy.types.Operator):
 		try:
 			bpy.data.textures[texList[0].name].name = newName
 		except:
-			if conf.v:print('\tiwarning: material '+mat.name+' has no texture slot. skipping...')
+			if conf.v:print('\twarning: material '+mat.name+' has no texture slot. skipping...')
 			return
 
 		# disable all but first slot, ensure first slot enabled
@@ -250,6 +251,10 @@ class MCPREP_materialChange(bpy.types.Operator):
 	
 	
 	def execute(self, context):
+
+		# only sends tracking if opted in
+		tracking.trackUsage("materials",bpy.context.scene.render.engine)
+
 		#get list of selected objects
 		objList = context.selected_objects
 		if len(objList)==0:
@@ -279,7 +284,6 @@ class MCPREP_materialChange(bpy.types.Operator):
 					self.materialsCycles(mat)
 			else:
 				if conf.v:print('Get the linked material instead!')
-		#if checkOptin():usageStat('materialChange')
 		return {'FINISHED'}
 
 

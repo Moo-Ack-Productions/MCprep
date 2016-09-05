@@ -20,6 +20,7 @@ import os
 import codecs
 import sys
 import shutil
+import zipfile
 
 
 # Global vars, the things to change
@@ -32,7 +33,8 @@ addonpath = "/Users/patrickcrawford/Library/Application Support/Blender/2.76/scr
 build_dir = "../compiled/"
 
 files = ["__init__.py","conf.py","materials.py","meshswap.py","spawner.py","tracking.py",
-		"mcprep_ui.py", "util.py"]
+		"mcprep_ui.py", "util.py", "MCprep_resources","addon_updater.py",
+		"addon_updater_ops.py"]
 
 
 
@@ -101,9 +103,20 @@ def publish_version(version, install=False):
 			outFile.close()
 
 	# zip and remove
-	p = Popen(['zip','-r',stagepath+'.zip',stagepath],
-				stdin=PIPE,stdout=PIPE, stderr=PIPE)
-	stdout, err = p.communicate(b"")
+	def old_method(stagepath):
+		p = Popen(['zip','-r',stagepath+'.zip',stagepath],
+					stdin=PIPE,stdout=PIPE, stderr=PIPE)
+		stdout, err = p.communicate(b"")
+
+	old_method(stagepath)
+	
+	# new zip method, to skip .DS's
+	# with zipfile.ZipFile(stagepath+".zip", 'w') as myzip:
+	# 	filezips = os.listdir(stagepath)
+	# 	for file in filezips:
+	# 		if file != '.DS_Store':
+	# 			myzip.write(file)
+
 
 	if install == True:
 		installedpath = os.path.join(addonpath,addon_name+"_"+version)
