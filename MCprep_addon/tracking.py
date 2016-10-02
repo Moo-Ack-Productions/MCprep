@@ -60,11 +60,9 @@ curl -X POST -d '{"timestamp":0,"version":"v2.9.9","blender":"2.77","status":"Ne
 
 import os
 import json
-import requests
 import http.client
 import platform
 import threading
-from datetime import datetime
 import bpy
 
 
@@ -365,7 +363,7 @@ def trackInstalled(background=None):
 			location = "/1/track/install.json"
 		
 		payload = json.dumps({
-				"timestamp":str(datetime.now()),
+				"timestamp": {".sv": "timestamp"},
 				"version":Tracker.version,
 				"blender":"2.77",
 				"status":"None",
@@ -410,7 +408,7 @@ def trackUsage(function, param=None, background=None):
 			location = "/1/track/usage.json"
 		
 		payload = json.dumps({
-				"timestamp":str(datetime.now()),
+				"timestamp":{".sv": "timestamp"},
 				"version":Tracker.version,
 				"blender":"2.77",
 				"platform":platform.system()+":"+platform.release(),

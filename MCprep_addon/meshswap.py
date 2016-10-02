@@ -44,7 +44,7 @@ from . import tracking
 
 class meshSwap(bpy.types.Operator):
 	"""Swap minecraft objects from world imports for custom 3D models in the according meshSwap blend file"""
-	bl_idname = "object.mcprep_meshswap"
+	bl_idname = "mcprep.meshswap"
 	bl_label = "MCprep meshSwap"
 	bl_options = {'REGISTER', 'UNDO'}
 	
@@ -508,7 +508,7 @@ class meshSwap(bpy.types.Operator):
 				loc = swap.matrix_world*mathutils.Vector(set) #local to global
 				if grouped:
 					# definition for randimization, defined at top!
-					randGroup = randomizeMeshSawp(swapGen,3)
+					randGroup = util.randomizeMeshSawp(swapGen,3)
 					
 					# The built in method fails, bpy.ops.object.group_instance_add(...)
 					#UPDATE: I reported the bug, and they fixed it nearly instantly =D

@@ -53,15 +53,20 @@ from . import conf
 # 		return None
 
 def nameGeneralize(name):
-	nameList = name.split(".")
-	#check last item in list, to see if numeric type e.g. from .001
-	try:
-		x = int(nameList[-1])
-		name = nameList[0]
-		for a in nameList[1:-1]: name+='.'+a
-	except:
-		pass
-	return name
+	if duplicatedDatablock(name) == True:
+		return name[:-4]
+	else:
+		return name
+	# old method
+	# nameList = name.split(".")
+	# #check last item in list, to see if numeric type e.g. from .001
+	# try:
+	# 	x = int(nameList[-1])
+	# 	name = nameList[0]
+	# 	for a in nameList[1:-1]: name+='.'+a
+	# except:
+	# 	pass
+	# return name
 
 ####
 # gets all materials on input list of objects
@@ -116,7 +121,7 @@ def bAppendLink(directory,name, toLink):
 		if (toLink):
 			bpy.ops.wm.link(directory=directory, filename=name)
 		else:
-			bpy.ops.wm.append(directory=directory, filename=name)
+			bpy.ops.wm.append(directory=directory, filename=name) #, activelayer=True
 	else:
 		# OLD method of importing
 		bpy.ops.wm.link_append(directory=directory, filename=name, link=toLink)
@@ -132,4 +137,65 @@ def onEdge(faceLoc):
 		return True
 	else:
 		return False
+
+
+########
+# randomization for model imports, add extra statements for exta cases
+def randomizeMeshSawp(swap,variations):
+	randi=''
+	if swap == 'torch':
+		randomized = random.randint(0,variations-1)
+		#print("## "+str(randomized))
+		if randomized != 0: randi = ".{x}".format(x=randomized)
+	elif swap == 'Torch':
+		randomized = random.randint(0,variations-1)
+		#print("## "+str(randomized))
+		if randomized != 0: randi = ".{x}".format(x=randomized)
+	return swap+randi
+
+
+# ---------
+# Check if datablock is a duplicate or not, e.g. ending in .00#
+def duplicatedDatablock(name):
+	try:
+		if name[-4]!=".": return False
+		int(name[-3:])
+		return True
+	except:
+		return False
+
+
+# ---------
+# Load texture, reusing existing texture if present
+def loadTexture(texture):
+
+	# load the image only once
+	base = bpy.path.basename(texture)
+	# HERE load the iamge and set
+	if base in bpy.data.images:
+		if bpy.path.abspath(bpy.data.images[base].filepath) == bpy.path.abspath(texture):
+			data_img = bpy.data.images[base]
+			data_img.reload()
+			if conf.v:print("Using already loaded texture")
+		else:
+			data_img = bpy.data.images.load(texture)
+			if conf.v:print("Loading new texture image")
+	else:
+		data_img = bpy.data.images.load(texture)
+		if conf.v:print("Loading new texture image")
+
+	return data_img
+
+
+# ---------
+# Consistent, general way to remap datablock users
+# todo: write equivalent function of user_remap for older blender versions
+def remap_users(old, new):
+	if bpy.app.version[0]>=2 and bpy.app.version[1] >= 78:
+		#if hasattr(old, "user_remap"): # let it fail
+		old.user_remap( new )
+		return 0	
+	else:
+		#raise ValueError("Error: not available prior to blender 2.78")
+		return "not available prior to blender 2.78"
 

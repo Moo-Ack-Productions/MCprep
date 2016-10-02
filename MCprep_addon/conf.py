@@ -27,6 +27,7 @@
 # ADDON GLOBAL VARIABLES AND INITIAL SETTINGS
 # -----------------------------------------------------------------------------
 
+import bpy
 
 def init():
 
@@ -72,7 +73,7 @@ def init():
 	global json_data # mcprep_data.json
 	json_data = None # later will load addon information etc
 
-	global joson_user # mcprep_user.json
+	global json_user # mcprep_user.json
 	json_user = None # later will load user saved information
 
 
@@ -122,9 +123,9 @@ def init():
 	assets_installed = False
 
 
-	#
-	# Updates and stat tracking
-	#
+	# -----------------------------------------------
+	# For installing assets
+	# -----------------------------------------------
 
 	global update_ready
 	update_ready = False
@@ -134,3 +135,18 @@ def init():
 	# or force users to decide after 5 uses, ie blocking the panels
 
 
+	# -----------------------------------------------
+	# For cross-addon lists
+	# -----------------------------------------------
+	global skin_list
+	global rig_list
+	skin_list = [] # each is: [ basename, path ]
+	rig_list = [] # each is: [ verify this ]
+
+
+
+def register():
+	pass
+
+def unregister():
+	pass

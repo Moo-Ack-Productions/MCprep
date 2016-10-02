@@ -50,12 +50,13 @@ def getRigList(): #consider passing in rigpath... but
 	pathlist = []
 	riglist = []
 
-	# check if cache file exists
-	rigCache = os.path.join(rigpath,"rigcache")
-	if not os.path.isfile(rigCache):
-		return updateRigList() # updates and returns the result
+
+	if len(conf.rig_list)==0: # may redraw too many times, perhaps have flag
+		return updateRigList()
 
 	else:
+		return conf.rig_list
+
 		# load the cache file
 		f = open(rigCache,'r')
 		ln = f.read()
@@ -79,8 +80,8 @@ def getRigList(): #consider passing in rigpath... but
 		rigListExample = [('blend/creeper.blend', '#Creeper', '#Description'),
 					('blend/steve.blend', '#Steve', '#Description'),
 					('blend/dawg.blend', '#Dawg', '#Description')]
-		#print(riglist)
-		return riglist # for debugging, return rigListExample
+		
+		return riglist 
 
 
 def updateRigList():
@@ -89,12 +90,6 @@ def updateRigList():
 	blendFiles = []
 	pathlist = []
 	riglist = []
-
-	# check if cache file exists
-	rigCache = os.path.join(rigpath,"rigcache")
-	if os.path.isdir(rigpath) == False:
-		os.mkdir(rigpath)
-		# or just print an error?
 
 	# iterate through all folders
 	if len(os.listdir(rigpath)) < 1:
@@ -136,13 +131,15 @@ def updateRigList():
 
 
 	# save the file
-	f = open(rigCache,'w')
-	f.write("{x}\n".format(x=bpy.context.scene.mcrig_path))
-	for tm in riglist:
-		#print("did it write?")
-		f.write("{x}\t{y}\t{z}\n".format(x=tm[0],y=tm[1],z=tm[2]))
-		#print( "{x}\t{y}\t{z}\n".format(x=tm[0],y=tm[1],z=tm[2]) )
-	f.close()
+
+	conf.rig_list = riglist
+	# f = open(rigCache,'w')
+	# f.write("{x}\n".format(x=bpy.context.scene.mcrig_path))
+	# for tm in riglist:
+	# 	#print("did it write?")
+	# 	f.write("{x}\t{y}\t{z}\n".format(x=tm[0],y=tm[1],z=tm[2]))
+	# 	#print( "{x}\t{y}\t{z}\n".format(x=tm[0],y=tm[1],z=tm[2]) )
+	# f.close()
 	return riglist
 
 
@@ -165,7 +162,7 @@ class spawnRealoadCache(bpy.types.Operator):
 
 class mobSpawner(bpy.types.Operator):
 	"""Instantly spawn built-in or custom rigs into a scene"""
-	bl_idname = "object.mcprep_mobspawner"
+	bl_idname = "mcprep.mobspawner"
 	bl_label = "Mob Spawner"
 	bl_options = {'REGISTER', 'UNDO'}
 
@@ -450,6 +447,8 @@ class mobSpawner(bpy.types.Operator):
 
 		# if there is a script with this rig, attempt to run it
 		self.attemptScriptLoad(path)
+		if context.scene.render.engine == 'CYCLES':
+			bpy.ops.mcprep.mat_change() # if cycles
 
 		return {'FINISHED'}
 
@@ -570,7 +569,7 @@ class openRigFolder(bpy.types.Operator):
 
 class spawnPathReset(bpy.types.Operator):
 	"""Reset the spawn path to the default specified in the addon preferences panel"""
-	bl_idname = "object.mcprep_spawnpathreset"
+	bl_idname = "mcprep.spawnpathreset"
 	bl_label = "Reset spawn path"
 
 	def execute(self,context):
@@ -584,7 +583,7 @@ class spawnPathReset(bpy.types.Operator):
 
 # -----------------------------------------------------------------------------
 #	Above for class functions/operators
-#	Below for UI
+#	Below for UI/register
 # -----------------------------------------------------------------------------
 
 

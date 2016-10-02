@@ -169,7 +169,7 @@ class addon_updater_update_target(bpy.types.Operator):
 
 	@classmethod
 	def poll(cls, context):
-		return updater.update_ready != None
+		return updater.update_ready != None and len(updater.tags)>0
 
 	def invoke(self, context, event):
 		return context.window_manager.invoke_props_dialog(self)
@@ -314,6 +314,24 @@ class addon_updater_ignore(bpy.types.Operator):
 	
 	def execute(self, context):
 		updater.ignore_update()
+		return {'FINISHED'}
+
+
+class addon_updater_end_background(bpy.types.Operator):
+	"""Stop checking for update in the background"""
+	bl_label = "End background check"
+	bl_idname = updater.addon+".end_background_check"
+	bl_description = "Stop checking for update in the background"
+
+	# @classmethod
+	# def poll(cls, context):
+	# 	if updater.async_checking == True:
+	# 		return True
+	# 	else:
+	# 		return False
+	
+	def execute(self, context):
+		updater.stop_async_check_update()
 		return {'FINISHED'}
 
 # -----------------------------------------------------------------------------
@@ -522,19 +540,40 @@ def update_settings_ui(self, context):
 	row = box.row()
 	col = row.column()
 	movemosue = False
-	if updater.update_ready == None and updater.async_checking == False:
+	if updater.error != None:
+		subcol = col.row(align=True)
+		subcol.scale_y = 1
+		split = subcol.split(align=True)
+		split.enabled = False
+		split.scale_y = 2
+		split.operator(addon_updater_check_now.bl_idname,
+						updater.error)
+		split = subcol.split(align=True)
+		split.scale_y = 2
+		split.operator(addon_updater_check_now.bl_idname,
+						text = "", icon="FILE_REFRESH")
+
+	elif updater.update_ready == None and updater.async_checking == False:
 		col.scale_y = 2
 		col.operator(addon_updater_check_now.bl_idname)
 	elif updater.update_ready == None: # async is running
-		col.scale_y = 2
-		col.enabled = False
-		col.operator(addon_updater_check_now.bl_idname, "Checking for update....")
-		movemosue = True # tell user to move mouse, trigger re-draw on background check
-	elif updater.update_ready == True and updater.update_version != updater.current_version:
+		subcol = col.row(align=True)
+		subcol.scale_y = 1
+		split = subcol.split(align=True)
+		split.enabled = False
+		split.scale_y = 2
+		split.operator(addon_updater_check_now.bl_idname,
+						"Checking...")
+		split = subcol.split(align=True)
+		split.scale_y = 2
+		split.operator(addon_updater_end_background.bl_idname,
+						text = "", icon="X")
+		
+	elif updater.update_ready == True:# and updater.update_version != updater.current_version:
 		col.scale_y = 2
 		col.operator(addon_updater_update_now.bl_idname,
 					"Update now to "+str(updater.update_version))
-	else:
+	else: # ie that updater.update_ready == False
 		subcol = col.row(align=True)
 		subcol.scale_y = 1
 		split = subcol.split(align=True)
@@ -563,14 +602,15 @@ def update_settings_ui(self, context):
 
 	row = box.row()
 	lastcheck = updater.json["last_check"]
-	if movemosue == True:
+	if updater.error != None and updater.error_msg != None:
+		row.label(updater.error_msg)
+	elif movemosue == True:
 		row.label("Move mouse if button doesn't update")
 	elif lastcheck != "" and lastcheck != None:
 		lastcheck = lastcheck[0: lastcheck.index(".") ]
 		row.label("Last update check: " + lastcheck)
 	else:
 		row.label("Last update check: None")
-
 
 
 
@@ -605,7 +645,7 @@ def register(bl_info):
 	
 	# optional, consider turning off for production or allow as an option
 	# This will print out additional debugging info to the console
-	updater.verbose = True 
+	updater.verbose = False 
 
 	# optional, customize where the addon updater processing subfolder is,
 	# needs to be within the same folder as the addon itself
