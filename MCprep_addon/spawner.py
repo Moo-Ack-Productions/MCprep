@@ -28,6 +28,7 @@ import bpy
 from bpy_extras.io_utils import ImportHelper
 import os
 import math
+import shutil
 
 # addon imports
 from . import conf
@@ -510,7 +511,6 @@ class installMob(bpy.types.Operator, ImportHelper):
 				return {'CANCELLED'}
 
 		# copy this file to the rig folder
-		import shutil
 		filename = (newrig).split('/')[-1]
 		# path:rig folder / category / blend file
 		try:
@@ -562,8 +562,12 @@ class openRigFolder(bpy.types.Operator):
 				# mac... works on Yosemite minimally
 				subprocess.call(["open", bpy.path.abspath(context.scene.mcrig_path)])
 			except:
-				self.report({'ERROR'}, "Didn't open folder, navigate to it manually: {x}".format(x=context.scene.mcrig_path))
-				return {'CANCELLED'}
+				# linux
+				try:
+					subprocess.call(["xdg-open", bpy.path.abspath(context.scene.mcrig_path)])
+				except:
+					self.report({'ERROR'}, "Didn't open folder, navigate to it manually: {x}".format(x=context.scene.mcrig_path))
+					return {'CANCELLED'}
 		return {'FINISHED'}
 
 
@@ -585,7 +589,6 @@ class spawnPathReset(bpy.types.Operator):
 #	Above for class functions/operators
 #	Below for UI/register
 # -----------------------------------------------------------------------------
-
 
 
 def register():

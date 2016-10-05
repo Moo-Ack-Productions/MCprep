@@ -83,7 +83,7 @@ class Singleton_updater(object):
 		 # "" # assume specific cache name, use addon?.cache
 		self._check_interval_enable = False
 		self._check_interval_months = 0
-		self._check_interval_days = 14
+		self._check_interval_days = 7
 		self._check_interval_hours = 0
 		self._check_interval_minutes = 0
 

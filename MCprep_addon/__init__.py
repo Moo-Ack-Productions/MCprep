@@ -22,7 +22,18 @@
 #
 # ##### END MIT LICENSE BLOCK #####
 
+
+
+# -----------------------------------------------------------------------------
+# Additional disclaimer & terms
+# -----------------------------------------------------------------------------
+
 """
+By installing and using this addon, you agree to the following privacy policy:
+http://theduckcow.com/privacy-policy/
+which should have been present on the original download page.
+
+
 This code is open source under the MIT license.
 Its purpose is to increase the workflow of creating Minecraft
 related renders and animations, by automating certain tasks.
@@ -35,15 +46,20 @@ https://github.com/TheDuckCow/MCprep
 
 """
 
+# -----------------------------------------------------------------------------
+# 
+# -----------------------------------------------------------------------------
+
+
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",
-	"version": (2, 99, 1),
-	"blender": (2, 76, 0),
+	"version": (3, 0, 0),
+	"blender": (2, 78, 0),
 	"location": "3D window toolshelf > MCprep tab",
 	"description": "Minecraft workflow addon for rendering and animation",
 	"warning": "",
-	"wiki_url": "https://github.com/TheDuckCow/MCprep",
+	"wiki_url": "https://TheDuckCow.com/MCprep",
 	"author": "Patrick W. Crawford <support@theduckcow.com>",
 	"tracker_url":"https://github.com/TheDuckCow/MCprep/issues"
 }
@@ -80,9 +96,6 @@ else:
 	conf.init()  #initialize global variables
 	if conf.v:print("MCprep: Verbose is enabled")
 	if conf.vv:print("MCprep: Very Verbose is enabled")
-	# except:
-	# 	print("Importing errors occured")
-	# 	pass
 
 
 def register():

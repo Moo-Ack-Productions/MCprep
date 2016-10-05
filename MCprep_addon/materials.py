@@ -185,6 +185,7 @@ class MCPREP_materialChange(bpy.types.Operator):
 			mat.emit = 1
 		else:
 			mat.emit = 0
+		return 0
 
 	### Function for default cycles materials
 	def materialsCycles(self, mat):
@@ -267,7 +268,17 @@ class MCPREP_materialChange(bpy.types.Operator):
 				nodeTex.image_user.frame_duration = intlength
 		except:
 			pass
+		return 0
 	
+	def invoke(self, context, event):
+		return context.window_manager.invoke_props_dialog(self)
+
+	def draw(self, context):
+		row = self.layout.row()
+		col = row.column()
+		col.prop(self, "useReflections")
+		col.prop(self, "consolidateMaterials")
+		# tick box to enable tracking
 	
 	def execute(self, context):
 
@@ -296,13 +307,17 @@ class MCPREP_materialChange(bpy.types.Operator):
 				if (render_engine == 'BLENDER_RENDER'):
 					#print('BI mat')
 					if conf.vv:print("Blender internal material prep")
-					self.materialsInternal(mat)
+					res = self.materialsInternal(mat)
+					if res==0: count+=1
 				elif (render_engine == 'CYCLES'):
 					#print('cycles mat')
 					if conf.vv:print("Cycles material prep")
-					self.materialsCycles(mat)
+					res = self.materialsCycles(mat)
+					if res==0: count+=1
 			else:
 				if conf.v:print('Get the linked material instead!')
+
+		self.report({"INFO"},"Modified "+str(count)+" materials")
 		return {'FINISHED'}
 
 
@@ -330,6 +345,14 @@ class MCPREP_combineMaterials(bpy.types.Operator):
 				nameCat[base].append(mat.name)
 			else:
 				print("Skipping, already added material")
+
+		# pre 2.78 solution, deep loop
+		if (bpy.app.version[0]>=2 and bpy.app.version[1] >= 78) == False:
+			for ob in bpy.data.objects:
+				for sl in ob.material_slots:
+					if sl == None or sl.material == None:continue
+					sl.material = bpy.data.materials[nameCat[ util.nameGeneralize(sl.material.name) ][0]]
+			return {'FINISHED'}
 
 		# perform the consolidation with one basename set at a time
 		for base in nameCat:
@@ -390,10 +413,24 @@ class MCPREP_combineMaterials(bpy.types.Operator):
 # 		return {'FINISHED'}
 
 
+class MCPREP_improveUI(bpy.types.Operator):
+	"""Improve the UI with specific view settings"""
+	bl_idname = "mcprep.improve_ui"
+	bl_label = "Prep UI"
+	bl_description = "Improve UI for minecraft by disabling mipmaps & setting texture solid"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	def execute(self, context):
+		context.space_data.show_textured_solid = True # need to make it 3d space
+		context.user_preferences.system.use_mipmaps = True
+
+		return {'FINISHED'}
+
 
 # -----------------------------------------------------------------------------
 # Skin swapping lists
 # -----------------------------------------------------------------------------
+
 
 # for asset listing UIList drawing
 class MCPREP_skin_UIList(bpy.types.UIList):
@@ -410,8 +447,6 @@ class ListColl(bpy.types.PropertyGroup):
 # reload the skins in the directory for UI list
 def reloadSkinList(context):
 
-	#addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
-
 	skinfolder = context.scene.mcskin_path
 	files = [ f for f in os.listdir(skinfolder) if\
 					os.path.isfile(os.path.join(skinfolder,f)) ]
@@ -427,8 +462,6 @@ def reloadSkinList(context):
 
 	# recreate
 	for i, (skin, description) in enumerate(skinlist, 1):
-		print("#",i)
-		
 		item = context.scene.mcprep_skins_list.add()
 		conf.skin_list.append(  (skin,os.path.join(skinfolder,skin))  )
 		item.label = description
@@ -484,16 +517,26 @@ def collhack_skins(scene):
 
 	try:
 		reloadSkinList(bpy.context)
-		#bpy.ops.mcprep.reload_skins()
 	except:
-		print("Didin't run callback")
+		if conf.v:print("Didn't run callback")
 		pass
 
 
 # input is either UV image itself or filepath
 def swapCycles(image, mats):
-	print("Skin swapping cycles")
-	#self.report({'ERROR'}, "Work in progress operator")
+	if conf.vv:print("Texture swapping cycles")
+	changed = 0
+	for mat in mats:
+		if mat.node_tree == None:continue
+		for node in mat.node_tree.nodes:
+			if node.type != "TEX_IMAGE": continue
+			node.image = image
+			changed+=1
+
+	if changed == 0:
+		return False # nothing updated
+	else:
+		return True # updated at least one texture (the first)
 
 
 # input is either UV image itself or filepath
@@ -563,7 +606,7 @@ class MCPREP_skinSwapper(bpy.types.Operator, ImportHelper):
 	files = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
 
 	def execute(self,context):
-
+		tracking.trackUsage("skin","file import")
 		res = loadSkinFile(self, context)
 		if res!=0:
 			return {'CANCELLED'}
@@ -584,7 +627,7 @@ class MCPREP_applySkin(bpy.types.Operator):
 		description="selected")
 
 	def execute(self,context):
-
+		tracking.trackUsage("skin","ui list")
 		res = loadSkinFile(self, context)
 		if res!=0:
 			return {'CANCELLED'}
@@ -609,10 +652,8 @@ class MCPREP_applyUsernameSkin(bpy.types.Operator):
 		description="Re-download if already locally found",
 		default=False)
 
-
 	def invoke(self, context, event):
 		return context.window_manager.invoke_props_dialog(self)
-
 
 	def draw(self, context):
 		self.layout.label("Enter exact username below")
@@ -620,12 +661,11 @@ class MCPREP_applyUsernameSkin(bpy.types.Operator):
 		self.layout.label(
 			"and then press OK; blender may pause briefly to download")
 
-
 	def execute(self,context):
 		if self.username == "":
 			self.report({"ERROR","Invalid username"})
 			return {'CANCELLED'}
-
+		tracking.trackUsage("skin","username")
 
 		skins = [ str(skin[0]).lower() for skin in conf.skin_list ]
 		paths = [ skin[1] for skin in conf.skin_list ]
@@ -640,7 +680,6 @@ class MCPREP_applyUsernameSkin(bpy.types.Operator):
 
 
 	def downloadUser(self, context):
-
 
 		#http://minotar.net/skin/theduckcow
 		src_link = "http://minotar.net/skin/"
@@ -681,7 +720,6 @@ class MCPREP_skinFixEyes(bpy.types.Operator):
 		self.report({'ERROR'}, "Work in progress operator")
 		return {'CANCELLED'}
 
-
 		return {'FINISHED'}
 
 
@@ -701,18 +739,14 @@ class MCPREP_addSkin(bpy.types.Operator, ImportHelper):
 	files = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
 
 	def execute(self,context):
-		
-		# filepath editor dialog
-		# select file, apply change
 
 		new_skin = bpy.path.abspath(self.filepath)
 		if os.path.isfile(new_skin) == False:
 			self.report({"ERROR"},"Not a image file path")
 			return {'CANCELLED'}
 
-		base = bpy.path.basename(new_skin)
-
 		# copy the skin file
+		base = bpy.path.basename(new_skin)
 		shutil.copy2(new_skin, os.path.join(context.scene.mcskin_path,base))
 
 		# in future, select multiple

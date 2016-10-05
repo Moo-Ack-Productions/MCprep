@@ -64,6 +64,7 @@ import http.client
 import platform
 import threading
 import bpy
+from datetime import datetime
 
 
 # -----------------------------------------------------------------------------
@@ -83,7 +84,7 @@ class Singleton_tracking(object):
 
 	def __init__(self):
 		self._verbose = False
-		self._enable_tracking = False
+		self._tracking_enabled = False
 		self._appurl = ""
 		self._failsafe = False
 		self._dev = False
@@ -93,7 +94,9 @@ class Singleton_tracking(object):
 		self._version = ""
 		self._addon = __package__.lower()
 		self._tracker_json = os.path.join(os.path.dirname(__file__),
-							os.pardir,self._addon+"_tracker.json")
+							self._addon+"_tracker.json")
+		self._tracker_idbackup = os.path.join(os.path.dirname(__file__),
+							os.pardir,self._addon+"_trackerid.json")
 		print(self._tracker_json)
 		self.json = {}
 
@@ -103,11 +106,11 @@ class Singleton_tracking(object):
 	# -------------------------------------------------------------------------
 
 	@property
-	def enable_tracking(self):
-		return self._enable_tracking
-	@enable_tracking.setter
-	def enable_tracking(self, value):
-		self._enable_tracking = bool(value)
+	def tracking_enabled(self):
+		return self._tracking_enabled
+	@tracking_enabled.setter
+	def tracking_enabled(self, value):
+		self._tracking_enabled = bool(value)
 		self.enable_tracking(False, value)
 
 	@property
@@ -180,15 +183,13 @@ class Singleton_tracking(object):
 	def enable_tracking(self, toggle=True, enable=True):
 		# respect toggle primarily
 		if toggle == True:
-			self._enable_tracking != self._enable_tracking
+			self._tracking_enabled = not self._tracking_enabled
 		else:
-			self._enable_tracking = enable
+			self._tracking_enabled = enable
 
 		# update static json
-		self.json["enable_tracking"] = self._enable_tracking
-		self.save_tracker_json()
-
-		
+		self.json["enable_tracking"] = self._tracking_enabled
+		self.save_tracker_json()	
 
 	def initialize(self, appurl, version):
 
@@ -199,14 +200,11 @@ class Singleton_tracking(object):
 		# load or create the tracker data
 		self.set_tracker_json()
 
-		
-
-
 		return
 
 		# create the local file
 		# push into BG push update info if true
-		# create local cache file locaitons
+		# create local cache file locations
 		# including search for previous
 
 	# interface request, either launches on main or background
@@ -261,7 +259,7 @@ class Singleton_tracking(object):
 		if self._tracker_json == None:
 			raise ValueError("tracker_json is not defined")
 
-		if os.path.isfile(self._tracker_json):
+		if os.path.isfile(self._tracker_json)==True:
 			with open(self._tracker_json) as data_file:
 				self.json = json.load(data_file)
 				if self._verbose:print("Read in json settings from tracker file")
@@ -271,12 +269,23 @@ class Singleton_tracking(object):
 				"install_date":None,
 				"install_id":None,
 				"enable_tracking":False,
-				"functions":{}
+				"status":None,
+				"metadata":{}
 			}
+
+			if os.path.isfile(self._tracker_idbackup):
+				with open(self._tracker_idbackup) as data_file:
+					idbackup = json.load(data_file)
+					if self._verbose:print("Reinstall, getting idname")
+					if "idname" in idbackup:
+						self.json["install_id"] = idbackup["idname"]
+						self.json["status"] = "re-install"
+						self.json["install_date"] = idbackup["date"]
+
 			self.save_tracker_json()
 
 		# update any other properties if necessary from json
-		self._enable_tracking = self.json["enable_tracking"]
+		self._tracking_enabled = self.json["enable_tracking"]
 
 
 	def save_tracker_json(self):
@@ -289,6 +298,21 @@ class Singleton_tracking(object):
 		if self._verbose:
 			print("Wrote out json settings to file, with the contents:")
 			print(self.json)
+
+	def save_tracker_idbackup(self):
+
+		jpath = self._tracker_idbackup
+		
+		if "install_id" in self.json and self.json["install_id"] != None:
+			outf = open(jpath,'w')
+			idbackup = {"idname":self.json["install_id"], 
+						"date":self.json["install_date"]}
+			data_out = json.dumps(idbackup,indent=4)
+			outf.write(data_out)
+			outf.close()
+			if self._verbose:
+				print("Wrote out backup settings to file, with the contents:")
+				print(idbackup)
 
 
 	# def tracking(set='disable'):
@@ -340,6 +364,37 @@ class toggleenable_tracking(bpy.types.Operator):
 
 
 
+class accept_terms(bpy.types.Operator):
+	"""Toggle anonymous usage tracking to help the developers, disabled by default. The only data tracked is what functions are used, and the timestamp of the addon installation"""
+	bl_idname = idname+".accept_terms"
+	bl_label = "Acknowledge tracking privacy policy terms"
+	options = {'REGISTER', 'UNDO'}
+
+	def invoke(self, context, event):
+		return context.window_manager.invoke_props_dialog(self)
+
+	def draw(self, context):
+		row = self.layout.row()
+		col = row.column()
+		col.label("Acknowledge privacy policy")
+		col = row.column()
+		p = col.operator("wm.url_open","Open policy here")
+		p.url = "http://theduckcow.com/privacy-policy"
+		# tick box to enable tracking
+		self.layout.label("Press okay to accept and use addon")
+
+	def execute(self, context):
+		if self.tracking == "toggle":
+			Tracker.enable_tracking(toggle=True)
+		elif self.tracking == "enable":
+			Tracker.enable_tracking(toggle=False, enable=True)
+		else:
+			Tracker.enable_tracking(toggle=False, enable=False)
+
+		# send the install NOW
+		return {'FINISHED'}
+
+
 # -----------------------------------------------------------------------------
 # additional functions
 # -----------------------------------------------------------------------------
@@ -347,7 +402,8 @@ class toggleenable_tracking(bpy.types.Operator):
 
 def trackInstalled(background=None):
 	# if already installed, skip
-	if Tracker.json["install_id"] != None: return
+	if Tracker.json["status"] == None and \
+			Tracker.json["install_id"] != None: return
 
 	if Tracker.verbose: print("Tracking install")
 
@@ -357,23 +413,40 @@ def trackInstalled(background=None):
 
 	def runInstall(background):
 
+
 		if Tracker.dev==True:
 			location = "/1/track/install_dev.json"
 		else:
 			location = "/1/track/install.json"
-		
+
+		# for compatibility to prior blender (2.75?)
+		try:
+			bversion = str(bpy.app.version)
+		except:
+			bversion = "unknown"
+
+		# capture re-installs/other status events
+		if Tracker.json["status"]==None:
+			status = "New install"
+		else:
+			status = Tracker.json["status"]
+			Tracker.json["status"]=None
+			Tracker.save_tracker_json()
+
+		Tracker.json["install_date"] = str(datetime.now())
 		payload = json.dumps({
 				"timestamp": {".sv": "timestamp"},
+				"usertime":Tracker.json["install_date"],
 				"version":Tracker.version,
-				"blender":"2.77",
-				"status":"None",
+				"blender":bversion,
+				"status":status,
 				"platform":platform.system()+":"+platform.release()
 			})
 
 		resp = Tracker.request('POST', location, payload, background, callback)
 
 	def callback(arg):
-		# assumes input is the server repsonse (dictionary format)
+		# assumes input is the server response (dictionary format)
 		if type(arg) != type({'name':'ID'}):
 			return
 		elif "name" not in arg:
@@ -381,6 +454,7 @@ def trackInstalled(background=None):
 
 		Tracker.json["install_id"] = arg["name"]
 		Tracker.save_tracker_json()
+		Tracker.save_tracker_idbackup()
 
 	if Tracker.failsafe == True:
 		try:
@@ -392,7 +466,7 @@ def trackInstalled(background=None):
 
 
 def trackUsage(function, param=None, background=None):
-	if Tracker.enable_tracking == False: return # skip if not opted in
+	if Tracker.tracking_enabled == False: return # skip if not opted in
 
 	if Tracker.verbose: print("Tracking usage: "+function +", param: "+str(param))
 
@@ -407,10 +481,16 @@ def trackUsage(function, param=None, background=None):
 		else:
 			location = "/1/track/usage.json"
 		
+		# for compatibility to prior blender (2.75?)
+		try:
+			bversion = str(bpy.app.version)
+		except:
+			bversion = "unknown"
+
 		payload = json.dumps({
 				"timestamp":{".sv": "timestamp"},
 				"version":Tracker.version,
-				"blender":"2.77",
+				"blender":bversion,
 				"platform":platform.system()+":"+platform.release(),
 				"function":function,
 				"param":str(param),
@@ -428,10 +508,10 @@ def trackUsage(function, param=None, background=None):
 		runUsage(background)
 
 
-
 # -----------------------------------------------------------------------------
 # registration related
 # -----------------------------------------------------------------------------
+
 
 def register(bl_info):
 	Tracker.initialize(
@@ -443,18 +523,16 @@ def register(bl_info):
 
 	if Tracker.dev == True:
 		Tracker.verbose = True
-		Tracker.background = False
+		Tracker.background = True
 		Tracker.failsafe = False
-		Tracker.enable_tracking = True
+		Tracker.tracking_enabled = True
 	else:
 		Tracker.verbose = False
 		Tracker.background = True
 		Tracker.failsafe = True
-		Tracker.enable_tracking = False # users must accept to enable first
-	
+		Tracker.tracking_enabled = False # users must accept to enable first
 
 	# try running install
-	print("running tracker install")
 	trackInstalled()
 
 def unregister():

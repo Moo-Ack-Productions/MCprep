@@ -27,16 +27,18 @@
 import bpy
 import os
 import math
+import subprocess
 
 # addon imports
 from . import conf
 from . import util
 from . import spawner # remove once UIlist for mobs implemented
-from . import addon_updater_ops
 from . import materials
+from . import addon_updater_ops
+from . import tracking
 
-# do this here??
 
+# check if custom preview icons available
 try:
 	import bpy.utils.previews
 except:
@@ -47,19 +49,53 @@ except:
 preview_collections = {} # move to conf..
 
 
-
-
 class showMCprefs(bpy.types.Operator):
 	"""Show MCprep preferences"""
-	bl_idname = "object.mcprep_preferences"
+	bl_idname = "mcprep.preferences"
 	bl_label = "Show MCprep preferences"
+
+	tab = bpy.props.EnumProperty(
+		items = [('settings', 'Open settings', 'Open MCprep preferences settings'),
+				('tutorials', 'Open tutorials', 'View tutorials'),
+				('tracker', 'Open tracker settings', 'Open user tracking settings'),
+				('updates', 'Open updater settings', 'Open addon updater settings')],
+		name = "Exporter")
 
 	def execute(self,context):
 		bpy.ops.screen.userpref_show('INVOKE_AREA')
 		bpy.data.window_managers["WinMan"].addon_search = "MCprep"
+		#self.tab
+		preferences_tab = self.tab
 		#bpy.ops.wm.addon_expand(module="MCprep_addon") # just toggles not sets it, not helpful. need to SET it to expanded
 		return {'FINISHED'}
 
+
+class openFolder(bpy.types.Operator):
+	"""Open the rig folder for mob spawning"""
+	bl_idname = "mcprep.openfolder"
+	bl_label = "Open folder"
+
+	folder = bpy.props.StringProperty(
+		name="Folderpath",
+		default="//")
+
+	def execute(self,context):
+		
+		if os.path.isdir(bpy.path.abspath(self.folder))==False:
+			self.report({'ERROR'}, "Invalid folder path: {x}".format(x=self.folder))
+			return {'CANCELLED'}
+
+		try:
+			# windows... untested
+			subprocess.Popen('explorer "{x}"'.format(x=bpy.path.abspath(self.folder)))
+		except:
+			try:
+				# mac... works on Yosemite minimally
+				subprocess.call(["open", bpy.path.abspath(self.folder)])
+			except:
+				self.report({'ERROR'}, "Didn't open folder, navigate to it manually: {x}".format(x=self.folder))
+				return {'CANCELLED'}
+		return {'FINISHED'}
 
 
 # -----------------------------------------------------------------------------
@@ -175,6 +211,12 @@ class MCprepPreference(bpy.types.AddonPreferences):
 		name = "mcprep_meshswapjoin",
 		description = "Join individuals objects together during meshswapping",
 		default = True)
+	preferences_tab = bpy.props.EnumProperty(
+		items = [('settings', 'Settings', 'Change MCprep settings'),
+				('tutorials', 'Tutorials', 'View MCprep tutorials & other help'),
+				('tracking', 'Tracking', 'Change anonymous tracking settings'),
+				('updates', 'Updater', 'Check for update and adjust atuo-check settings')],
+		name = "Exporter")
 
 	# addon updater preferences
 
@@ -216,59 +258,111 @@ class MCprepPreference(bpy.types.AddonPreferences):
 	def draw(self, context):
 		layout = self.layout
 		row = layout.row()
-		row.label("Meshswap")
-		layout = layout.box()
-		split = layout.split(percentage=0.3)
-		col = split.column()
-		col.label("Default Exporter:")
-		col = split.column()
-		col.prop(self, "MCprep_exporter_type", text="")
-		split = layout.split(percentage=0.3)
-		col = split.column()
-		col.label("Meshwap assets")
-		col = split.column()
-		col.prop(self, "meshswap_path", text="")
+		#row.template_header()
+		row.prop(self, "preferences_tab", expand=True)
 
-		layout = self.layout
-		row = layout.row()
-		row.label("Mob spawning")
-		layout = layout.box()
-		split = layout.split(percentage=0.3)
-		col = split.column()
-		col.label("Rig Folder")
-		col = split.column()
-		col.prop(self, "mcrig_path", text="")
-		split = layout.split(percentage=0.3)
-		col = split.column()
-		col.label("Select/install mobs")
-		col = split.column()
-		col.operator("object.mcmob_install_menu", text="Install file for mob spawning")
-		col = split.column()
-		col.operator("object.mc_openrigpath", text="Open rig folder")
+		if self.preferences_tab == "settings":
+			row = layout.row()
+			row.label("Meshswap")
+			layout = layout.box()
+			split = layout.split(percentage=0.3)
+			col = split.column()
+			col.label("Default Exporter:")
+			col = split.column()
+			col.prop(self, "MCprep_exporter_type", text="")
+			split = layout.split(percentage=0.3)
+			col = split.column()
+			col.label("Meshwap assets")
+			col = split.column()
+			col.prop(self, "meshswap_path", text="")
 
-		# misc settings
-		layout = self.layout
-		row = layout.row()
-		row.prop(self, "mcprep_use_lib")
-		row = layout.row()
+			layout = self.layout
+			row = layout.row()
+			row.label("Mob spawning")
+			layout = layout.box()
+			split = layout.split(percentage=0.3)
+			col = split.column()
+			col.label("Rig Folder")
+			col = split.column()
+			col.prop(self, "mcrig_path", text="")
+			split = layout.split(percentage=0.3)
+			col = split.column()
+			col.label("Select/install mobs")
+			col = split.column()
+			col.operator("object.mcmob_install_menu", text="Install file for mob spawning")
+			col = split.column()
+			col.operator("object.mc_openrigpath", text="Open rig folder") #mcprep.openfolder
 
-		# another row for 
-		layout = self.layout
-		split = layout.split(percentage=0.5)
-		col = split.column()
-		row = layout.row()
-		# if checkOptin():
-		# 	col.operator("object.mc_toggleoptin", text="Opt OUT of anonymous usage tracking", icon='CANCEL')
-		# else:
-		# 	col.operator("object.mc_toggleoptin", text="Opt into of anonymous usage tracking", icon='HAND')
-		#row = layout.row()
-		col = split.column()
-		col.operator("wm.url_open", text="MCprep page for instructions and updates", icon="WORLD").url = "https://github.com/TheDuckCow/MCprep/releases"
-		row = layout.row()
-		row.label("Don't forget to save user preferences!")
+			layout = self.layout
+			row = layout.row()
+			row.label("Skin swapping")
+			layout = layout.box()
+			split = layout.split(percentage=0.3)
+			col = split.column()
+			col.label("Skin Folder")
+			col = split.column()
+			col.prop(self, "mcskin_path", text="")
+			split = layout.split(percentage=0.3)
+			col = split.column()
+			col.label("Install skins")
+			col = split.column()
+			col.operator("mcprep.skin_swapper", text="Install skin file for swapping")
+			col = split.column()
+			p = col.operator("mcprep.openfolder", text="Open skin folder")
+			p.folder = self.mcskin_path
 
-		# updater draw function
-		addon_updater_ops.update_settings_ui(self,context)
+			# misc settings
+			layout = self.layout
+			row = layout.row()
+			row.prop(self, "mcprep_use_lib")
+			row = layout.row()
+
+		elif self.preferences_tab == "tutorials":
+			layout.label("Tutorials tab!")
+			col = layout.column()
+			col.operator("wm.url_open", text="MCprep page for instructions and updates", icon="WORLD").url = "https://github.com/TheDuckCow/MCprep/releases"
+			row = layout.row()
+			
+		elif self.preferences_tab == "tracking":
+			layout = self.layout
+			split = layout.split(percentage=0.5)
+			col = split.column()
+			row = layout.row()
+
+			if tracking.Tracker.tracking_enabled == False:
+				row.operator("mcprep.toggle_enable_tracking","Opt into anonymous usage tracking")
+			else:
+				row.operator("mcprep.toggle_enable_tracking","Opt OUT of anonymous usage tracking")
+			
+			# row.operator(//url,"Read the privacy policy/terms")
+			# UI list this info?
+			# label("All information collected is anonymous")
+			# label("Data collected when enabled includes:")
+			# label("- Blender version")
+			# label("- MCprep version")
+			# label("- OS name/version")
+			# label("- MCprep operator used")
+			# label("- anonymous ID")
+			# label("- Timestamp of when the operator was used")
+			# label("No other information is collected.")
+
+			# label("The anonymous local ID name is solely used")
+			# label("to track how often a single user uses a function")
+			# label("and cannot be traced back to an individual user")
+
+
+			# if checkOptin():
+			# 	col.operator("object.mc_toggleoptin", text="Opt OUT of anonymous usage tracking", icon='CANCEL')
+			# else:
+			# 	col.operator("object.mc_toggleoptin", text="Opt into of anonymous usage tracking", icon='HAND')
+			#row = layout.row()
+
+			# additional tracking info
+
+		elif self.preferences_tab == "updates":
+			# updater draw function
+			addon_updater_ops.update_settings_ui(self,context)
+		layout.label("Don't forget to save user preferences!")			
 
 
 
@@ -294,13 +388,14 @@ class MCpanel(bpy.types.Panel):
 		col = split.row(align=True)
 		row = col.row(align=True)
 		row.prop(addon_prefs,"MCprep_exporter_type", expand=True)
-
 		
 		split = layout.split()
 		col = split.column(align=True)
 
 		col.label("MCprep tools")
 		col.operator("mcprep.mat_change", text="Prep Materials", icon='MATERIAL')
+		col.operator("mcprep.combine_materials", text="Combine Materials", icon='MATERIAL')
+		
 		if (bpy.app.version[0]==2 and bpy.app.version[1] > 77) or (bpy.app.version[0]>2):
 			col.operator("mcprep.combine_materials", icon='PACKAGE')
 		col.operator("mcprep.meshswap", text="Mesh Swap", icon='LINK_BLEND')
@@ -325,11 +420,11 @@ class MCpanel(bpy.types.Panel):
 		if not context.scene.mcprep_props.mcprep_showsettings:
 			row.prop(context.scene.mcprep_props,"mcprep_showsettings", text="settings", icon="TRIA_RIGHT")
 			#row.operator("object.mcprep_preferences",icon="PREFERENCES",text='')
-			row.operator("screen.userpref_show",icon="PREFERENCES",text='')
+			row.operator("mcprep.preferences",icon="PREFERENCES",text='').tab = "settings"
 
 		else:
 			row.prop(context.scene.mcprep_props,"mcprep_showsettings", text="settings", icon="TRIA_DOWN")
-			row.operator("screen.userpref_show",icon="PREFERENCES",text='')
+			row.operator("mcprep.preferences",icon="PREFERENCES",text='').tab = "settings"
 			layout = layout.box()
 
 			split = layout.split(percentage=1)
