@@ -55,8 +55,8 @@ class MCPREP_materialChange(bpy.types.Operator):
 		default = True
 		)
 
-	consolidateMaterials = bpy.props.BoolProperty(
-		name = "Consolidate materials",
+	combineMaterials = bpy.props.BoolProperty(
+		name = "Combine materials",
 		description = "Consolidate duplciate materials & textures",
 		default = True
 		)
@@ -317,6 +317,8 @@ class MCPREP_materialChange(bpy.types.Operator):
 			else:
 				if conf.v:print('Get the linked material instead!')
 
+		if self.combineMaterials==True:
+			bpy.ops.mcprep.combine_materials(selection_only=True)
 		self.report({"INFO"},"Modified "+str(count)+" materials")
 		return {'FINISHED'}
 
@@ -325,16 +327,50 @@ class MCPREP_materialChange(bpy.types.Operator):
 class MCPREP_combineMaterials(bpy.types.Operator):
 	bl_idname = "mcprep.combine_materials"
 	bl_label = "Combine materials"
-	bl_description = "Consolidate the same materials together"
+	bl_description = "Consolidate the same materials together e.g. mat.001 and mat.002"
 
 	# arg to auto-force remove old? versus just keep as 0-users
+	selection_only = bpy.props.BoolProperty(
+		name = "Selection only",
+		description = "Build materials to consoldiate based on selected objects only",
+		default = True
+		)
 
 	def execute(self, context):
+
+		removeold = True
+
+		if self.selection_only==True and len(context.selected_objects)==0:
+			self.report({'ERROR',"Either turn selection only off or select objects with materials"})
+			return {'CANCELLED'}
+
 
 		# 2-level structure to hold base name and all
 		# materials blocks with the same base
 		nameCat = {}
-		data = bpy.data.materials
+
+
+		def getMaterials(self, context):
+			if self.selection_only == False:
+				return bpy.data.materials
+			else:
+				mats = []
+				for ob in bpy.data.objects:
+					for sl in ob.material_slots:
+						if sl == None or sl.material == None:continue
+						if sl.material in mats:continue
+						mats.append(sl.material)
+				return mats
+
+		data = getMaterials(self, context)
+		precount = len( ["x" for x in data if x.users >0] )
+
+		if len(data)==0:
+			if self.selection_only==True:
+				self.report({"ERROR"},"No materials found on selected objects")
+			else:
+				self.report({"ERROR"},"No materials in open file")
+			return {'CANCELLED'}
 
 		# get and categorize all materials names
 		for mat in data:
@@ -344,14 +380,129 @@ class MCPREP_combineMaterials(bpy.types.Operator):
 			elif mat.name not in nameCat[base]:
 				nameCat[base].append(mat.name)
 			else:
-				print("Skipping, already added material")
+				if conf.vv:print("Skipping, already added material")
+
 
 		# pre 2.78 solution, deep loop
 		if (bpy.app.version[0]>=2 and bpy.app.version[1] >= 78) == False:
 			for ob in bpy.data.objects:
 				for sl in ob.material_slots:
 					if sl == None or sl.material == None:continue
+					if sl.material not in data: continue # selection only
 					sl.material = bpy.data.materials[nameCat[ util.nameGeneralize(sl.material.name) ][0]]
+			# doesn't remove old textures, but gets it to zero users
+			
+			postcount = len( ["x" for x in bpy.data.materials if x.users >0] )
+			self.report({"INFO"},
+				"Consolidated {x} materials, down to {y} overall".format(
+				x=precount-postcount,
+				y=postcount))
+			return {'FINISHED'}
+
+		# perform the consolidation with one basename set at a time
+		for base in nameCat: # the keys of the dictionary
+			if len(base)<2: continue
+			
+			nameCat[base].sort() # in-place sorting
+			baseMat = bpy.data.materials[ nameCat[base][0] ]
+
+			print(nameCat[base], "##", baseMat )
+
+			for matname in nameCat[base][1:]:
+
+				# skip if fake user set
+				if bpy.data.materials[matname].use_fake_user == True: continue 
+				# otherwise, remap
+				res = util.remap_users(bpy.data.materials[matname],baseMat)
+				if res != 0:
+					self.report({'ERROR'}, str(res))
+					return {'CANCELLED'}
+				old = bpy.data.materials[matname]
+				print("removing old? ",bpy.data.materials[matname])
+				if removeold==True and old.users==0:
+					print("removing old:")
+					data.remove( bpy.data.materials[matname] )
+			
+			# Final step.. rename to not have .001 if it does
+			genBase = util.nameGeneralize(baseMat.name)
+			if baseMat.name != genBase:
+				if genBase in bpy.data.materials and bpy.data.materials[genBase].users!=0:
+					pass
+				else:
+					baseMat.name = genBase
+			else:
+				baseMat.name = genBase
+			print("Final: ",baseMat)
+
+		postcount = len( ["x" for x in getMaterials(self, context) if x.users >0] )
+		self.report({"INFO"},
+				"Consolidated {x} materials down to {y}".format(
+				x=precount,
+				y=postcount))
+
+		return {'FINISHED'}
+
+
+class MCPREP_combineImages(bpy.types.Operator):
+	bl_idname = "mcprep.combine_images"
+	bl_label = "Combine images"
+	bl_description = "Consolidate the same images together e.g. img.001 and img.002"
+
+	# arg to auto-force remove old? versus just keep as 0-users
+	selection_only = bpy.props.BoolProperty(
+		name = "Selection only",
+		description = "Build images to consoldiate based on selected objects' materials only",
+		default = False
+		)
+	
+	def execute(self, context):
+
+		removeold = True
+
+		if self.selection_only==True and len(context.selected_objects)==0:
+			self.report({'ERROR',"Either turn selection only off or select objects with materials/images"})
+			return {'CANCELLED'}
+
+		# 2-level structure to hold base name and all
+		# images blocks with the same base
+
+		if (bpy.app.version[0]>=2 and bpy.app.version[1] >= 78) == False:
+			self.report({'ERROR',"Must use blender 2.78 or higher to use this operator"})
+			return {'CANCELLED'}
+
+		if self.selection_only==True:
+			self.report({'ERROR'},"Combine images does not yet work for selection only, retry with option disabled")
+			return {'CANCELLED'}
+
+		nameCat = {}
+		data = bpy.data.images
+
+		precount = len(data)
+
+		# get and categorize all image names
+		for im in bpy.data.images:
+			base = util.nameGeneralize(im.name)
+			if base not in nameCat:
+				nameCat[base] = [im.name]
+			elif im.name not in nameCat[base]:
+				nameCat[base].append(im.name)
+			else:
+				if conf.vv:print("Skipping, already added image")
+
+		# pre 2.78 solution, deep loop
+		if (bpy.app.version[0]>=2 and bpy.app.version[1] >= 78) == False:
+			for ob in bpy.data.objects:
+				for sl in ob.material_slots:
+					if sl == None or sl.material == None:continue
+					if sl.material not in data: continue # selection only
+					sl.material = data[nameCat[ util.nameGeneralize(sl.material.name) ][0]]
+			# doesn't remove old textures, but gets it to zero users
+			
+			postcount = len( ["x" for x in bpy.data.materials if x.users >0] )
+			self.report({"INFO"},
+				"Consolidated {x} materials, down to {y} overall".format(
+				x=precount-postcount,
+				y=postcount))
 			return {'FINISHED'}
 
 		# perform the consolidation with one basename set at a time
@@ -359,30 +510,34 @@ class MCPREP_combineMaterials(bpy.types.Operator):
 			if len(base)<2: continue
 			
 			nameCat[base].sort() # in-place sorting
-			baseMat = data[ nameCat[base][0] ]
+			baseImg = bpy.data.images[ nameCat[base][0] ]
 			
-			for matname in nameCat[base][1:]:
+			for imgname in nameCat[base][1:]:
 
 				# skip if fake user set
-				if data[matname].use_fake_user == True: continue 
+				if bpy.data.images[imgname].use_fake_user == True: continue 
+
 				# otherwise, remap
-				res = util.remap_users(data[matname],baseMat)
-				if res != 0:
-					self.report({'ERROR'}, str(res))
-					return {'CANCELLED'}
-				old = data[matname]
+				util.remap_users(data[imgname],baseImg)
+				old = bpy.data.images[imgname]
 				if removeold==True and old.users==0:
-					data.remove( data[matname] )
+					bpy.data.images.remove( bpy.data.images[imgname] )
 			
 			# Final step.. rename to not have .001 if it does
-			genBase = util.nameGeneralize(baseMat.name)
-			if baseMat.name != genBase:
-				if genBase in data and data[genBase].users!=0:
+			if baseImg.name != util.nameGeneralize(baseImg.name):
+				if util.nameGeneralize(baseImg.name) in data and \
+						bpy.data.images[util.nameGeneralize(baseImg.name)].users!=0:
 					pass
 				else:
-					baseMat.name = genBase
+					baseImg.name = util.nameGeneralize(baseImg.name)
 			else:
-				baseMat.name = genBase
+				baseImg.name = util.nameGeneralize(baseImg.name)
+
+		postcount = len( ["x" for x in bpy.data.images if x.users >0] )
+		self.report({"INFO"},
+				"Consolidated {x} images down to {y}".format(
+				x=precount,
+				y=postcount))
 
 		return {'FINISHED'}
 
@@ -416,13 +571,13 @@ class MCPREP_combineMaterials(bpy.types.Operator):
 class MCPREP_improveUI(bpy.types.Operator):
 	"""Improve the UI with specific view settings"""
 	bl_idname = "mcprep.improve_ui"
-	bl_label = "Prep UI"
-	bl_description = "Improve UI for minecraft by disabling mipmaps & setting texture solid"
+	bl_label = "Improve UI"
+	bl_description = "Improve UI for minecraft textures: disable mipmaps & set texture solid"
 	bl_options = {'REGISTER', 'UNDO'}
 
 	def execute(self, context):
-		context.space_data.show_textured_solid = True # need to make it 3d space
-		context.user_preferences.system.use_mipmaps = True
+		context.space_data.show_textured_solid = True # need to make it 3d space?
+		context.user_preferences.system.use_mipmaps = False
 
 		return {'FINISHED'}
 
@@ -471,7 +626,7 @@ def reloadSkinList(context):
 
 # for UI list path callback
 def update_skin_path(self, context):
-	if conf.vv:print("Updating skin path")
+	if conf.vv:print("Updating rig path")
 	reloadSkinList(context)
 
 
@@ -585,9 +740,11 @@ def loadSkinFile(self, context):
 	return 0
 
 
+
 # -----------------------------------------------------------------------------
 # Skin swapping classes
 # -----------------------------------------------------------------------------
+
 
 
 class MCPREP_skinSwapper(bpy.types.Operator, ImportHelper):
@@ -612,7 +769,6 @@ class MCPREP_skinSwapper(bpy.types.Operator, ImportHelper):
 			return {'CANCELLED'}
 
 		return {'FINISHED'}
-
 
 
 class MCPREP_applySkin(bpy.types.Operator):

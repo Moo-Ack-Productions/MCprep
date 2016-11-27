@@ -23,6 +23,8 @@
 # ##### END MIT LICENSE BLOCK #####
 
 import bpy
+import random
+
 from . import conf
 
 # -----------------------------------------------------------------------------
@@ -52,6 +54,8 @@ from . import conf
 # 		if conf.vv:print(name)
 # 		return None
 
+# ---------
+# Get base name from datablock
 def nameGeneralize(name):
 	if duplicatedDatablock(name) == True:
 		return name[:-4]
@@ -68,7 +72,8 @@ def nameGeneralize(name):
 	# 	pass
 	# return name
 
-####
+
+# ---------
 # gets all materials on input list of objects
 def materialsFromObj(objList): # old name: getObjectMaterials
 	matList = []
@@ -85,7 +90,7 @@ def materialsFromObj(objList): # old name: getObjectMaterials
 	return matList
 
 
-####
+# ---------
 # gets all textures on input list of materials
 # currently not used, some issue in getting NoneTypes (line if textureID.texture in..)
 def texturesFromMaterials(matList): # original name: getMaterialTextures
@@ -100,10 +105,10 @@ def texturesFromMaterials(matList): # original name: getMaterialTextures
 	return texList
 
 
-####
+# ---------
 # For multiple version compatibility,
 # this function generalized appending/linking
-def bAppendLink(directory,name, toLink):
+def bAppendLink(directory,name, toLink, active_layer=True):
 	# blender post 2.71 changed to new append/link methods
 	post272 = False
 	try:
@@ -121,13 +126,19 @@ def bAppendLink(directory,name, toLink):
 		if (toLink):
 			bpy.ops.wm.link(directory=directory, filename=name)
 		else:
-			bpy.ops.wm.append(directory=directory, filename=name) #, activelayer=True
+			bpy.ops.wm.append(
+					directory=directory,
+					filename=name,
+					active_layer=active_layer,
+					) #, activelayer=True
+			# if active_layer==True:
+
 	else:
 		# OLD method of importing
 		bpy.ops.wm.link_append(directory=directory, filename=name, link=toLink)
 
 
-########
+# ---------
 # check if a face is on the boundary between two blocks (local coordinates)
 def onEdge(faceLoc):
 	strLoc = [ str(faceLoc[0]).split('.')[1][0],
@@ -139,7 +150,7 @@ def onEdge(faceLoc):
 		return False
 
 
-########
+# ---------
 # randomization for model imports, add extra statements for exta cases
 def randomizeMeshSawp(swap,variations):
 	randi=''
@@ -191,11 +202,19 @@ def loadTexture(texture):
 # Consistent, general way to remap datablock users
 # todo: write equivalent function of user_remap for older blender versions
 def remap_users(old, new):
-	if bpy.app.version[0]>=2 and bpy.app.version[1] >= 78:
-		#if hasattr(old, "user_remap"): # let it fail
+	try:
 		old.user_remap( new )
-		return 0	
-	else:
-		#raise ValueError("Error: not available prior to blender 2.78")
+		return 0
+	except:
 		return "not available prior to blender 2.78"
 
+
+# ---------
+# quick script for linking all objects back into a scene
+"""
+import bpy
+
+for ob in bpy.data.objects:
+    if ob not in list(bpy.context.scene.objects):
+        bpy.context.scene.objects.link(ob)
+"""

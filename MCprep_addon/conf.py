@@ -35,12 +35,14 @@ def init():
 	# Verbose, use as conf.v
 	# Used to print out extra information, set false with distribution
 	# -----------------------------------------------
-	
+	global dev
+	dev = True
+
 	global v
-	v = True # $VERBOSE
+	v = True # $VERBOSE, UI setting
 
 	global vv
-	vv = True # $VERYVERBOSE
+	vv = dev # $VERYVERBOSE
 
 	# -----------------------------------------------
 	# To prevent recusrive function calls on property changes
@@ -139,9 +141,17 @@ def init():
 	# For cross-addon lists
 	# -----------------------------------------------
 	global skin_list
-	global rig_list
 	skin_list = [] # each is: [ basename, path ]
-	rig_list = [] # each is: [ verify this ]
+	
+	global rig_list
+	global rig_list_sub
+	global rig_categories
+	
+	rig_list = [] # each is: [ relative path+':/:'+name+':/:'+catgry,  
+				  #            name.title(),
+				  #            description ]
+	rig_list_sub = [] # shorthand for categories
+	rig_categories = [] # simple list of directory names
 
 
 

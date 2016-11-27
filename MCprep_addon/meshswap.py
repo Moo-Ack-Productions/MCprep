@@ -67,6 +67,9 @@ class meshSwap(bpy.types.Operator):
 	def draw(self, context):
 		layout = self.layout
 		layout.label("Warning: may take a long time to process", icon="ERROR")
+		#layout.label("Consider selecting a smaller area closer to the camera to swap", icon="ERROR")
+		
+
 
 	# called for each object in the loop as soon as possible
 	def checkExternal(self, context, name):

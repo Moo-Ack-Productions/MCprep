@@ -56,6 +56,8 @@ xx OS running
 
 curl -X POST -d '{"timestamp":0,"version":"v2.9.9","blender":"2.77","status":"New install"}' 'https://mcprep-1aa04.firebaseio.com/1/track/install_dev.json'
 
+curl -X GET 'https://mcprep-1aa04.firebaseio.com/1/SECRET.json'
+
 """
 
 import os
@@ -65,6 +67,8 @@ import platform
 import threading
 import bpy
 from datetime import datetime
+
+from . import conf
 
 
 # -----------------------------------------------------------------------------
@@ -241,7 +245,13 @@ class Singleton_tracking(object):
 		except:
 			print("Connection not made, verify connectivity")
 			return {'status':'NO_CONNECTION'}
-		connection.request(method, path, payload)
+
+		if method=="POST" or method=="PUT":
+			connection.request(method, path, payload)
+		elif method == "GET": # GET
+			connection.request(method, path)
+		else:
+			raise ValueError("raw_request input must be GET, POST, or PUT")
 
 		raw = connection.getresponse().read()
 		resp = json.loads( raw.decode() )
@@ -363,7 +373,7 @@ class toggleenable_tracking(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-
+# currently not in use, agreement made on donwload
 class accept_terms(bpy.types.Operator):
 	"""Toggle anonymous usage tracking to help the developers, disabled by default. The only data tracked is what functions are used, and the timestamp of the addon installation"""
 	bl_idname = idname+".accept_terms"
@@ -456,6 +466,7 @@ def trackInstalled(background=None):
 		Tracker.save_tracker_json()
 		Tracker.save_tracker_idbackup()
 
+
 	if Tracker.failsafe == True:
 		try:
 			runInstall(background)
@@ -519,13 +530,14 @@ def register(bl_info):
 		version = str(bl_info["version"])
 		)
 
-	Tracker.dev = True # used to define which server source, not just if's below
+	# used to define which server source, not just if's below
+	Tracker.dev = conf.dev # True or False
 
 	if Tracker.dev == True:
 		Tracker.verbose = True
-		Tracker.background = True
-		Tracker.failsafe = False
-		Tracker.tracking_enabled = True
+		Tracker.background = True # test either way
+		Tracker.failsafe = False # test either way
+		Tracker.tracking_enabled = True # enabled automatically for testing
 	else:
 		Tracker.verbose = False
 		Tracker.background = True

@@ -42,62 +42,46 @@ from . import tracking
 # -----------------------------------------------------------------------------
 
 
-
-def getRigList(): #consider passing in rigpath... but 
+# only used for UI drawing of enum menus, full list
+def getRigList(context): #consider passing in rigpath
 
 	# test the link path first!
-	rigpath = bpy.path.abspath(bpy.context.scene.mcrig_path) #addon_prefs.mcrig_path
-	blendFiles = []
-	pathlist = []
-	riglist = []
-
+	# rigpath = bpy.path.abspath(context.scene.mcrig_path) #addon_prefs.mcrig_path
+	# blendFiles = []
+	# pathlist = []
+	# riglist = []
 
 	if len(conf.rig_list)==0: # may redraw too many times, perhaps have flag
-		return updateRigList()
+		return updateRigList(context)
 
 	else:
 		return conf.rig_list
 
-		# load the cache file
-		f = open(rigCache,'r')
-		ln = f.read()
-		f.close()
-		riglist = []
 
-		entries = ln.split("\n")
-		# check if the path at beginning of file is correct, ie if outdated cache
-		samePath = (entries[0] == bpy.context.scene.mcrig_path)
-		if not samePath:
-			return updateRigList()
-		else:
-			for a in entries:
-				tmp = a.split("\t")
-				try:
-					riglist.append( (tmp[0],tmp[1],tmp[2]) )
-				except:
-					pass # e.g. at the end of the file, extra lines.
+# for UI list path callback
+def update_rig_path(self, context):
+	if conf.vv:print("Updating skin path")
+	updateRigList(context)
 
-		# setup template, the riglist needs to be in this format
-		rigListExample = [('blend/creeper.blend', '#Creeper', '#Description'),
-					('blend/steve.blend', '#Steve', '#Description'),
-					('blend/dawg.blend', '#Dawg', '#Description')]
-		
-		return riglist 
-
-
-def updateRigList():
+# Update the rig list and subcategory list
+def updateRigList(context):
 	# test the link path first!
-	rigpath = bpy.path.abspath(bpy.context.scene.mcrig_path) #addon_prefs.mcrig_path
+	rigpath = bpy.path.abspath(context.scene.mcrig_path)
 	blendFiles = []
 	pathlist = []
 	riglist = []
+	conf.rig_list = []
+	subriglist = []
+	context.scene.mcprep_mob_list.clear()
 
 	# iterate through all folders
 	if len(os.listdir(rigpath)) < 1:
 		#self.report({'ERROR'}, "Rig sub-folders not found")
 		return# {'CANCELLED'}
+
 	nocatpathlist = []
 	for catgry in os.listdir(rigpath):
+
 		it = os.path.join(rigpath,catgry) # make a full path
 		#print("dir: ",it)
 		if os.path.isdir(it) and it[0] != ".": # ignore hidden or structural files
@@ -112,6 +96,11 @@ def updateRigList():
 			for [rigPath,local] in pathlist:
 				with bpy.data.libraries.load(rigPath) as (data_from, data_to):
 					for name in data_from.groups:
+
+						# special cases, skip some groups
+						if name.lower() == "Rigidbodyworld".lower():
+							continue 
+
 						#if name in bpy.data.groups:
 						#	if conf.v:print("Already grouped in this one. maybe should append the same way/rename?")
 						#	riglist.append( ('//'+':/:'+name+':/:'+catgry,name,\
@@ -119,30 +108,68 @@ def updateRigList():
 							## still append the group name, more of an fyi
 						#else:
 						#	riglist.append( (rigPath+':/:'+name+':/:'+catgry,name,"Spawn a {x} rig".format(x=name)) )
-						riglist.append( (local+':/:'+name+':/:'+catgry,name,"Spawn a {x} rig".format(x=name)) )
+						description = "Spawn a {x} rig".format(x=name)
+						riglist.append( (local+':/:'+name+':/:'+catgry,name.title(),description) )
+						item = context.scene.mcprep_mob_list.add()
+						item.label = description
+						item.description = description
+						item.name = name.title()
 						# MAKE THE ABOVE not write the whole rigPath, slow an unnecessary;
 		
 		elif catgry.split('.')[-1] == 'blend': # not a folder.. a .blend
 			nocatpathlist.append([os.path.join(rigpath,catgry), catgry])
+	
+
+	# Finally, update the list
 	for [rigPath,local] in nocatpathlist:
 		with bpy.data.libraries.load(rigPath) as (data_from, data_to):
 			for name in data_from.groups:
 				# //\// as keyword for root directory
 				riglist.append( (local+':/:'+name+':/:'+"//\//",name,"Spawn a {x} rig".format(x=name)) )
 
+	# set output and update category listing
 
-	# save the file
+	# sort the list alphebtically by name, and if possible,
+	# put the generic player mob first (or eventually, the "pinned" rig)
+	temp, sorted_rigs = zip(*sorted(zip([rig[1].lower() for rig in riglist], riglist)))
 
-	conf.rig_list = riglist
-	# f = open(rigCache,'w')
-	# f.write("{x}\n".format(x=bpy.context.scene.mcrig_path))
-	# for tm in riglist:
-	# 	#print("did it write?")
-	# 	f.write("{x}\t{y}\t{z}\n".format(x=tm[0],y=tm[1],z=tm[2]))
-	# 	#print( "{x}\t{y}\t{z}\n".format(x=tm[0],y=tm[1],z=tm[2]) )
-	# f.close()
+	# put the generic play on top, special case
+	# if "player" in temp:
+	# 	ind = temp.index("player")
+	# 	sorted_rigs = [sorted_rigs[ind]]+[sorted_rigs[:ind]]+[sorted_rigs[ind+1:]]
+
+	print("-------")
+	for a in sorted_rigs:print(a)
+	print("-------")
+	conf.rig_list = sorted_rigs
+	updateCategory(context)
 	return riglist
 
+
+def updateCategory(context):
+
+	if len(conf.rig_list)==0:
+		if conf.v:print("No rigs found, failed to update category")
+		context.scene.mcprep_mob_list.clear()
+		return
+
+	category = context.scene.mcprep_props.spawn_rig_category
+	filter = (category != "all")
+
+	context.scene.mcprep_mob_list.clear()
+	conf.rig_list_sub = []
+
+	for itm in conf.rig_list:
+		sub = itm[0].split(":/:")
+		if filter==True and sub[-1].lower() != category.lower():
+			continue
+		item = context.scene.mcprep_mob_list.add()
+		print("SPAWNING:",sub, "#", itm)
+		description = "Spawn a {x} rig".format(x=sub[1])
+		item.label = description
+		item.description = description
+		item.name = sub[1].title()
+		conf.rig_list_sub.append(itm)
 
 
 # -----------------------------------------------------------------------------
@@ -151,25 +178,25 @@ def updateRigList():
 
 
 
-class spawnRealoadCache(bpy.types.Operator):
+class reloadMobs(bpy.types.Operator):
 	"""Force reload the mob spawner rigs, use after manually adding rigs to folders"""
-	bl_idname = "object.mc_reloadcache"
-	bl_label = "Reload the rig cache"
+	bl_idname = "mcprep.reload_mobs"
+	bl_label = "Reload the rigs and cache"
 
 	def execute(self,context):
-		updateRigList()
+		updateRigList(context)
 		return {'FINISHED'}
 
 
 class mobSpawner(bpy.types.Operator):
 	"""Instantly spawn built-in or custom rigs into a scene"""
-	bl_idname = "mcprep.mobspawner"
+	bl_idname = "mcprep.mob_spawner"
 	bl_label = "Mob Spawner"
 	bl_options = {'REGISTER', 'UNDO'}
 
 	# properties, will appear in redo-last menu
 	def riglist_enum(self, context):
-		return getRigList()
+		return getRigList(context)
 
 	mcmob_type = bpy.props.EnumProperty(items=riglist_enum, name="Mob Type") # needs to be defined after riglist_enum
 	relocation = bpy.props.EnumProperty(
@@ -215,8 +242,6 @@ class mobSpawner(bpy.types.Operator):
 		
 		# only sends tracking if opted in
 		tracking.trackUsage("mobSpawner",self.mcmob_type)
-
-		#addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
 
 		try:
 			[path,name,category] = self.mcmob_type.split(':/:')
@@ -454,6 +479,37 @@ class mobSpawner(bpy.types.Operator):
 		return {'FINISHED'}
 
 
+class meshswapSpawner(bpy.types.Operator):
+	"""Instantly spawn built-in meshswap blocks into a scene"""
+	bl_idname = "mcprep.meshswap_spawner"
+	bl_label = "Meshswap Spawner"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	# properties, will appear in redo-last menu
+	def riglist_enum(self, context):
+		return getRigList(context)
+
+	mcmob_type = bpy.props.EnumProperty(items=riglist_enum, name="Mob Type") # needs to be defined after riglist_enum
+	relocation = bpy.props.EnumProperty(
+		items = [('None', 'Cursor', 'No relocation'),
+				('Clear', 'Origin', 'Move the rig to the origin'),
+				('Offset', 'Offset root', 'Offset the root bone to curse while moving the rest pose to the origin')],
+		name = "Relocation")
+	toLink = bpy.props.BoolProperty(
+		name = "Library Link mob",
+		description = "Library link instead of append the group",
+		default = False
+		)
+	clearPose = bpy.props.BoolProperty(
+		name = "Clear Pose",
+		description = "Clear the pose to rest position",
+		default = True 
+		)
+
+	def execut(self, context):
+		return {'CANCELLED'}
+
+
 
 class installMob(bpy.types.Operator, ImportHelper):
 	"""Install custom rig popup for the mob spawner, all groups in selected blend file will become individually spawnable"""
@@ -473,6 +529,7 @@ class installMob(bpy.types.Operator, ImportHelper):
 		ret = []
 		path = bpy.path.abspath(context.scene.mcrig_path)
 		onlyfiles = [ f for f in os.listdir(path) if os.path.isdir(os.path.join(path,f)) ]
+		ret.append(  ("all","All mobs","All mobs"))
 		for a in onlyfiles:
 			if a==".DS_Store":continue
 			ret.append(  (a, a.title(), "{x} mob".format(x=a.title()))  )
@@ -534,7 +591,7 @@ class installMob(bpy.types.Operator, ImportHelper):
 			return {'CANCELLED'}
 
 		# reload the cache
-		updateRigList()
+		updateRigList(context)
 		self.report({'INFO'}, "Mob-file Installed")
 
 		return {'FINISHED'}
@@ -571,18 +628,213 @@ class openRigFolder(bpy.types.Operator):
 		return {'FINISHED'}
 
 
+class changeMobFolder(bpy.types.Operator):
+	"""Change the rig folder"""
+	bl_idname = "object.mc_mobpath_change"
+	bl_label = "Change mob golder"
+	bl_description = "Change the source folder"
+
+	def execute(self,context):
+		print("not doing anythign yet.")
+
+
+
 class spawnPathReset(bpy.types.Operator):
 	"""Reset the spawn path to the default specified in the addon preferences panel"""
 	bl_idname = "mcprep.spawnpathreset"
 	bl_label = "Reset spawn path"
+	bl_options = {'REGISTER', 'UNDO'}
 
 	def execute(self,context):
 		
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
 		context.scene.mcrig_path = addon_prefs.mcrig_path
-		updateRigList()
+		updateRigList(context)
 		return {'FINISHED'}
 
+
+class uninstallMob(bpy.types.Operator):
+	"""Reset the spawn path to the default specified in the addon preferences panel"""
+	bl_idname = "mcprep.mcmob_uninstall"
+	bl_label = "Uninstall selected mob by deleting source blend file"
+
+	path = ""
+	listing = []
+
+	def invoke(self, context, event):
+		return context.window_manager.invoke_props_dialog(self)
+
+	def preDraw(self, context):
+		mob = conf.rig_list_sub[context.scene.mcprep_mob_list_index]
+
+		try:
+			[path,name,category] = mob[0]
+			path = os.path.join(context.scene.mcrig_path,path)
+		except:
+			self.report({'ERROR'}, "Could not resolve file to delete")
+			return {'CANCELLED'}
+
+		# see how many groups use this blend file
+		count = 0
+		listing = ""
+		for grp in conf.riglist:
+			if grp[0][0] == path:
+				listing.append(grp[0][1])
+				count+=1
+
+
+	def draw(self, context):
+		row = self.layout.row()
+		row.label("Multiple mobs found in target blend file:")
+		row = self.layout.row()
+
+		# draw 3-column list of mobs to be deleted
+		col1 = row.column()
+		col2 = row.column()
+		col3 = row.column()
+		count = 0
+		for grp in self.listing:
+			count+=1
+			if count%3==0:
+				col1.label(grp)
+			elif count%3==1:
+				col2.label(grp)
+			else:
+				col3.label(grp)
+		row = self.layout.row()
+		row.label("Press okay to remove all, or press esc to cancel")
+
+
+	def execute(self,context):
+		
+		mob = conf.rig_list_sub[context.scene.mcprep_mob_list_index]
+
+		try:
+			[path,name,category] = mob[0]
+			path = os.path.join(context.scene.mcrig_path,path)
+		except:
+			self.report({'ERROR'}, "Could not resolve file to delete")
+			return {'CANCELLED'}
+
+		# see how many groups use this blend file
+		count = 0
+		listing = ""
+		for grp in conf.riglist:
+			if grp[0][0] == path:
+				#listing.append(grp[0][1])
+				listing += grp[0][1] + ":/:"
+				count+=1
+
+		if count>1:
+			#warning menu to indicate the fact there is more than one group
+			#self.report({'ERROR'}, "Would delete more than one group")
+			# listing , pass this into next function which acknwoledges all removing 
+			liststr
+
+			bpy.ops.mcprep.mcmob_uninstall_all_in_file(path=path, listing=liststr)
+
+			pass
+		else:
+			if os.path.isfile(path) == False:
+				if conf.v:print("Error: Source file not found, didn't delete")
+				self.report({'ERROR'}, "Source file not found, didn't delete")
+			else:
+				os.remove(path)
+
+		return {'FINISHED'}
+
+
+class uninstallMobs(bpy.types.Operator):
+	"""If uninstalling a mob file contianing other mobs, delete anyways"""
+	bl_idname = "mcprep.mcmob_uninstall_all_in_file"
+	bl_label = "Uninstall all mobs in source blend file"
+
+	path = bpy.props.StringProperty(default="")
+	listing = bpy.props.StringProperty(default="")
+
+	def invoke(self, context, event):
+		return context.window_manager.invoke_props_dialog(self)
+
+	def draw(self, context):
+		row = self.layout.row()
+		row.label("Multiple mobs found in target blend file:")
+		row = self.layout.row()
+
+		# draw 3-column list of mobs to be deleted
+		col1 = row.column()
+		col2 = row.column()
+		col3 = row.column()
+		count = 0
+		for grp in self.listing.split(":/:"):
+			count+=1
+			if count%3==0:
+				col1.label(grp)
+			elif count%3==1:
+				col2.label(grp)
+			else:
+				col3.label(grp)
+
+		row = self.layout.row()
+		row.label("Press okay to remove all, or press esc to cancel")
+
+	def execute(self,context):
+
+		if os.path.isfile(self.path) == False:
+			if conf.v:print("Error: Source file not found, didn't delete")
+			self.report({'ERROR'}, "Source file not found, didn't delete")
+		else:
+			os.remove(self.path)
+
+		return {'FINISHED'}
+
+
+
+# -----------------------------------------------------------------------------
+#	Mob category related
+# -----------------------------------------------------------------------------
+
+
+def spawn_rigs_categories(self, context):
+	items = []
+	items.append(("all","All mobs","Show all mobs loaded"))
+
+	categories = conf.rig_categories
+	if len(conf.rig_categories)==0:
+		it = context.scene.mcrig_path
+		categories = [ f for f in os.listdir(it) if os.path.isdir(os.path.join(it,f)) ]
+		conf.rig_categories = categories
+	
+	for item in categories: #
+		items.append((item, item+" mobs", "Show all mobs in the '"+item+"' category"))
+	
+	items.append(("no_category","Uncategorized","Show all uncategorized mobs"))
+	return items
+
+
+def spawn_rigs_category_load(self, context):
+	# what happens when you load a NEW category of mobs
+	print("New category selected!")
+	# all handled in this loading module anyways
+	updateCategory(context)
+
+	return
+
+
+# -----------------------------------------------------------------------------
+#	UI list related
+# -----------------------------------------------------------------------------
+
+
+# for asset listing UIList drawing
+class MCPREP_mob_UIList(bpy.types.UIList):
+	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
+		layout.prop(set, "name", text="", emboss=False)
+
+
+# for asset listing
+class ListColl(bpy.types.PropertyGroup):
+	label = bpy.props.StringProperty()
+	description = bpy.props.StringProperty()
 
 
 # -----------------------------------------------------------------------------
@@ -592,9 +844,16 @@ class spawnPathReset(bpy.types.Operator):
 
 
 def register():
-	pass
+	bpy.types.Scene.mcprep_mob_list = \
+			bpy.props.CollectionProperty(type=ListColl)
+	bpy.types.Scene.mcprep_mob_list_index = bpy.props.IntProperty(default=0)
 
+	# to auto-load the skins
+	#bpy.app.handlers.scene_update_pre.append(collhack_skins)
+	# come with built-in cache_update in the json
 
 def unregister():
-	pass
+	del bpy.types.Scene.mcprep_mob_list
+	del bpy.types.Scene.mcprep_mob_list_index
+
 
