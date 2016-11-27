@@ -36,7 +36,7 @@ def init():
 	# Used to print out extra information, set false with distribution
 	# -----------------------------------------------
 	global dev
-	dev = True
+	dev = False
 
 	global v
 	v = True # $VERBOSE, UI setting

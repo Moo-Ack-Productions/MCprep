@@ -57,8 +57,7 @@ class showMCprefs(bpy.types.Operator):
 	tab = bpy.props.EnumProperty(
 		items = [('settings', 'Open settings', 'Open MCprep preferences settings'),
 				('tutorials', 'Open tutorials', 'View tutorials'),
-				('tracker', 'Open tracker settings', 'Open user tracking settings'),
-				('updates', 'Open updater settings', 'Open addon updater settings')],
+				('tracker_updater', 'Open tracker/updater settings', 'Open user tracking & addon updating settings')],
 		name = "Exporter")
 
 	def execute(self,context):
@@ -249,8 +248,7 @@ class MCprepPreference(bpy.types.AddonPreferences):
 	preferences_tab = bpy.props.EnumProperty(
 		items = [('settings', 'Settings', 'Change MCprep settings'),
 				('tutorials', 'Tutorials', 'View MCprep tutorials & other help'),
-				('tracking', 'Tracking', 'Change anonymous tracking settings'),
-				('updates', 'Updater', 'Check for update and adjust auto-check settings')],
+				('tracker_updater', 'Tracking/Updater', 'Change tracking and updating settings')],
 		name = "Exporter")
 	verbose = bpy.props.BoolProperty(
 		name = "Verbose",
@@ -274,7 +272,7 @@ class MCprepPreference(bpy.types.AddonPreferences):
 	updater_intrval_days = bpy.props.IntProperty(
 		name='Days',
 		description = "Number of days between checking for updates",
-		default=14,
+		default=7,
 		min=0,
 		)
 	updater_intrval_hours = bpy.props.IntProperty(
@@ -381,18 +379,33 @@ class MCprepPreference(bpy.types.AddonPreferences):
 					"https://youtu.be/C3YoZx-seFE?list=PL8X_CzUEVBfaajwyguIj_utPXO4tEOr7a"
 			row = layout.row()
 			
-		elif self.preferences_tab == "tracking":
+		elif self.preferences_tab == "tracker_updater":
 			layout = self.layout
-			split = layout.split(percentage=0.5)
-			col = split.column()
 			row = layout.row()
+			box = row.box()
+			brow = box.row()
+			brow.label("Anonymous user tracking settings")
+
+
+			brow = box.row()
+			bcol = brow.column()
+			bcol.scale_y = 2
 
 			if tracking.Tracker.tracking_enabled == False:
-				row.operator("mcprep.toggle_enable_tracking",
-						"Opt into anonymous usage tracking")
+				bcol.operator("mcprep.toggle_enable_tracking",
+						"Opt into anonymous usage tracking",
+						icon = "HAND")
 			else:
-				row.operator("mcprep.toggle_enable_tracking",
-						"Opt OUT of anonymous usage tracking")
+				bcol.operator("mcprep.toggle_enable_tracking",
+						"Opt OUT of anonymous usage tracking",
+						icon = "CANCEL")
+
+			bcol = brow.column()
+			bcol.label("For info on anonymous usage tracking:")
+			bcol.operator("wm.url_open",
+					text="Open the Privacy Policy").url = \
+					"http://theduckcow.com/privacy-policy"
+
 			
 			# row.operator(//url,"Read the privacy policy/terms")
 			# UI list this info?
@@ -419,9 +432,9 @@ class MCprepPreference(bpy.types.AddonPreferences):
 
 			# additional tracking info
 
-		elif self.preferences_tab == "updates":
 			# updater draw function
 			addon_updater_ops.update_settings_ui(self,context)
+			
 		layout.label("Don't forget to save user preferences!")			
 
 
@@ -458,10 +471,12 @@ class MCpanel(bpy.types.Panel):
 				text="Prep Materials", icon='MATERIAL')
 
 		col.operator("mcprep.combine_materials",
-				text="Combine Materials").selection_only=True
+				text="Combine Materials",
+				icon="GHOST").selection_only=True
 		if (bpy.app.version[0]	==2 and bpy.app.version[1] > 77) or (bpy.app.version[0]>2):
 			col.operator("mcprep.combine_images",
-					text="Combine Images")
+					text="Combine Images",
+					icon="GHOST")
 
 		if context.space_data.show_textured_solid == True and \
 				context.user_preferences.system.use_mipmaps == False:
