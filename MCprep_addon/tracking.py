@@ -542,7 +542,7 @@ def register(bl_info):
 		Tracker.verbose = False
 		Tracker.background = True
 		Tracker.failsafe = True
-		Tracker.tracking_enabled = False # users must accept to enable first
+		Tracker.tracking_enabled = True # User accepted on download
 
 	# try running install
 	trackInstalled()

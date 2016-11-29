@@ -711,13 +711,13 @@ def swapInternal(image, mats):
 		return True # updated at least one texture (the first)
 
 
-def loadSkinFile(self, context):
+def loadSkinFile(self, context, filepath):
 
-	if os.path.isfile(self.filepath)==False:
-		self.report({'ERROR'}, "No materials found to update")
+	if os.path.isfile(filepath)==False:
+		self.report({'ERROR'}, "Image file not found")
 		# special message for library linking?
 
-	image = util.loadTexture(self.filepath)
+	image = util.loadTexture(filepath)
 	mats = getMatsFromSelected(context.selected_objects)
 	if len(mats)==0:
 		self.report({'ERROR'}, "No materials found to update")
@@ -732,14 +732,22 @@ def loadSkinFile(self, context):
 	else:
 		pass 
 
+	# adjust the UVs if appropriate
+	setUVimage(context.selected_objects,image)
+
 	# and fix eyes if appropriate
 	if image.size[1]/image.size[0] != 1:
-		# self.report({'ERROR'}, "")
-		self.report({'INFO'}, "No image textures found to update")
+		self.report({'INFO'}, "Skin swapper works best on 1.8 skins")
 		return 0
 	return 0
 
 
+def setUVimage(objs,image):
+	for ob in objs:
+		if ob.type != "MESH": continue
+		if ob.data.uv_textures.active == None: continue
+		for uv_face in ob.data.uv_textures.active.data:
+			uv_face.image = image
 
 # -----------------------------------------------------------------------------
 # Skin swapping classes
@@ -764,7 +772,7 @@ class MCPREP_skinSwapper(bpy.types.Operator, ImportHelper):
 
 	def execute(self,context):
 		tracking.trackUsage("skin","file import")
-		res = loadSkinFile(self, context)
+		res = loadSkinFile(self, context, self.filepath)
 		if res!=0:
 			return {'CANCELLED'}
 
@@ -784,7 +792,7 @@ class MCPREP_applySkin(bpy.types.Operator):
 
 	def execute(self,context):
 		tracking.trackUsage("skin","ui list")
-		res = loadSkinFile(self, context)
+		res = loadSkinFile(self, context, self.filepath)
 		if res!=0:
 			return {'CANCELLED'}
 
@@ -830,7 +838,7 @@ class MCPREP_applyUsernameSkin(bpy.types.Operator):
 		else:
 			if conf.v:print("Reusing downloaded skin")
 			ind = skins.index(self.username.lower())
-			bpy.ops.mcprep.applyskin(filepath=paths[ind][1])
+			res = loadSkinFile(self, context, paths[ind][1])
 
 		return {'FINISHED'}
 
@@ -855,8 +863,9 @@ class MCPREP_applyUsernameSkin(bpy.types.Operator):
 		# 	self.report({"ERROR"},"Error occurred trying to download skin")
 		# 	return {'CANCELLED'}
 
-		bpy.ops.mcprep.applyskin(filepath = saveloc)
+		res = loadSkinFile(self, context, saveloc)
 		bpy.ops.mcprep.reload_skins()
+		
 
 
 
