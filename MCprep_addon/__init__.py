@@ -76,6 +76,7 @@ if "bpy" in locals():
 	importlib.reload(materials)
 	importlib.reload(meshswap)
 	importlib.reload(spawner)
+	importlib.reload(world_tools)
 	importlib.reload(tracking)
 	
 
@@ -90,6 +91,7 @@ else:
 		materials,
 		meshswap,
 		spawner,
+		world_tools,
 		addon_updater_ops,
 		tracking
 	)
@@ -109,6 +111,7 @@ def register():
 	materials.register()
 	meshswap.register()
 	spawner.register()
+	world_tools.register()
 	tracking.register(bl_info)
 
 	# addon updater code and configurations
@@ -122,6 +125,7 @@ def unregister():
 	materials.unregister()
 	meshswap.unregister()
 	spawner.unregister()
+	world_tools.unregister()
 	tracking.unregister()
 	
 

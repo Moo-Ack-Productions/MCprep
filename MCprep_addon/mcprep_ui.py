@@ -32,7 +32,7 @@ import subprocess
 # addon imports
 from . import conf
 from . import util
-from . import spawner # remove once UIlist for mobs implemented
+from . import spawner
 from . import materials
 from . import addon_updater_ops
 from . import tracking
@@ -255,6 +255,18 @@ class MCprepPreference(bpy.types.AddonPreferences):
 		description = "Print out more information in the console",
 		default = False,
 		update = change_verbose)
+	open_jmc2obj_path = bpy.props.StringProperty(
+		name = "jmc2obj path",
+		description = "Path to the jmc2obj executable",
+		subtype = 'FILE_PATH',
+		default = "~/jMc2Obj.jar")
+	open_mineways_path = bpy.props.StringProperty(
+		name = "Mineways path",
+		description = "Path to the Mineways executable",
+		subtype = 'FILE_PATH',
+		default = "~/mineways.exe")
+		# use update = func to search for sub executable intelligently
+
 
 	# addon updater preferences
 
@@ -307,6 +319,19 @@ class MCprepPreference(bpy.types.AddonPreferences):
 			col.label("Default Exporter:")
 			col = split.column()
 			col.prop(self, "MCprep_exporter_type", text="")
+			
+			split = layout.split(percentage=0.3)
+			col = split.column()
+			col.label("jmc2obj executable")
+			col = split.column()
+			col.prop(self, "open_jmc2obj_path", text="")
+
+			split = layout.split(percentage=0.3)
+			col = split.column()
+			col.label("Mineways executable")
+			col = split.column()
+			col.prop(self, "open_mineways_path", text="")
+
 			split = layout.split(percentage=0.3)
 			col = split.column()
 			col.label("Meshwap assets")
@@ -362,13 +387,13 @@ class MCprepPreference(bpy.types.AddonPreferences):
 			col = layout.column()
 			col.operator("wm.url_open",
 					text="MCprep page for instructions and updates",
-					icon="WORLD").url = "https://github.com/TheDuckCow/MCprep"
+					icon="WORLD").url = "http://theduckcow.com/dev/blender/mcprep/"
 
 			row = layout.row()
 			col = row.column()
 			col.operator("wm.url_open",
 					text="Import Minecraft worlds").url = \
-					"https://youtu.be/iRixJzraHFI?list=PL8X_CzUEVBfaajwyguIj_utPXO4tEOr7a"
+					"http://theduckcow.com/dev/blender/mcprep/mcprep-minecraft-world-imports/"
 			col = row.column()
 			col.operator("wm.url_open",
 					text="Mob (rig) spawning").url = \
@@ -402,6 +427,7 @@ class MCprepPreference(bpy.types.AddonPreferences):
 
 			bcol = brow.column()
 			bcol.label("For info on anonymous usage tracking:")
+			brow = box.row()
 			bcol.operator("wm.url_open",
 					text="Open the Privacy Policy").url = \
 					"http://theduckcow.com/privacy-policy"
@@ -445,7 +471,7 @@ class MCpanel(bpy.types.Panel):
 	bl_label = "World Imports"
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'TOOLS'
-	bl_context = "objectmode"
+	# bl_context = "objectmode"
 	bl_category = "MCprep"
 
 	def draw(self, context):
@@ -459,9 +485,19 @@ class MCpanel(bpy.types.Panel):
 		col = split.column(align=True)
 		col.label("World exporter:")
 		split = layout.split()
-		col = split.row(align=True)
+		col = split.column(align=True)
 		row = col.row(align=True)
 		row.prop(addon_prefs,"MCprep_exporter_type", expand=True)
+		col.operator("import_scene.obj","OBJ world import")
+		row = col.row(align=True)
+		if addon_prefs.MCprep_exporter_type == "(choose)":
+			row.label(text="Select exporter!",icon='ERROR')
+			row.enabled = False
+		elif addon_prefs.MCprep_exporter_type == "Mineways":
+			row.operator("mcprep.open_mineways")
+		else:
+			row.operator("mcprep.open_jmc2obj")
+
 		
 		split = layout.split()
 		col = split.column(align=True)
@@ -542,23 +578,16 @@ class MCpanel(bpy.types.Panel):
 		addon_updater_ops.update_notice_box_ui(self, context)
 
 
-		if conf.update_ready==True:# checkForUpdate(): # and not v: # for dev testing, don't show?
-			row.label (text="Update ready!", icon='ERROR')
-			split = layout.split()
-			row = split.row(align=True)
-			row.operator("wm.url_open",text="Get it now", icon="HAND").url = \
-					"https://github.com/TheDuckCow/MCprep/releases"
-
-
 
 # ---------
 # MCprep panel for skin swapping
+# (multiple contexts)
 class MCpanelSkins(bpy.types.Panel):
 	"""MCprep addon panel"""
 	bl_label = "Skin Swapper"
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'TOOLS'
-	bl_context = "objectmode"
+	# bl_context = "objectmode"
 	bl_category = "MCprep"
 
 	def draw(self, context):
@@ -577,7 +606,6 @@ class MCpanelSkins(bpy.types.Panel):
 		# set size of UIlist
 		row = layout.row()
 		col = row.column()
-
 
 
 		is_sortable = len(conf.skin_list) > 1
@@ -637,11 +665,16 @@ class MCpanelSpawn(bpy.types.Panel):
 
 	def draw(self, context):
 
-		# check for update if appropriate
+		# checkingck for update if appropriate
 		addon_updater_ops.check_for_update_background(context)
 		settings = context.scene.mcprep_props
 		
 		layout = self.layout
+		split = layout.split()
+		col = split.column(align=True)
+		row = col.row(align=True)
+		row.prop(context.scene,"mcrig_path",text="")
+
 		row = layout.row()
 		row.prop(settings, "spawn_rig_category", text="")
 
@@ -681,7 +714,9 @@ class MCpanelSpawn(bpy.types.Panel):
 		if len(conf.rig_list_sub)>0:
 			name = conf.rig_list_sub[context.scene.mcprep_mob_list_index][1]
 			p = col.operator("mcprep.mob_spawner","Spawn: "+name)
-			p.mcmob_type = conf.rig_list_sub[context.scene.mcprep_mob_list_index][0]
+			datapass = conf.rig_list_sub[context.scene.mcprep_mob_list_index][0]
+			p.mcmob_type = datapass
+			col.label(datapass.split(":/:")[0])
 		else:
 			# other condition for reloading??/if none found
 			col.label("No mobs loaded")
@@ -790,12 +825,13 @@ def register():
 		name = "mcrig_path",
 		description = "Folder for rigs to spawn in, saved with this blend file data",
 		subtype = 'DIR_PATH',
+		update = spawner.update_rig_path,
 		default = addon_prefs.mcrig_path)
 	bpy.types.Scene.mcskin_path = bpy.props.StringProperty(	
 		name = "mcskin_path",
 		description = "Folder for skin textures, used in skin swapping",
 		subtype = 'DIR_PATH',
-		update=materials.update_skin_path,
+		update = materials.update_skin_path,
 		default = addon_prefs.mcskin_path)
 
 	conf.v = addon_prefs.verbose

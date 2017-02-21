@@ -576,7 +576,7 @@ class MCPREP_improveUI(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 
 	def execute(self, context):
-		context.space_data.show_textured_solid = True # need to make it 3d space?
+		context.space_data.show_textured_solid = True
 		context.user_preferences.system.use_mipmaps = False
 
 		return {'FINISHED'}

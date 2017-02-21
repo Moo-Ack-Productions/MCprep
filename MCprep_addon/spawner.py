@@ -60,8 +60,9 @@ def getRigList(context): #consider passing in rigpath
 
 # for UI list path callback
 def update_rig_path(self, context):
-	if conf.vv:print("Updating skin path")
+	if conf.vv:print("Updating rig path")
 	updateRigList(context)
+	spawn_rigs_categories(self, context)
 
 # Update the rig list and subcategory list
 def updateRigList(context):
@@ -77,6 +78,7 @@ def updateRigList(context):
 	# iterate through all folders
 	if len(os.listdir(rigpath)) < 1:
 		#self.report({'ERROR'}, "Rig sub-folders not found")
+		# should this really be an error? only if no local files too
 		return# {'CANCELLED'}
 
 	nocatpathlist = []
@@ -164,7 +166,7 @@ def updateCategory(context):
 		if filter==True and sub[-1].lower() != category.lower():
 			continue
 		item = context.scene.mcprep_mob_list.add()
-		print("SPAWNING:",sub, "#", itm)
+		if conf.v:print("Spawning:",sub, "#", itm)
 		description = "Spawn a {x} rig".format(x=sub[1])
 		item.label = description
 		item.description = description

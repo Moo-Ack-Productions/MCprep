@@ -24,6 +24,9 @@
 
 import bpy
 import random
+import os
+
+from subprocess import Popen, PIPE
 
 from . import conf
 
@@ -218,3 +221,22 @@ for ob in bpy.data.objects:
     if ob not in list(bpy.context.scene.objects):
         bpy.context.scene.objects.link(ob)
 """
+
+# ---------
+# Open an external program from filepath/executbale
+def open_program(executable):
+
+	if os.path.isfile(executable) == False:
+		return "Executable not found"
+
+	p = Popen(['open',executable], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+	stdout, err = p.communicate(b"")
+
+	if err != b"":
+		return "Error occured while trying to open Sync: "+str(err) 
+
+	# print("stdout?")
+	# print(stdout)
+
+	return 0
+
