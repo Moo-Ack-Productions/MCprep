@@ -28,6 +28,14 @@
 # -----------------------------------------------------------------------------
 
 import bpy
+import os
+
+# check if custom preview icons available
+try:
+	import bpy.utils.previews
+except:
+	if conf.v: print("No custom icons in this blender instance")
+	pass
 
 def init():
 
@@ -136,6 +144,11 @@ def init():
 	# have an internal count thing that requests to enable checking
 	# or force users to decide after 5 uses, ie blocking the panels
 
+	# -----------------------------------------------
+	# For initializing the custom icons
+	# -----------------------------------------------
+	icons_init()
+
 
 	# -----------------------------------------------
 	# For cross-addon lists
@@ -153,10 +166,48 @@ def init():
 	rig_list_sub = [] # shorthand for categories
 	rig_categories = [] # simple list of directory names
 
+	global active_mob
+	global active_mob_subind
+
+	# for radio button active mob
+	active_mob = "" # format "relative path+':/:'+name+':/:'+catgry"
+	active_mob_subind = -1
+
+
+def icons_init():
+	# start with custom icons
+	# put into a try statement in case older blender version!
+	global preview_collections
+	global v
+
+	try:
+		custom_icons = bpy.utils.previews.new()
+		script_path = bpy.path.abspath(os.path.dirname(__file__))
+		icons_dir = os.path.join(script_path,'icons')
+		custom_icons.load("crafting_icon", os.path.join(icons_dir, "crafting_icon.png"), 'IMAGE')
+		custom_icons.load("grass_icon", os.path.join(icons_dir, "grass_icon.png"), 'IMAGE')
+		custom_icons.load("spawner_icon", os.path.join(icons_dir, "spawner_icon.png"), 'IMAGE')
+		preview_collections["main"] = custom_icons
+	except Exception as e:
+		if v:print("Old verison of blender, no custom icons available")
+		if v:print("\t"+str(e))
+		preview_collections["main"] = ""
+	
+	# initialize the rest
+	preview_collections["skins"] = ""
+	preview_collections["mobs"] = ""
+	preview_collections["blocks"] = ""
 
 
 def register():
 	pass
 
+
 def unregister():
-	pass
+	global preview_collections
+	if preview_collections["main"] != "":
+		for pcoll in preview_collections.values():
+			#print("clearing?",pcoll)
+			bpy.utils.previews.remove(pcoll)
+		preview_collections.clear()
+	

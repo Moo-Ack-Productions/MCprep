@@ -113,6 +113,8 @@ def texturesFromMaterials(matList): # original name: getMaterialTextures
 # this function generalized appending/linking
 def bAppendLink(directory,name, toLink, active_layer=True):
 	# blender post 2.71 changed to new append/link methods
+
+	if conf.vv:print("Appending ",directory," : ",name)
 	post272 = False
 	try:
 		version = bpy.data.version
@@ -120,11 +122,16 @@ def bAppendLink(directory,name, toLink, active_layer=True):
 	except:
 		pass #  "version" didn't exist before 72!
 	#if (version[0] >= 2 and version[1] >= 72):
+
+	# for compatibility, add ending character
+	if directory[-1] != "/" and directory[-1] != os.path.sep:
+		directory += os.path.sep
+
 	if post272:
+		if conf.vv:print("Using post-2.72 method of append/link")
 		# new method of importing
 
-		# consider checking if "/" is at the end of the director,
-		# add it if not
+		
 
 		if (toLink):
 			bpy.ops.wm.link(directory=directory, filename=name)
@@ -138,6 +145,7 @@ def bAppendLink(directory,name, toLink, active_layer=True):
 
 	else:
 		# OLD method of importing
+		if conf.vv:print("Using old method of append/link, 2.72 <=")
 		bpy.ops.wm.link_append(directory=directory, filename=name, link=toLink)
 
 
@@ -226,8 +234,16 @@ for ob in bpy.data.objects:
 # Open an external program from filepath/executbale
 def open_program(executable):
 
-	if os.path.isfile(executable) == False:
-		return "Executable not found"
+	if (os.path.isfile(executable) == False):
+		if (os.path.isdir(executable) == False):
+			return -1
+		elif ".app" not in executable:
+			return -1
+		
+
+	# for mac, if folder, check that it has .app otherwise throw -1
+	# (right now says will open even if just folder!!)
+
 
 	p = Popen(['open',executable], stdin=PIPE, stdout=PIPE, stderr=PIPE)
 	stdout, err = p.communicate(b"")
@@ -239,4 +255,27 @@ def open_program(executable):
 	# print(stdout)
 
 	return 0
+
+# ---------
+# fix/update the mineways path for any oddities
+def exec_path_expand(self, context):
+	# code may trigger twice
+	path = self.open_mineways_path
+
+	# # if not .app, assume valid found
+	# if ".	app" not in path: return
+	
+	# dirs = path.split(os.path.sep)
+	# for d in dirs:
+
+		# # if Contents in x, os.path.join(x,"Contents")
+		# path = os.path.join(path, "Contents")
+		# if "MacOS" not in [listdirs]: return # failed?
+		# path = os.path.join(path, "MacOS")
+		# if "startwine" not in [listdirs]: return # failed?
+		# path = os.path.join(path, "startwine")
+
+		# >> end command SHOULD be open Mineways.app.
+
+
 

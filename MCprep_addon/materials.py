@@ -30,6 +30,7 @@ import math
 from bpy_extras.io_utils import ImportHelper
 import shutil
 import urllib.request
+from bpy.app.handlers import persistent
 
 # addon imports
 from . import conf
@@ -58,10 +59,22 @@ class MCPREP_materialChange(bpy.types.Operator):
 	combineMaterials = bpy.props.BoolProperty(
 		name = "Combine materials",
 		description = "Consolidate duplciate materials & textures",
-		default = True
+		default = False
 		)
 
 	# prop: consolidate textures consolidateTextures
+	# prop: set all blocks as solid (no transparency)
+	# set transparency type (z versus ray)
+
+	def invoke(self, context, event):
+		return context.window_manager.invoke_props_dialog(self)
+
+	def draw(self, context):
+		row = self.layout.row()
+		col = row.column()
+		col.prop(self, "useReflections")
+		col.prop(self, "combineMaterials")
+		# tick box to enable tracking
 	
 	def getListDataMats(self):
 
@@ -270,19 +283,9 @@ class MCPREP_materialChange(bpy.types.Operator):
 			pass
 		return 0
 	
-	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self)
-
-	def draw(self, context):
-		row = self.layout.row()
-		col = row.column()
-		col.prop(self, "useReflections")
-		col.prop(self, "consolidateMaterials")
-		# tick box to enable tracking
-	
 	def execute(self, context):
 
-		# only sends tracking if opted in
+		# only sends tracking if opted in (and not internal change)
 		tracking.trackUsage("materials",bpy.context.scene.render.engine)
 
 		#get list of selected objects
@@ -306,14 +309,15 @@ class MCPREP_materialChange(bpy.types.Operator):
 			if (True):
 				if (render_engine == 'BLENDER_RENDER'):
 					#print('BI mat')
-					if conf.vv:print("Blender internal material prep")
 					res = self.materialsInternal(mat)
 					if res==0: count+=1
 				elif (render_engine == 'CYCLES'):
 					#print('cycles mat')
-					if conf.vv:print("Cycles material prep")
 					res = self.materialsCycles(mat)
 					if res==0: count+=1
+				else:
+					self.report({'ERROR'},"Only blender internal or cycles supported")
+					return {'CANCELLED'}
 			else:
 				if conf.v:print('Get the linked material instead!')
 
@@ -406,7 +410,7 @@ class MCPREP_combineMaterials(bpy.types.Operator):
 			nameCat[base].sort() # in-place sorting
 			baseMat = bpy.data.materials[ nameCat[base][0] ]
 
-			print(nameCat[base], "##", baseMat )
+			if conf.vv:print(nameCat[base], "##", baseMat )
 
 			for matname in nameCat[base][1:]:
 
@@ -418,9 +422,9 @@ class MCPREP_combineMaterials(bpy.types.Operator):
 					self.report({'ERROR'}, str(res))
 					return {'CANCELLED'}
 				old = bpy.data.materials[matname]
-				print("removing old? ",bpy.data.materials[matname])
+				if conf.vv:print("removing old? ",bpy.data.materials[matname])
 				if removeold==True and old.users==0:
-					print("removing old:")
+					if conf.vv:print("removing old:")
 					data.remove( bpy.data.materials[matname] )
 			
 			# Final step.. rename to not have .001 if it does
@@ -432,7 +436,7 @@ class MCPREP_combineMaterials(bpy.types.Operator):
 					baseMat.name = genBase
 			else:
 				baseMat.name = genBase
-			print("Final: ",baseMat)
+			if conf.vv:print("Final: ",baseMat)
 
 		postcount = len( ["x" for x in getMaterials(self, context) if x.users >0] )
 		self.report({"INFO"},
@@ -591,6 +595,9 @@ class MCPREP_improveUI(bpy.types.Operator):
 class MCPREP_skin_UIList(bpy.types.UIList):
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
 		layout.prop(set, "name", text="", emboss=False)
+		# extra code for placing warning if skin is
+		# not square, ie old texture and reocmmend converting it
+		# would need to load all images first though.
 
 
 # for asset listing
@@ -603,6 +610,7 @@ class ListColl(bpy.types.PropertyGroup):
 def reloadSkinList(context):
 
 	skinfolder = context.scene.mcskin_path
+	skinfolder = bpy.path.abspath(skinfolder)
 	files = [ f for f in os.listdir(skinfolder) if\
 					os.path.isfile(os.path.join(skinfolder,f)) ]
 
@@ -665,15 +673,25 @@ def changeTexture(image, materials):
 	return status
 
 
-# scene update to auto load skins on load
-def collhack_skins(scene):
-	bpy.app.handlers.scene_update_pre.remove(collhack_skins)
-	if conf.vv:print("Reloading skins")
+# scene update to auto load skins on load after new file
+def handler_skins_enablehack(scene):
+	try:
+		bpy.app.handlers.scene_update_pre.remove(handler_skins_enablehack)
+	except:
+		pass
+	if conf.vv:print("Triggering Handler_skins_load from first enable")
+	handler_skins_load(scene)
+
+
+@persistent
+def handler_skins_load(scene):
+	if conf.vv:print("Handler_skins_load running")
 
 	try:
+		if conf.vv:print("Reloading skins")
 		reloadSkinList(bpy.context)
 	except:
-		if conf.v:print("Didn't run callback")
+		if conf.v:print("Didn't run skin reloading callback")
 		pass
 
 
@@ -831,9 +849,12 @@ class MCPREP_applyUsernameSkin(bpy.types.Operator):
 			return {'CANCELLED'}
 		tracking.trackUsage("skin","username")
 
+
+
 		skins = [ str(skin[0]).lower() for skin in conf.skin_list ]
 		paths = [ skin[1] for skin in conf.skin_list ]
 		if self.username.lower() not in skins or self.redownload==True:
+			if conf.v:print("Donwloading skin")
 			self.downloadUser(context)
 		else:
 			if conf.v:print("Reusing downloaded skin")
@@ -852,6 +873,8 @@ class MCPREP_applyUsernameSkin(bpy.types.Operator):
 		
 		#urllib.request.urlretrieve(src_link+self.username.lower(), saveloc)
 		try:
+			if conf.vv:print("Download starting with url: "+src_link+self.username.lower())
+			if conf.vv:print("to save location: "+saveloc)
 			urllib.request.urlretrieve(src_link+self.username.lower(), saveloc)
 		except urllib.error.HTTPError as e:
 			self.report({"ERROR"},"Could not find username")
@@ -859,13 +882,16 @@ class MCPREP_applyUsernameSkin(bpy.types.Operator):
 		except urllib.error.URLError as e:
 			self.report({"ERROR"},"URL error, check internet connection")
 			return {'CANCELLED'}
+		except Exception as e:
+			self.report({"ERROR"},"General error occured: "+str(e))
+			return {'CANCELLED'}
+
 		# else:
 		# 	self.report({"ERROR"},"Error occurred trying to download skin")
 		# 	return {'CANCELLED'}
 
 		res = loadSkinFile(self, context, saveloc)
 		bpy.ops.mcprep.reload_skins()
-		
 
 
 
@@ -968,6 +994,51 @@ class MCPREP_reloadSkins(bpy.types.Operator):
 
 
 
+class MCPREP_spawn_with_skin(bpy.types.Operator):
+	bl_idname = "mcprep.spawn_with_skin"
+	bl_label = "Spawn with skin"
+	bl_description = "Spawn rig and apply selected skin"
+
+	relocation = bpy.props.EnumProperty(
+		items = [('None', 'Cursor', 'No relocation'),
+				('Clear', 'Origin', 'Move the rig to the origin'),
+				('Offset', 'Offset root', 'Offset the root bone to curse while moving the rest pose to the origin')],
+		name = "Relocation")
+	toLink = bpy.props.BoolProperty(
+		name = "Library Link",
+		description = "Library link instead of append the group",
+		default = False
+		)
+	clearPose = bpy.props.BoolProperty(
+		name = "Clear Pose",
+		description = "Clear the pose to rest position",
+		default = True 
+		)
+
+	def execute(self, context):
+		
+
+		if len (conf.skin_list)>0:
+			skinname = bpy.path.basename(
+					conf.skin_list[context.scene.mcprep_skins_list_index][0] )
+		else:
+			self.report({'ERROR'}, "No skins found")
+			return {'CANCELLED'}
+
+		# try not to use internal ops because of analytics
+		bpy.ops.mcprep.mob_spawner(
+				mcmob_type=conf.active_mob,
+				relocation = self.relocation,
+				toLink = self.toLink,
+				clearPose = self.clearPose)
+
+		# bpy.ops.mcprep.spawn_with_skin() spawn based on active mob
+		ind = context.scene.mcprep_skins_list_index
+		bpy.ops.mcprep.applyskin(filepath=conf.skin_list[ind][1])
+
+		return {'FINISHED'}
+
+
 # -----------------------------------------------------------------------------
 #	Above for UI
 #	Below for register
@@ -981,9 +1052,19 @@ def register():
 	bpy.types.Scene.mcprep_skins_list_index = bpy.props.IntProperty(default=0)
 
 	# to auto-load the skins
-	bpy.app.handlers.scene_update_pre.append(collhack_skins)
+	if conf.vv:print("Adding reload skin handler to scene")
+	bpy.app.handlers.scene_update_pre.append(handler_skins_enablehack)
+	bpy.app.handlers.load_post.append(handler_skins_load)
+	
+
 
 def unregister():
 	del bpy.types.Scene.mcprep_skins_list
 	del bpy.types.Scene.mcprep_skins_list_index
+
+	try:
+		bpy.app.handlers.load_post.remove(handler_skins_load)
+		bpy.app.handlers.scene_update_pre.remove(handler_skins_enablehack)
+	except:
+		pass
 

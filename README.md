@@ -9,7 +9,7 @@ TO INSTALL MCprep
 
 It should remain a zip folder. In blender, go to preferences, then the addons tab, and at the bottom of the window install from file. Select the .zip file. **NOTE:** _Blender may not automatically enable the addon. If the MCprep addon is not already shown in the window after installing, search for it at left and then ensure the check box is enabled._ **Save user preferences** to keep it enabled next time blender opens.
 
-*Again, please download from the link above or the releases page, **not** by clicking `download zip` button.*
+*Again, please download from the link above or the releases page, __not__ by clicking `download zip` button.*
 
 *The preferences panel should look like this after installing the zip file*
 ![Install MCprep](/visuals/install.png?raw=true)

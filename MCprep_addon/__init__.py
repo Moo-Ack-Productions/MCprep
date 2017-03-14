@@ -85,8 +85,11 @@ if "bpy" in locals():
 
 else:
 	import bpy
+	from . import conf
+	conf.init()  #initialize global variables
+
+	# import the rest
 	from . import (
-		conf,
 		mcprep_ui,
 		materials,
 		meshswap,
@@ -95,17 +98,13 @@ else:
 		addon_updater_ops,
 		tracking
 	)
-	conf.init()  #initialize global variables
+
 	if conf.v:print("MCprep: Verbose is enabled")
 	if conf.vv:print("MCprep: Very Verbose is enabled")
 
 
 def register():
 	
-	# call error if modules not able to import, popup message
-	# if "conf" not in locals():
-	# 	raise ValueError("Addon not installed properly, you MUST install the MCprep zip file, NOT the __init__.py file. See http://bit.ly/MCprep")
-
 	bpy.utils.register_module(__name__)
 	mcprep_ui.register()
 	materials.register()
@@ -121,12 +120,16 @@ def register():
 def unregister():
 
 	bpy.utils.unregister_module(__name__)
+	conf.unregister()
 	mcprep_ui.unregister()
 	materials.unregister()
 	meshswap.unregister()
 	spawner.unregister()
 	world_tools.unregister()
 	tracking.unregister()
+
+	# addon updater code and configurations
+	addon_updater_ops.unregister(bl_info)
 	
 
 
