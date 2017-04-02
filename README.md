@@ -133,6 +133,9 @@ Feature list
 | + sign | Install a custom rig into the 'custom' category for personal use |
 
 
+### Spawner mobs included in the current version of MCprep
+![included-mobs](/visuals/MCprep_mobs_included.png?raw=true)
+
 
 How to use this addon
 ======

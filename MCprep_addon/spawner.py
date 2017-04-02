@@ -561,14 +561,25 @@ class MCPREP_mobSpawner(bpy.types.Operator):
 							act = context.active_object
 							bpy.context.scene.objects.active = ob
 							if conf.v:print("ACTIVE obj = {x}".format(x=ob.name))
-							bpy.ops.object.mode_set(mode='POSE')
-							if conf.v:print("clear the stuff!")
-							bpy.ops.pose.select_all(action='SELECT')
-							bpy.ops.pose.rot_clear()
-							bpy.ops.pose.scale_clear()
-							bpy.ops.pose.loc_clear()
-							bpy.ops.object.mode_set(mode='OBJECT')
-							#bpy.context.scene.objects.active = act # no, make the armatures active!
+							
+							try:
+								bpy.ops.object.mode_set(mode='POSE')
+
+								if conf.v:print("clear the stuff!")
+								bpy.ops.pose.select_all(action='SELECT')
+								bpy.ops.pose.rot_clear()
+								bpy.ops.pose.scale_clear()
+								bpy.ops.pose.loc_clear()
+								bpy.ops.object.mode_set(mode='OBJECT')
+								#bpy.context.scene.objects.active = act # no, make the armatures active!
+							except Exception as e:
+								print("ERROR: #spawner_575, encountered issue entering object mode but should have been fine")
+								self.report({'ERROR'},"Exception occured, see logs")
+								print("Exception: ",str(e))
+								print(bpy.context.scene.objects.active)
+								print(ob)
+								print("-- end error context printout --")
+								continue
 				else:
 					# just make sure the last object selected is an armature, for each pose mode
 					for ob in addedObjs:

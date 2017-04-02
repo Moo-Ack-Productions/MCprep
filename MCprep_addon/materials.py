@@ -638,7 +638,7 @@ def update_skin_path(self, context):
 	reloadSkinList(context)
 
 
-def getMatsFromSelected(selected):
+def getMatsFromSelected(selected,new_material=False):
 	# pre-expand
 	obj_list = []
 	
@@ -652,12 +652,35 @@ def getMatsFromSelected(selected):
 			continue
 	
 	mat_list = []
+	mat_ret = []
 	for ob in obj_list:
 		# get all materials
-		
-		for slot in ob.material_slots:
-			if slot.material not in mat_list:mat_list.append(slot.material)
-	return mat_list
+		if new_material==False:
+			for slot in ob.material_slots:
+				if slot.material==None:continue
+				if slot.material not in mat_ret:
+					mat_ret.append(slot.material)
+		else:
+			for slot in ob.material_slots:
+				if slot.material not in mat_list:
+					if slot.material==None:continue
+					mat_list.append(slot.material)
+					new_mat = slot.material.copy()
+					mat_ret.append(new_mat)
+					slot.material = new_mat
+				else:
+					# if already created, re-assign with new material
+					slot.material = mat_ret[ mat_list.index(slot.material) ]
+
+	# if internal, also ensure textures are made unique per new mat
+	if new_material and bpy.context.scene.render.engine == 'BLENDER_RENDER':
+		for m in mat_ret:
+			for tx in m.texture_slots:
+				if tx==None:continue
+				if tx.texture==None:continue
+				tx.texture = tx.texture.copy()
+
+	return mat_ret
 
 
 # called for any texture changing
@@ -714,12 +737,11 @@ def swapCycles(image, mats):
 
 # input is either UV image itself or filepath
 def swapInternal(image, mats):
-	if conf.vv:print("Texture swapping internal")
 	changed = 0
 	for mat in mats:
 		for sl in mat.texture_slots:
 			if sl==None or sl.texture == None or sl.texture.type != 'IMAGE': continue
-			print("Found  a good texture slot! orig image: "+str(sl.texture.image.name))
+			#print("Found a good texture slot! orig image: "+str(sl.texture.image.name))
 			sl.texture.image = image
 			changed += 1
 			break
@@ -729,14 +751,13 @@ def swapInternal(image, mats):
 		return True # updated at least one texture (the first)
 
 
-def loadSkinFile(self, context, filepath):
-
+def loadSkinFile(self, context, filepath, new_material=False):
 	if os.path.isfile(filepath)==False:
 		self.report({'ERROR'}, "Image file not found")
 		# special message for library linking?
 
 	image = util.loadTexture(filepath)
-	mats = getMatsFromSelected(context.selected_objects)
+	mats = getMatsFromSelected(context.selected_objects,new_material)
 	if len(mats)==0:
 		self.report({'ERROR'}, "No materials found to update")
 		# special message for library linking?
@@ -806,11 +827,16 @@ class MCPREP_applySkin(bpy.types.Operator):
 
 	filepath = bpy.props.StringProperty(
 		name="Skin",
-		description="selected")
+		description="selected",
+		)
+	new_material = bpy.props.BoolProperty(
+		name="New Material",
+		description="Create a new material instead of overwriting existing one",
+		default=True)
 
 	def execute(self,context):
 		tracking.trackUsage("skin","ui list")
-		res = loadSkinFile(self, context, self.filepath)
+		res = loadSkinFile(self, context, self.filepath, self.new_material)
 		if res!=0:
 			return {'CANCELLED'}
 
