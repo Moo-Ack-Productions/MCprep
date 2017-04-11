@@ -1,3 +1,6 @@
+GO TO http://theduckcow.com/MCprep for more help
+
+
 HOW TO INSTALL
 
 If you are reading this text file, then you’re already a step in the wrong direction. This addon must be installed as a .zip file, do not unzip it.
