@@ -29,6 +29,7 @@ from bpy_extras.io_utils import ImportHelper
 import os
 import math
 import shutil
+from mathutils import Vector
 
 # addon imports
 from . import conf
@@ -60,8 +61,9 @@ def getRigList(context): #consider passing in rigpath
 
 # for UI list path callback
 def update_rig_path(self, context):
-	if conf.vv:print("Updating skin path")
+	if conf.vv:print("Updating rig path")
 	updateRigList(context)
+	spawn_rigs_categories(self, context)
 
 # Update the rig list and subcategory list
 def updateRigList(context):
@@ -77,6 +79,7 @@ def updateRigList(context):
 	# iterate through all folders
 	if len(os.listdir(rigpath)) < 1:
 		#self.report({'ERROR'}, "Rig sub-folders not found")
+		# should this really be an error? only if no local files too
 		return# {'CANCELLED'}
 
 	nocatpathlist = []
@@ -138,9 +141,9 @@ def updateRigList(context):
 	# 	ind = temp.index("player")
 	# 	sorted_rigs = [sorted_rigs[ind]]+[sorted_rigs[:ind]]+[sorted_rigs[ind+1:]]
 
-	print("-------")
-	for a in sorted_rigs:print(a)
-	print("-------")
+	#print("-------")
+	#for a in sorted_rigs:print(a)
+	#print("-------")
 	conf.rig_list = sorted_rigs
 	updateCategory(context)
 	return riglist
@@ -158,18 +161,21 @@ def updateCategory(context):
 
 	context.scene.mcprep_mob_list.clear()
 	conf.rig_list_sub = []
+	conf.active_mob_subind = -1 # temp assignment, for radio buttons
 
 	for itm in conf.rig_list:
 		sub = itm[0].split(":/:")
 		if filter==True and sub[-1].lower() != category.lower():
 			continue
 		item = context.scene.mcprep_mob_list.add()
-		print("SPAWNING:",sub, "#", itm)
+		if conf.v:print("Spawning:",sub, "#", itm)
 		description = "Spawn a {x} rig".format(x=sub[1])
 		item.label = description
 		item.description = description
 		item.name = sub[1].title()
 		conf.rig_list_sub.append(itm)
+		if itm[0] == conf.active_mob:
+			conf.active_mob_subind = len(conf.rig_list_sub)-1
 
 
 # -----------------------------------------------------------------------------
@@ -178,7 +184,7 @@ def updateCategory(context):
 
 
 
-class reloadMobs(bpy.types.Operator):
+class MCPREP_reloadMobs(bpy.types.Operator):
 	"""Force reload the mob spawner rigs, use after manually adding rigs to folders"""
 	bl_idname = "mcprep.reload_mobs"
 	bl_label = "Reload the rigs and cache"
@@ -188,10 +194,70 @@ class reloadMobs(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class mobSpawner(bpy.types.Operator):
-	"""Instantly spawn built-in or custom rigs into a scene"""
+class MCPREP_mobSpawner_direct(bpy.types.Operator):
+	"""Instantly spawn this rig into scene, no menu"""
+	bl_idname = "mcprep.mob_spawner_direct"
+	bl_label = "Mob Spawner"
+	bl_description = "Instantly spawn this rig into scene, no menu"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	mcmob_index = bpy.props.IntProperty(
+		name="Mob index",
+		default=-1
+		#min=0,
+		#max=len(conf.rig_list_sub)-1
+		)
+	relocation = bpy.props.EnumProperty(
+		items = [('None', 'Cursor', 'No relocation'),
+				('Clear', 'Origin', 'Move the rig to the origin'),
+				('Offset', 'Offset root', 'Offset the root bone to curse while moving the rest pose to the origin')],
+		name = "Relocation"
+		)
+	toLink = bpy.props.BoolProperty(
+		name = "Library Link",
+		description = "Library link instead of append the group",
+		default = False
+		)
+	clearPose = bpy.props.BoolProperty(
+		name = "Clear Pose",
+		description = "Clear the pose to rest position",
+		default = True 
+		)
+
+	def execute(self, context):
+
+		print(conf.rig_list_sub)
+		# fix the index if needed
+		# if self.mcmob_index>=len(conf.rig_list_sub):
+		# 	self.mcmob_index = 0
+		# 	print("Wraparound)")
+		# elif self.mcmob_index<0:
+		# 	self.mcmob_index = len(conf.rig_list_sub)-1
+		# 	print("neg wraparound")
+
+		if self.mcmob_index == -1:
+			mob = ""
+			self.report({'ERROR'},"Invalid mob index -1")
+			return {'CANCELLED'}
+		else:
+			mob = conf.rig_list_sub[self.mcmob_index][0]
+
+		bpy.ops.mcprep.mob_spawner('EXEC_DEFAULT',
+				mcmob_type = mob,
+				relocation = self.relocation,
+				toLink = self.toLink,
+				clearPose = self.clearPose)
+
+		return {'FINISHED'}
+
+
+
+
+class MCPREP_mobSpawner(bpy.types.Operator):
+	"""Show menu and spawn built-in or custom rigs into a scene"""
 	bl_idname = "mcprep.mob_spawner"
 	bl_label = "Mob Spawner"
+	bl_description = "Spawn built-in or custom rigs into a scene with menu"
 	bl_options = {'REGISTER', 'UNDO'}
 
 	# properties, will appear in redo-last menu
@@ -203,9 +269,10 @@ class mobSpawner(bpy.types.Operator):
 		items = [('None', 'Cursor', 'No relocation'),
 				('Clear', 'Origin', 'Move the rig to the origin'),
 				('Offset', 'Offset root', 'Offset the root bone to curse while moving the rest pose to the origin')],
-		name = "Relocation")
+		name = "Relocation"
+		)
 	toLink = bpy.props.BoolProperty(
-		name = "Library Link mob",
+		name = "Library Link",
 		description = "Library link instead of append the group",
 		default = False
 		)
@@ -215,6 +282,19 @@ class mobSpawner(bpy.types.Operator):
 		default = True 
 		)
 
+	def draw(self, context):
+		row = self.layout.row()
+		row.prop(self,"mcmob_type")
+		row = self.layout.row()
+		row.prop(self,"relocation")
+
+		row = self.layout.row(align=True)
+		row.prop(self,"toLink")
+		row.prop(self,"clearPose")
+	
+
+	def invoke(self, context, event):
+		return context.window_manager.invoke_props_dialog(self)
 
 	def proxySpawn(self):
 		if conf.v:print("Attempting to do proxySpawn")
@@ -236,6 +316,12 @@ class mobSpawner(bpy.types.Operator):
 			ctx['edit_text'] = text
 			bpy.ops.text.run_script(ctx)
 			if conf.v:print("Ran the script")
+
+	def setRootLocation(self,context):
+		pass
+		# should be the consolidated code for 
+		# both linking and appending below, .. they branched right now.
+
 
 
 	def execute(self, context):
@@ -267,14 +353,15 @@ class mobSpawner(bpy.types.Operator):
 				#probably consists of checking currently linked libraries, checking if which
 				#have already been linked into existing rigs
 				try:
-					bpy.ops.object.proxy_make(object=name+'.arma') # this brings up a menu, should do automatically.
+					# try also with capitor name? name.title()
+					bpy.ops.object.proxy_make(object=name+'.arma')
 					# this would be "good convention", but don't force it - let it also search through
-					# and proxy every arma, regardless of name
-					# settings!
+					# and proxy every arma, regardless of name settings!
 
 					if self.relocation == "Offset":
 						# do the offset stuff, set active etc
 						#bpy.ops.object.mode_set(mode='OBJECT')
+
 						bpy.ops.transform.translate(value=(-gl[0],-gl[1],-gl[2]))
 					
 					act = context.active_object
@@ -289,7 +376,7 @@ class mobSpawner(bpy.types.Operator):
 						bpy.ops.pose.loc_clear()
 					if self.relocation == "Offset":
 						tmp=0
-						for nam in ["MAIN","root","base"]:
+						for nam in ["MAIN","root","base", "Root", "Base", "ROOT"]:
 							if conf.v:print("Attempting offset root")
 							if nam in ob.pose.bones and tmp==0:
 
@@ -304,20 +391,29 @@ class mobSpawner(bpy.types.Operator):
 								# these transforms.. are so weird. what. but it works..
 								# but not for all, some rigs are different. need some kind
 								# of transform to consider in, global vs local etc.
-								ob.pose.bones[nam].location[0] = cl[0]
-								ob.pose.bones[nam].location[1] = cl[1]
-								ob.pose.bones[nam].location[2] = -cl[2]
+								# OLD way
+								#ob.pose.bones[nam].location[0] = cl[0]
+								#ob.pose.bones[nam].location[1] = cl[1]
+								#ob.pose.bones[nam].location[2] = -cl[2]
+
 								tmp=1
+
+								# do global space method
+								worldtrans = ob.matrix_world * ob.pose.bones[nam].matrix
+								print(worldtrans)
+
+								break
 						if tmp==0:
 							if conf.v:print("This addon works better when the root bone's name is 'MAIN'")
 							elf.report({'INFO'}, "This addon works better when the root bone's name is 'MAIN'")
 
 					# copied from below, should be the same
 
-				except:
+				except Exception as e:
 					if conf.v:print("Spawner works better if the armature's name is {x}.arma".format(x=name))
 					self.report({'INFO'}, "Works better if armature's name = {x}.arma".format(x=name))
 					# self report?
+					print("Spawning error: ",str(e))
 					pass
 
 			else:
@@ -372,7 +468,7 @@ class mobSpawner(bpy.types.Operator):
 					else:
 						bpy.ops.group.objects_remove()
 
-				grp_added.name = "reaload-blend-to-remove-this-empty-group"
+				grp_added.name = "reload-blend-to-remove-this-empty-group"
 				bpy.ops.group.objects_remove_all() # just in case
 				grp_added.user_clear() # next time blend file reloads, this group will be gone
 
@@ -391,13 +487,27 @@ class mobSpawner(bpy.types.Operator):
 							act = context.active_object
 							bpy.context.scene.objects.active = ob
 							if conf.v:print("ACTIVE obj = {x}".format(x=ob.name))
-							bpy.ops.object.mode_set(mode='POSE')
+							try:
+								bpy.ops.object.mode_set(mode='POSE')
+							except Exception as e:
+								self.report({'ERROR'},"Exception occured, see logs")
+								print("Exception: ",str(e))
+								print(bpy.context.scene.objects.active)
+								print(ob)
+								print("-- end error context printout --")
+								continue
 							if self.clearPose:
 								if conf.v:print("clear the stuff!")
 
 								#ob.animation_data_clear()
 								if ob.animation_data:
 									ob.animation_data.action = None
+								
+								# transition to clear out pose this way
+								# for b in ob.pose.bones:
+
+
+								# old way, with mode set
 								bpy.ops.pose.select_all(action='SELECT')
 								bpy.ops.pose.rot_clear()
 								bpy.ops.pose.scale_clear()
@@ -423,10 +533,19 @@ class mobSpawner(bpy.types.Operator):
 										# these transforms.. are so weird. what. but it works..
 										# but not for all, some rigs are different. need some kind
 										# of transform to consider in, global vs local etc.
-										ob.pose.bones[nam].location[0] = cl[0]
-										ob.pose.bones[nam].location[1] = cl[1]
-										ob.pose.bones[nam].location[2] = -cl[2]
+										# OLD ways
+										# ob.pose.bones[nam].location[0] = cl[0]
+										# ob.pose.bones[nam].location[1] = cl[1]
+										# ob.pose.bones[nam].location[2] = -cl[2]
 										tmp=1
+
+										# do global space method
+										ob.pose.bones[nam].location = \
+												ob.matrix_world.inverted() * \
+												ob.pose.bones[nam].bone.matrix_local.inverted() * context.scene.cursor_location
+										print("Updated location: ")
+										print(ob.pose.bones[nam].location)
+
 								if tmp==0:
 									if conf.v:print("This addon works better when the root bone's name is 'MAIN'")
 									self.report({'INFO'}, "This addon works better when the root bone's name is 'MAIN'")
@@ -442,14 +561,25 @@ class mobSpawner(bpy.types.Operator):
 							act = context.active_object
 							bpy.context.scene.objects.active = ob
 							if conf.v:print("ACTIVE obj = {x}".format(x=ob.name))
-							bpy.ops.object.mode_set(mode='POSE')
-							if conf.v:print("clear the stuff!")
-							bpy.ops.pose.select_all(action='SELECT')
-							bpy.ops.pose.rot_clear()
-							bpy.ops.pose.scale_clear()
-							bpy.ops.pose.loc_clear()
-							bpy.ops.object.mode_set(mode='OBJECT')
-							#bpy.context.scene.objects.active = act # no, make the armatures active!
+							
+							try:
+								bpy.ops.object.mode_set(mode='POSE')
+
+								if conf.v:print("clear the stuff!")
+								bpy.ops.pose.select_all(action='SELECT')
+								bpy.ops.pose.rot_clear()
+								bpy.ops.pose.scale_clear()
+								bpy.ops.pose.loc_clear()
+								bpy.ops.object.mode_set(mode='OBJECT')
+								#bpy.context.scene.objects.active = act # no, make the armatures active!
+							except Exception as e:
+								print("ERROR: #spawner_575, encountered issue entering object mode but should have been fine")
+								self.report({'ERROR'},"Exception occured, see logs")
+								print("Exception: ",str(e))
+								print(bpy.context.scene.objects.active)
+								print(ob)
+								print("-- end error context printout --")
+								continue
 				else:
 					# just make sure the last object selected is an armature, for each pose mode
 					for ob in addedObjs:
@@ -474,12 +604,17 @@ class mobSpawner(bpy.types.Operator):
 		# if there is a script with this rig, attempt to run it
 		self.attemptScriptLoad(path)
 		if context.scene.render.engine == 'CYCLES':
-			bpy.ops.mcprep.mat_change() # if cycles
+			if conf.internal_change == False:
+				conf.internal_change = True
+				bpy.ops.mcprep.mat_change() # if cycles
+				conf.internal_change = False
+			else:
+				bpy.ops.mcprep.mat_change() # if cycles
 
 		return {'FINISHED'}
 
 
-class meshswapSpawner(bpy.types.Operator):
+class MCPREP_meshswapSpawner(bpy.types.Operator):
 	"""Instantly spawn built-in meshswap blocks into a scene"""
 	bl_idname = "mcprep.meshswap_spawner"
 	bl_label = "Meshswap Spawner"
@@ -511,7 +646,7 @@ class meshswapSpawner(bpy.types.Operator):
 
 
 
-class installMob(bpy.types.Operator, ImportHelper):
+class MCPREP_installMob(bpy.types.Operator, ImportHelper):
 	"""Install custom rig popup for the mob spawner, all groups in selected blend file will become individually spawnable"""
 	bl_idname = "object.mcmob_install_menu"
 	bl_label = "Install new mob"
@@ -603,7 +738,7 @@ class installMob(bpy.types.Operator, ImportHelper):
 		#return {'FINISHED'} returned in the sub functions
 
 
-class openRigFolder(bpy.types.Operator):
+class MCPREP_openRigFolder(bpy.types.Operator):
 	"""Open the rig folder for mob spawning"""
 	bl_idname = "object.mc_openrigpath"
 	bl_label = "Open rig folder"
@@ -628,18 +763,19 @@ class openRigFolder(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class changeMobFolder(bpy.types.Operator):
-	"""Change the rig folder"""
-	bl_idname = "object.mc_mobpath_change"
-	bl_label = "Change mob golder"
-	bl_description = "Change the source folder"
+# class MCPchangeMobFolder(bpy.types.Operator):
+# 	"""Change the rig folder"""
+# 	bl_idname = "object.mc_mobpath_change"
+# 	bl_label = "Change mob golder"
+# 	bl_description = "Change the source folder"
 
-	def execute(self,context):
-		print("not doing anythign yet.")
+# 	def execute(self,context):
+# 		print("not doing anything yet.")
+# 		return {'CANCELLED'}
 
 
 
-class spawnPathReset(bpy.types.Operator):
+class MCPREP_spawnPathReset(bpy.types.Operator):
 	"""Reset the spawn path to the default specified in the addon preferences panel"""
 	bl_idname = "mcprep.spawnpathreset"
 	bl_label = "Reset spawn path"
@@ -653,8 +789,8 @@ class spawnPathReset(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class uninstallMob(bpy.types.Operator):
-	"""Reset the spawn path to the default specified in the addon preferences panel"""
+
+class MCPREP_uninstallMob(bpy.types.Operator):
 	bl_idname = "mcprep.mcmob_uninstall"
 	bl_label = "Uninstall selected mob by deleting source blend file"
 
@@ -708,7 +844,6 @@ class uninstallMob(bpy.types.Operator):
 	def execute(self,context):
 		
 		mob = conf.rig_list_sub[context.scene.mcprep_mob_list_index]
-
 		try:
 			[path,name,category] = mob[0]
 			path = os.path.join(context.scene.mcrig_path,path)
@@ -729,7 +864,7 @@ class uninstallMob(bpy.types.Operator):
 			#warning menu to indicate the fact there is more than one group
 			#self.report({'ERROR'}, "Would delete more than one group")
 			# listing , pass this into next function which acknwoledges all removing 
-			liststr
+			#liststr
 
 			bpy.ops.mcprep.mcmob_uninstall_all_in_file(path=path, listing=liststr)
 
@@ -744,7 +879,8 @@ class uninstallMob(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class uninstallMobs(bpy.types.Operator):
+
+class MCPREP_uninstallMobs(bpy.types.Operator):
 	"""If uninstalling a mob file contianing other mobs, delete anyways"""
 	bl_idname = "mcprep.mcmob_uninstall_all_in_file"
 	bl_label = "Uninstall all mobs in source blend file"
@@ -789,6 +925,29 @@ class uninstallMobs(bpy.types.Operator):
 
 
 
+class MCPREP_spawnerActiveMob(bpy.types.Operator):
+	"""Set the active mob radio head, separate from selection"""
+	bl_idname = "mcprep.spawner_set_active_mob"
+	bl_label = "Press to set active for quick spawning in skin swapper panel"
+
+	index = bpy.props.IntProperty(
+		name = "Active mob index",
+		description = "Set the active mob index for other uses",
+		default = -1
+		)
+
+	def execute(self, context):
+
+		conf.active_mob_subind = self.index
+		if self.index == -1:
+			conf.active_mob = ""
+		else:
+			conf.active_mob = conf.rig_list_sub[self.index][0]
+
+		return {'FINISHED'}
+
+
+
 # -----------------------------------------------------------------------------
 #	Mob category related
 # -----------------------------------------------------------------------------
@@ -828,7 +987,29 @@ def spawn_rigs_category_load(self, context):
 # for asset listing UIList drawing
 class MCPREP_mob_UIList(bpy.types.UIList):
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
-		layout.prop(set, "name", text="", emboss=False)
+
+		if self.layout_type in {'DEFAULT', 'COMPACT'}:
+			col = layout.column()
+			col.prop(set, "name", text="", emboss=False)
+			#layout.label(text='', icon='TIME')
+
+			if conf.active_mob_subind == index:
+				ic = "RADIOBUT_ON"
+				layout.label("Skin swap")
+			else:
+				ic = "RADIOBUT_OFF"
+
+			col = layout.column()
+			row = col.row()
+			row.scale_x = 0.25
+			row.operator('mcprep.spawner_set_active_mob', emboss=False, text='',
+                        icon=ic).index = index
+			row.operator('mcprep.mob_spawner_direct',emboss=False, text='',
+						icon='FORWARD').mcmob_index = index
+
+		elif self.layout_type in {'GRID'}:
+			layout.alignment = 'CENTER'
+			layout.label("", icon='QUESTION')
 
 
 # for asset listing

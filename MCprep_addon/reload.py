@@ -34,7 +34,8 @@ build_dir = "../compiled/"
 
 files = ["__init__.py","conf.py","materials.py","meshswap.py","spawner.py","tracking.py",
 		"mcprep_ui.py", "util.py", "MCprep_resources","addon_updater.py",
-		"addon_updater_ops.py", "icons"]
+		"addon_updater_ops.py", "icons", "world_tools.py","LICENSE.txt",
+		"install_readme.txt"]
 
 
 
@@ -75,6 +76,12 @@ def publish(target=""):
 	print("Build finished")
 
 
+def ig_copytree(dir, files):
+	return [f for f in files if ".DS_Store".lower() in f.lower()]
+
+def ignore_patterns(dir, files):
+	return ['DS_Store']
+
 def publish_version(version, install=False):
 
 	# make the staging area
@@ -90,7 +97,7 @@ def publish_version(version, install=False):
 	for fil in files:
 		if os.path.isdir(fil)==True:
 			newdirname = os.path.join(stagepath, fil)
-			shutil.copytree(fil, newdirname) # will have some .DS_store's
+			shutil.copytree(fil, newdirname, ignore=ignore_patterns) # will have some .DS_store's
 		else:
 			fname = fil
 			newname = os.path.join(stagepath, fil)

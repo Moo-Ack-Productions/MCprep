@@ -478,6 +478,7 @@ def trackInstalled(background=None):
 
 def trackUsage(function, param=None, background=None):
 	if Tracker.tracking_enabled == False: return # skip if not opted in
+	if conf.internal_change == True: return # skip if internal run
 
 	if Tracker.verbose: print("Tracking usage: "+function +", param: "+str(param))
 
@@ -534,7 +535,7 @@ def register(bl_info):
 	Tracker.dev = conf.dev # True or False
 
 	if Tracker.dev == True:
-		Tracker.verbose = True
+		Tracker.verbose = False
 		Tracker.background = True # test either way
 		Tracker.failsafe = False # test either way
 		Tracker.tracking_enabled = True # enabled automatically for testing
@@ -542,7 +543,7 @@ def register(bl_info):
 		Tracker.verbose = False
 		Tracker.background = True
 		Tracker.failsafe = True
-		Tracker.tracking_enabled = False # users must accept to enable first
+		Tracker.tracking_enabled = True # User accepted on download
 
 	# try running install
 	trackInstalled()
