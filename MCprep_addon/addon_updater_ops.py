@@ -66,15 +66,15 @@ class addon_updater_install_popup(bpy.types.Operator):
 
 	def execute(self,context):
 
-		if updater.update_ready == True updater.manual_only==False:
+		if updater.update_ready == True and updater.manual_only==False:
 
 			res = updater.run_update(force=False, callback=post_update_callback)
 			# should return 0, if not something happened
 			if updater.verbose:
 				if res==0: print("Updater returned successful")
 				else: print("Updater returned "+str(res)+", error occured")
-		elif updater.update_ready == True updater.manual_only==True:
-			bpy.ops.wm.url_open(updater.website)
+		elif updater.update_ready == True and updater.manual_only==True:
+			bpy.ops.wm.url_open(url=updater.website)
 		elif updater.update_ready == None:
 			(update_ready, version, link) = updater.check_for_update(now=True)
 			
