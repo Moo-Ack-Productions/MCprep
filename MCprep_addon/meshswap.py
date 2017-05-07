@@ -55,6 +55,44 @@ class meshSwap(bpy.types.Operator):
 	# properties for draw
 	# meshSwapPath = addon_prefs.meshswap_path
 
+	# menu properties
+	meshswap_join = bpy.props.BoolProperty(
+		name="Join same blocks",
+		default=True,
+		description="Join together swapped blocks of the same type (unless swapped with a group)")
+	use_dupliverts = bpy.props.BoolProperty(
+		name="Use dupliverts (faster)",
+		default=True,
+		description="Use dupliverts to add meshes")
+	link_groups = bpy.props.BoolProperty(
+		name="Link groups",
+		default=False,
+		description="Link groups instead of appending")
+	prep_materials = bpy.props.BoolProperty(
+		name="Prep materials",
+		default=False,
+		description="Automatically apply prep materials (with default settings) to blocks added in")
+	append_layer = bpy.props.IntProperty(
+		name="Append layer",
+		default=20,
+		min=1,
+		max=20,
+		description="Set the layer for appending and placing referenced groups")
+	
+	meshswap_lamps = bpy.props.EnumProperty(
+		name="Lamps",
+		items= [('group', 'With groups', 'Repalce light emitting blocks group instances, containing 3D blocks and lamps'),
+				('material', 'By material', "Add lamps above light emitting blocks, withotu modifying original light-emitting blocks"),
+				('none', 'Skip lights', "Don't add any lights, skip meshswapping for light-emitting blocks")],
+		description="Set how lights are added (if any, based on selected materials)"
+		)
+
+	filmic_values = bpy.props.BoolProperty(
+		name="Use filmic lamp values",
+		default=False,
+		description="Set added lamp values with appropriate filmic rendering values")
+	
+
 	@classmethod
 	def poll(cls, context):
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
@@ -62,20 +100,46 @@ class meshSwap(bpy.types.Operator):
 
 	# force use UI
 	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self)
+		return context.window_manager.invoke_props_dialog(self, width=400)
 
 	def draw(self, context):
 		layout = self.layout
-		layout.label("Warning: may take a long time to process", icon="ERROR")
-		#layout.label("Consider selecting a smaller area closer to the camera to swap", icon="ERROR")
+
+		# please save the file first
+		if False:
+			layout.label("You must save your blend file before meshswapping", icon="ERROR")
+			return
+
+		layout.label("GENERAL SETTINGS")
+		row = layout.row()
+		row.prop(self,"use_dupliverts")
+		row.prop(self,"meshswap_join")
+		row = layout.row()
+		row.prop(self,"link_groups")
+		row.prop(self,"prep_materials")
+		row = layout.row()
+		row.prop(self,"append_layer")
 		
+		layout.split()
+		layout.label("HOW TO ADD LIGHTS")
+		row = layout.row()
+		row.prop(self,"meshswap_lamps",expand=True)
+		row = layout.row()
+		row.prop(self,"filmic_values")
+		
+		if True:
+			layout.split()
+			col = layout.column()
+			col.scale_y = 0.7
+			col.label("WARNING: May take a long time to process!!", icon="ERROR")
+			col.label("You selected a large number of blocks to meshswap,", icon="BLANK1")
+			col.label("Consider using a smaller area closer to the camera", icon="BLANK1")
 
 
 	# called for each object in the loop as soon as possible
 	def checkExternal(self, context, name):
 		if conf.v:print("Checking external library")
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
-
 		
 		meshSwapPath = addon_prefs.meshswap_path
 		rmable = []

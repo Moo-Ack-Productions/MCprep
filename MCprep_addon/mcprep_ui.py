@@ -543,7 +543,7 @@ class MCpanel(bpy.types.Panel):
 
 		col.label("MCprep tools")
 		col.operator("mcprep.mat_change",
-				text="Prep Materials", icon='MATERIAL').combineMaterials=True
+				text="Prep Materials", icon='MATERIAL')
 
 		col.operator("mcprep.combine_materials",
 				text="Combine Materials",
