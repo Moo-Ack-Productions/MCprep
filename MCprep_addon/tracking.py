@@ -373,35 +373,45 @@ class toggleenable_tracking(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-# currently not in use, agreement made on donwload
-class accept_terms(bpy.types.Operator):
-	"""Toggle anonymous usage tracking to help the developers, disabled by default. The only data tracked is what functions are used, and the timestamp of the addon installation"""
-	bl_idname = idname+".accept_terms"
-	bl_label = "Acknowledge tracking privacy policy terms"
+class popup_feedback(bpy.types.Operator):
+	bl_idname = idname+".popup_feedback"
+	bl_label = "Thanks for using {}!".format(idname)
 	options = {'REGISTER', 'UNDO'}
 
 	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self)
+		return context.window_manager.invoke_props_dialog(self, width=400)
 
 	def draw(self, context):
+
+		# seems that only the first url open works here,
+		# so many need to create operators that are just url open operations
+		# for the other in-popup items.
+
 		row = self.layout.row()
-		col = row.column()
-		col.label("Acknowledge privacy policy")
-		col = row.column()
-		p = col.operator("wm.url_open","Open policy here")
-		p.url = "http://theduckcow.com/privacy-policy"
-		# tick box to enable tracking
-		self.layout.label("Press okay to accept and use addon")
+		self.layout.split()
+		row = self.layout.row()
+		row.label("See the latest")
+		p = row.operator("wm.url_open","on the website")
+		p.url = "http://theduckcow.com/dev/blender/mcprep/"
+
+		row = self.layout.row()
+		row.label("Want to support development?")
+		p = row.operator("wm.url_open","Consider donating")
+		p.url = "bit.ly/donate2TheDuckCow"
+
+		self.layout.split()
+		col = self.layout.column()
+		col.alignment='CENTER'
+		col.label("PRESS OKAY TO OPEN SURVEY BELOW")
+		self.layout.split()
+		col = self.layout.column()
+		col.scale_y = 0.7
+		col.label("Responding to the survey helps drive what devleopment is worked on")
+		col.label("and identify those nasty bugs. You help everyone by responding!")
 
 	def execute(self, context):
-		if self.tracking == "toggle":
-			Tracker.enable_tracking(toggle=True)
-		elif self.tracking == "enable":
-			Tracker.enable_tracking(toggle=False, enable=True)
-		else:
-			Tracker.enable_tracking(toggle=False, enable=False)
+		bpy.ops.wm.url_open(url="bit.ly/MCprepSurvey")
 
-		# send the install NOW
 		return {'FINISHED'}
 
 

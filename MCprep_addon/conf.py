@@ -34,7 +34,7 @@ import os
 try:
 	import bpy.utils.previews
 except:
-	if conf.v: print("No custom icons in this blender instance")
+	print("MCprep: No custom icons in this blender instance")
 	pass
 
 def init():
