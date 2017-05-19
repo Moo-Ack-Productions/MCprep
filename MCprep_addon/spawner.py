@@ -123,7 +123,7 @@ def updateRigList(context):
 			nocatpathlist.append([os.path.join(rigpath,catgry), catgry])
 	
 
-	# Finally, update the list
+	# Finally, update the list with non-categorized mobs
 	for [rigPath,local] in nocatpathlist:
 		with bpy.data.libraries.load(rigPath) as (data_from, data_to):
 			for name in data_from.groups:
@@ -146,7 +146,7 @@ def updateRigList(context):
 	#print("-------")
 	conf.rig_list = sorted_rigs
 	updateCategory(context)
-	return riglist
+	return conf.rig_list
 
 
 def updateCategory(context):
@@ -606,49 +606,17 @@ class MCPREP_mobSpawner(bpy.types.Operator):
 		if context.scene.render.engine == 'CYCLES':
 			if conf.internal_change == False:
 				conf.internal_change = True
-				bpy.ops.mcprep.mat_change() # if cycles
+				bpy.ops.mcprep.mat_change(skipUsage=True) # if cycles
 				conf.internal_change = False
 			else:
-				bpy.ops.mcprep.mat_change() # if cycles
+				bpy.ops.mcprep.mat_change(skipUsage=True) # if cycles
 
 		return {'FINISHED'}
 
 
-class MCPREP_meshswapSpawner(bpy.types.Operator):
-	"""Instantly spawn built-in meshswap blocks into a scene"""
-	bl_idname = "mcprep.meshswap_spawner"
-	bl_label = "Meshswap Spawner"
-	bl_options = {'REGISTER', 'UNDO'}
-
-	# properties, will appear in redo-last menu
-	def riglist_enum(self, context):
-		return getRigList(context)
-
-	mcmob_type = bpy.props.EnumProperty(items=riglist_enum, name="Mob Type") # needs to be defined after riglist_enum
-	relocation = bpy.props.EnumProperty(
-		items = [('None', 'Cursor', 'No relocation'),
-				('Clear', 'Origin', 'Move the rig to the origin'),
-				('Offset', 'Offset root', 'Offset the root bone to curse while moving the rest pose to the origin')],
-		name = "Relocation")
-	toLink = bpy.props.BoolProperty(
-		name = "Library Link mob",
-		description = "Library link instead of append the group",
-		default = False
-		)
-	clearPose = bpy.props.BoolProperty(
-		name = "Clear Pose",
-		description = "Clear the pose to rest position",
-		default = True 
-		)
-
-	def execut(self, context):
-		return {'CANCELLED'}
-
-
-
 class MCPREP_installMob(bpy.types.Operator, ImportHelper):
 	"""Install custom rig popup for the mob spawner, all groups in selected blend file will become individually spawnable"""
-	bl_idname = "object.mcmob_install_menu"
+	bl_idname = "mcprep.mob_install_menu"
 	bl_label = "Install new mob"
 
 	filename_ext = ".blend"
@@ -740,7 +708,7 @@ class MCPREP_installMob(bpy.types.Operator, ImportHelper):
 
 class MCPREP_openRigFolder(bpy.types.Operator):
 	"""Open the rig folder for mob spawning"""
-	bl_idname = "object.mc_openrigpath"
+	bl_idname = "mcprep.openrigpath"
 	bl_label = "Open rig folder"
 
 	def execute(self,context):
@@ -763,17 +731,6 @@ class MCPREP_openRigFolder(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-# class MCPchangeMobFolder(bpy.types.Operator):
-# 	"""Change the rig folder"""
-# 	bl_idname = "object.mc_mobpath_change"
-# 	bl_label = "Change mob golder"
-# 	bl_description = "Change the source folder"
-
-# 	def execute(self,context):
-# 		print("not doing anything yet.")
-# 		return {'CANCELLED'}
-
-
 
 class MCPREP_spawnPathReset(bpy.types.Operator):
 	"""Reset the spawn path to the default specified in the addon preferences panel"""
@@ -791,7 +748,7 @@ class MCPREP_spawnPathReset(bpy.types.Operator):
 
 
 class MCPREP_uninstallMob(bpy.types.Operator):
-	bl_idname = "mcprep.mcmob_uninstall"
+	bl_idname = "mcprep.mob_uninstall"
 	bl_label = "Uninstall selected mob by deleting source blend file"
 
 	path = ""
@@ -804,10 +761,12 @@ class MCPREP_uninstallMob(bpy.types.Operator):
 		mob = conf.rig_list_sub[context.scene.mcprep_mob_list_index]
 
 		try:
+			print(mob)
 			[path,name,category] = mob[0]
 			path = os.path.join(context.scene.mcrig_path,path)
-		except:
+		except Exception as e:
 			self.report({'ERROR'}, "Could not resolve file to delete")
+			print("Error: {}".format(e))
 			return {'CANCELLED'}
 
 		# see how many groups use this blend file
@@ -866,7 +825,7 @@ class MCPREP_uninstallMob(bpy.types.Operator):
 			# listing , pass this into next function which acknwoledges all removing 
 			#liststr
 
-			bpy.ops.mcprep.mcmob_uninstall_all_in_file(path=path, listing=liststr)
+			bpy.ops.mcprep.mob_uninstall_all_in_file(path=path, listing=liststr)
 
 			pass
 		else:
@@ -882,7 +841,7 @@ class MCPREP_uninstallMob(bpy.types.Operator):
 
 class MCPREP_uninstallMobs(bpy.types.Operator):
 	"""If uninstalling a mob file contianing other mobs, delete anyways"""
-	bl_idname = "mcprep.mcmob_uninstall_all_in_file"
+	bl_idname = "mcprep.mob_uninstall_all_in_file"
 	bl_label = "Uninstall all mobs in source blend file"
 
 	path = bpy.props.StringProperty(default="")
@@ -1029,12 +988,8 @@ def register():
 			bpy.props.CollectionProperty(type=ListColl)
 	bpy.types.Scene.mcprep_mob_list_index = bpy.props.IntProperty(default=0)
 
-	# to auto-load the skins
-	#bpy.app.handlers.scene_update_pre.append(collhack_skins)
-	# come with built-in cache_update in the json
 
 def unregister():
 	del bpy.types.Scene.mcprep_mob_list
 	del bpy.types.Scene.mcprep_mob_list_index
-
 

@@ -279,3 +279,14 @@ def exec_path_expand(self, context):
 
 
 
+# ---------
+# add object instance not working, so workaround function:
+def addGroupInstance(groupName,loc):
+	scene = bpy.context.scene
+	ob = bpy.data.objects.new(groupName, None)
+	ob.dupli_type = 'GROUP'
+	ob.dupli_group = bpy.data.groups.get(groupName) #.. why not more directly?
+	ob.location = loc
+	scene.objects.link(ob)
+	ob.select = True
+	# why not return the instance object??

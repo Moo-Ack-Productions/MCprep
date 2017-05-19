@@ -33,6 +33,7 @@ import subprocess
 from . import conf
 from . import util
 from . import spawner
+from . import meshswap
 from . import materials
 from . import addon_updater_ops
 from . import tracking
@@ -118,6 +119,18 @@ class openFolder(bpy.types.Operator):
 		return {'FINISHED'}
 
 
+class reloadSpawners(bpy.types.Operator):
+	"""Relaod meshswapping and spawning lists"""
+	bl_idname = "mcprep.reload_spawners"
+	bl_label = "Reload meshswap and mob spawners"
+
+	def execute(self,context):
+		
+		bpy.ops.mcprep.reload_meshswap()
+		bpy.ops.mcprep.reload_mobs()
+
+		return {'FINISHED'}
+
 
 # -----------------------------------------------------------------------------
 #	Above for class functions/operators
@@ -142,20 +155,28 @@ class mobSpawnerMenu(bpy.types.Menu):
 			row.alignment = 'CENTER'
 			return
 
+		for n in range(len(conf.rig_list)):
+			mob = conf.rig_list[n]
+			#if mob[0].split(':/:')[-1]!=conf.rig_categories[c]:continue			
+			# eventually with icon too
+			layout.operator("mcprep.mob_spawner",
+						text=mob[1]
+						).mcmob_type = mob[0]
+
 		# load mobs, eventually try with categories horizontally
 		# (via template_list with a collection property?)
-		for c in range(len(conf.rig_categories)):
-			col = layout.row()
-			col.label(conf.rig_categories[c])
-			col.separator()
-			for n in range(len(conf.rig_list)):
-				mob = conf.rig_list[n]
-				if mob[0].split(':/:')[-1]!=conf.rig_categories[c]:continue
+		# for c in range(len(conf.rig_categories)):
+		# 	col = layout.row()
+		# 	col.label(conf.rig_categories[c])
+		# 	col.separator()
+		# 	for n in range(len(conf.rig_list)):
+		# 		mob = conf.rig_list[n]
+		# 		if mob[0].split(':/:')[-1]!=conf.rig_categories[c]:continue
 				
-				# eventually with icon too
-				col.operator("mcprep.mob_spawner",
-							text=mob[1]
-							).mcmob_type = mob[0]
+		# 		# eventually with icon too
+		# 		col.operator("mcprep.mob_spawner",
+		# 					text=mob[1]
+		# 					).mcmob_type = mob[0]
 
 
 
@@ -166,15 +187,25 @@ class meshswapPlaceMenu(bpy.types.Menu):
 
 	def draw(self, context):
 		layout = self.layout
-		if True:
-			layout.label(text="Feature coming soon, really!", icon='ERROR')
-			return
+		# if True:
+		# 	layout.label(text="Feature coming soon, really!", icon='ERROR')
+		# 	return
 
 		# make it for meshswap items
-		rigitems = spawner.getRigList(context)
-		for n in range(len(rigitems)):
-			# do some kind of check for if no rigs found
-			layout.operator("mcprep.meshswap_spawner", text=rigitems[n][1]).mcmob_type = rigitems[n][0]
+		meshswap_blocks = meshswap.getMeshswapList(context)
+		for n in range(len(meshswap_blocks)):
+			# do some kind of check for if no blocks found
+			icn = "BLANK1"
+			if meshswap_blocks[n][0].split("/")[0]=="Group":
+				icn = "GROUP"
+
+			p = layout.operator(
+				"mcprep.meshswap_spawner",
+				text=meshswap_blocks[n][1],
+				icon=icn
+			)
+			p.meshswap_block = meshswap_blocks[n][0]
+			p.location = context.scene.cursor_location
 
 
 
@@ -186,27 +217,46 @@ class mcprepQuickMenu(bpy.types.Menu):
 	def draw(self, context):
 		layout = self.layout
 		layout = self.layout
+
+
 		if conf.preview_collections["main"] != "":
 			pcoll = conf.preview_collections["main"]
 			spawner = pcoll["spawner_icon"]
 			meshswap = pcoll["grass_icon"]
-			
-			# if mobs not loaded yet
-			if len(conf.rig_list)==0:
-				row = layout.row()
-				row.operator("mcprep.reload_mobs", text="Load mobs", icon='HAND')
-				row.scale_y = 2
-				row.alignment = 'CENTER'
-			else:
-				#layout.operator_menu_enum("object.modifier_add", "type")
-				layout.operator_menu_enum("mcprep.mob_spawner", "mcmob_type")
-				#layout.menu(mobSpawnerMenu.bl_idname,icon_value=spawner.icon_id)
+		else:
+			spawner=None
+			meshwap=None
+		
+
+		if len(conf.rig_list)==0 or len(conf.meshswap_list)==0:
+			row = layout.row()
+			row.operator("mcprep.reload_spawners", text="Load spawners", icon='HAND')
+			row.scale_y = 2
+			row.alignment = 'CENTER'
+			return
+
+		#layout.operator_menu_enum("object.modifier_add", "type")
+		if spawner!=None:
+			#layout.operator_menu_enum("mcprep.mob_spawner", "mcmob_type",icon=spawner.icon_id)
+			layout.menu(mobSpawnerMenu.bl_idname,icon_value=spawner.icon_id)
+		else:
+			#layout.operator_menu_enum("mcprep.mob_spawner", "mcmob_type")
+			layout.menu(mobSpawnerMenu.bl_idname)
+		if meshswap!=None:
 			layout.menu(meshswapPlaceMenu.bl_idname,icon_value=meshswap.icon_id)
 		else:
-			#layout.menu(mobSpawnerMenu.bl_idname)
-			layout.operator_menu_enum("mcprep.mob_spawner", "mcmob_type")
 			layout.menu(meshswapPlaceMenu.bl_idname)
 
+
+# for custom menu registration, icon for spawner MCprep menu of shift-A
+def draw_mobspawner(self, context):
+	layout = self.layout
+	pcoll = conf.preview_collections["main"]
+	if pcoll != "":
+		my_icon = pcoll["spawner_icon"]
+		layout.menu(mobSpawnerMenu.bl_idname,icon_value=my_icon.icon_id)
+	else:
+		layout.menu(mobSpawnerMenu.bl_idname)
 
 
 # pop-up declaring some button is WIP still =D
@@ -268,10 +318,10 @@ class MCprepPreference(bpy.types.AddonPreferences):
 				('jmc2obj', 'jmc2obj', 'Select if exporter used was jmc2obj'),
 				('Mineways', 'Mineways', 'Select if exporter used was Mineways')],
 		name = "Exporter")
-	mcprep_meshswapjoin = bpy.props.BoolProperty(
-		name = "Meshswap join",
-		description = "Join individuals objects together during meshswapping",
-		default = True)
+	# mcprep_meshswapjoin = bpy.props.BoolProperty(
+	# 	name = "Meshswap join",
+	# 	description = "Join individuals objects together during meshswapping",
+	# 	default = True)
 	preferences_tab = bpy.props.EnumProperty(
 		items = [('settings', 'Settings', 'Change MCprep settings'),
 				('tutorials', 'Tutorials', 'View MCprep tutorials & other help'),
@@ -388,9 +438,9 @@ class MCprepPreference(bpy.types.AddonPreferences):
 			col = split.column()
 			col.label("Select/install mobs")
 			col = split.column()
-			col.operator("object.mcmob_install_menu", text="Install file for mob spawning")
+			col.operator("mcprep.mob_install_menu", text="Install file for mob spawning")
 			col = split.column()
-			col.operator("object.mc_openrigpath", text="Open rig folder") #mcprep.openfolder
+			col.operator("mcprep.openrigpath", text="Open rig folder") #mcprep.openfolder
 
 			layout = self.layout
 			row = layout.row()
@@ -468,32 +518,6 @@ class MCprepPreference(bpy.types.AddonPreferences):
 			bcol.operator("wm.url_open",
 					text="Open the Privacy Policy").url = \
 					"http://theduckcow.com/privacy-policy"
-
-			
-			# row.operator(//url,"Read the privacy policy/terms")
-			# UI list this info?
-			# label("All information collected is anonymous")
-			# label("Data collected when enabled includes:")
-			# label("- Blender version")
-			# label("- MCprep version")
-			# label("- OS name/version")
-			# label("- MCprep operator used")
-			# label("- anonymous ID")
-			# label("- Timestamp of when the operator was used")
-			# label("No other information is collected.")
-
-			# label("The anonymous local ID name is solely used")
-			# label("to track how often a single user uses a function")
-			# label("and cannot be traced back to an individual user")
-
-
-			# if checkOptin():
-			# 	col.operator("object.mc_toggleoptin", text="Opt OUT of anonymous usage tracking", icon='CANCEL')
-			# else:
-			# 	col.operator("object.mc_toggleoptin", text="Opt into of anonymous usage tracking", icon='HAND')
-			#row = layout.row()
-
-			# additional tracking info
 
 			# updater draw function
 			addon_updater_ops.update_settings_ui(self,context)
@@ -599,8 +623,8 @@ class MCpanel(bpy.types.Panel):
 
 			split = layout.split(percentage=1)
 			col = split.column(align=True)
-			col.prop(addon_prefs,"mcprep_meshswapjoin",
-					text="Join same blocks together")
+			# col.prop(addon_prefs,"mcprep_meshswapjoin",
+			# 		text="Join same blocks together")
 			col.prop(addon_prefs,"mcprep_use_lib",text="Link groups")
 			col.label("Append layer")
 			col.prop(addon_prefs,"MCprep_groupAppendLayer",text="")
@@ -711,9 +735,18 @@ class MCpanelSpawn(bpy.types.Panel):
 	bl_category = "MCprep"
 
 	def draw(self, context):
-
 		# checkingck for update if appropriate
+		self.layout.prop(context.scene.mcprep_props,"spawn_mode",expand=True)
+
 		addon_updater_ops.check_for_update_background(context)
+		if context.scene.mcprep_props.spawn_mode=="mob":
+			self.mob_spawner(context)
+		elif context.scene.mcprep_props.spawn_mode=="meshswap":
+			self.meshswap(context)
+		
+
+	def mob_spawner(self, context):
+		
 		settings = context.scene.mcprep_props
 		
 		layout = self.layout
@@ -748,12 +781,12 @@ class MCpanelSpawn(bpy.types.Panel):
 				rows=rows)
 		
 		col = row.column(align=True)
-		p = col.operator("object.mcmob_install_menu","",icon="ZOOMIN")
+		p = col.operator("mcprep.mob_install_menu","",icon="ZOOMIN")
 		p.mob_category = settings.spawn_rig_category
-		col.operator("mcprep.mcmob_uninstall", icon='ZOOMOUT', text="")
+		col.operator("mcprep.mob_uninstall", icon='ZOOMOUT', text="")
 		
 		# instead of open, make it change folder.
-		col.operator("object.mc_openrigpath", text="", icon='FILE_FOLDER')
+		col.operator("mcprep.openrigpath", text="", icon='FILE_FOLDER')
 		col.operator("mcprep.reload_mobs", icon='FILE_REFRESH', text='')
 		col.operator("mcprep.spawnpathreset", icon='LOAD_FACTORY', text='')
 
@@ -772,6 +805,48 @@ class MCpanelSpawn(bpy.types.Panel):
 			row2 = col.row()
 			row2.scale_y = 2
 			row2.operator("mcprep.spawnpathreset","Press to reload", icon="ERROR")
+
+	def meshswap(self, context):
+		settings = context.scene.mcprep_props
+		
+		layout = self.layout
+		split = layout.split()
+		col = split.column(align=True)
+		row = col.row(align=True)
+		row.prop(context.scene,"meshswap_path",text="")
+
+		# any other conditions for needing reloading?
+		if len(conf.rig_list)==0:
+			col = layout.column()
+			col.label("No blocks loaded")
+			row2 = col.row()
+			row2.scale_y = 2
+			p = row2.operator("mcprep.spawnpathreset","Press to reload", icon="ERROR")
+			p.location=context.scene.cursor_location
+			return
+
+		row = layout.row()
+		rows = 4
+
+		col = row.column(align=True)
+		col.template_list("MCPREP_meshswap_UIList", "",
+				context.scene, "mcprep_meshswap_list",
+				context.scene, "mcprep_meshswap_list_index",
+				rows=rows)
+		
+		# col = row.column(align=True)
+		# p = col.operator("mcprep.mob_install_menu","",icon="ZOOMIN")
+		# p.mob_category = settings.spawn_rig_category
+		# col.operator("mcprep.mob_uninstall", icon='ZOOMOUT', text="")
+
+		# something to directly open meshswap file??
+		name = conf.meshswap_list[context.scene.mcprep_meshswap_list_index][1]
+		p = col.operator("mcprep.meshswap_spawner","Place: "+name)
+		datapass = conf.meshswap_list[context.scene.mcprep_meshswap_list_index][0]
+		p.meshswap_block = datapass
+		# col.label(datapass.split("/")[0])
+
+
 
 
 
@@ -801,18 +876,6 @@ class dialogue(bpy.types.Operator):
 #	Below for registration stuff
 # -----------------------------------------------------------------------------
 
-
-# for custom menu registration, icon for spawner MCprep menu of shift-A
-def draw_mobspawner(self, context):
-	layout = self.layout
-	pcoll = conf.preview_collections["main"]
-	if pcoll != "":
-		my_icon = pcoll["spawner_icon"]
-		layout.menu(mobSpawnerMenu.bl_idname,icon_value=my_icon.icon_id)
-	else:
-		layout.menu(mobSpawnerMenu.bl_idname)
-
-
 # for custom menu registration, icon for top-level MCprep menu of shift-A
 def draw_mcprepadd(self, context):
 	layout = self.layout
@@ -830,7 +893,7 @@ def draw_mcprepadd(self, context):
 class MCprep_props(bpy.types.PropertyGroup):
 
 	# not available here
-	#addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
+	addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
 
 	mcprep_showsettings = bpy.props.BoolProperty(
 		name = "mcprep_showsettings",
@@ -842,6 +905,12 @@ class MCprep_props(bpy.types.PropertyGroup):
 		description="Category of mobs & character rigs to spawn",
 		update=spawner.spawn_rigs_category_load,
 		items=spawner.spawn_rigs_categories #
+	)
+	spawn_mode = bpy.props.EnumProperty(
+		name="Spawn Mode",
+		description="Set mode for rig/object spawner",
+		items = [('mob', 'Mob', 'Show mob spawner'),
+				('meshswap', 'Meshswap', 'Show meshswap spawner')]
 	)
 
 
@@ -871,6 +940,12 @@ def register():
 		subtype = 'DIR_PATH',
 		update = materials.update_skin_path,
 		default = addon_prefs.mcskin_path)
+	bpy.types.Scene.meshswap_path = bpy.props.StringProperty(	
+		name = "mcskin_path",
+		description = "File for meshswap library",
+		subtype = 'FILE_PATH',
+		update = meshswap.update_meshswap_path,
+		default = addon_prefs.meshswap_path)
 
 	conf.v = addon_prefs.verbose
 
@@ -882,4 +957,6 @@ def unregister():
 	bpy.types.INFO_MT_add.remove(draw_mcprepadd)
 	
 	del bpy.types.Scene.mcprep_props
+	del bpy.types.Scene.mcrig_path
+	del bpy.types.Scene.mcskin_path
 

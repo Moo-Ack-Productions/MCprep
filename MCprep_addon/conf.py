@@ -173,6 +173,14 @@ def init():
 	active_mob = "" # format "relative path+':/:'+name+':/:'+catgry"
 	active_mob_subind = -1
 
+	global meshswap_list
+	meshswap_list = []
+
+
+# -----------------------------------------------------------------------------
+# ICONS INIT
+# -----------------------------------------------------------------------------
+
 
 def icons_init():
 	# start with custom icons
@@ -197,6 +205,11 @@ def icons_init():
 	preview_collections["skins"] = ""
 	preview_collections["mobs"] = ""
 	preview_collections["blocks"] = ""
+
+
+# -----------------------------------------------------------------------------
+# GLOBAL REGISTRATOR INIT
+# -----------------------------------------------------------------------------
 
 
 def register():

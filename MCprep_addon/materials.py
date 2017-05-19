@@ -46,7 +46,7 @@ from . import tracking
 
 class MCPREP_materialChange(bpy.types.Operator):
 	"""Fixes materials and textures on selected objects for Minecraft rendering"""
-	bl_idname = "mcprep.mat_change" #"object.mc_mat_change"
+	bl_idname = "mcprep.mat_change"
 	bl_label = "MCprep Materials"
 	bl_options = {'REGISTER', 'UNDO'}
 
@@ -59,6 +59,9 @@ class MCPREP_materialChange(bpy.types.Operator):
 	combineMaterials = bpy.props.BoolProperty(
 		name = "Combine materials",
 		description = "Consolidate duplciate materials & textures",
+		default = False
+		)
+	skipUsage = bpy.props.BoolProperty(
 		default = False
 		)
 
@@ -286,7 +289,8 @@ class MCPREP_materialChange(bpy.types.Operator):
 	def execute(self, context):
 
 		# only sends tracking if opted in (and not internal change)
-		tracking.trackUsage("materials",bpy.context.scene.render.engine)
+		if self.skipUsage==False:
+			tracking.trackUsage("materials",bpy.context.scene.render.engine)
 
 		#get list of selected objects
 		objList = context.selected_objects

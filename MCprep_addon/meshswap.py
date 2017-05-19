@@ -37,8 +37,193 @@ from . import tracking
 
 
 # -----------------------------------------------------------------------------
-# Mesh swap class & functions
+# Mesh swap functions
 # -----------------------------------------------------------------------------
+
+# only used for UI drawing of enum menus, full list
+def getMeshswapList(context):
+
+	# test the link path first!
+	# rigpath = bpy.path.abspath(context.scene.mcrig_path) #addon_prefs.mcrig_path
+	# blendFiles = []
+	# riglist = []
+
+	if len(conf.rig_list)==0: # may redraw too many times, perhaps have flag
+		return updateMeshswapList(context)
+
+	else:
+		return conf.meshswap_list
+
+
+# for UI list path callback
+def update_meshswap_path(self, context):
+	if conf.vv:print("Updating meshswap path")
+	updateMeshswapList(context)
+
+# Update the meshswap list
+def updateMeshswapList(context):
+	# test the link path first!
+	meshswap_file = bpy.path.abspath(context.scene.meshswap_path)
+	temp_meshswap_list = []
+	meshswap_list = []
+	conf.meshswap_list = []
+	subriglist = []
+	context.scene.mcprep_meshswap_list.clear()
+
+	with bpy.data.libraries.load(meshswap_file) as (data_from, data_to):
+		for name in data_from.groups:
+
+			# special cases, skip some groups
+			if util.nameGeneralize(name).lower() == "Rigidbodyworld".lower():
+				continue 
+
+			description = "Place {x} block".format(x=name)
+			meshswap_list.append( ("Group/"+name,name.title(),description) )
+			item = context.scene.mcprep_meshswap_list.add()
+			item.label = description
+			item.description = description
+			item.name = name.title()
+			temp_meshswap_list.append(util.nameGeneralize(name).lower())
+			# MAKE THE ABOVE not write the whole rigPath, slow an unnecessary;
+		# here do same for blocks, assuming no name clashes. 
+		# way to 'ignore' blocks from source? ID prop?
+
+		for name in data_from.objects:
+			if util.nameGeneralize(name).lower() in temp_meshswap_list: continue
+			description = "Place {x} block".format(x=name)
+			meshswap_list.append( ("Object/"+name,name.title(),description) )
+			item = context.scene.mcprep_meshswap_list.add()
+			item.label = description
+			item.description = description
+			item.name = name.title()
+			temp_meshswap_list.append(util.nameGeneralize(name).lower())
+
+	# sort the list alphebtically by name
+	temp, sorted_blocks = zip(*sorted(zip([block[1].lower() for block in meshswap_list], meshswap_list)))
+	conf.meshswap_list = sorted_blocks
+	return conf.meshswap_list
+
+
+# -----------------------------------------------------------------------------
+# Mesh swap functions
+# -----------------------------------------------------------------------------
+
+
+class MCPREP_spawnPathReset(bpy.types.Operator):
+	"""Reset the spawn path to the default specified in the addon preferences panel"""
+	bl_idname = "mcprep.meshswap_pathreset"
+	bl_label = "Reset meshswap path"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	def execute(self,context):
+		
+		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
+		context.scene.meshswap_path = addon_prefs.meshswap_path
+		updateMeshswapList(context)
+		return {'FINISHED'}
+
+
+class MCPREP_meshswapSpawner(bpy.types.Operator):
+	"""Instantly spawn built-in meshswap blocks into a scene"""
+	bl_idname = "mcprep.meshswap_spawner"
+	bl_label = "Meshswap Spawner"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	# properties, will appear in redo-last menu
+	def swap_enum(self, context):
+		return getMeshswapList(context)
+
+	meshswap_block = bpy.props.EnumProperty(items=swap_enum, name="Meshswap block")
+	location = bpy.props.FloatVectorProperty(
+		default=(0,0,0),
+		name = "Location")
+	append_layer = bpy.props.IntProperty(
+		name="Append layer",
+		default=20,
+		min=0,
+		max=20,
+		description="Set the layer for appending groups, 0 means same as active layers")
+	prep_materials = bpy.props.BoolProperty(
+		name="Prep materials",
+		default=True,
+		description="Run prep materials on objects after appending")
+	
+	# toLink = bpy.props.BoolProperty(
+	# 	name = "Library Link mob",
+	# 	description = "Library link instead of append the group",
+	# 	default = False
+	# 	)
+	# instantiate if group?
+
+	def execute(self, context):
+
+		pre_groups = list(bpy.data.groups)
+
+		meshSwapPath = bpy.path.abspath(context.scene.meshswap_path)
+		method,block = self.meshswap_block.split("/")
+		toLink = False
+
+		util.bAppendLink(os.path.join(meshSwapPath,method), block, toLink)
+
+		if method=="Object":
+			try:
+				importedObj = bpy.context.selected_objects[0]
+			except:
+				print("selected obejct not found") #in case nothing selected.. which happens even during selection?
+				return {'FINISHED'}
+			importedObj["MCprep_noSwap"] = "True"
+			importedObj.location = self.location
+			if self.prep_materials==True:
+				bpy.ops.mcprep.mat_change(skipUsage=True) # if cycles
+		else:
+			# first, move append to according layer
+			bpy.ops.object.select_all(action='DESELECT')
+
+			layers = [False]*20
+			if self.append_layer==0:
+				layers = context.scene.layers
+			else:
+				layers[self.append_layer-1] = True
+			objlist = []
+			groupname = None
+			for g in bpy.data.groups:
+				if g in pre_groups:continue
+
+				for ob in g.objects:
+					if ob.name in context.scene.objects:
+						#context.scene.objects.unlink(ob)
+						objlist.append(ob)
+				if util.nameGeneralize(g.name) == util.nameGeneralize(block):
+					groupname = g
+
+			if groupname==None:
+				self.report({"ERROR"},"Could not retreive imported group")
+				return {'CANCELLED'}
+
+			if self.prep_materials==True:
+				for ob in objlist:
+					ob.select=True
+				bpy.ops.mcprep.mat_change(skipUsage=True) # if cycles
+				bpy.ops.object.select_all(action='DESELECT')
+
+			for ob in objlist:
+				ob.layers = layers
+
+			# now finally add the group instance
+			util.addGroupInstance(groupname.name,self.location)
+
+
+		return {'FINISHED'}
+
+
+class MCPREP_reloadMeshswap(bpy.types.Operator):
+	"""Force reload the mob spawner rigs, use after manually adding rigs to folders"""
+	bl_idname = "mcprep.reload_meshswap"
+	bl_label = "Reload the meshswap and cache"
+
+	def execute(self,context):
+		updateMeshswapList(context)
+		return {'FINISHED'}
 
 
 
@@ -53,9 +238,6 @@ class meshSwap(bpy.types.Operator):
 	countMax = 5		# count compared to this, frequency of refresh (number of objs)
 
 	# properties for draw
-	# meshSwapPath = addon_prefs.meshswap_path
-
-	# menu properties
 	meshswap_join = bpy.props.BoolProperty(
 		name="Join same blocks",
 		default=True,
@@ -66,7 +248,7 @@ class meshSwap(bpy.types.Operator):
 		description="Use dupliverts to add meshes")
 	link_groups = bpy.props.BoolProperty(
 		name="Link groups",
-		default=False,
+		default=False,#addon_prefs.mcprep_use_lib,
 		description="Link groups instead of appending")
 	prep_materials = bpy.props.BoolProperty(
 		name="Prep materials",
@@ -75,9 +257,11 @@ class meshSwap(bpy.types.Operator):
 	append_layer = bpy.props.IntProperty(
 		name="Append layer",
 		default=20,
-		min=1,
+		min=0,
 		max=20,
-		description="Set the layer for appending and placing referenced groups")
+		description="When groups are appended instead of linked, "+\
+				"the objects part of the group will be placed in this "+\
+				"layer, 0 means same as active layers")
 	
 	meshswap_lamps = bpy.props.EnumProperty(
 		name="Lamps",
@@ -112,7 +296,7 @@ class meshSwap(bpy.types.Operator):
 
 		layout.label("GENERAL SETTINGS")
 		row = layout.row()
-		row.prop(self,"use_dupliverts")
+		# row.prop(self,"use_dupliverts") # coming soon
 		row.prop(self,"meshswap_join")
 		row = layout.row()
 		row.prop(self,"link_groups")
@@ -120,20 +304,21 @@ class meshSwap(bpy.types.Operator):
 		row = layout.row()
 		row.prop(self,"append_layer")
 		
-		layout.split()
-		layout.label("HOW TO ADD LIGHTS")
-		row = layout.row()
-		row.prop(self,"meshswap_lamps",expand=True)
-		row = layout.row()
-		row.prop(self,"filmic_values")
+		# multi settings, to come
+		# layout.split()
+		# layout.label("HOW TO ADD LIGHTS")
+		# row = layout.row()
+		# row.prop(self,"meshswap_lamps",expand=True)
+		# row = layout.row()
+		# row.prop(self,"filmic_values")
 		
 		if True:
 			layout.split()
 			col = layout.column()
 			col.scale_y = 0.7
 			col.label("WARNING: May take a long time to process!!", icon="ERROR")
-			col.label("You selected a large number of blocks to meshswap,", icon="BLANK1")
-			col.label("Consider using a smaller area closer to the camera", icon="BLANK1")
+			col.label("If you selected a large number of blocks to meshswap,", icon="BLANK1")
+			col.label("consider using a smaller area closer to the camera", icon="BLANK1")
 
 
 	# called for each object in the loop as soon as possible
@@ -141,7 +326,7 @@ class meshSwap(bpy.types.Operator):
 		if conf.v:print("Checking external library")
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
 		
-		meshSwapPath = addon_prefs.meshswap_path
+		meshSwapPath = context.scene.meshswap_path
 		rmable = []
 		if addon_prefs.MCprep_exporter_type == "jmc2obj":
 			rmable = ['double_plant_grass_top','torch_flame','cactus_side','cactus_bottom','book',
@@ -180,12 +365,12 @@ class meshSwap(bpy.types.Operator):
 
 		# now import
 		if conf.v:print("about to link, group/mesh?",groupSwap,meshSwap)
-		toLink = addon_prefs.mcprep_use_lib # should read from addon prefs, false by default
+		toLink = self.link_groups # should read from addon prefs, false by default
 		bpy.ops.object.select_all(action='DESELECT') # context...? ensure in 3d view..
 		#import: guaranteed to have same name as "appendObj" for the first instant afterwards
 		grouped = False # used to check if to join or not
 		importedObj = None		# need to initialize to something, though this obj no used
-		groupAppendLayer = addon_prefs.MCprep_groupAppendLayer
+		groupAppendLayer = self.append_layer
 		if groupSwap and name not in bpy.data.groups:
 			# if group not linked, put appended group data onto the GUI field layer
 			activeLayers = list(context.scene.layers)
@@ -282,20 +467,6 @@ class meshSwap(bpy.types.Operator):
 				'edgeFlush':edgeFlush,'edgeFloat':edgeFloat,'torchlike':torchlike,
 				'removable':removable,'object':importedObj,'doorlike':doorlike}
 
-
-	########
-	# add object instance not working, so workaround function:
-	def addGroupInstance(self,groupName,loc):
-		scene = bpy.context.scene
-		ob = bpy.data.objects.new(groupName, None)
-		ob.dupli_type = 'GROUP'
-		ob.dupli_group = bpy.data.groups.get(groupName) #.. why not more directly?
-		ob.location = loc
-		scene.objects.link(ob)
-		ob.select = True
-		# why not return the instance object??
-
-
 	def offsetByHalf(self,obj):
 		if obj.type != 'MESH': return
 		# bpy.ops.object.mode_set(mode='OBJECT')
@@ -323,7 +494,7 @@ class meshSwap(bpy.types.Operator):
 		if conf.v:print('###################################')
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
 		# if checkOptin():usageStat('meshSwap'+':'+addon_prefs.MCprep_exporter_type)
-		direc = addon_prefs.meshswap_path
+		direc = context.scene.meshswap_path
 		
 		#check library file exists
 		if not os.path.isfile(direc):
@@ -336,7 +507,7 @@ class meshSwap(bpy.types.Operator):
 		
 		# get some scene information
 		toLink = False #context.scene.MCprep_linkGroup
-		groupAppendLayer = addon_prefs.MCprep_groupAppendLayer
+		groupAppendLayer = self.append_layer
 		activeLayers = list(context.scene.layers) ## NEED TO BE PASSED INTO the thing.
 		# along with the scene name
 		doOffset = (addon_prefs.MCprep_exporter_type == "Mineways")
@@ -580,7 +751,7 @@ class meshSwap(bpy.types.Operator):
 					# The built in method fails, bpy.ops.object.group_instance_add(...)
 					#UPDATE: I reported the bug, and they fixed it nearly instantly =D
 					# but it was recommended to do the below anyways.
-					self.addGroupInstance(randGroup,loc)
+					util.addGroupInstance(randGroup,loc)
 					
 				else:
 					#sets location of current selection, imported object or group from above
@@ -658,7 +829,7 @@ class meshSwap(bpy.types.Operator):
 				bpy.ops.object.delete() # the original copy used for duplication
 			
 			#join meshes together
-			if not grouped and (len(dupedObj) >0) and addon_prefs.mcprep_meshswapjoin:
+			if not grouped and (len(dupedObj) >0) and self.meshswap_join:
 				#print(len(dupedObj))
 				# ERROR HERE if don't do the len(dupedObj) thing.
 				bpy.context.scene.objects.active = dupedObj[0]
@@ -726,11 +897,25 @@ class fixMinewaysScale(bpy.types.Operator):
 		return {'FINISHED'}
 
 
+# -----------------------------------------------------------------------------
+#	Above for class functions/operators
+#	Below for UI/register
+# -----------------------------------------------------------------------------
+
+
+# for asset listing
+class ListColl(bpy.types.PropertyGroup):
+	label = bpy.props.StringProperty()
+	description = bpy.props.StringProperty()
+
 
 def register():
-	"register"
+	bpy.types.Scene.mcprep_meshswap_list = \
+			bpy.props.CollectionProperty(type=ListColl)
+	bpy.types.Scene.mcprep_meshswap_list_index = bpy.props.IntProperty(default=0)
 
 
 def unregister():
-	"unregister"
+	del bpy.types.Scene.mcprep_meshswap_list
+	del bpy.types.Scene.mcprep_meshswap_list_index
 
