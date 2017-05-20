@@ -112,7 +112,7 @@ class MCPREP_materialChange(bpy.types.Operator):
 		emit = ['redstone_block','redstone_lamp_on','glowstone','lava',
 				'lava_flowing','fire','sea_lantern','Glowstone',
 				'Redstone_Lamp_(on)','Stationary_Lava','Fire','Sea_Lantern',
-				'Block_of_Redstone']
+				'Block_of_Redstone','torch_flame_noimport','Sea-Lantern']
 
 		######## CHANGE TO MATERIALS LIBRARY
 		# if v and not importedMats:print("Parsing library file for materials")

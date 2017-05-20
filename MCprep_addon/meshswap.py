@@ -64,43 +64,45 @@ def update_meshswap_path(self, context):
 def updateMeshswapList(context):
 	# test the link path first!
 	meshswap_file = bpy.path.abspath(context.scene.meshswap_path)
+	if os.path.isfile(meshswap_file)==False:
+		print("Invalid meshswap blend file path")
 	temp_meshswap_list = []
 	meshswap_list = []
-	conf.meshswap_list = []
-	subriglist = []
-	context.scene.mcprep_meshswap_list.clear()
+	# conf.meshswap_list = []
 
 	with bpy.data.libraries.load(meshswap_file) as (data_from, data_to):
 		for name in data_from.groups:
 
-			# special cases, skip some groups
+			# special cases, skip some groups/repeats
+			if util.nameGeneralize(name).lower() in temp_meshswap_list: continue
 			if util.nameGeneralize(name).lower() == "Rigidbodyworld".lower():
-				continue 
+				continue
+
 
 			description = "Place {x} block".format(x=name)
 			meshswap_list.append( ("Group/"+name,name.title(),description) )
-			item = context.scene.mcprep_meshswap_list.add()
-			item.label = description
-			item.description = description
-			item.name = name.title()
 			temp_meshswap_list.append(util.nameGeneralize(name).lower())
-			# MAKE THE ABOVE not write the whole rigPath, slow an unnecessary;
 		# here do same for blocks, assuming no name clashes. 
 		# way to 'ignore' blocks from source? ID prop?
 
-		for name in data_from.objects:
-			if util.nameGeneralize(name).lower() in temp_meshswap_list: continue
-			description = "Place {x} block".format(x=name)
-			meshswap_list.append( ("Object/"+name,name.title(),description) )
-			item = context.scene.mcprep_meshswap_list.add()
-			item.label = description
-			item.description = description
-			item.name = name.title()
-			temp_meshswap_list.append(util.nameGeneralize(name).lower())
+		# for name in data_from.objects:
+		# 	if util.nameGeneralize(name).lower() in temp_meshswap_list: continue
+		# 	description = "Place {x} block".format(x=name)
+		# 	meshswap_list.append( ("Object/"+name,name.title(),description) )
+		# 	temp_meshswap_list.append(util.nameGeneralize(name).lower())
 
 	# sort the list alphebtically by name
 	temp, sorted_blocks = zip(*sorted(zip([block[1].lower() for block in meshswap_list], meshswap_list)))
 	conf.meshswap_list = sorted_blocks
+
+	# now re-populate the UI list
+	context.scene.mcprep_meshswap_list.clear()
+	for itm in conf.meshswap_list:
+		item = context.scene.mcprep_meshswap_list.add()
+		item.label = itm[2]
+		item.description = itm[2]
+		item.name = itm[1].title()
+
 	return conf.meshswap_list
 
 
@@ -147,6 +149,18 @@ class MCPREP_meshswapSpawner(bpy.types.Operator):
 		name="Prep materials",
 		default=True,
 		description="Run prep materials on objects after appending")
+	snapping = bpy.props.EnumProperty(
+		name="Snapping",
+		items=[("none","No snap","Keep exact location"),
+				("center","Snap center","Snap to block center"),
+				("offset","Snap offset","Snap to block center with 0.5 offset")
+			],
+		description="Automatically snap to whole block locations")
+	make_real = bpy.props.BoolProperty(
+		name="Make real",
+		default=True,
+		description="Automatically make groups real after placement")
+
 	
 	# toLink = bpy.props.BoolProperty(
 	# 	name = "Library Link mob",
@@ -166,6 +180,8 @@ class MCPREP_meshswapSpawner(bpy.types.Operator):
 		util.bAppendLink(os.path.join(meshSwapPath,method), block, toLink)
 
 		if method=="Object":
+			# Object-level disabled! Must have better
+			# asset management for this to work
 			try:
 				importedObj = bpy.context.selected_objects[0]
 			except:
@@ -176,6 +192,8 @@ class MCPREP_meshswapSpawner(bpy.types.Operator):
 			if self.prep_materials==True:
 				bpy.ops.mcprep.mat_change(skipUsage=True) # if cycles
 		else:
+			# Group method
+
 			# first, move append to according layer
 			bpy.ops.object.select_all(action='DESELECT')
 
@@ -210,7 +228,16 @@ class MCPREP_meshswapSpawner(bpy.types.Operator):
 				ob.layers = layers
 
 			# now finally add the group instance
-			util.addGroupInstance(groupname.name,self.location)
+			bpy.ops.object.select_all(action='DESELECT')
+			ob = util.addGroupInstance(groupname.name,self.location)
+			if self.snapping=="center":
+				offset=0 # could be 0.5
+				ob.location = [round(x+offset)-offset for x in self.location]
+			elif self.snapping=="offset":
+				offset=0.5 # could be 0.5
+				ob.location = [round(x+offset)-offset for x in self.location]
+			ob["MCprep_noSwap"] = "True"
+			if self.make_real:bpy.ops.object.duplicates_make_real()
 
 
 		return {'FINISHED'}
@@ -225,6 +252,33 @@ class MCPREP_reloadMeshswap(bpy.types.Operator):
 		updateMeshswapList(context)
 		return {'FINISHED'}
 
+
+# for asset listing UIList drawing
+class MCPREP_meshswap_UIList(bpy.types.UIList):
+	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
+
+		if self.layout_type in {'DEFAULT', 'COMPACT'}:
+			col = layout.column()
+			col.prop(set, "name", text="", emboss=False)
+			#layout.label(text='', icon='TIME')
+
+			# if conf.active_mob_subind == index:
+			# 	ic = "RADIOBUT_ON"
+			# 	layout.label("Skin swap")
+			# else:
+			# 	ic = "RADIOBUT_OFF"
+
+			# col = layout.column()
+			# row = col.row()
+			# row.scale_x = 0.25
+			# row.operator('mcprep.spawner_set_active_mob', emboss=False, text='',
+			#               icon=ic).index = index
+			# row.operator('mcprep.mob_spawner_direct',emboss=False, text='',
+			# 			icon='FORWARD').mcmob_index = index
+
+		elif self.layout_type in {'GRID'}:
+			layout.alignment = 'CENTER'
+			layout.label("", icon='QUESTION')
 
 
 class meshSwap(bpy.types.Operator):

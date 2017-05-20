@@ -338,6 +338,7 @@ class addon_updater_updated_successful(bpy.types.Operator):
 				col.scale_y = 0.7
 				col.label("Addon restored")
 				col.label("Restart blender to reload.")
+				print("updater json reset restore, reload post")
 				updater.json_reset_restore()
 			else:
 				col = layout.column()
@@ -352,6 +353,7 @@ class addon_updater_updated_successful(bpy.types.Operator):
 				col.scale_y = 0.7
 				col.label("Addon restored")
 				col.label("Consider restarting blender to fully reload.")
+				print("updater json reset restore")
 				updater.json_reset_restore()
 			else:
 				col = layout.column()
@@ -476,6 +478,8 @@ def updater_run_install_popup_handler(scene):
 		pass
 
 	if "ignore" in updater.json and updater.json["ignore"] == True:
+		if updater.verbose:
+			print("Updater: ignoring {} update popup".fomrat(updater.addon))
 		return # don't do popup if ignore pressed
 	elif type(updater.update_version) != type((0,0,0)):
 		# likely was from master or another branch, shouldn't trigger popup

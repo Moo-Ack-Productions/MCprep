@@ -242,8 +242,9 @@ class Singleton_tracking(object):
 		connection = http.client.HTTPSConnection(url, self._port)
 		try:
 			connection.connect()
+			if self.verbose:print("Connection made to "+str(path))
 		except:
-			print("Connection not made, verify connectivity")
+			print("Connection not made, verify connectivity; intended: "+str(path))
 			return {'status':'NO_CONNECTION'}
 
 		if method=="POST" or method=="PUT":

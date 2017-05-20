@@ -764,7 +764,7 @@ class MCpanelSpawn(bpy.types.Panel):
 			col.label("No mobs loaded")
 			row2 = col.row()
 			row2.scale_y = 2
-			row2.operator("mcprep.spawnpathreset","Press to reload", icon="ERROR")
+			row2.operator("mcprep.reload_spawners","Reload assets", icon="ERROR")
 			return
 		
 		row = layout.row()
@@ -814,6 +814,8 @@ class MCpanelSpawn(bpy.types.Panel):
 		col = split.column(align=True)
 		row = col.row(align=True)
 		row.prop(context.scene,"meshswap_path",text="")
+		row = col.row(align=True)
+		row.label("Experimental feature",icon="ERROR")
 
 		# any other conditions for needing reloading?
 		if len(conf.rig_list)==0:
@@ -821,8 +823,7 @@ class MCpanelSpawn(bpy.types.Panel):
 			col.label("No blocks loaded")
 			row2 = col.row()
 			row2.scale_y = 2
-			p = row2.operator("mcprep.spawnpathreset","Press to reload", icon="ERROR")
-			p.location=context.scene.cursor_location
+			row2.operator("mcprep.reload_spawners","Reload assets", icon="ERROR")
 			return
 
 		row = layout.row()
@@ -844,6 +845,7 @@ class MCpanelSpawn(bpy.types.Panel):
 		p = col.operator("mcprep.meshswap_spawner","Place: "+name)
 		datapass = conf.meshswap_list[context.scene.mcprep_meshswap_list_index][0]
 		p.meshswap_block = datapass
+		p.location = context.scene.cursor_location
 		# col.label(datapass.split("/")[0])
 
 
