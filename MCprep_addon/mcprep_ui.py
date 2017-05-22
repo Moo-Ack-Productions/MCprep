@@ -259,6 +259,15 @@ def draw_mobspawner(self, context):
 		layout.menu(mobSpawnerMenu.bl_idname)
 
 
+# for updating the mineways path on OSX
+def mineways_update(self, context):
+	if ".app/" in self.open_mineways_path:
+		# will run twice inherently
+		temp = self.open_mineways_path.split(".app/")[0]
+		self.open_mineways_path = temp+".app"
+	return
+
+
 # pop-up declaring some button is WIP still =D
 class WIP(bpy.types.Menu):
 	bl_label = "wip_warning"
@@ -269,8 +278,6 @@ class WIP(bpy.types.Menu):
 		layout = self.layout
 		row1 = layout.row()
 		row1.label(text="This addon is a work in progress, this function is not yet implemented")  
-
-
 
 
 # preferences UI
@@ -341,6 +348,7 @@ class MCprepPreference(bpy.types.AddonPreferences):
 		name = "Mineways path",
 		description = "Path to the Mineways executable",
 		subtype = 'FILE_PATH',
+		update=mineways_update,
 		default = "Mineways")
 	# open_mineways_path_mac = bpy.props.StringProperty(
 	# 	name = "Mineways path",
@@ -599,13 +607,13 @@ class MCpanel(bpy.types.Panel):
 		row = split.row(align=True)
 		if addon_prefs.MCprep_exporter_type == "(choose)":
 			row.label(text="Select exporter!",icon='ERROR')
-		elif addon_prefs.MCprep_exporter_type == "Mineways":
-			col.label (text="Check block size is")
-			col.label (text="1x1x1, not .1x.1.x.1")
-			# Attempt AutoFix, another button
-			col.operator("object.fixmeshswapsize", text="Quick upscale from 0.1")
-		else:
-			row.label('jmc2obj works best :)')
+		# elif addon_prefs.MCprep_exporter_type == "Mineways":
+		# 	col.label (text="Check block size is")
+		# 	col.label (text="1x1x1, not .1x.1.x.1")
+		# 	# Attempt AutoFix, another button
+		# 	col.operator("object.fixmeshswapsize", text="Quick upscale from 0.1")
+		# else:
+		# 	row.label('jmc2obj works best :)')
 
 		split = layout.split()
 		col = split.column(align=True)
@@ -712,14 +720,30 @@ class MCpanelSkins(bpy.types.Panel):
 		row = col.row(align=True)
 
 		if context.mode == "OBJECT":
-			if conf.active_mob == "":
+
+			if len (conf.rig_list_sub)==0:
 				row.enabled = False
-				row.operator("mcprep.spawn_with_skin","Set active mob below")
-			elif len (conf.skin_list)>0:
-				nm = conf.active_mob.split(":/:")[1]
+				row.operator("mcprep.spawn_with_skin","Reload mobs below")
+			elif len (conf.skin_list)==0:
+				row.enabled = False
+				row.operator("mcprep.spawn_with_skin","Reload skins above")
+			else:
+				name = conf.rig_list_sub[context.scene.mcprep_mob_list_index][1]
+				datapass = conf.rig_list_sub[context.scene.mcprep_mob_list_index][0]
 				tx = "Spawn {x} with active skin {y}".format(
-							x=nm, y=skinname)
-				row.operator("mcprep.spawn_with_skin",tx)
+							x=name, y=skinname)
+				p = row.operator("mcprep.spawn_with_skin",tx)
+				p.mob = datapass
+
+
+			# if conf.active_mob == "":
+			# 	row.enabled = False
+			# 	row.operator("mcprep.spawn_with_skin","Set active mob below")
+			# elif len (conf.skin_list)>0:
+			# 	nm = conf.active_mob.split(":/:")[1]
+			# 	tx = "Spawn {x} with active skin {y}".format(
+			# 				x=nm, y=skinname)
+			# 	row.operator("mcprep.spawn_with_skin",tx)
 
 
 # ---------

@@ -884,26 +884,26 @@ class MCPREP_uninstallMob(bpy.types.Operator):
 
 
 
-class MCPREP_spawnerActiveMob(bpy.types.Operator):
-	"""Set the active mob radio head, separate from selection"""
-	bl_idname = "mcprep.spawner_set_active_mob"
-	bl_label = "Press to set active for quick spawning in skin swapper panel"
+# class MCPREP_spawnerActiveMob(bpy.types.Operator):
+# 	"""Set the active mob radio head, separate from selection"""
+# 	bl_idname = "mcprep.spawner_set_active_mob"
+# 	bl_label = "Press to set active for quick spawning in skin swapper panel"
 
-	index = bpy.props.IntProperty(
-		name = "Active mob index",
-		description = "Set the active mob index for other uses",
-		default = -1
-		)
+# 	index = bpy.props.IntProperty(
+# 		name = "Active mob index",
+# 		description = "Set the active mob index for other uses",
+# 		default = -1
+# 		)
 
-	def execute(self, context):
+# 	def execute(self, context):
 
-		conf.active_mob_subind = self.index
-		if self.index == -1:
-			conf.active_mob = ""
-		else:
-			conf.active_mob = conf.rig_list_sub[self.index][0]
+# 		conf.active_mob_subind = self.index
+# 		if self.index == -1:
+# 			conf.active_mob = ""
+# 		else:
+# 			conf.active_mob = conf.rig_list_sub[self.index][0]
 
-		return {'FINISHED'}
+# 		return {'FINISHED'}
 
 
 
@@ -952,17 +952,15 @@ class MCPREP_mob_UIList(bpy.types.UIList):
 			col.prop(set, "name", text="", emboss=False)
 			#layout.label(text='', icon='TIME')
 
-			if conf.active_mob_subind == index:
-				ic = "RADIOBUT_ON"
-				layout.label("Skin swap")
-			else:
-				ic = "RADIOBUT_OFF"
+			# if conf.active_mob_subind == index:
+			# 	ic = "RADIOBUT_ON"
+			# 	layout.label("Skin swap")
+			# else:
+			# 	ic = "RADIOBUT_OFF"
 
 			col = layout.column()
 			row = col.row()
-			row.scale_x = 0.25
-			row.operator('mcprep.spawner_set_active_mob', emboss=False, text='',
-                        icon=ic).index = index
+			row.scale_x = 0.2
 			row.operator('mcprep.mob_spawner_direct',emboss=False, text='',
 						icon='FORWARD').mcmob_index = index
 

@@ -1055,9 +1055,11 @@ class MCPREP_spawn_with_skin(bpy.types.Operator):
 			self.report({'ERROR'}, "No skins found")
 			return {'CANCELLED'}
 
+		active_mob = conf.rig_list_sub[context.scene.mcprep_mob_list_index][0]
+
 		# try not to use internal ops because of analytics
 		bpy.ops.mcprep.mob_spawner(
-				mcmob_type=conf.active_mob,
+				mcmob_type=active_mob,
 				relocation = self.relocation,
 				toLink = self.toLink,
 				clearPose = self.clearPose)
