@@ -759,11 +759,10 @@ class MCPREP_uninstallMob(bpy.types.Operator):
 
 	def preDraw(self, context):
 		mob = conf.rig_list_sub[context.scene.mcprep_mob_list_index]
+		print("Running pre-draw!")
 
 		try:
-			print(mob)
-			[path,name,category] = mob[0]
-			path = os.path.join(context.scene.mcrig_path,path)
+			path = mob[0].split(":/:")[0]
 		except Exception as e:
 			self.report({'ERROR'}, "Could not resolve file to delete")
 			print("Error: {}".format(e))
@@ -771,116 +770,117 @@ class MCPREP_uninstallMob(bpy.types.Operator):
 
 		# see how many groups use this blend file
 		count = 0
-		listing = ""
-		for grp in conf.riglist:
-			if grp[0][0] == path:
-				listing.append(grp[0][1])
+		self.listing = []
+		for grp in conf.rig_list:
+			if grp[0].split(":/:")[0] == path:
+				self.listing.append(grp[0].split(":/:")[1])
 				count+=1
 
 
 	def draw(self, context):
-		row = self.layout.row()
-		row.label("Multiple mobs found in target blend file:")
-		row = self.layout.row()
+		self.preDraw(context)
 
-		# draw 3-column list of mobs to be deleted
-		col1 = row.column()
-		col2 = row.column()
-		col3 = row.column()
-		count = 0
-		for grp in self.listing:
-			count+=1
-			if count%3==0:
-				col1.label(grp)
-			elif count%3==1:
-				col2.label(grp)
-			else:
-				col3.label(grp)
 		row = self.layout.row()
-		row.label("Press okay to remove all, or press esc to cancel")
+		row.scale_y=0.5
+		if len(self.listing)>1:
+			row.label("Multiple mobs found in target blend file:")
+			row = self.layout.row()
+			row.scale_y=0.5
 
+			# draw 3-column list of mobs to be deleted
+			col1 = row.column()
+			col1.scale_y=0.5
+			col2 = row.column()
+			col2.scale_y=0.5
+			col3 = row.column()
+			col3.scale_y=0.5
+			count = 0
+			for grp in self.listing:
+				count+=1
+				if count%3==0:
+					col1.label(grp)
+				elif count%3==1:
+					col2.label(grp)
+				else:
+					col3.label(grp)
+			row = self.layout.row()
+			row.label("Press okay to remove all these mobs and file")
+		else:
+			row.label("Press okay to remove mob and file")
 
 	def execute(self,context):
 		
 		mob = conf.rig_list_sub[context.scene.mcprep_mob_list_index]
 		try:
-			[path,name,category] = mob[0]
+			path = mob[0].split(":/:")[0]
 			path = os.path.join(context.scene.mcrig_path,path)
-		except:
+		except Exception as e:
 			self.report({'ERROR'}, "Could not resolve file to delete")
+			print("Error trying to remove mob file: "+str(e))
 			return {'CANCELLED'}
-
-		# see how many groups use this blend file
-		count = 0
-		listing = ""
-		for grp in conf.riglist:
-			if grp[0][0] == path:
-				#listing.append(grp[0][1])
-				listing += grp[0][1] + ":/:"
-				count+=1
-
-		if count>1:
-			#warning menu to indicate the fact there is more than one group
-			#self.report({'ERROR'}, "Would delete more than one group")
-			# listing , pass this into next function which acknwoledges all removing 
-			#liststr
-
-			bpy.ops.mcprep.mob_uninstall_all_in_file(path=path, listing=liststr)
-
-			pass
+		
+		if os.path.isfile(path) == False:
+			if conf.v:
+				print("Error: Source filepath not found, didn't delete")
+				print("path: "+path)
+			self.report({'ERROR'}, "Source filepath not found, didn't delete")
+			return {'CANCELLED'}
 		else:
-			if os.path.isfile(path) == False:
-				if conf.v:print("Error: Source file not found, didn't delete")
-				self.report({'ERROR'}, "Source file not found, didn't delete")
-			else:
+			try:
 				os.remove(path)
-
+			except:
+				if conf.v:print("Error: could not delete file")
+				self.report({'ERROR'}, "Could not delete file")
+				return {'CANCELLED'}
+		self.report({'INFO'},"Removed: "+str(path))
+		if conf.v:print("Removed file: "+str(path))
+		bpy.ops.mcprep.reload_mobs()
 		return {'FINISHED'}
 
 
 
-class MCPREP_uninstallMobs(bpy.types.Operator):
-	"""If uninstalling a mob file contianing other mobs, delete anyways"""
-	bl_idname = "mcprep.mob_uninstall_all_in_file"
-	bl_label = "Uninstall all mobs in source blend file"
+# class MCPREP_uninstallMobs(bpy.types.Operator):
+# 	"""If uninstalling a mob file contianing other mobs, delete anyways"""
+# 	bl_idname = "mcprep.mob_uninstall_all_in_file"
+# 	bl_label = "Uninstall all mobs in source blend file"
 
-	path = bpy.props.StringProperty(default="")
-	listing = bpy.props.StringProperty(default="")
+# 	path = bpy.props.StringProperty(default="")
+# 	listing = bpy.props.StringProperty(default="")
 
-	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self)
+# 	def invoke(self, context, event):
+# 		return context.window_manager.invoke_props_dialog(self)
 
-	def draw(self, context):
-		row = self.layout.row()
-		row.label("Multiple mobs found in target blend file:")
-		row = self.layout.row()
+# 	def draw(self, context):
+# 		row = self.layout.row()
+# 		row.label("Multiple mobs found in target blend file:")
+# 		row = self.layout.row()
 
-		# draw 3-column list of mobs to be deleted
-		col1 = row.column()
-		col2 = row.column()
-		col3 = row.column()
-		count = 0
-		for grp in self.listing.split(":/:"):
-			count+=1
-			if count%3==0:
-				col1.label(grp)
-			elif count%3==1:
-				col2.label(grp)
-			else:
-				col3.label(grp)
+# 		# draw 3-column list of mobs to be deleted
+# 		col1 = row.column()
+# 		col2 = row.column()
+# 		col3 = row.column()
+# 		count = 0
+# 		for grp in self.listing.split(":/:"):
+# 			count+=1
+# 			if count%3==0:
+# 				col1.label(grp)
+# 			elif count%3==1:
+# 				col2.label(grp)
+# 			else:
+# 				col3.label(grp)
 
-		row = self.layout.row()
-		row.label("Press okay to remove all, or press esc to cancel")
+# 		row = self.layout.row()
+# 		row.label("Press okay to remove all, or press esc to cancel")
 
-	def execute(self,context):
+# 	def execute(self,context):
 
-		if os.path.isfile(self.path) == False:
-			if conf.v:print("Error: Source file not found, didn't delete")
-			self.report({'ERROR'}, "Source file not found, didn't delete")
-		else:
-			os.remove(self.path)
+# 		if os.path.isfile(self.path) == False:
+# 			if conf.v:print("Error: Source file not found, didn't delete")
+# 			self.report({'ERROR'}, "Source file not found, didn't delete")
+# 		else:
+# 			os.remove(self.path)
 
-		return {'FINISHED'}
+# 		return {'FINISHED'}
 
 
 

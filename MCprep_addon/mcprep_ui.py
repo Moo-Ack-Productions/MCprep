@@ -301,10 +301,10 @@ class MCprepPreference(bpy.types.AddonPreferences):
 		description = "Default folder for opening world objs from programs like jmc2obj or Mineways",
 		subtype = 'DIR_PATH',
 		default = "//")
-	mcprep_use_lib = bpy.props.BoolProperty(
-		name = "Link meshswapped groups & materials",
-		description = "Use library linking when meshswapping or material matching",
-		default = False)
+	# mcprep_use_lib = bpy.props.BoolProperty(
+	# 	name = "Link meshswapped groups & materials",
+	# 	description = "Use library linking when meshswapping or material matching",
+	# 	default = False)
 	MCprep_groupAppendLayer = bpy.props.IntProperty(
 		name="Group Append Layer",
 		description="When groups are appended instead of linked, "+\
@@ -464,8 +464,6 @@ class MCprepPreference(bpy.types.AddonPreferences):
 			layout = self.layout
 			row = layout.row()
 			col = row.column()
-			col.prop(self, "mcprep_use_lib")
-			col = row.column()
 			col.prop(self, "verbose")
 			row = layout.row()
 
@@ -534,6 +532,13 @@ class MCpanel(bpy.types.Panel):
 	bl_region_type = 'TOOLS'
 	# bl_context = "objectmode"
 	bl_category = "MCprep"
+
+	# def draw_header(self, context):
+	# 	col = self.layout.column()
+	# 	# col.scale = 0.75
+	# 	col.operator("wm.url_open",
+	# 		text="", icon="QUESTION",
+	# 		emboss=False).url="http://theduckcow.com/dev/blender/mcprep/mcprep-minecraft-world-imports/"
 
 	def draw(self, context):
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
@@ -623,13 +628,6 @@ class MCpanel(bpy.types.Panel):
 
 			split = layout.split(percentage=1)
 			col = split.column(align=True)
-			# col.prop(addon_prefs,"mcprep_meshswapjoin",
-			# 		text="Join same blocks together")
-			col.prop(addon_prefs,"mcprep_use_lib",text="Link groups")
-			col.label("Append layer")
-			col.prop(addon_prefs,"MCprep_groupAppendLayer",text="")
-			if addon_prefs.mcprep_use_lib == True:
-				col.enabled = False
 			col.label(text="Meshswap source:")
 			col.prop(addon_prefs,"meshswap_path",text="")
 
@@ -814,8 +812,8 @@ class MCpanelSpawn(bpy.types.Panel):
 		col = split.column(align=True)
 		row = col.row(align=True)
 		row.prop(context.scene,"meshswap_path",text="")
-		row = col.row(align=True)
-		row.label("Experimental feature",icon="ERROR")
+		# row = col.row(align=True)
+		# row.label("Experimental feature",icon="ERROR")
 
 		# any other conditions for needing reloading?
 		if len(conf.rig_list)==0:
@@ -841,8 +839,9 @@ class MCpanelSpawn(bpy.types.Panel):
 		# col.operator("mcprep.mob_uninstall", icon='ZOOMOUT', text="")
 
 		# something to directly open meshswap file??
+		row = layout.row()
 		name = conf.meshswap_list[context.scene.mcprep_meshswap_list_index][1]
-		p = col.operator("mcprep.meshswap_spawner","Place: "+name)
+		p = row.operator("mcprep.meshswap_spawner","Place: "+name)
 		datapass = conf.meshswap_list[context.scene.mcprep_meshswap_list_index][0]
 		p.meshswap_block = datapass
 		p.location = context.scene.cursor_location

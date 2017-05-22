@@ -481,12 +481,13 @@ def updater_run_install_popup_handler(scene):
 		if updater.verbose:
 			print("Updater: ignoring {} update popup".fomrat(updater.addon))
 		return # don't do popup if ignore pressed
-	elif type(updater.update_version) != type((0,0,0)):
-		# likely was from master or another branch, shouldn't trigger popup
-		if updater.verbose:
-				print("{} updater, restoring json due to mismatch version num type")
-		updater.json_reset_restore()
-		return
+	# elif type(updater.update_version) != type((0,0,0)):
+	# 	# likely was from master or another branch, shouldn't trigger popup
+	# 	if updater.verbose:
+	# 			print("{} updater, restoring json due to mismatch version num type")
+	# 	print("THIS HAPPENED HERE?")
+	# 	# updater.json_reset_restore()
+	# 	return
 	elif "version_text" in updater.json and "version" in updater.json["version_text"]:
 		version = updater.json["version_text"]["version"]
 		ver_tuple = updater.version_tuple_from_text(version)

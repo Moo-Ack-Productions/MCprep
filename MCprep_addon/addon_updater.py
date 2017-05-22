@@ -1061,7 +1061,7 @@ class Singleton_updater(object):
 		self.save_updater_json()
 	def json_reset_restore(self):
 		self._json["just_restored"] = False
-		self._json["update_ready"] = False
+		self._json["update_ready"] = False #none?
 		self._json["version_text"] = {}
 		self.save_updater_json()
 		self._update_ready = None # reset so you could check update again

@@ -302,7 +302,7 @@ class meshSwap(bpy.types.Operator):
 		description="Use dupliverts to add meshes")
 	link_groups = bpy.props.BoolProperty(
 		name="Link groups",
-		default=False,#addon_prefs.mcprep_use_lib,
+		default=False,
 		description="Link groups instead of appending")
 	prep_materials = bpy.props.BoolProperty(
 		name="Prep materials",
