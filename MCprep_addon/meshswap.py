@@ -171,6 +171,8 @@ class MCPREP_meshswapSpawner(bpy.types.Operator):
 
 	def execute(self, context):
 
+		tracking.trackUsage("meshswapSpawner",self.meshswap_block)
+
 		pre_groups = list(bpy.data.groups)
 
 		meshSwapPath = bpy.path.abspath(context.scene.meshswap_path)

@@ -732,8 +732,7 @@ class MCpanelSkins(bpy.types.Panel):
 				datapass = conf.rig_list_sub[context.scene.mcprep_mob_list_index][0]
 				tx = "Spawn {x} with active skin {y}".format(
 							x=name, y=skinname)
-				p = row.operator("mcprep.spawn_with_skin",tx)
-				p.mob = datapass
+				row.operator("mcprep.spawn_with_skin",tx)
 
 
 			# if conf.active_mob == "":
