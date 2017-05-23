@@ -15,8 +15,8 @@ In blender, version 2.75 and up:
 - Press install addon
 - If MCprep does not show up immediately, search for it in the text box top / left
 - Press the check box to enable the addon
-- Consider opting into anonymous tracking
-- Save user preferences so you don’t have to enable it every time you open blender
+- You are automatically opted into anonymous user tracking, but you can opt out by going to MCprep preferences > tracking > opt-out
+- Save user preferences so you don’t have to enable it every time you open blender. Opting out/in user tracking will always save automatically.
 
 For any further issues, reach out to <support@theduckcow.com> for help
 View the source code or check for new updates at: http://bit.ly/MCprep

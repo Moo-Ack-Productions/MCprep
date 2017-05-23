@@ -123,7 +123,7 @@ def updateRigList(context):
 			nocatpathlist.append([os.path.join(rigpath,catgry), catgry])
 	
 
-	# Finally, update the list
+	# Finally, update the list with non-categorized mobs
 	for [rigPath,local] in nocatpathlist:
 		with bpy.data.libraries.load(rigPath) as (data_from, data_to):
 			for name in data_from.groups:
@@ -146,7 +146,7 @@ def updateRigList(context):
 	#print("-------")
 	conf.rig_list = sorted_rigs
 	updateCategory(context)
-	return riglist
+	return conf.rig_list
 
 
 def updateCategory(context):
@@ -606,49 +606,17 @@ class MCPREP_mobSpawner(bpy.types.Operator):
 		if context.scene.render.engine == 'CYCLES':
 			if conf.internal_change == False:
 				conf.internal_change = True
-				bpy.ops.mcprep.mat_change() # if cycles
+				bpy.ops.mcprep.mat_change(skipUsage=True) # if cycles
 				conf.internal_change = False
 			else:
-				bpy.ops.mcprep.mat_change() # if cycles
+				bpy.ops.mcprep.mat_change(skipUsage=True) # if cycles
 
 		return {'FINISHED'}
 
 
-class MCPREP_meshswapSpawner(bpy.types.Operator):
-	"""Instantly spawn built-in meshswap blocks into a scene"""
-	bl_idname = "mcprep.meshswap_spawner"
-	bl_label = "Meshswap Spawner"
-	bl_options = {'REGISTER', 'UNDO'}
-
-	# properties, will appear in redo-last menu
-	def riglist_enum(self, context):
-		return getRigList(context)
-
-	mcmob_type = bpy.props.EnumProperty(items=riglist_enum, name="Mob Type") # needs to be defined after riglist_enum
-	relocation = bpy.props.EnumProperty(
-		items = [('None', 'Cursor', 'No relocation'),
-				('Clear', 'Origin', 'Move the rig to the origin'),
-				('Offset', 'Offset root', 'Offset the root bone to curse while moving the rest pose to the origin')],
-		name = "Relocation")
-	toLink = bpy.props.BoolProperty(
-		name = "Library Link mob",
-		description = "Library link instead of append the group",
-		default = False
-		)
-	clearPose = bpy.props.BoolProperty(
-		name = "Clear Pose",
-		description = "Clear the pose to rest position",
-		default = True 
-		)
-
-	def execut(self, context):
-		return {'CANCELLED'}
-
-
-
 class MCPREP_installMob(bpy.types.Operator, ImportHelper):
 	"""Install custom rig popup for the mob spawner, all groups in selected blend file will become individually spawnable"""
-	bl_idname = "object.mcmob_install_menu"
+	bl_idname = "mcprep.mob_install_menu"
 	bl_label = "Install new mob"
 
 	filename_ext = ".blend"
@@ -740,7 +708,7 @@ class MCPREP_installMob(bpy.types.Operator, ImportHelper):
 
 class MCPREP_openRigFolder(bpy.types.Operator):
 	"""Open the rig folder for mob spawning"""
-	bl_idname = "object.mc_openrigpath"
+	bl_idname = "mcprep.openrigpath"
 	bl_label = "Open rig folder"
 
 	def execute(self,context):
@@ -763,17 +731,6 @@ class MCPREP_openRigFolder(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-# class MCPchangeMobFolder(bpy.types.Operator):
-# 	"""Change the rig folder"""
-# 	bl_idname = "object.mc_mobpath_change"
-# 	bl_label = "Change mob golder"
-# 	bl_description = "Change the source folder"
-
-# 	def execute(self,context):
-# 		print("not doing anything yet.")
-# 		return {'CANCELLED'}
-
-
 
 class MCPREP_spawnPathReset(bpy.types.Operator):
 	"""Reset the spawn path to the default specified in the addon preferences panel"""
@@ -791,7 +748,7 @@ class MCPREP_spawnPathReset(bpy.types.Operator):
 
 
 class MCPREP_uninstallMob(bpy.types.Operator):
-	bl_idname = "mcprep.mcmob_uninstall"
+	bl_idname = "mcprep.mob_uninstall"
 	bl_label = "Uninstall selected mob by deleting source blend file"
 
 	path = ""
@@ -802,149 +759,151 @@ class MCPREP_uninstallMob(bpy.types.Operator):
 
 	def preDraw(self, context):
 		mob = conf.rig_list_sub[context.scene.mcprep_mob_list_index]
+		print("Running pre-draw!")
 
 		try:
-			[path,name,category] = mob[0]
-			path = os.path.join(context.scene.mcrig_path,path)
-		except:
+			path = mob[0].split(":/:")[0]
+		except Exception as e:
 			self.report({'ERROR'}, "Could not resolve file to delete")
+			print("Error: {}".format(e))
 			return {'CANCELLED'}
 
 		# see how many groups use this blend file
 		count = 0
-		listing = ""
-		for grp in conf.riglist:
-			if grp[0][0] == path:
-				listing.append(grp[0][1])
+		self.listing = []
+		for grp in conf.rig_list:
+			if grp[0].split(":/:")[0] == path:
+				self.listing.append(grp[0].split(":/:")[1])
 				count+=1
 
 
 	def draw(self, context):
-		row = self.layout.row()
-		row.label("Multiple mobs found in target blend file:")
-		row = self.layout.row()
+		self.preDraw(context)
 
-		# draw 3-column list of mobs to be deleted
-		col1 = row.column()
-		col2 = row.column()
-		col3 = row.column()
-		count = 0
-		for grp in self.listing:
-			count+=1
-			if count%3==0:
-				col1.label(grp)
-			elif count%3==1:
-				col2.label(grp)
-			else:
-				col3.label(grp)
 		row = self.layout.row()
-		row.label("Press okay to remove all, or press esc to cancel")
+		row.scale_y=0.5
+		if len(self.listing)>1:
+			row.label("Multiple mobs found in target blend file:")
+			row = self.layout.row()
+			row.scale_y=0.5
 
+			# draw 3-column list of mobs to be deleted
+			col1 = row.column()
+			col1.scale_y=0.5
+			col2 = row.column()
+			col2.scale_y=0.5
+			col3 = row.column()
+			col3.scale_y=0.5
+			count = 0
+			for grp in self.listing:
+				count+=1
+				if count%3==0:
+					col1.label(grp)
+				elif count%3==1:
+					col2.label(grp)
+				else:
+					col3.label(grp)
+			row = self.layout.row()
+			row.label("Press okay to remove all these mobs and file")
+		else:
+			row.label("Press okay to remove mob and file")
 
 	def execute(self,context):
 		
 		mob = conf.rig_list_sub[context.scene.mcprep_mob_list_index]
 		try:
-			[path,name,category] = mob[0]
+			path = mob[0].split(":/:")[0]
 			path = os.path.join(context.scene.mcrig_path,path)
-		except:
+		except Exception as e:
 			self.report({'ERROR'}, "Could not resolve file to delete")
+			print("Error trying to remove mob file: "+str(e))
 			return {'CANCELLED'}
-
-		# see how many groups use this blend file
-		count = 0
-		listing = ""
-		for grp in conf.riglist:
-			if grp[0][0] == path:
-				#listing.append(grp[0][1])
-				listing += grp[0][1] + ":/:"
-				count+=1
-
-		if count>1:
-			#warning menu to indicate the fact there is more than one group
-			#self.report({'ERROR'}, "Would delete more than one group")
-			# listing , pass this into next function which acknwoledges all removing 
-			#liststr
-
-			bpy.ops.mcprep.mcmob_uninstall_all_in_file(path=path, listing=liststr)
-
-			pass
+		
+		if os.path.isfile(path) == False:
+			if conf.v:
+				print("Error: Source filepath not found, didn't delete")
+				print("path: "+path)
+			self.report({'ERROR'}, "Source filepath not found, didn't delete")
+			return {'CANCELLED'}
 		else:
-			if os.path.isfile(path) == False:
-				if conf.v:print("Error: Source file not found, didn't delete")
-				self.report({'ERROR'}, "Source file not found, didn't delete")
-			else:
+			try:
 				os.remove(path)
-
+			except:
+				if conf.v:print("Error: could not delete file")
+				self.report({'ERROR'}, "Could not delete file")
+				return {'CANCELLED'}
+		self.report({'INFO'},"Removed: "+str(path))
+		if conf.v:print("Removed file: "+str(path))
+		bpy.ops.mcprep.reload_mobs()
 		return {'FINISHED'}
 
 
 
-class MCPREP_uninstallMobs(bpy.types.Operator):
-	"""If uninstalling a mob file contianing other mobs, delete anyways"""
-	bl_idname = "mcprep.mcmob_uninstall_all_in_file"
-	bl_label = "Uninstall all mobs in source blend file"
+# class MCPREP_uninstallMobs(bpy.types.Operator):
+# 	"""If uninstalling a mob file contianing other mobs, delete anyways"""
+# 	bl_idname = "mcprep.mob_uninstall_all_in_file"
+# 	bl_label = "Uninstall all mobs in source blend file"
 
-	path = bpy.props.StringProperty(default="")
-	listing = bpy.props.StringProperty(default="")
+# 	path = bpy.props.StringProperty(default="")
+# 	listing = bpy.props.StringProperty(default="")
 
-	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self)
+# 	def invoke(self, context, event):
+# 		return context.window_manager.invoke_props_dialog(self)
 
-	def draw(self, context):
-		row = self.layout.row()
-		row.label("Multiple mobs found in target blend file:")
-		row = self.layout.row()
+# 	def draw(self, context):
+# 		row = self.layout.row()
+# 		row.label("Multiple mobs found in target blend file:")
+# 		row = self.layout.row()
 
-		# draw 3-column list of mobs to be deleted
-		col1 = row.column()
-		col2 = row.column()
-		col3 = row.column()
-		count = 0
-		for grp in self.listing.split(":/:"):
-			count+=1
-			if count%3==0:
-				col1.label(grp)
-			elif count%3==1:
-				col2.label(grp)
-			else:
-				col3.label(grp)
+# 		# draw 3-column list of mobs to be deleted
+# 		col1 = row.column()
+# 		col2 = row.column()
+# 		col3 = row.column()
+# 		count = 0
+# 		for grp in self.listing.split(":/:"):
+# 			count+=1
+# 			if count%3==0:
+# 				col1.label(grp)
+# 			elif count%3==1:
+# 				col2.label(grp)
+# 			else:
+# 				col3.label(grp)
 
-		row = self.layout.row()
-		row.label("Press okay to remove all, or press esc to cancel")
+# 		row = self.layout.row()
+# 		row.label("Press okay to remove all, or press esc to cancel")
 
-	def execute(self,context):
+# 	def execute(self,context):
 
-		if os.path.isfile(self.path) == False:
-			if conf.v:print("Error: Source file not found, didn't delete")
-			self.report({'ERROR'}, "Source file not found, didn't delete")
-		else:
-			os.remove(self.path)
+# 		if os.path.isfile(self.path) == False:
+# 			if conf.v:print("Error: Source file not found, didn't delete")
+# 			self.report({'ERROR'}, "Source file not found, didn't delete")
+# 		else:
+# 			os.remove(self.path)
 
-		return {'FINISHED'}
+# 		return {'FINISHED'}
 
 
 
-class MCPREP_spawnerActiveMob(bpy.types.Operator):
-	"""Set the active mob radio head, separate from selection"""
-	bl_idname = "mcprep.spawner_set_active_mob"
-	bl_label = "Press to set active for quick spawning in skin swapper panel"
+# class MCPREP_spawnerActiveMob(bpy.types.Operator):
+# 	"""Set the active mob radio head, separate from selection"""
+# 	bl_idname = "mcprep.spawner_set_active_mob"
+# 	bl_label = "Press to set active for quick spawning in skin swapper panel"
 
-	index = bpy.props.IntProperty(
-		name = "Active mob index",
-		description = "Set the active mob index for other uses",
-		default = -1
-		)
+# 	index = bpy.props.IntProperty(
+# 		name = "Active mob index",
+# 		description = "Set the active mob index for other uses",
+# 		default = -1
+# 		)
 
-	def execute(self, context):
+# 	def execute(self, context):
 
-		conf.active_mob_subind = self.index
-		if self.index == -1:
-			conf.active_mob = ""
-		else:
-			conf.active_mob = conf.rig_list_sub[self.index][0]
+# 		conf.active_mob_subind = self.index
+# 		if self.index == -1:
+# 			conf.active_mob = ""
+# 		else:
+# 			conf.active_mob = conf.rig_list_sub[self.index][0]
 
-		return {'FINISHED'}
+# 		return {'FINISHED'}
 
 
 
@@ -993,17 +952,15 @@ class MCPREP_mob_UIList(bpy.types.UIList):
 			col.prop(set, "name", text="", emboss=False)
 			#layout.label(text='', icon='TIME')
 
-			if conf.active_mob_subind == index:
-				ic = "RADIOBUT_ON"
-				layout.label("Skin swap")
-			else:
-				ic = "RADIOBUT_OFF"
+			# if conf.active_mob_subind == index:
+			# 	ic = "RADIOBUT_ON"
+			# 	layout.label("Skin swap")
+			# else:
+			# 	ic = "RADIOBUT_OFF"
 
 			col = layout.column()
 			row = col.row()
-			row.scale_x = 0.25
-			row.operator('mcprep.spawner_set_active_mob', emboss=False, text='',
-                        icon=ic).index = index
+			row.scale_x = 0.2
 			row.operator('mcprep.mob_spawner_direct',emboss=False, text='',
 						icon='FORWARD').mcmob_index = index
 
@@ -1029,12 +986,8 @@ def register():
 			bpy.props.CollectionProperty(type=ListColl)
 	bpy.types.Scene.mcprep_mob_list_index = bpy.props.IntProperty(default=0)
 
-	# to auto-load the skins
-	#bpy.app.handlers.scene_update_pre.append(collhack_skins)
-	# come with built-in cache_update in the json
 
 def unregister():
 	del bpy.types.Scene.mcprep_mob_list
 	del bpy.types.Scene.mcprep_mob_list_index
-
 

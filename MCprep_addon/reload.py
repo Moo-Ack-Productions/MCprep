@@ -35,7 +35,7 @@ build_dir = "../compiled/"
 files = ["__init__.py","conf.py","materials.py","meshswap.py","spawner.py","tracking.py",
 		"mcprep_ui.py", "util.py", "MCprep_resources","addon_updater.py",
 		"addon_updater_ops.py", "icons", "world_tools.py","LICENSE.txt",
-		"install_readme.txt"]
+		"install_readme.txt", "privacy-policy.txt"]
 
 
 

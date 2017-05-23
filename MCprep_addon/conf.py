@@ -34,7 +34,7 @@ import os
 try:
 	import bpy.utils.previews
 except:
-	if conf.v: print("No custom icons in this blender instance")
+	print("MCprep: No custom icons in this blender instance")
 	pass
 
 def init():
@@ -173,6 +173,14 @@ def init():
 	active_mob = "" # format "relative path+':/:'+name+':/:'+catgry"
 	active_mob_subind = -1
 
+	global meshswap_list
+	meshswap_list = []
+
+
+# -----------------------------------------------------------------------------
+# ICONS INIT
+# -----------------------------------------------------------------------------
+
 
 def icons_init():
 	# start with custom icons
@@ -199,15 +207,20 @@ def icons_init():
 	preview_collections["blocks"] = ""
 
 
+# -----------------------------------------------------------------------------
+# GLOBAL REGISTRATOR INIT
+# -----------------------------------------------------------------------------
+
+
 def register():
 	pass
 
 
 def unregister():
 	global preview_collections
-	if preview_collections["main"] != "":
-		for pcoll in preview_collections.values():
-			#print("clearing?",pcoll)
-			bpy.utils.previews.remove(pcoll)
-		preview_collections.clear()
+	# if preview_collections["main"] != "":
+	# 	for pcoll in preview_collections.values():
+	# 		#print("clearing?",pcoll)
+	# 		bpy.utils.previews.remove(pcoll)
+	# 	preview_collections.clear()
 	

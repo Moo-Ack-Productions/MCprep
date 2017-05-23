@@ -46,7 +46,7 @@ from . import tracking
 
 class MCPREP_materialChange(bpy.types.Operator):
 	"""Fixes materials and textures on selected objects for Minecraft rendering"""
-	bl_idname = "mcprep.mat_change" #"object.mc_mat_change"
+	bl_idname = "mcprep.mat_change"
 	bl_label = "MCprep Materials"
 	bl_options = {'REGISTER', 'UNDO'}
 
@@ -59,6 +59,9 @@ class MCPREP_materialChange(bpy.types.Operator):
 	combineMaterials = bpy.props.BoolProperty(
 		name = "Combine materials",
 		description = "Consolidate duplciate materials & textures",
+		default = False
+		)
+	skipUsage = bpy.props.BoolProperty(
 		default = False
 		)
 
@@ -109,7 +112,7 @@ class MCPREP_materialChange(bpy.types.Operator):
 		emit = ['redstone_block','redstone_lamp_on','glowstone','lava',
 				'lava_flowing','fire','sea_lantern','Glowstone',
 				'Redstone_Lamp_(on)','Stationary_Lava','Fire','Sea_Lantern',
-				'Block_of_Redstone']
+				'Block_of_Redstone','torch_flame_noimport','Sea-Lantern']
 
 		######## CHANGE TO MATERIALS LIBRARY
 		# if v and not importedMats:print("Parsing library file for materials")
@@ -286,7 +289,8 @@ class MCPREP_materialChange(bpy.types.Operator):
 	def execute(self, context):
 
 		# only sends tracking if opted in (and not internal change)
-		tracking.trackUsage("materials",bpy.context.scene.render.engine)
+		if self.skipUsage==False:
+			tracking.trackUsage("materials",bpy.context.scene.render.engine)
 
 		#get list of selected objects
 		objList = context.selected_objects
@@ -1051,9 +1055,11 @@ class MCPREP_spawn_with_skin(bpy.types.Operator):
 			self.report({'ERROR'}, "No skins found")
 			return {'CANCELLED'}
 
+		active_mob = conf.rig_list_sub[context.scene.mcprep_mob_list_index][0]
+
 		# try not to use internal ops because of analytics
 		bpy.ops.mcprep.mob_spawner(
-				mcmob_type=conf.active_mob,
+				mcmob_type=active_mob,
 				relocation = self.relocation,
 				toLink = self.toLink,
 				clearPose = self.clearPose)

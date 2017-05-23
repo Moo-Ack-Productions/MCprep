@@ -54,7 +54,7 @@ https://github.com/TheDuckCow/MCprep
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",
-	"version": (3, 0, 1),
+	"version": (3, 0, 2),
 	"blender": (2, 78, 0),
 	"location": "3D window toolshelf > MCprep tab",
 	"description": "Minecraft workflow addon for rendering and animation",
@@ -129,7 +129,7 @@ def unregister():
 	tracking.unregister()
 
 	# addon updater code and configurations
-	addon_updater_ops.unregister(bl_info)
+	addon_updater_ops.unregister()
 	
 
 

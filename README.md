@@ -68,8 +68,8 @@ Feature list
 
 | Spawner   |      Description      |
 |----------|:-------------:|
-| Spawn: [rig] | Based on the actively selected rig, from an according spawning rig category, add the mob/character into the scene. These are fully rigged characters |
-| + sign | Install a custom rig into the 'custom' category for personal use |
+| Spawn: [rig] | Based on the actively selected rig, from an according spawning rig category, add the mob/character into the scene. These are fully rigged characters. Using the plus sign, you can even install your own rigs (rig must be part of a group). For quicker mapping, you can even set an entire folder and it will auto-create subcategories of rigs based on folders. |
+| Spawn: meshswap block | Place a block from the meshswap file into the 3D scene. Currently is limited to only having meshswap groups (e.g. torches and fire) and not objects (e.g. not supporting grass and flowers yet).|
 
 
 ### Spawner mobs included in the current version of MCprep
@@ -156,10 +156,26 @@ How to use this addon
 - **Step 1:** Select the objects that you wish to be meshSwapped. Swappable objects are determined *automatically* based on the contents of the blend file selected above. If an object is not found or swappable, it will just be skipped - no harm done by "overselecting" (so select all objects to make sure everything that can be swapped gets swapped!)
 - **Step 2:** Press Mesh Swap (there will be a small delay, meshswapping large areas such as fields of grass may take awhile).
 
-*Settup your jmc2obj and Mineways worlds in this fashion for best results.*
+*Setup your jmc2obj and Mineways worlds in this fashion for best results.*
 ![Exporter setups](/visuals/exporterSettings.png?raw=true)
 
 *Note jmc2obj is preferred because of how the obj materials are exported, Mineways has more limitations.*
+
+*Note 2: You can now also directly add meshswap blocks into the scene from the shift-A menu or the spawner:meshswap panel.*
+
+To add your own objects to meshswap (or groupswap):
+- **Step 1:** Check your imported world object and see the name of the material for the object you want to setup. You might think it is "glass plane", but if the importer names the material "glass_plane", you need to note this name down for step 3.
+- **Step 2:** Model you object in the mcprep_meshSwap.blend file, or append it.
+- **Step 3:** Rename your object to exactly match the previously noted material name. If you want to have a group swappable, then name the group to match the name above.  
+  * So the MATERIAL name found in the 3D imported world should match the OBJECT name of the model in the meshswap file to work  
+  * Note if both a group and an object have matching names, the script will prefer the group and meswap that over the object.  
+- **Step 4:** Add necessary properties to special blocks as needed. See the meshSwap file included for examples, but the properties to add are:  
+  * "variance": Objects with this property when meshswapped will have some x/y variance added. If the property is set to 1, it will also have (only negative) z variance. If it is set to 0, it will only have xy variance. For instance, tall_grass is given a value of 1 so some grass is shorter than others, but flowers are given a value of 0 so they always have the same height but still have some variance in placement.
+  * "edgeFloat": objects like vines, ladders, and lillypads which float off the edge of other blocks.  
+  * "torchlike": objects that can have rotations like a torch on a wall. Objects with this property will be determined to be either on top of a block or placed on the side of another block according to the mesh.
+  * **Note:** there is no UI for adding properties to a group, so if you want to add a property to a group (say a torch which has a pre-animated light and particle system, as the included blend file does) you must go into the python consol and add the property like so:  <code>bpy.data.groups['groupName']['propertyName'] = 1</code>  (the value only matters for the variance property)
+  * **Example:** <code>bpy.data.groups['torch']['torchlike'] = 1</code> will add the torchlike property to the torch group, allowing it to have correct rotaitons when meshSwapped in.
+
 
 
 ### Skin Swapping:
@@ -169,6 +185,7 @@ How to use this addon
   - *Don't see the skin you want?* Use the + button to add to the list, or use (download) skin from username below the UIList
 - **Step 3:** Press the button that says "Apply [skin name]"
 - **Step 4:** You're done! If the user interface appears to not update, be sure to **check rendered view**. Also note the default behavior is to make a *new* material in the event you have other copies or uses of the existing material. You can turn this off in the redo last menu.
+
 
 
 ### Mob Spawner:
@@ -188,19 +205,6 @@ How to use this addon
 *Mob Spawner Options*
 ![Meshswap options](/visuals/spawnOptions.png?raw=true)
 
-To add your own objects to meshswap (or groupswap):
-- **Step 1:** Check your imported world object and see the name of the material for the object you want to setup. You might think it is "glass plane", but if the importer names the material "glass_plane", you need to note this name down for step 3.
-- **Step 2:** Model you object in the mcprep_meshSwap.blend file, or append it.
-- **Step 3:** Rename your object to exactly match the previously noted material name. If you want to have a group swappable, then name the group to match the name above.  
-  * So the MATERIAL name found in the 3D imported world should match the OBJECT name of the model in the meshswap file to work  
-  * Note if both a group and an object have matching names, the script will prefer the group and meswap that over the object.  
-- **Step 4:** Add necessary properties to special blocks as needed. See the meshSwap file included for examples, but the properties to add are:  
-  * "variance": Objects with this property when meshswapped will have some x/y variance added. If the property is set to 1, it will also have (only negative) z variance. If it is set to 0, it will only have xy variance. For instance, tall_grass is given a value of 1 so some grass is shorter than others, but flowers are given a value of 0 so they always have the same height but still have some variance in placement.
-  * "edgeFloat": objects like vines, ladders, and lillypads which float off the edge of other blocks.  
-  * "torchlike": objects that can have rotations like a torch on a wall. Objects with this property will be determined to be either on top of a block or placed on the side of another block according to the mesh.
-  * **Note:** there is no UI for adding properties to a group, so if you want to add a property to a group (say a torch which has a pre-animated light and particle system, as the included blend file does) you must go into the python consol and add the property like so:  <code>bpy.data.groups['groupName']['propertyName'] = 1</code>  (the value only matters for the variance property)
-  * **Example:** <code>bpy.data.groups['torch']['torchlike'] = 1</code> will add the torchlike property to the torch group, allowing it to have correct rotaitons when meshSwapped in.
-
 To add your own rigs to the Mob Spawner:
 - **Step 1:** Make your rig, or download one you want to use!
 - **Step 2:** Make sure all elements of the rig, ie all armatures, body parts, and extra objects, are added to a single group inside your rig file. The name of this group is what will appear under the shift-a menu, and typically matches the name of the file if there is just one rig per blend file.
@@ -214,6 +218,22 @@ To add your own rigs to the Mob Spawner:
 *Sometimes you may need to reload a rig cache, click this button if the correct rigs aren't appearing*
 ![Reload rig cache](/visuals/reloadRigCache.png?raw=true)
 
+
+### Meshswap block Spawner:
+- **Purpose:** To provide quick, one-click importing of meshswap 3D blocks and groups.
+- **Step 0:** By default this is already done for you; make sure the meshswap file path is a directory with valid blend files setup for appending (addon preferences > MCprep). When installed, this path will already be setup and valid pointing to the included blocks with this release.
+- **Step 1:** Navigate to the spawner panel and select meshswap
+- **Step 2:** Highlight the desired block
+- **Step 3:** Press meshswap, and see the block placed in the scene
+- **Step 4:** Modify redo last settings as needed (also accesible by pressing F6 after spawning). Options include:
+  - Meshswap block: You can change here which block you wanted to add
+  - Location: Set the location where the block is placed
+  - Append layer: layer to append contents of the group to; default is layer 20, setting to 0 will use the currently active layer(s) as the layers for the group
+  - Prep materials: run prep materials on the imported objects, particuarly useful if using cycles
+  - Snapping dropdown: Snap the placed block to a rounded coordinate. Optional offset by 0.5 as well
+  - Make real: Instance the groups so they are made real, thus allowing you to individually modify the objects within the group. Note: this may clear any pre-applied animation.
+
+
 Known Bugs
 ======
 - SOMETIMES UNDO (control/command z) MAY CRASH AFTER MESHSWAPPING, recommended to save before using to be safe but generally is fine.
@@ -223,6 +243,7 @@ Known Bugs
   - Redstone items like repeaters, dust, and so forth generally don't swap properly, and is a much more difficult problem to solve.
   - Rails: for jmc2obj, all rails should at least be placed in the correct position, but not necessarily rotated correctly.
   - Some materials such as fire are pre-setup with animated image sequences (yay!), but blender cannot pack image sequences into a blend file. If animated textures go missing (e.g. after moving a blend file around), reconnect them back to the according folder/file, such as /textures/fire/fire_0001.png. Note this should not be a problem if the default meshwap path/file is used, provided the addon is not uninstalled.
+  - Doors are not meshswapped into the correct location, manual fixing may be required.
 - **Mineways specific meshswap oddities:**
   - Mineways, unlike jmc2obj, replaces the face of a solid block with the object attached to it. For example, ladders and redstone dust when meshswapped will leave a hole in the block they were attached to. There is essentially nothing I can do about that.
   - In Mineways, many blocks simply cannot be meshswapped because of the way the exporter will group multiple objects (for example, all the flowers and double tall grass) into one material. For the time being, there is nothing I can do to resolve this.
@@ -231,10 +252,7 @@ Known Bugs
 
 Future Plans
 ======
-- Create a "solidify pixels" operator, where single-faced planes are converted into properly subdivided and extruded 3D planes according to the active texture, removing transparent areas accordingly. Should be able to apply to arbitrary objects
-- Continue adding more blocks for meshswapping
-- Add the ability to shift-A add objects in the library like other objects, not just via meshswapping
-- Create a "match external material" operator, where all materials in the set of selected objects are checked against an external library, and if any have matching names, the external material will overwrite the local one. This would allow one to quickly cycles between different styles, e.g. texture packs.
+Future deveploment plans are now recorded and updated as milestones and enhancement issues on github.
 
 
 Additional Help
