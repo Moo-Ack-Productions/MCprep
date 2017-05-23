@@ -101,7 +101,6 @@ class Singleton_tracking(object):
 							self._addon+"_tracker.json")
 		self._tracker_idbackup = os.path.join(os.path.dirname(__file__),
 							os.pardir,self._addon+"_trackerid.json")
-		print(self._tracker_json)
 		self.json = {}
 
 

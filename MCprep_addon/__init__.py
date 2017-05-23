@@ -129,7 +129,7 @@ def unregister():
 	tracking.unregister()
 
 	# addon updater code and configurations
-	addon_updater_ops.unregister(bl_info)
+	addon_updater_ops.unregister()
 	
 
 

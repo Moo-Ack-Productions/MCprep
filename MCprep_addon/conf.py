@@ -44,7 +44,7 @@ def init():
 	# Used to print out extra information, set false with distribution
 	# -----------------------------------------------
 	global dev
-	dev = True
+	dev = False
 
 	global v
 	v = True # $VERBOSE, UI setting
@@ -218,9 +218,9 @@ def register():
 
 def unregister():
 	global preview_collections
-	if preview_collections["main"] != "":
-		for pcoll in preview_collections.values():
-			#print("clearing?",pcoll)
-			bpy.utils.previews.remove(pcoll)
-		preview_collections.clear()
+	# if preview_collections["main"] != "":
+	# 	for pcoll in preview_collections.values():
+	# 		#print("clearing?",pcoll)
+	# 		bpy.utils.previews.remove(pcoll)
+	# 	preview_collections.clear()
 	
