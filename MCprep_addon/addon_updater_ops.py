@@ -491,8 +491,10 @@ def updater_run_install_popup_handler(scene):
 	elif "version_text" in updater.json and "version" in updater.json["version_text"]:
 		version = updater.json["version_text"]["version"]
 		ver_tuple = updater.version_tuple_from_text(version)
+
+		#print("Comparing version updates: intsalled {} vs online {}".format(updater.current_version, ver_tuple))
 		
-		if ver_tuple < updater.current_version:
+		if ver_tuple <= updater.current_version:
 			# user probably manually installed to get the up to date addon
 			# in here. Clear out the update flag using this function
 			if updater.verbose:
