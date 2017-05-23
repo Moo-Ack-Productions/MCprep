@@ -225,7 +225,7 @@ class mcprepQuickMenu(bpy.types.Menu):
 			meshswap = pcoll["grass_icon"]
 		else:
 			spawner=None
-			meshwap=None
+			meshswap=None
 		
 
 		if len(conf.rig_list)==0 or len(conf.meshswap_list)==0:
