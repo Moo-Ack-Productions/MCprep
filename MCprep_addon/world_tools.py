@@ -36,7 +36,7 @@ from . import util
 
 
 # -----------------------------------------------------------------------------
-# class definitions
+# open mineways/jmc2obj related
 # -----------------------------------------------------------------------------
 
 
@@ -156,6 +156,105 @@ class MCP_install_mineways(bpy.types.Operator):
 
 
 # -----------------------------------------------------------------------------
+# Additional world tools
+# -----------------------------------------------------------------------------
+
+
+class MCP_prep_world(bpy.types.Operator):
+	"""Class to prep world settings to appropriate default"""
+	bl_idname = "mcprep.world"
+	bl_label = "Prep World"
+	bl_description = "Prep world render settings to something generally useful"
+
+	def execute(self, context):
+
+		print("WORK IN PROGRESS")
+		if True:
+			self.report({"ERROR"},"Not yet developed")
+			return {'CANCELLED'}
+
+		# if blender internal:
+		# set ambient occlusion, sky color (check if any visible sun lamps with atmosphere)
+		# set environment color
+
+		return {'FINISHED'}
+
+
+class MCP_add_sun_or_moon(bpy.types.Operator):
+	"""Add a sun or moon setup into scene"""
+	bl_idname = "mcprep.add_sun_or_moon"
+	bl_label = "Add sun & moon"
+	bl_description = "Add sun or moon to scene"
+
+	def execute(self, context):
+
+		print("WORK IN PROGRESS")
+		if True:
+			self.report({"ERROR"},"Not yet developed")
+			return {'CANCELLED'}
+
+		return {'FINISHED'}
+
+
+class MCP_time_set(bpy.types.Operator):
+	"""Set the time to a major unit"""
+	bl_idname = "mcprep.time_set"
+	bl_label = "Set time"
+	bl_description = "Set the time affecting light, sun and moon position, similar to in-game commands"
+
+	# subject center to place lighting around
+	time_enum = bpy.props.EnumProperty(
+		name="Time selection",
+		description="Select between the different reflections",
+		items=[
+			("1000","Day","Time (day)=1,000"), # matches command
+			("6000","Noon","Time=6,000"), # Sun is at zenith
+			("12000","Sunset","Time=12,000"), # Approx matching resource
+			("13000","Night","Time (night)=13,000"), # matches command
+			("18000","Midnight","Time=18,000"), # matches reference
+			("23000","Sunrise","/Time set day=23,000") # sun first visible
+			],
+	)
+
+	day_offset = bpy.props.IntProperty(
+		name="Day offset",
+		description="Offset by number of days (ie +/- 24000*n)",
+		default=0
+	)
+
+	def execute(self, context):
+
+		print("WORK IN PROGRESS")
+		if True:
+			self.report({"ERROR"},"Not yet developed")
+			return {'CANCELLED'}
+
+		# add the day offset first
+		new_time = 24000*self.day_offset
+
+		# switch against scenarios
+		new_time += int(self.time_enum)
+
+		context.scene.mcprep_props.world_time = new_time
+		return {'FINISHED'}
+
+
+def world_time_update(self, context):
+
+	time = context.scene.mcprep_props.world_time
+	# translate time into rotation of sun/moon rig
+	# see: http://minecraft.gamepedia.com/Day-night_cycle
+	# set to the armature.... would be even better if it was somehow driver-set.
+	# but I guess it would mean requires MCprep is installed
+
+	# show warning if animated, "Requires MCprep be installed on rendering devices"
+	# >> or do a popup instead? with paragraph explanation
+
+
+	return
+
+
+# -----------------------------------------------------------------------------
 #	Above for UI
 #	Below for register
 # -----------------------------------------------------------------------------
@@ -163,6 +262,7 @@ class MCP_install_mineways(bpy.types.Operator):
 
 
 def register():
+
 	pass
 
 def unregister():

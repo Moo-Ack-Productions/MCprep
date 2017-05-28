@@ -35,6 +35,7 @@ from . import util
 from . import spawner
 from . import meshswap
 from . import materials
+from . import world_tools
 from . import addon_updater_ops
 from . import tracking
 
@@ -532,7 +533,7 @@ class MCprepPreference(bpy.types.AddonPreferences):
 
 
 # ---------
-# General addon panel, world importing & material settings
+# World importing related & material settings
 class MCpanel(bpy.types.Panel):
 	"""MCprep addon panel"""
 	bl_label = "World Imports"
@@ -645,6 +646,40 @@ class MCpanel(bpy.types.Panel):
 
 		# show update ready if available
 		addon_updater_ops.update_notice_box_ui(self, context)
+
+
+# ---------
+# World settings and tools
+class MCpanelWorldTools(bpy.types.Panel):
+	"""MCprep addon panel"""
+	bl_label = "World Tools"
+	bl_space_type = 'VIEW_3D'
+	bl_region_type = 'TOOLS'
+	bl_category = "MCprep"
+
+	def draw(self, context):
+		layout = self.layout
+		rw = layout.row()
+		col = rw.column(align=True)
+		col.label("World time")
+		if "mcprep_world" not in bpy.data.groups:
+			col.label("No sun/moon found,", icon="ERROR")
+			col.operator("mcprep.add_sun_or_moon")
+
+		else:
+			col.prop(context.scene.mcprep_props,"world_time",text="")
+			p = col.operator("mcprep.time_set")
+			p.day_offset = int(context.scene.mcprep_props.world_time/24000)
+
+		layout.split()
+
+		rw = layout.row()
+		col = rw.column(align=True)
+		col.label("World setup")
+		col.operator("mcprep.world")
+		col.operator("mcprep.world", text="Add clouds")
+		col.operator("mcprep.world", text="Set Weather")
+
 
 
 
@@ -936,6 +971,16 @@ class MCprep_props(bpy.types.PropertyGroup):
 		items = [('mob', 'Mob', 'Show mob spawner'),
 				('meshswap', 'Meshswap', 'Show meshswap spawner')]
 	)
+
+	world_time = bpy.props.IntProperty(
+		name="Time",
+		description="Set world time. 0=Day start, 12000=nightfall",
+		default=8000,
+		soft_min=0,
+		soft_max=24000,
+		update=world_tools.world_time_update
+	)
+
 
 
 
