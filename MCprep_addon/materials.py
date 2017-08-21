@@ -550,29 +550,88 @@ class MCPREP_combineImages(bpy.types.Operator):
 
 
 
-# class MCPREP_scaleUV(bpy.types.Operator):
-# 	bl_idname = "mcprep.scaleUV"
-# 	bl_label = "Scale all faces in UV editor"
-# 	bl_description = "Scale all faces in the UV editor"
+class MCPREP_scaleUV(bpy.types.Operator):
+	bl_idname = "mcprep.scale_uv"
+	bl_label = "Scale Faces"
+	bl_description = "Scale all selected UV faces"
+	bl_options = {'REGISTER', 'UNDO'}
 
-# 	def execute(self, context):
+	scale = bpy.props.FloatProperty(default=1.0,name="Scale")
+	initial_UV = []
+
+	def execute(self, context):
 		
-# 		# WIP
-# 		ob = context.active_object
+		# INITIAL WIP
+		"""
+		# WIP
+		ob = context.active_object
+		# copied from elsewhere
+		uvs = ob.data.uv_layers[0].data
+		matchingVertIndex = list(chain.from_iterable(polyIndices))
+		# example, matching list of uv coord and 3dVert coord:
+		uvs_XY = [i.uv for i in Object.data.uv_layers[0].data]
+		vertXYZ= [v.co for v in Object.data.vertices]
+		matchingVertIndex = list(chain.from_iterable([p.vertices for p in Object.data.polygons]))
+		# and now, the coord to pair with uv coord:
+		matchingVertsCoord = [vertsXYZ[i] for i in matchingVertIndex]
+		"""
 
-# 		# copied from elsewhere
-# 		uvs = ob.data.uv_layers[0].data
-# 		matchingVertIndex = list(chain.from_iterable(polyIndices))
+		bpy.ops.object.mode_set(mode="OBJECT")
+		ret = self.scale_UV_faces(context, bpy.context.object,self.scale)
+		bpy.ops.object.mode_set(mode="EDIT")
+		if ret != None:
+			self.report({ret[0]},ret[1])
+			if conf.v:print(ret[0]+", "+ret[1])
+			return {'CANCELLED'}
 
-# 		# example, matching list of uv coord and 3dVert coord:
-# 		uvs_XY = [i.uv for i in Object.data.uv_layers[0].data]
-# 		vertXYZ= [v.co for v in Object.data.vertices]
+		return {'FINISHED'}
 
-# 		matchingVertIndex = list(chain.from_iterable([p.vertices for p in Object.data.polygons]))
-# 		# and now, the coord to pair with uv coord:
-# 		matchingVertsCoord = [vertsXYZ[i] for i in matchingVertIndex]
+	def scale_UV_faces(self, context, ob, factor):
+		
+		if ob==None:
+			return ("ERROR","No active object found")
+		elif ob.type != 'MESH':
+			return ("ERROR","Active object must be a mesh")
+		elif len(ob.data.polygons)==0:
+			return ("ERROR","Active object has no faces to delete")
+		 
+		uv = ob.data.uv_layers.active
+		
+		if uv==None:
+			return ("ERROR","No active UV map found")
+		
+		# transform the scale factor properly to implementation below
+		factor *= -1
+		factor += 1
+		mod = False
+		
+		for f in ob.data.polygons:
+			
+			if f.select!=True:continue # if not selected, won't show up in UV editor
+			# initialize for avergae center on polygon (probably a better way exists)
+			x=0
+			y=0
+			n=0 # number of verts in loop for average purpose
+			for i in f.loop_indices:
+				l = ob.data.loops[i] # The loop entry this polygon point refers to
+				v = ob.data.vertices[l.vertex_index]  # The vertex data that loop entry refers to
+				#print("\tLoop index", l.index, "points to vertex index", l.vertex_index,"at position", v.co)
+				# isolate to specific UV already used
+				#print("\t\tUV map coord: ", uv.data[l.index].uv)
+				if uv.data[l.index].select == False:continue
+				x+=uv.data[l.index].uv[0]
+				y+=uv.data[l.index].uv[1]
+				n+=1
+			for i in f.loop_indices:
+				if uv.data[l.index].select == False:continue
+				l = ob.data.loops[i]
+				uv.data[l.index].uv[0] = uv.data[l.index].uv[0]*(1-factor)+x/n*(factor)
+				uv.data[l.index].uv[1] = uv.data[l.index].uv[1]*(1-factor)+y/n*(factor)
+				mod=True
+		if mod==False:
+			return ("ERROR","No UV faces selected")
 
-# 		return {'FINISHED'}
+		return None
 
 
 class MCPREP_improveUI(bpy.types.Operator):
