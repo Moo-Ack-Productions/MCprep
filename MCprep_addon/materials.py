@@ -61,7 +61,8 @@ class MCPREP_materialChange(bpy.types.Operator):
 		default = False
 		)
 	skipUsage = bpy.props.BoolProperty(
-		default = False
+		default = False,
+		options={'HIDDEN'}
 		)
 
 	# prop: consolidate textures consolidateTextures
@@ -325,7 +326,7 @@ class MCPREP_materialChange(bpy.types.Operator):
 				if conf.v:print('Get the linked material instead!')
 
 		if self.combineMaterials==True:
-			bpy.ops.mcprep.combine_materials(selection_only=True)
+			bpy.ops.mcprep.combine_materials(selection_only=True, skipUsage=True)
 		self.report({"INFO"},"Modified "+str(count)+" materials")
 		return {'FINISHED'}
 
@@ -342,8 +343,16 @@ class MCPREP_combineMaterials(bpy.types.Operator):
 		description = "Build materials to consoldiate based on selected objects only",
 		default = True
 		)
+	skipUsage = bpy.props.BoolProperty(
+		default = False,
+		options={'HIDDEN'}
+		)
 
 	def execute(self, context):
+
+		# only sends tracking if opted in (and not internal change)
+		if self.skipUsage==False:
+			tracking.trackUsage("combine_materials")
 
 		removeold = True
 
@@ -461,8 +470,16 @@ class MCPREP_combineImages(bpy.types.Operator):
 		description = "Build images to consoldiate based on selected objects' materials only",
 		default = False
 		)
+	skipUsage = bpy.props.BoolProperty(
+		default = False,
+		options={'HIDDEN'}
+		)
 	
 	def execute(self, context):
+
+		# only sends tracking if opted in (and not internal change)
+		if self.skipUsage==False:
+			tracking.trackUsage("combine_images")
 
 		removeold = True
 
@@ -557,53 +574,124 @@ class MCPREP_scaleUV(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 
 	scale = bpy.props.FloatProperty(default=1.0,name="Scale")
+	first_mouse_x = bpy.props.IntProperty() # hidden
+	first_mouse_y = bpy.props.IntProperty() # hidden
 	initial_UV = []
+	skipUsage = bpy.props.BoolProperty(
+		default = False,
+		options={'HIDDEN'}
+		)
 
-	def execute(self, context):
-		
-		# INITIAL WIP
-		"""
-		# WIP
-		ob = context.active_object
-		# copied from elsewhere
-		uvs = ob.data.uv_layers[0].data
-		matchingVertIndex = list(chain.from_iterable(polyIndices))
-		# example, matching list of uv coord and 3dVert coord:
-		uvs_XY = [i.uv for i in Object.data.uv_layers[0].data]
-		vertXYZ= [v.co for v in Object.data.vertices]
-		matchingVertIndex = list(chain.from_iterable([p.vertices for p in Object.data.polygons]))
-		# and now, the coord to pair with uv coord:
-		matchingVertsCoord = [vertsXYZ[i] for i in matchingVertIndex]
-		"""
+	# 1) Need to save orig_center (x,y) point of all selected faces
+	# 2) factor ALWAYS = sqrtdist(initial center - current xy)/sqrtdist(initial_medium - orig_xy)
+	# 3) and the sign (positive or negative) is from dot product (scalar) agaisnt orig
+	#    vector direction of orig_xy - orig_center
+	# 4) Draw a dotted line from curser loc to said origin, plus  in/out arrows aligned to vector
+	# 5) Add scale values update parameter in view below on window
+	# 6) Add ability to enter text value for scale e.g. type in 0.5 during modal
 
-		bpy.ops.object.mode_set(mode="OBJECT")
-		ret = self.scale_UV_faces(context, bpy.context.object,self.scale)
-		bpy.ops.object.mode_set(mode="EDIT")
-		if ret != None:
-			self.report({ret[0]},ret[1])
-			if conf.v:print(ret[0]+", "+ret[1])
+	# It already works for individual faces...
+	# but not when their borders are already touching (which is the use case here)
+
+	# @classmethod
+	# def poll(cls, context):
+	# 	return context.mode == 'EDIT'
+
+	def modal(self, context, event):
+		ob = context.object
+		print("EEEVVEENNT: ",event.type,event,type(event))
+		if event.type == 'MOUSEMOVE':
+			delta = event.mouse_x - self.first_mouse_x
+			#context.object.location.x = self.first_value + delta * 0.01
+			bpy.ops.object.mode_set(mode="OBJECT")
+			factor = 1+delta*0.01
+			# ret = self.scale_UV_faces(context, ob, factor)
+			ret = self.scale_UV_faces(context, ob, factor)
+			bpy.ops.object.mode_set(mode="EDIT")
+
+		elif event.type in {'LEFTMOUSE', 'RET'}:
+			# set scale factor here?
+			delta = event.mouse_x - self.first_mouse_x
+			self.scale = 1+self.first_mouse_x + delta*0.01
+			bpy.ops.object.mode_set(mode="EDIT")
+			return {'FINISHED'}
+
+		elif event.type in {'RIGHTMOUSE', 'ESC'}:
+			bpy.ops.object.mode_set(mode="OBJECT")
+			ret = self.scale_UV_faces(context, ob, 1) # unset back to original data
+			bpy.ops.object.mode_set(mode="EDIT")
 			return {'CANCELLED'}
 
-		return {'FINISHED'}
+		return {'RUNNING_MODAL'}
+
+	def invoke(self, context, event):
+
+		# only sends tracking if opted in (and not internal change)
+		if self.skipUsage==False:
+			tracking.trackUsage("scale_UV_faces")
+
+		ob = context.object
+		if ob==None:
+			self.report({'WARNING'}, "No active object found")
+			return {'CANCELLED'}
+		elif ob.type != 'MESH':
+			self.report({'WARNING'}, "Active object must be a mesh")
+			return {'CANCELLED'}
+		elif len(ob.data.polygons)==0:
+			self.report({'WARNING'}, "Active object has no faces to delete")
+			return {'CANCELLED'}
+		
+		if not ob.data.uv_layers.active:#uv==None:
+			self.report({'WARNING'}, "No active UV map found")
+			return {'CANCELLED'}
+
+		bpy.ops.object.mode_set(mode="OBJECT")
+		self.first_mouse_x = event.mouse_x
+		#zip the data... so that format is [(x,y),(x,y)]
+		self.initial_UV = [ (d.uv[0], d.uv[1]) for d in ob.data.uv_layers.active.data]
+		print(self.initial_UV)
+		#self.initial_UV = list(ob.data.uv_layers.active.data)
+		bpy.ops.object.mode_set(mode="EDIT")
+
+		context.window_manager.modal_handler_add(self)
+		return {'RUNNING_MODAL'}
+
+
+	# def execute(self, context):
+		
+	# 	# INITIAL WIP
+	# 	"""
+	# 	# WIP
+	# 	ob = context.active_object
+	# 	# copied from elsewhere
+	# 	uvs = ob.data.uv_layers[0].data
+	# 	matchingVertIndex = list(chain.from_iterable(polyIndices))
+	# 	# example, matching list of uv coord and 3dVert coord:
+	# 	uvs_XY = [i.uv for i in Object.data.uv_layers[0].data]
+	# 	vertXYZ= [v.co for v in Object.data.vertices]
+	# 	matchingVertIndex = list(chain.from_iterable([p.vertices for p in Object.data.polygons]))
+	# 	# and now, the coord to pair with uv coord:
+	# 	matchingVertsCoord = [vertsXYZ[i] for i in matchingVertIndex]
+	# 	"""
+
+	# 	bpy.ops.object.mode_set(mode="OBJECT")
+	# 	ret = self.scale_UV_faces(context, bpy.context.object,self.scale)
+	# 	bpy.ops.object.mode_set(mode="EDIT")
+	# 	if ret != None:
+	# 		self.report({ret[0]},ret[1])
+	# 		if conf.v:print(ret[0]+", "+ret[1])
+	# 		return {'CANCELLED'}
+
+	# 	return {'FINISHED'}
 
 	def scale_UV_faces(self, context, ob, factor):
-		
-		if ob==None:
-			return ("ERROR","No active object found")
-		elif ob.type != 'MESH':
-			return ("ERROR","Active object must be a mesh")
-		elif len(ob.data.polygons)==0:
-			return ("ERROR","Active object has no faces to delete")
-		 
-		uv = ob.data.uv_layers.active
-		
-		if uv==None:
-			return ("ERROR","No active UV map found")
 		
 		# transform the scale factor properly to implementation below
 		factor *= -1
 		factor += 1
 		mod = False
+
+		uv = ob.data.uv_layers.active
 		
 		for f in ob.data.polygons:
 			
@@ -625,13 +713,58 @@ class MCPREP_scaleUV(bpy.types.Operator):
 			for i in f.loop_indices:
 				if uv.data[l.index].select == False:continue
 				l = ob.data.loops[i]
-				uv.data[l.index].uv[0] = uv.data[l.index].uv[0]*(1-factor)+x/n*(factor)
-				uv.data[l.index].uv[1] = uv.data[l.index].uv[1]*(1-factor)+y/n*(factor)
+				# hmm.. seems initial_UV index order does NOT remain consistent
+				uv.data[l.index].uv[0] = self.initial_UV[l.index][0]*(1-factor)+x/n*(factor)
+				uv.data[l.index].uv[1] = self.initial_UV[l.index][1]*(1-factor)+y/n*(factor)
 				mod=True
 		if mod==False:
 			return ("ERROR","No UV faces selected")
 
 		return None
+
+
+class MCPREP_isolate_alpha_uvs(bpy.types.Operator):
+	bl_idname = "mcprep.isolate_alpha_uvs"
+	bl_label = "Alpha faces"
+	bl_description = "Select or delete alpha faces of a mesh"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	# deleteAlpha = False
+	skipUsage = bpy.props.BoolProperty(
+		default = False,
+		options={'HIDDEN'}
+		)
+
+	def execute(self, context):
+
+		bpy.ops.object.mode_set(mode="OBJECT")
+		# if doing multiple objects, iterate over loop of this function
+		ret = self.select_alpha(None, bpy.context, bpy.context.object, 1)
+		bpy.ops.object.mode_set(mode="EDIT")
+		
+		return {"FINISHED"}
+
+	def select_alpha(self, context, ob, thresh):
+
+		if ob==None:
+			return ("ERROR","No active object found")
+		elif ob.type != 'MESH':
+			return ("ERROR","Active object must be a mesh")
+		elif len(ob.data.polygons)==0:
+			return ("ERROR","Active object has no faces to delete")
+		 
+		uv = ob.data.uv_layers.active
+		
+		if uv==None:
+			return ("ERROR","No active UV map found")
+
+		# img = 
+		# if ob.data.uv_textures.active == None: continue
+		for uv_face in ob.data.uv_textures.active.data:
+			uv_face.image = image
+
+		return ("WARNING","Not implemented yet")
+
 
 
 class MCPREP_improveUI(bpy.types.Operator):
@@ -937,8 +1070,6 @@ class MCPREP_applyUsernameSkin(bpy.types.Operator):
 			return {'CANCELLED'}
 		tracking.trackUsage("skin","username")
 
-
-
 		skins = [ str(skin[0]).lower() for skin in conf.skin_list ]
 		paths = [ skin[1] for skin in conf.skin_list ]
 		if self.username.lower() not in skins or self.redownload==True:
@@ -1104,8 +1235,6 @@ class MCPREP_spawn_with_skin(bpy.types.Operator):
 		)
 
 	def execute(self, context):
-		
-
 		if len (conf.skin_list)>0:
 			skinname = bpy.path.basename(
 					conf.skin_list[context.scene.mcprep_skins_list_index][0] )
@@ -1146,7 +1275,6 @@ def register():
 	bpy.app.handlers.scene_update_pre.append(handler_skins_enablehack)
 	bpy.app.handlers.load_post.append(handler_skins_load)
 	
-
 
 def unregister():
 	del bpy.types.Scene.mcprep_skins_list

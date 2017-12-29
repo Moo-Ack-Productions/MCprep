@@ -33,29 +33,6 @@ from . import conf
 # GENERAL SUPPORTING FUNCTIONS
 # -----------------------------------------------------------------------------
 
-####
-# strips out duplication ".001", ".002" from a name
-# def nameGeneralize(name):
-
-# 	# old way
-# 	# nameList = name.split(".")
-# 	# #check last item in list, to see if numeric type e.g. from .001
-# 	# try:
-# 	# 	x = int(nameList[-1])
-# 	# 	name = nameList[0]
-# 	# 	for a in nameList[1:-1]: name+='.'+a
-# 	# except:
-# 	# 	pass
-
-# 	try:
-# 		x = int(name[-3:])
-# 		name = name[0:-4]
-# 		return name
-# 	except:
-# 		if conf.vv:print("Error in name generalize, returning none:")
-# 		if conf.vv:print(name)
-# 		return None
-
 # ---------
 # Get base name from datablock
 def nameGeneralize(name):
@@ -63,16 +40,6 @@ def nameGeneralize(name):
 		return name[:-4]
 	else:
 		return name
-	# old method
-	# nameList = name.split(".")
-	# #check last item in list, to see if numeric type e.g. from .001
-	# try:
-	# 	x = int(nameList[-1])
-	# 	name = nameList[0]
-	# 	for a in nameList[1:-1]: name+='.'+a
-	# except:
-	# 	pass
-	# return name
 
 
 # ---------
@@ -129,8 +96,6 @@ def bAppendLink(directory,name, toLink, active_layer=True):
 	if post272:
 		if conf.vv:print("Using post-2.72 method of append/link")
 		# new method of importing
-
-		
 
 		if (toLink):
 			bpy.ops.wm.link(directory=directory, filename=name)
@@ -239,7 +204,6 @@ def open_program(executable):
 		elif ".app" not in executable:
 			return -1
 		
-
 	# for mac, if folder, check that it has .app otherwise throw -1
 	# (right now says will open even if just folder!!)
 
@@ -277,7 +241,6 @@ def exec_path_expand(self, context):
 		# >> end command SHOULD be open Mineways.app.
 
 
-
 # ---------
 # add object instance not working, so workaround function:
 def addGroupInstance(groupName,loc):
@@ -289,4 +252,66 @@ def addGroupInstance(groupName,loc):
 	ob.location = loc
 	ob.select = True
 	return ob
+
+
+# ---------
+# or instead of this, a class which keeps record of inputs and interprets
+# the state output as per blender norm, e.g. transformmodal(3d=False) keeps stream
+# of the transform operations and options, ignoring the rest, including interpreting
+# of toggles of axis etc. stream output in standard way, e.g. [val, mods]
+# Examples of transform stream:
+# -/2x becomes [-0.5, 'x']
+# -/2x/ becomes [-2, 'x']
+# but! it shouldn't just append the string... that could become memory leak...
+# it should save the STATE of the stream at any given moment internally
+# should it should be an instance of a class variable, with functions on that class
+# shared
+class event_stream(): #class event_stream(Object)
+
+	# global event vars
+	nums = ['NUMPAD_0','zero',
+			'NUMPAD_1','one',
+			'NUMPAD_2','two',
+			'NUMPAD_3','three',
+			'NUMPAD_4','four',
+			'NUMPAD_5','five',
+			'NUMPAD_6','six',
+			'NUMPAD_7','seven',
+			'NUMPAD_8','eight',
+			'NUMPAD_9','nine',
+		]
+	nums_eval = [0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9]
+
+	# text = []
+	neg = ['MINUS','NUMPAD_MINUS']
+
+	# modifiers
+	mods = ['shift?','alt?','ctrl?','OSKEY',"etc....."]
+
+	# initializations
+	def __init__(self):
+		self.x=False
+		self.y=False
+		self.z=False
+		self.neg=None # can have negative modified without specifying value
+		self.value=None # if None, then no value initially set
+		self.valuestr=None # not sure if needed, but keep value as string for padding
+
+	# streaming functions
+	def stream_transform(val,two_dim=False):
+		# interpret val, and update state
+		if val in ['MINUS','NUMPAD_MINUS']:
+			# if not yet initialized for use, set to True, else toggle
+			self.neg = True if self.neg == None else not self.neg
+		# elif val in ... 
+
+	def getKeyval(event):
+
+		if event.type in nums:
+			return ["INTEGER",nums_eval[nums.index(event.type)]]
+		elif event.type in neg:
+			return ["NEGATIVE",""]
+		elif event.type == "X":
+			return ["X",""]
+
 

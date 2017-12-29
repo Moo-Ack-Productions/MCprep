@@ -1,3 +1,4 @@
+#!/usr/local/bin/python3
 ###
 # DO NOT DISTRIBUTE WITH ADDON
 # This is a convenience script for reloading files into blender and packaging
@@ -6,13 +7,6 @@
 # Simply run this python script in its own working directory
 #
 ###
-
-"""
-todo
-
-Make it auto-install into the blender source files
-
-"""
 
 from datetime import datetime
 from subprocess import Popen, PIPE
@@ -28,8 +22,9 @@ name_var = "$VERSION"  # search for this in each, string
 name_array = ["free","premium"]
 verbose_var = "$VERBOSE" # turn line from 'v = True # $VERBOSE" to 'v = False'
 addon_name = "MCprep_addon"
+stagepath = "MCprep_addon"
 
-addonpath = "/Users/patrickcrawford/Library/Application Support/Blender/2.76/scripts/addons"
+addonpath = "/Users/patrickcrawford/Library/Application Support/Blender/2.79/scripts/addons"
 build_dir = "../compiled/"
 
 files = ["__init__.py","conf.py","materials.py","meshswap.py","spawner.py","tracking.py",
@@ -37,13 +32,13 @@ files = ["__init__.py","conf.py","materials.py","meshswap.py","spawner.py","trac
 		"addon_updater_ops.py", "icons", "world_tools.py","LICENSE.txt",
 		"install_readme.txt", "privacy-policy.txt"]
 
-
-
 def main():
 
 	if len(sys.argv) < 2:
-		# no input args, just assume the basic level
+		# no input args, just assume the basic level which includes
+		# installing fresh
 		publish()
+		fresh_install()
 
 	elif len(sys.argv) == 2:
 		if sys.argv[1] == "publish":
@@ -62,31 +57,16 @@ def publish(target=""):
 		shutil.rmtree(build_dir)
 	os.mkdir(build_dir)
 
-	# compile one or all
-
-	#OLD CODE, no longer applicable
-	# if target in name_array:
-	# 	publish_version(target, install=True)
-	# else:
-	# 	for t in name_array:
-	# 		publish_version(t)
-
 	publish_version("", install=False)
 
 	print("Build finished")
 
 
-def ig_copytree(dir, files):
-	return [f for f in files if ".DS_Store".lower() in f.lower()]
-
-def ignore_patterns(dir, files):
-	return ['DS_Store']
-
 def publish_version(version, install=False):
 
 	# make the staging area
-	# stagepath = "addon_name"+_+version # OLD
-	stagepath = addon_name
+	# stagepath = "pro_lighting_studio_"+version # OLD
+	# stagepath = "poliigon-material-converter" # will be sub-folder from place reload is ran.
 	print("Building target: "+stagepath)
 
 	if os.path.isdir(stagepath)==True:
@@ -97,7 +77,7 @@ def publish_version(version, install=False):
 	for fil in files:
 		if os.path.isdir(fil)==True:
 			newdirname = os.path.join(stagepath, fil)
-			shutil.copytree(fil, newdirname, ignore=ignore_patterns) # will have some .DS_store's
+			shutil.copytree(fil, newdirname) # will have some .DS_store's
 		else:
 			fname = fil
 			newname = os.path.join(stagepath, fil)
@@ -110,30 +90,20 @@ def publish_version(version, install=False):
 			outFile.close()
 
 	# zip and remove
-	def old_method(stagepath):
-		p = Popen(['zip','-r',stagepath+'.zip',stagepath],
-					stdin=PIPE,stdout=PIPE, stderr=PIPE)
-		stdout, err = p.communicate(b"")
+	p = Popen(['zip','-r',stagepath+'.zip',stagepath],
+				stdin=PIPE,stdout=PIPE, stderr=PIPE)
+	stdout, err = p.communicate(b"")
 
-	old_method(stagepath)
-	
-	# new zip method, to skip .DS's
-	# with zipfile.ZipFile(stagepath+".zip", 'w') as myzip:
-	# 	filezips = os.listdir(stagepath)
-	# 	for file in filezips:
-	# 		if file != '.DS_Store':
-	# 			myzip.write(file)
-
-
+	# not actually implemented/tested
 	if install == True:
-		installedpath = os.path.join(addonpath,addon_name+"_"+version)
+		installedpath = os.path.join(addonpath,"theory-tab_"+version)
 		if not os.path.isdir(installedpath):
 			print("creating folder:")
 			print(installedpath)
 			os.mkdir(installedpath)
 		else:
 			try:
-				os.rmtree(os.path.join(addonpath,addon_name+"_"+version,\
+				os.rmtree(os.path.join(addonpath,"theory-tab_"+version,\
 						"__pycache__"))
 			except:
 				print("No cache to delete")
@@ -163,6 +133,23 @@ def do_replacements_on(line,version):
 
 	return tmp
 
+def fresh_install():
 
+	if os.path.isdir(os.path.join(addonpath,stagepath)):
+
+		try:
+			shutil.rmtree(os.path.join(addonpath,stagepath))
+		except:
+			print("> issue removing existing addon path")
+		try:
+			os.mkdir(os.path.join(addonpath,stagepath))
+		except:
+			print("> issue creating directory, install manually")
+			return
+	with zipfile.ZipFile(  os.path.join(build_dir,stagepath+'.zip'),'r') as zf:
+		zf.extractall(addonpath)
+
+# run main
 main()
+
 
