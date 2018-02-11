@@ -65,8 +65,6 @@ def publish(target=""):
 def publish_version(version, install=False):
 
 	# make the staging area
-	# stagepath = "pro_lighting_studio_"+version # OLD
-	# stagepath = "poliigon-material-converter" # will be sub-folder from place reload is ran.
 	print("Building target: "+stagepath)
 
 	if os.path.isdir(stagepath)==True:
