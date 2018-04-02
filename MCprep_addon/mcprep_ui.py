@@ -552,7 +552,7 @@ class MCpanel(bpy.types.Panel):
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
 
 		# check for update in background thread if appropraite
-		addon_updater_ops.check_for_update_background(context)
+		addon_updater_ops.check_for_update_background()
 		
 		layout = self.layout
 		split = layout.split()
@@ -714,7 +714,7 @@ class MCpanelSkins(bpy.types.Panel):
 		if (is_sortable):
 			rows = 4
 
-		col.prop(context.scene,"mcskin_path")
+		col.prop(context.scene,"mcskin_path", text="Skin folder")
 
 		# any other conditions for needing reloading?
 		if len(conf.skin_list)==0:
@@ -793,7 +793,7 @@ class MCpanelSpawn(bpy.types.Panel):
 		# checkingck for update if appropriate
 		self.layout.prop(context.scene.mcprep_props,"spawn_mode",expand=True)
 
-		addon_updater_ops.check_for_update_background(context)
+		addon_updater_ops.check_for_update_background()
 		if context.scene.mcprep_props.spawn_mode=="mob":
 			self.mob_spawner(context)
 		elif context.scene.mcprep_props.spawn_mode=="meshswap":

@@ -1,3 +1,8 @@
+# ##### MCprep #####
+#
+# Developed by Patrick W. Crawford, see more at
+# http://theduckcow.com/dev/blender/MCprep
+# 
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #  This program is free software; you can redistribute it and/or
@@ -352,7 +357,7 @@ Tracker = Singleton_tracking()
 
 
 class toggleenable_tracking(bpy.types.Operator):
-	"""Toggle anonymous usage tracking to help the developers, disabled by default. The only data tracked is what functions are used, and the timestamp of the addon installation"""
+	"""Toggle anonymous usage tracking to help the developers. The only data tracked is what functions are used, and the timestamp of the addon installation"""
 	bl_idname = idname+".toggle_enable_tracking"
 	bl_label = "Toggle opt-in for analytics tracking"
 	options = {'REGISTER', 'UNDO'}

@@ -18,12 +18,10 @@ import zipfile
 
 
 # Global vars, the things to change
-name_var = "$VERSION"  # search for this in each, string
-name_array = ["free","premium"]
-verbose_var = "$VERBOSE" # turn line from 'v = True # $VERBOSE" to 'v = False'
-addon_name = "MCprep_addon"
 stagepath = "MCprep_addon"
-
+name_var = "$VERSION"  # search for this in each, string
+name_array = ["free"]
+verbose_var = "$VERBOSE" # turn line from 'v = True # $VERBOSE" to 'v = False'
 addonpath = "/Users/patrickcrawford/Library/Application Support/Blender/2.79/scripts/addons"
 build_dir = "../compiled/"
 
@@ -75,7 +73,8 @@ def publish_version(version, install=False):
 	for fil in files:
 		if os.path.isdir(fil)==True:
 			newdirname = os.path.join(stagepath, fil)
-			shutil.copytree(fil, newdirname) # will have some .DS_store's
+			shutil.copytree(fil, newdirname,
+				ignore=shutil.ignore_patterns(".DS_Store")) # will have some .DS_store's
 		else:
 			fname = fil
 			newname = os.path.join(stagepath, fil)
@@ -91,27 +90,6 @@ def publish_version(version, install=False):
 	p = Popen(['zip','-r',stagepath+'.zip',stagepath],
 				stdin=PIPE,stdout=PIPE, stderr=PIPE)
 	stdout, err = p.communicate(b"")
-
-	# not actually implemented/tested
-	if install == True:
-		installedpath = os.path.join(addonpath,"theory-tab_"+version)
-		if not os.path.isdir(installedpath):
-			print("creating folder:")
-			print(installedpath)
-			os.mkdir(installedpath)
-		else:
-			try:
-				os.rmtree(os.path.join(addonpath,"theory-tab_"+version,\
-						"__pycache__"))
-			except:
-				print("No cache to delete")
-
-		for fil in files:
-			stagefile = os.path.join(stagepath, fil)
-			p = Popen(['mv',stagefile,installedpath],
-				stdin=PIPE,stdout=PIPE, stderr=PIPE)
-			stdout, err = p.communicate(b"")
-
 
 	shutil.rmtree(stagepath)
 	os.rename(stagepath+'.zip',os.path.join(build_dir,stagepath+'.zip'))
@@ -149,5 +127,4 @@ def fresh_install():
 
 # run main
 main()
-
 

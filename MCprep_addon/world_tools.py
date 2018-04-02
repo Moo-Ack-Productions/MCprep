@@ -68,7 +68,7 @@ class MCP_install_jmc2obj(bpy.types.Operator):
 	"""Utility class to prompt Mineways installing"""
 	bl_idname = "mcprep.install_jmc2obj"
 	bl_label = "Install jmc2obj"
-	bl_description = "Prompt to install the Mineways world exporter"
+	bl_description = "Prompt to install the jmc2obj world exporter"
 
 	# error message
 	
@@ -175,6 +175,9 @@ class MCP_prep_world(bpy.types.Operator):
 		# if blender internal:
 		# set ambient occlusion, sky color (check if any visible sun lamps with atmosphere)
 		# set environment color
+		# if cycles, set sky node
+
+		# set flag/attribute if already prepped to scene
 
 		return {'FINISHED'}
 
@@ -211,7 +214,7 @@ class MCP_time_set(bpy.types.Operator):
 			("12000","Sunset","Time=12,000"), # Approx matching resource
 			("13000","Night","Time (night)=13,000"), # matches command
 			("18000","Midnight","Time=18,000"), # matches reference
-			("23000","Sunrise","/Time set day=23,000") # sun first visible
+			("23000","Sunrise","Time set day=23,000") # sun first visible
 			],
 	)
 
@@ -235,6 +238,8 @@ class MCP_time_set(bpy.types.Operator):
 		new_time += int(self.time_enum)
 
 		context.scene.mcprep_props.world_time = new_time
+		# insert keyframe if appropriate
+
 		return {'FINISHED'}
 
 
@@ -244,10 +249,9 @@ def world_time_update(self, context):
 	# translate time into rotation of sun/moon rig
 	# see: http://minecraft.gamepedia.com/Day-night_cycle
 	# set to the armature.... would be even better if it was somehow driver-set.
-	# but I guess it would mean requires MCprep is installed
-
-	# show warning if animated, "Requires MCprep be installed on rendering devices"
-	# >> or do a popup instead? with paragraph explanation
+	
+	# if real python code requried to set this up, generate and auto-run python
+	# script, though more ideally just set drivers based on the time param
 
 
 	return

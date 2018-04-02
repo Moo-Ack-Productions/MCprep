@@ -21,8 +21,6 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-
-
 # -----------------------------------------------------------------------------
 # Additional disclaimer & terms
 # -----------------------------------------------------------------------------
@@ -31,14 +29,6 @@
 By installing and using this addon, you agree to the following privacy policy:
 http://theduckcow.com/privacy-policy/
 which should have been present on the original download page.
-
-
-This code is open source under the MIT license.
-Its purpose is to increase the workflow of creating Minecraft
-related renders and animations, by automating certain tasks.
-
-Developed and tested for blender 2.72* up to the indicated blender version below
-* testing is out of date
 
 Source code available on github as well as more information:
 https://github.com/TheDuckCow/MCprep
@@ -129,9 +119,7 @@ def unregister():
 
 	# addon updater code and configurations
 	addon_updater_ops.unregister()
-	
 
 
 if __name__ == "__main__":
 	register()
-
