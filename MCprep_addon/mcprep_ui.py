@@ -1,8 +1,3 @@
-# ##### MCprep #####
-#
-# Developed by Patrick W. Crawford, see more at
-# http://theduckcow.com/dev/blender/MCprep
-# 
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #  This program is free software; you can redistribute it and/or
@@ -70,12 +65,12 @@ class showMCprefs(bpy.types.Operator):
 			# addons = [(mod, addon_utils.module_bl_info(mod)) for mod in addon_utils.modules(refresh=False)]
 			#
 			# ie, get MCprep from mod in addon_utils.modules(refresh=False)
-			# and then just 	grab 
+			# and then just 	grab
 			# [addon_utils.module_bl_info(mod)]
 
 
 			# less ideal way but works
-			# for mod in 
+			# for mod in
 			# addon = addon_utils.module_bl_info(mode)
 			import addon_utils
 			addon = addon_utils.module_bl_info(__package__)
@@ -91,7 +86,7 @@ class showMCprefs(bpy.types.Operator):
 
 
 class openFolder(bpy.types.Operator):
-	"""Open the rig folder for mob spawning"""
+	"""Open a folder in the host operating system"""
 	bl_idname = "mcprep.openfolder"
 	bl_label = "Open folder"
 
@@ -100,35 +95,16 @@ class openFolder(bpy.types.Operator):
 		default="//")
 
 	def execute(self,context):
-		
+
 		if os.path.isdir(bpy.path.abspath(self.folder))==False:
 			self.report({'ERROR'}, "Invalid folder path: {x}".format(x=self.folder))
 			return {'CANCELLED'}
 
-		try:
-			# windows... untested
-			subprocess.Popen('explorer "{x}"'.format(x=bpy.path.abspath(self.folder)))
-		except:
-			try:
-				# mac... works on Yosemite minimally
-				subprocess.call(["open", bpy.path.abspath(self.folder)])
-			except:
-				self.report({'ERROR'},
-					"Didn't open folder, navigate to it manually: {x}".format(x=self.folder))
-				return {'CANCELLED'}
-		return {'FINISHED'}
-
-
-class reloadSpawners(bpy.types.Operator):
-	"""Relaod meshswapping and spawning lists"""
-	bl_idname = "mcprep.reload_spawners"
-	bl_label = "Reload meshswap and mob spawners"
-
-	def execute(self,context):
-		
-		bpy.ops.mcprep.reload_meshswap()
-		bpy.ops.mcprep.reload_mobs()
-
+		res = util.open_folder_crossplatform(self.folder)
+		if res==False:
+			self.report({'ERROR'},
+				"Didn't open folder, navigate to it manually: {x}".format(x=self.folder))
+			return {'CANCELLED'}
 		return {'FINISHED'}
 
 
@@ -157,7 +133,7 @@ class mobSpawnerMenu(bpy.types.Menu):
 
 		for n in range(len(conf.rig_list)):
 			mob = conf.rig_list[n]
-			#if mob[0].split(':/:')[-1]!=conf.rig_categories[c]:continue			
+			#if mob[0].split(':/:')[-1]!=conf.rig_categories[c]:continue
 			# eventually with icon too
 			layout.operator("mcprep.mob_spawner",
 						text=mob[1]
@@ -172,7 +148,7 @@ class mobSpawnerMenu(bpy.types.Menu):
 		# 	for n in range(len(conf.rig_list)):
 		# 		mob = conf.rig_list[n]
 		# 		if mob[0].split(':/:')[-1]!=conf.rig_categories[c]:continue
-				
+
 		# 		# eventually with icon too
 		# 		col.operator("mcprep.mob_spawner",
 		# 					text=mob[1]
@@ -226,7 +202,7 @@ class mcprepQuickMenu(bpy.types.Menu):
 		else:
 			spawner=None
 			meshswap=None
-		
+
 
 		if len(conf.rig_list)==0 or len(conf.meshswap_list)==0:
 			row = layout.row()
@@ -277,7 +253,7 @@ class WIP(bpy.types.Menu):
 	def draw(self, context):
 		layout = self.layout
 		row1 = layout.row()
-		row1.label(text="This addon is a work in progress, this function is not yet implemented")  
+		row1.label(text="This addon is a work in progress, this function is not yet implemented")
 
 
 # preferences UI
@@ -408,7 +384,7 @@ class MCprepPreference(bpy.types.AddonPreferences):
 			col.label("Default Exporter:")
 			col = split.column()
 			col.prop(self, "MCprep_exporter_type", text="")
-			
+
 			split = layout.split(percentage=0.3)
 			col = split.column()
 			col.label("jmc2obj executable")
@@ -448,7 +424,8 @@ class MCprepPreference(bpy.types.AddonPreferences):
 			col = split.column()
 			col.operator("mcprep.mob_install_menu", text="Install file for mob spawning")
 			col = split.column()
-			col.operator("mcprep.openrigpath", text="Open rig folder") #mcprep.openfolder
+			p = col.operator("mcprep.openfolder", text="Open rig folder")
+			p.folder = context.scene.mcrig_path
 
 			layout = self.layout
 			row = layout.row()
@@ -496,7 +473,7 @@ class MCprepPreference(bpy.types.AddonPreferences):
 					text="Demo video/trailer").url = \
 					"https://youtu.be/C3YoZx-seFE?list=PL8X_CzUEVBfaajwyguIj_utPXO4tEOr7a"
 			row = layout.row()
-			
+
 		elif self.preferences_tab == "tracker_updater":
 			layout = self.layout
 			row = layout.row()
@@ -527,8 +504,8 @@ class MCprepPreference(bpy.types.AddonPreferences):
 
 			# updater draw function
 			addon_updater_ops.update_settings_ui(self,context)
-			
-		layout.label("Don't forget to save user preferences!")			
+
+		layout.label("Don't forget to save user preferences!")
 
 
 # ---------
@@ -553,7 +530,7 @@ class MCpanel(bpy.types.Panel):
 
 		# check for update in background thread if appropraite
 		addon_updater_ops.check_for_update_background()
-		
+
 		layout = self.layout
 		split = layout.split()
 		col = split.column(align=True)
@@ -574,7 +551,7 @@ class MCpanel(bpy.types.Panel):
 		wpath = addon_prefs.world_obj_path
 		col.operator("import_scene.obj","OBJ world import").filepath = wpath
 		# row = col.row(align=True)
-		
+
 		split = layout.split()
 		col = split.column(align=True)
 
@@ -595,11 +572,11 @@ class MCpanel(bpy.types.Panel):
 			row = col.row(align=True)
 			row.enabled = False
 			row.operator("mcprep.improve_ui",
-					text="(UI already improved)", icon='SETTINGS')		
+					text="(UI already improved)", icon='SETTINGS')
 		else:
 			col.operator("mcprep.improve_ui",
 					text="Improve UI", icon='SETTINGS')
-		
+
 		col.operator("mcprep.meshswap", text="Mesh Swap", icon='LINK_BLEND')
 		#the UV's pixels into actual 3D geometry (but same material, or modified to fit)
 		#col.operator("object.solidify_pixels", text="Solidify Pixels", icon='MOD_SOLIDIFY')
@@ -681,7 +658,6 @@ class MCpanelWorldTools(bpy.types.Panel):
 
 
 
-
 # ---------
 # MCprep panel for skin swapping
 # (multiple contexts)
@@ -693,21 +669,11 @@ class MCpanelSkins(bpy.types.Panel):
 	bl_category = "MCprep"
 
 	def draw(self, context):
-
 		layout = self.layout
-		# layout.label("Skin directory")
-		# split = layout.split()
-		# col = split.column(align=True)
-		# row = col.row(align=True)
-		# row.prop(context.scene,"mcskin_path",text="")
-		# row.operator("mcprep.reload_skins", icon='LOOP_BACK', text='')
-		# row = col.row(align=True)
-		# layout.operator("mcprep.fix_skin_eyes")
 
 		# set size of UIlist
 		row = layout.row()
 		col = row.column()
-
 
 		is_sortable = len(conf.skin_list) > 1
 		rows = 1
@@ -727,7 +693,7 @@ class MCpanelSkins(bpy.types.Panel):
 				context.scene, "mcprep_skins_list",
 				context.scene, "mcprep_skins_list_index",
 				rows=rows)
-		
+
 		col = row.column(align=True)
 		col.operator("mcprep.add_skin", icon='ZOOMIN', text="")
 		col.operator("mcprep.remove_skin",
@@ -735,14 +701,13 @@ class MCpanelSkins(bpy.types.Panel):
 				text="").index = context.scene.mcprep_skins_list_index
 		col.operator("mcprep.reload_skins", icon='FILE_REFRESH', text='')
 
-
 		col = layout.column(align=True)
 
 		row = col.row(align=True)
 		if len (conf.skin_list)>0:
 			skinname = bpy.path.basename(
 					conf.skin_list[context.scene.mcprep_skins_list_index][0] )
-			p = row.operator("mcprep.applyskin","Apply: "+skinname) 
+			p = row.operator("mcprep.applyskin","Apply: "+skinname)
 			p.filepath = conf.skin_list[context.scene.mcprep_skins_list_index][1]
 		else:
 			row.enabled = False
@@ -798,12 +763,12 @@ class MCpanelSpawn(bpy.types.Panel):
 			self.mob_spawner(context)
 		elif context.scene.mcprep_props.spawn_mode=="meshswap":
 			self.meshswap(context)
-		
+
 
 	def mob_spawner(self, context):
-		
+
 		settings = context.scene.mcprep_props
-		
+
 		layout = self.layout
 		split = layout.split()
 		col = split.column(align=True)
@@ -821,7 +786,7 @@ class MCpanelSpawn(bpy.types.Panel):
 			row2.scale_y = 2
 			row2.operator("mcprep.reload_spawners","Reload assets", icon="ERROR")
 			return
-		
+
 		row = layout.row()
 		rows = 4
 		# is_sortable = len(conf.rig_list) > 1
@@ -834,14 +799,15 @@ class MCpanelSpawn(bpy.types.Panel):
 				context.scene, "mcprep_mob_list",
 				context.scene, "mcprep_mob_list_index",
 				rows=rows)
-		
+
 		col = row.column(align=True)
 		p = col.operator("mcprep.mob_install_menu","",icon="ZOOMIN")
 		p.mob_category = settings.spawn_rig_category
 		col.operator("mcprep.mob_uninstall", icon='ZOOMOUT', text="")
-		
+
 		# instead of open, make it change folder.
-		col.operator("mcprep.openrigpath", text="", icon='FILE_FOLDER')
+		p = col.operator("mcprep.openfolder", text="", icon='FILE_FOLDER')
+		p.folder = context.scene.mcrig_path # context.scene.mcprep_props.
 		col.operator("mcprep.reload_mobs", icon='FILE_REFRESH', text='')
 		col.operator("mcprep.spawnpathreset", icon='LOAD_FACTORY', text='')
 
@@ -863,7 +829,7 @@ class MCpanelSpawn(bpy.types.Panel):
 
 	def meshswap(self, context):
 		settings = context.scene.mcprep_props
-		
+
 		layout = self.layout
 		split = layout.split()
 		col = split.column(align=True)
@@ -889,7 +855,7 @@ class MCpanelSpawn(bpy.types.Panel):
 				context.scene, "mcprep_meshswap_list",
 				context.scene, "mcprep_meshswap_list_index",
 				rows=rows)
-		
+
 		# col = row.column(align=True)
 		# p = col.operator("mcprep.mob_install_menu","",icon="ZOOMIN")
 		# p.mob_category = settings.spawn_rig_category
@@ -910,22 +876,22 @@ class MCpanelSpawn(bpy.types.Panel):
 
 # ---------
 # WIP OK button general purpose
-class dialogue(bpy.types.Operator):
-	bl_idname = "object.dialogue"
-	bl_label = "dialogue"
-	message = "Library error, check path to assets has the meshSwap blend"
-	
-	def execute(self, context):
-		self.report({'INFO'}, self.message)
-		print(self.message)
-		return {'FINISHED'}
-	
-	def invoke(self, context, event):
-		wm = context.window_manager
-		return wm.invoke_popup(self, width=400, height=200)
-	
-	def draw(self, context):
-		self.layout.label(self.message)
+# class dialogue(bpy.types.Operator):
+# 	bl_idname = "mcprep.dialogue"
+# 	bl_label = "dialogue"
+# 	message = "Library error, check path to assets has the meshSwap blend"
+
+# 	def execute(self, context):
+# 		self.report({'INFO'}, self.message)
+# 		print(self.message)
+# 		return {'FINISHED'}
+
+# 	def invoke(self, context, event):
+# 		wm = context.window_manager
+# 		return wm.invoke_popup(self, width=400, height=200)
+
+# 	def draw(self, context):
+# 		self.layout.label(self.message)
 
 
 
@@ -947,7 +913,7 @@ def draw_mcprepadd(self, context):
 
 # -----------------------------------------------
 # Addon wide properties (aside from user preferences)
-# ----------------------------------------------- 
+# -----------------------------------------------
 class MCprep_props(bpy.types.PropertyGroup):
 
 	# not available here
@@ -982,7 +948,6 @@ class MCprep_props(bpy.types.PropertyGroup):
 
 
 
-
 # -----------------------------------------------------------------------------
 # Register functions
 # -----------------------------------------------------------------------------
@@ -1002,13 +967,13 @@ def register():
 		subtype = 'DIR_PATH',
 		update = spawner.update_rig_path,
 		default = addon_prefs.mcrig_path)
-	bpy.types.Scene.mcskin_path = bpy.props.StringProperty(	
+	bpy.types.Scene.mcskin_path = bpy.props.StringProperty(
 		name = "mcskin_path",
 		description = "Folder for skin textures, used in skin swapping",
 		subtype = 'DIR_PATH',
 		update = materials.update_skin_path,
 		default = addon_prefs.mcskin_path)
-	bpy.types.Scene.meshswap_path = bpy.props.StringProperty(	
+	bpy.types.Scene.meshswap_path = bpy.props.StringProperty(
 		name = "mcskin_path",
 		description = "File for meshswap library",
 		subtype = 'FILE_PATH',
@@ -1018,12 +983,12 @@ def register():
 	conf.v = addon_prefs.verbose
 
 	bpy.types.INFO_MT_add.append(draw_mcprepadd)
-	
+
 
 def unregister():
 
 	bpy.types.INFO_MT_add.remove(draw_mcprepadd)
-	
+
 	del bpy.types.Scene.mcprep_props
 	del bpy.types.Scene.mcrig_path
 	del bpy.types.Scene.mcskin_path

@@ -1,8 +1,3 @@
-# ##### MCprep #####
-#
-# Developed by Patrick W. Crawford, see more at
-# http://theduckcow.com/dev/blender/MCprep
-# 
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #  This program is free software; you can redistribute it and/or
@@ -81,7 +76,7 @@ def updateMeshswapList(context):
 			description = "Place {x} block".format(x=name)
 			meshswap_list.append( ("Group/"+name,name.title(),description) )
 			temp_meshswap_list.append(util.nameGeneralize(name).lower())
-		# here do same for blocks, assuming no name clashes. 
+		# here do same for blocks, assuming no name clashes.
 		# way to 'ignore' blocks from source? ID prop?
 
 		# for name in data_from.objects:
@@ -117,7 +112,7 @@ class MCPREP_spawnPathReset(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 
 	def execute(self,context):
-		
+
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
 		context.scene.meshswap_path = addon_prefs.meshswap_path
 		updateMeshswapList(context)
@@ -160,7 +155,7 @@ class MCPREP_meshswapSpawner(bpy.types.Operator):
 		default=True,
 		description="Automatically make groups real after placement")
 
-	
+
 	# toLink = bpy.props.BoolProperty(
 	# 	name = "Library Link mob",
 	# 	description = "Library link instead of append the group",
@@ -287,7 +282,7 @@ class meshSwap(bpy.types.Operator):
 	bl_idname = "mcprep.meshswap"
 	bl_label = "MCprep meshSwap"
 	bl_options = {'REGISTER', 'UNDO'}
-	
+
 	#used for only occasionally refreshing the 3D scene while mesh swapping
 	counterObject = 0	# used in count
 	countMax = 5		# count compared to this, frequency of refresh (number of objs)
@@ -317,7 +312,7 @@ class meshSwap(bpy.types.Operator):
 		description="When groups are appended instead of linked, "+\
 				"the objects part of the group will be placed in this "+\
 				"layer, 0 means same as active layers")
-	
+
 	meshswap_lamps = bpy.props.EnumProperty(
 		name="Lamps",
 		items= [('group', 'With groups', 'Repalce light emitting blocks group instances, containing 3D blocks and lamps'),
@@ -330,7 +325,7 @@ class meshSwap(bpy.types.Operator):
 		name="Use filmic lamp values",
 		default=False,
 		description="Set added lamp values with appropriate filmic rendering values")
-	
+
 
 	@classmethod
 	def poll(cls, context):
@@ -358,7 +353,7 @@ class meshSwap(bpy.types.Operator):
 		row.prop(self,"prep_materials")
 		row = layout.row()
 		row.prop(self,"append_layer")
-		
+
 		# multi settings, to come
 		# layout.split()
 		# layout.label("HOW TO ADD LIGHTS")
@@ -366,7 +361,7 @@ class meshSwap(bpy.types.Operator):
 		# row.prop(self,"meshswap_lamps",expand=True)
 		# row = layout.row()
 		# row.prop(self,"filmic_values")
-		
+
 		if True:
 			layout.split()
 			col = layout.column()
@@ -380,7 +375,7 @@ class meshSwap(bpy.types.Operator):
 	def checkExternal(self, context, name):
 		if conf.v:print("Checking external library")
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
-		
+
 		meshSwapPath = context.scene.meshswap_path
 		rmable = []
 		if addon_prefs.MCprep_exporter_type == "jmc2obj":
@@ -400,7 +395,7 @@ class meshSwap(bpy.types.Operator):
 			return {'removable':removable}
 		groupSwap = False
 		meshSwap = False # if object  is in both group and mesh swap, group will be used
-		edgeFlush = False # blocks perfectly on edges, require rotation	
+		edgeFlush = False # blocks perfectly on edges, require rotation
 		edgeFloat = False # floating off edge into air, require rotation ['vines','ladder','lilypad']
 		torchlike = False # ['torch','redstone_torch_on','redstone_torch_off']
 		removable = False # to be removed, hard coded.
@@ -433,7 +428,7 @@ class meshSwap(bpy.types.Operator):
 				x = [False]*20
 				x[groupAppendLayer-1] = True
 				context.scene.layers = x
-			
+
 			#special cases, make another list for this? number of variants can vary..
 			if name == "torch" or name == "Torch":
 				util.bAppendLink(os.path.join(meshSwapPath,'Group'), name+".1", toLink)
@@ -541,7 +536,6 @@ class meshSwap(bpy.types.Operator):
 
 	def execute(self, context):
 
-		# 
 		tracking.trackUsage("meshswap",None)
 
 		runcount = 0 # counter.. if zero by end, raise error that no selected objects matched
@@ -550,7 +544,7 @@ class meshSwap(bpy.types.Operator):
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
 		# if checkOptin():usageStat('meshSwap'+':'+addon_prefs.MCprep_exporter_type)
 		direc = context.scene.meshswap_path
-		
+
 		#check library file exists
 		if not os.path.isfile(direc):
 			#extract actual path from the relative one if relative, e.g. //file.blend
@@ -559,7 +553,7 @@ class meshSwap(bpy.types.Operator):
 			if not os.path.isfile(direc):
 				self.report({'ERROR'}, "Mesh swap blend file not found!") # better, actual "error"
 				return {'CANCELLED'}
-		
+
 		# get some scene information
 		toLink = False #context.scene.MCprep_linkGroup
 		groupAppendLayer = self.append_layer
@@ -582,7 +576,7 @@ class meshSwap(bpy.types.Operator):
 			if obj.active_material == None: continue
 			obj.data.name = obj.active_material.name
 			obj.name = obj.active_material.name
-			objList.append(obj) 
+			objList.append(obj)
 
 		#listData = self.getListData() # legacy, no longer doing this
 		# global scale, WIP
@@ -635,38 +629,38 @@ class meshSwap(bpy.types.Operator):
 					continue # hack for not having too many torches show up, both jmc2obj and Mineways
 				facebook.append([n,g,l]) # g is global, l is local
 			bpy.ops.object.select_all(action='DESELECT')
-			
+
 			# removing duplicates and checking orientation
 			dupList = []	#where actual blocks are to be added
 			rotList = []	#rotation of blocks
 			for setNum in range(0,len(facebook)):
 				# LOCAL coordinates!!!
-				x = round(facebook[setNum][2][0]) #since center's are half ints.. 
+				x = round(facebook[setNum][2][0]) #since center's are half ints..
 				y = round(facebook[setNum][2][1]) #don't need (+0.5) -.5 structure
 				z = round(facebook[setNum][2][2])
-				
+
 				outsideBool = -1
 				if (swapProps['edgeFloat']): outsideBool = 1
-				
+
 				if util.onEdge(facebook[setNum][2]): #check if face is on unit block boundary (local coord!)
 					a = facebook[setNum][0][0] * 0.4 * outsideBool #x normal
 					b = facebook[setNum][0][1] * 0.4 * outsideBool #y normal
 					c = facebook[setNum][0][2] * 0.4 * outsideBool #z normal
-					x = round(facebook[setNum][2][0]+a) 
+					x = round(facebook[setNum][2][0]+a)
 					y = round(facebook[setNum][2][1]+b)
 					z = round(facebook[setNum][2][2]+c)
 					#print("ON EDGE, BRO! line, "+str(x) +","+str(y)+","+str(z))
-					#print([facebook[setNum][2][0], facebook[setNum][2][1], facebook[setNum][2][2]])	
-				
+					#print([facebook[setNum][2][0], facebook[setNum][2][1], facebook[setNum][2][2]])
+
 				#### TORCHES, hack removes duplicates while not removing "edge" floats
 				# if facebook[setNum][2][1]+0.5 - math.floor(facebook[setNum][2][1]+0.5) < 0.3:
 				# 	#continue if coord. is < 1/3 of block height, to do with torch's base in wrong cube.
 				# 	if not swapProps['edgeFloat']:
 				# 		#continue
-				# 		print("do nothing, this is for jmc2obj")	
+				# 		print("do nothing, this is for jmc2obj")
 				if conf.v:print(" DUPLIST: ")
 				if conf.v:print([x,y,z], [facebook[setNum][2][0], facebook[setNum][2][1], facebook[setNum][2][2]])
-				
+
 				### START HACK PATCH, FOR MINEWAYS double-tall adding
 				# prevent double high grass... which mineways names sunflowers.
 				overwrite = 0 # 0 means normal, -1 means skip, 1 means overwrite the one below
@@ -686,15 +680,15 @@ class meshSwap(bpy.types.Operator):
 					#print(facebook[setNum][2][0],x,x_diff)
 					z_diff = z-facebook[setNum][2][2]
 					#print(facebook[setNum][2][2],z,z_diff)
-					
+
 					# append rotation, exporter dependent
 					if addon_prefs.MCprep_exporter_type == "jmc2obj":
 						if swapProps['torchlike']: # needs fixing
 							if (x_diff>.1 and x_diff < 0.4):
 								rotList.append(1)
-							elif (z_diff>.1 and z_diff < 0.4):	
+							elif (z_diff>.1 and z_diff < 0.4):
 								rotList.append(2)
-							elif (x_diff<-.1 and x_diff > -0.4):	
+							elif (x_diff<-.1 and x_diff > -0.4):
 								rotList.append(3)
 							elif (z_diff<-.1 and z_diff > -0.4):
 								rotList.append(4)
@@ -705,7 +699,7 @@ class meshSwap(bpy.types.Operator):
 								rotList.append(8)
 							elif (x_diff > 0.3):
 								rotList.append(7)
-							elif (z_diff > 0.3):	
+							elif (z_diff > 0.3):
 								rotList.append(0)
 							elif (z_diff < -0.3):
 								rotList.append(6)
@@ -713,14 +707,14 @@ class meshSwap(bpy.types.Operator):
 								rotList.append(5)
 						elif swapProps['edgeFlush']:
 							# actually 6 cases here, can need rotation below...
-							# currently not necessary/used, so not programmed..	 
+							# currently not necessary/used, so not programmed..
 							rotList.append(0)
 						elif swapProps['doorlike']:
 							if (y-facebook[setNum][2][1] < 0):
 								rotList.append(8)
 							elif (x_diff > 0.3):
 								rotList.append(7)
-							elif (z_diff > 0.3):	
+							elif (z_diff > 0.3):
 								rotList.append(0)
 							elif (z_diff < -0.3):
 								rotList.append(6)
@@ -734,25 +728,25 @@ class meshSwap(bpy.types.Operator):
 							if conf.v:print("recognized it's a torchlike obj..")
 							if (x_diff>.1 and x_diff < 0.6):
 								rotList.append(1)
-								#print("rot 1?")	
-							elif (z_diff>.1 and z_diff < 0.6):	
+								#print("rot 1?")
+							elif (z_diff>.1 and z_diff < 0.6):
 								rotList.append(2)
-								#print("rot 2?")	
+								#print("rot 2?")
 							elif (x_diff<-.1 and x_diff > -0.6):
-								#print("rot 3?")	
+								#print("rot 3?")
 								rotList.append(3)
 							elif (z_diff<-.1 and z_diff > -0.6):
 								rotList.append(4)
-								#print("rot 4?")	
+								#print("rot 4?")
 							else:
 								rotList.append(0)
-								#print("rot 0?")	
+								#print("rot 0?")
 						elif swapProps['edgeFloat']:
 							if (y-facebook[setNum][2][1] < 0):
 								rotList.append(8)
 							elif (x_diff > 0.3):
 								rotList.append(7)
-							elif (z_diff > 0.3):	
+							elif (z_diff > 0.3):
 								rotList.append(0)
 							elif (z_diff < -0.3):
 								rotList.append(6)
@@ -760,14 +754,14 @@ class meshSwap(bpy.types.Operator):
 								rotList.append(5)
 						elif swapProps['edgeFlush']:
 							# actually 6 cases here, can need rotation below...
-							# currently not necessary/used, so not programmed..	 
+							# currently not necessary/used, so not programmed..
 							rotList.append(0)
 						elif swapProps['doorlike']:
 							if (y-facebook[setNum][2][1] < 0):
 								rotList.append(8)
 							elif (x_diff > 0.3):
 								rotList.append(7)
-							elif (z_diff > 0.3):	
+							elif (z_diff > 0.3):
 								rotList.append(0)
 							elif (z_diff < -0.3):
 								rotList.append(6)
@@ -787,7 +781,7 @@ class meshSwap(bpy.types.Operator):
 			# duplicating, rotating and moving
 			dupedObj = []
 			for (set,rot) in zip(dupList,rotList):
-				
+
 				### HIGH COMPUTATION/CRITICAL SECTION
 				#refresh the scene every once in awhile
 				self.counterObject+=1
@@ -797,17 +791,17 @@ class meshSwap(bpy.types.Operator):
 					#below technically a "hack", should use: bpy.data.scenes[0].update()
 					bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
 
-				
+
 				loc = swap.matrix_world*mathutils.Vector(set) #local to global
 				if grouped:
 					# definition for randimization, defined at top!
 					randGroup = util.randomizeMeshSawp(swapGen,3)
-					
+
 					# The built in method fails, bpy.ops.object.group_instance_add(...)
 					#UPDATE: I reported the bug, and they fixed it nearly instantly =D
 					# but it was recommended to do the below anyways.
 					util.addGroupInstance(randGroup,loc)
-					
+
 				else:
 					#sets location of current selection, imported object or group from above
 					base.select = True		# select the base object # UPDATE: THIS IS THE swapProps.object
@@ -816,20 +810,20 @@ class meshSwap(bpy.types.Operator):
 					# next line hackish....
 					dupedObj.append(bpy.context.selected_objects[-1])
 					base.select = False
-				
+
 				#still hackish
-				obj = bpy.context.selected_objects[-1]	
+				obj = bpy.context.selected_objects[-1]
 				# do extra transformations now as necessary
 				obj.rotation_euler = swap.rotation_euler
 				# special case of un-applied, 90(+/- 0.01)-0-0 rotation on source (y-up conversion)
 				if (swap.rotation_euler[0]>= math.pi/2-.01 and swap.rotation_euler[0]<= math.pi/2+.01
 					and swap.rotation_euler[1]==0 and swap.rotation_euler[2]==0):
 					obj.rotation_euler[0] -= math.pi/2
-				obj.scale = swap.scale	
-				
+				obj.scale = swap.scale
+
 				#rotation/translation for walls, assumes last added object still selected
 				x,y,offset,rotValue,z = 0,0,0.28,0.436332,0.12
-				
+
 				if rot == 1:
 					# torch rotation 1
 					x = -offset
@@ -862,7 +856,7 @@ class meshSwap(bpy.types.Operator):
 				elif rot==8:
 					# edge block rotation 4 (ceiling, not 'keep same')
 					obj.rotation_euler[0]+= math.pi/2
-					
+
 				# extra variance to break up regularity, e.g. for tall grass
 				# first, xy and z variance
 				if [True,1] == swapProps['variance']:
@@ -876,13 +870,13 @@ class meshSwap(bpy.types.Operator):
 					y = (random.random()-0.5)*0.5
 					obj.location += mathutils.Vector((x, y, 0))
 				bpy.ops.object.select_all(action='DESELECT')
-			
+
 			### END CRITICAL SECTION
-				
+
 			if not grouped:
 				base.select = True
 				bpy.ops.object.delete() # the original copy used for duplication
-			
+
 			#join meshes together
 			if not grouped and (len(dupedObj) >0) and self.meshswap_join:
 				#print(len(dupedObj))
@@ -890,13 +884,13 @@ class meshSwap(bpy.types.Operator):
 				bpy.context.scene.objects.active = dupedObj[0]
 				for d in dupedObj:
 					d.select = True
-				
+
 				bpy.ops.object.join()
-			
+
 			bpy.ops.object.select_all(action='DESELECT')
 			swap.select = True
 			bpy.ops.object.delete()
-			
+
 			#Try to reselect everything that was selected previoulsy + new objects
 			for d in dupedObj:
 				try:
@@ -912,7 +906,7 @@ class meshSwap(bpy.types.Operator):
 				d.select = True
 			except:
 				pass
-		
+
 		if runcount==0:
 			self.report({'ERROR'}, "Nothing swapped, likely no materials of selected objects match the meshswap file objects/groups")
 		elif runcount==1:

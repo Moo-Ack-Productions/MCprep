@@ -1,8 +1,3 @@
-# ##### MCprep #####
-#
-# Developed by Patrick W. Crawford, see more at
-# http://theduckcow.com/dev/blender/MCprep
-# 
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #  This program is free software; you can redistribute it and/or
@@ -101,7 +96,7 @@ def updateRigList(context):
 
 						# special cases, skip some groups
 						if name.lower() == "Rigidbodyworld".lower():
-							continue 
+							continue
 
 						#if name in bpy.data.groups:
 						#	if conf.v:print("Already grouped in this one. maybe should append the same way/rename?")
@@ -117,10 +112,10 @@ def updateRigList(context):
 						item.description = description
 						item.name = name.title()
 						# MAKE THE ABOVE not write the whole rigPath, slow an unnecessary;
-		
+
 		elif catgry.split('.')[-1] == 'blend': # not a folder.. a .blend
 			nocatpathlist.append([os.path.join(rigpath,catgry), catgry])
-	
+
 
 	# Finally, update the list with non-categorized mobs
 	for [rigPath,local] in nocatpathlist:
@@ -182,6 +177,18 @@ def updateCategory(context):
 # -----------------------------------------------------------------------------
 
 
+class reloadSpawners(bpy.types.Operator):
+	"""Relaod meshswapping and spawning lists"""
+	bl_idname = "mcprep.reload_spawners"
+	bl_label = "Reload meshswap and mob spawners"
+
+	def execute(self,context):
+
+		bpy.ops.mcprep.reload_meshswap()
+		bpy.ops.mcprep.reload_mobs()
+
+		return {'FINISHED'}
+
 
 class MCPREP_reloadMobs(bpy.types.Operator):
 	"""Force reload the mob spawner rigs, use after manually adding rigs to folders"""
@@ -220,7 +227,7 @@ class MCPREP_mobSpawner_direct(bpy.types.Operator):
 	clearPose = bpy.props.BoolProperty(
 		name = "Clear Pose",
 		description = "Clear the pose to rest position",
-		default = True 
+		default = True
 		)
 
 	def execute(self, context):
@@ -278,7 +285,7 @@ class MCPREP_mobSpawner(bpy.types.Operator):
 	clearPose = bpy.props.BoolProperty(
 		name = "Clear Pose",
 		description = "Clear the pose to rest position",
-		default = True 
+		default = True
 		)
 
 	def draw(self, context):
@@ -290,7 +297,7 @@ class MCPREP_mobSpawner(bpy.types.Operator):
 		row = self.layout.row(align=True)
 		row.prop(self,"toLink")
 		row.prop(self,"clearPose")
-	
+
 
 	def invoke(self, context, event):
 		return context.window_manager.invoke_props_dialog(self)
@@ -318,13 +325,13 @@ class MCPREP_mobSpawner(bpy.types.Operator):
 
 	def setRootLocation(self,context):
 		pass
-		# should be the consolidated code for 
+		# should be the consolidated code for
 		# both linking and appending below, .. they branched right now.
 
 
 
 	def execute(self, context):
-		
+
 		# only sends tracking if opted in
 		tracking.trackUsage("mobSpawner",self.mcmob_type)
 
@@ -362,7 +369,7 @@ class MCPREP_mobSpawner(bpy.types.Operator):
 						#bpy.ops.object.mode_set(mode='OBJECT')
 
 						bpy.ops.transform.translate(value=(-gl[0],-gl[1],-gl[2]))
-					
+
 					act = context.active_object
 					bpy.context.scene.objects.active = ob
 					if conf.v:print("ACTIVE obj = {x}".format(x=ob.name))
@@ -425,7 +432,7 @@ class MCPREP_mobSpawner(bpy.types.Operator):
 			# OOORR do append the group, then remove the group but keep the individual objects
 			# that way we know we don't append in too many objects (e.g. parents pulling in children/vice versa)
 
-			# also issue of "undo/redo"... groups stay linked/ as groups even if this happens!	
+			# also issue of "undo/redo"... groups stay linked/ as groups even if this happens!
 
 			if path != '//': #ie not yet linked in.
 				path = bpy.path.abspath(path)
@@ -434,7 +441,7 @@ class MCPREP_mobSpawner(bpy.types.Operator):
 				# consider taking pre-exisitng group names and giving them a temp name to name back at the end
 				if conf.v:print(os.path.join(path,'Group'),name)
 				util.bAppendLink(os.path.join(path,'Group'),name, False)
-				
+
 				try:
 					g1 = context.selected_objects[0]  # THE FOLLOWING is a common fail-point.
 					grp_added = g1.users_group[0] # to be safe, grab the group from one of the objects
@@ -442,7 +449,7 @@ class MCPREP_mobSpawner(bpy.types.Operator):
 					# this is more likely to fail but serves as a fallback
 					if conf.v:print("Mob spawn: Had to go to fallback group name grab")
 					grp_added = bpy.data.groups[name]
-				
+
 				gl = grp_added.dupli_offset # if rig not centered in original file, assume its group is
 				cl = bpy.context.space_data.cursor_location
 
@@ -481,7 +488,7 @@ class MCPREP_mobSpawner(bpy.types.Operator):
 								# do the offset stuff, set active etc
 								#bpy.ops.object.mode_set(mode='OBJECT')
 								bpy.ops.transform.translate(value=(-gl[0],-gl[1],-gl[2]))
-							
+
 							#bpy.ops.object.select_all(action='DESELECT')
 							act = context.active_object
 							bpy.context.scene.objects.active = ob
@@ -501,7 +508,7 @@ class MCPREP_mobSpawner(bpy.types.Operator):
 								#ob.animation_data_clear()
 								if ob.animation_data:
 									ob.animation_data.action = None
-								
+
 								# transition to clear out pose this way
 								# for b in ob.pose.bones:
 
@@ -511,7 +518,7 @@ class MCPREP_mobSpawner(bpy.types.Operator):
 								bpy.ops.pose.rot_clear()
 								bpy.ops.pose.scale_clear()
 								bpy.ops.pose.loc_clear()
-								
+
 								# preserve original selection? keep all selected
 							if self.relocation == "Offset":
 								tmp=0
@@ -560,7 +567,7 @@ class MCPREP_mobSpawner(bpy.types.Operator):
 							act = context.active_object
 							bpy.context.scene.objects.active = ob
 							if conf.v:print("ACTIVE obj = {x}".format(x=ob.name))
-							
+
 							try:
 								bpy.ops.object.mode_set(mode='POSE')
 
@@ -661,7 +668,7 @@ class MCPREP_installMob(bpy.types.Operator, ImportHelper):
 			if conf.v:print("Error: Rig directory is not valid!")
 			self.report({'ERROR'}, "Rig directory is not valid!")
 			return {'CANCELLED'}
-		
+
 		# check the file with a quick look for any groups, any error return failed
 		with bpy.data.libraries.load(newrig) as (data_from, data_to):
 			if len(data_from.groups) < 1:
@@ -685,7 +692,7 @@ class MCPREP_installMob(bpy.types.Operator, ImportHelper):
 				shutil.copy2(newrig, os.path.join(drpath , filename)) # no category, root of directory
 				if os.path.isfile(newrig[:-5]+"py"):
 					shutil.copy2(newrig[:-5]+"py", os.path.join(drpath , filename[:-5]+"py")) # no category, root of directory
-					
+
 		except:
 			# can fail if permission denied, i.e. an IOError error
 			self.report({'ERROR'}, "Failed to copy, manually install my copying rig to folder: {x}".\
@@ -712,21 +719,12 @@ class MCPREP_openRigFolder(bpy.types.Operator):
 
 	def execute(self,context):
 		#addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
-		import subprocess
-		try:
-			# windows... untested
-			subprocess.Popen('explorer "{x}"'.format(x=bpy.path.abspath(context.scene.mcrig_path)))
-		except:
-			try:
-				# mac... works on Yosemite minimally
-				subprocess.call(["open", bpy.path.abspath(context.scene.mcrig_path)])
-			except:
-				# linux
-				try:
-					subprocess.call(["xdg-open", bpy.path.abspath(context.scene.mcrig_path)])
-				except:
-					self.report({'ERROR'}, "Didn't open folder, navigate to it manually: {x}".format(x=context.scene.mcrig_path))
-					return {'CANCELLED'}
+
+		res = util.open_folder_crossplatform(context.scene.mcrig_path)
+		if res==False:
+			self.report({'ERROR'}, "Didn't open folder, navigate to it manually: {x}".format(x=context.scene.mcrig_path))
+			return {'CANCELLED'}
+
 		return {'FINISHED'}
 
 
@@ -738,7 +736,7 @@ class MCPREP_spawnPathReset(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 
 	def execute(self,context):
-		
+
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
 		context.scene.mcrig_path = addon_prefs.mcrig_path
 		updateRigList(context)
@@ -808,7 +806,7 @@ class MCPREP_uninstallMob(bpy.types.Operator):
 			row.label("Press okay to remove mob and file")
 
 	def execute(self,context):
-		
+
 		mob = conf.rig_list_sub[context.scene.mcprep_mob_list_index]
 		try:
 			path = mob[0].split(":/:")[0]
@@ -817,7 +815,7 @@ class MCPREP_uninstallMob(bpy.types.Operator):
 			self.report({'ERROR'}, "Could not resolve file to delete")
 			print("Error trying to remove mob file: "+str(e))
 			return {'CANCELLED'}
-		
+
 		if os.path.isfile(path) == False:
 			if conf.v:
 				print("Error: Source filepath not found, didn't delete")
@@ -920,10 +918,10 @@ def spawn_rigs_categories(self, context):
 		it = context.scene.mcrig_path
 		categories = [ f for f in os.listdir(it) if os.path.isdir(os.path.join(it,f)) ]
 		conf.rig_categories = categories
-	
+
 	for item in categories: #
 		items.append((item, item+" mobs", "Show all mobs in the '"+item+"' category"))
-	
+
 	items.append(("no_category","Uncategorized","Show all uncategorized mobs"))
 	return items
 

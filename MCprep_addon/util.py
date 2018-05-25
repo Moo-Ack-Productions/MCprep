@@ -1,8 +1,3 @@
-# ##### MCprep #####
-#
-# Developed by Patrick W. Crawford, see more at
-# http://theduckcow.com/dev/blender/MCprep
-# 
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #  This program is free software; you can redistribute it and/or
@@ -25,7 +20,7 @@ import bpy
 import random
 import os
 
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, call
 
 from . import conf
 
@@ -83,11 +78,14 @@ def bAppendLink(directory,name, toLink, active_layer=True):
 	if conf.vv:print("Appending ",directory," : ",name)
 	post272 = False
 	try:
-		version = bpy.data.version
+		version = bpy.app.version
 		post272 = True
+		post280 = bpy.app.version >= (2, 80)
 	except:
 		pass #  "version" didn't exist before 72!
 	#if (version[0] >= 2 and version[1] >= 72):
+
+	print("DEBUG 2.8 loader",version, post272, post280)
 
 	# for compatibility, add ending character
 	if directory[-1] != "/" and directory[-1] != os.path.sep:
@@ -97,8 +95,13 @@ def bAppendLink(directory,name, toLink, active_layer=True):
 		if conf.vv:print("Using post-2.72 method of append/link")
 		# new method of importing
 
-		if (toLink):
+		if toLink:
 			bpy.ops.wm.link(directory=directory, filename=name)
+		elif post280==True:
+			bpy.ops.wm.append(
+					directory=directory,
+					filename=name,
+					)
 		else:
 			bpy.ops.wm.append(
 					directory=directory,
@@ -203,7 +206,7 @@ def open_program(executable):
 			return -1
 		elif ".app" not in executable:
 			return -1
-		
+
 	# for mac, if folder, check that it has .app otherwise throw -1
 	# (right now says will open even if just folder!!)
 
@@ -212,12 +215,34 @@ def open_program(executable):
 	stdout, err = p.communicate(b"")
 
 	if err != b"":
-		return "Error occured while trying to open Sync: "+str(err) 
+		return "Error occured while trying to open Sync: "+str(err)
 
 	# print("stdout?")
 	# print(stdout)
-
 	return 0
+
+
+# ---------
+# cross platform way to open folder in host operating system
+def open_folder_crossplatform(folder):
+	folder = bpy.path.abspath(self.folder)
+	try:
+		# windows... untested
+		subprocess.Popen('explorer "{x}"'.format(x=folder))
+		#return True
+	except:
+		try:
+			# mac... works on Yosemite minimally
+			subprocess.call(["open", folder])
+			#return True
+		except:
+			# linux
+			try:
+				subprocess.call(["xdg-open", folder])
+				#return True
+			except:
+				return False
+
 
 # ---------
 # fix/update the mineways path for any oddities
@@ -227,7 +252,7 @@ def exec_path_expand(self, context):
 
 	# # if not .app, assume valid found
 	# if ".	app" not in path: return
-	
+
 	# dirs = path.split(os.path.sep)
 	# for d in dirs:
 
@@ -283,7 +308,7 @@ class event_stream(): #class event_stream(Object)
 	nums_eval = [0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9]
 
 	# text = []
-	neg = ['MINUS','NUMPAD_MINUS']
+	neg_vals = ['MINUS','NUMPAD_MINUS']
 
 	# modifiers
 	mods = ['shift?','alt?','ctrl?','OSKEY',"etc....."]
@@ -300,10 +325,10 @@ class event_stream(): #class event_stream(Object)
 	# streaming functions
 	def stream_transform(val,two_dim=False):
 		# interpret val, and update state
-		if val in ['MINUS','NUMPAD_MINUS']:
+		if val in neg_vals:
 			# if not yet initialized for use, set to True, else toggle
 			self.neg = True if self.neg == None else not self.neg
-		# elif val in ... 
+		# elif val in ...
 
 	def getKeyval(event):
 

@@ -1,8 +1,3 @@
-# ##### MCprep #####
-#
-# Developed by Patrick W. Crawford, see more at
-# http://theduckcow.com/dev/blender/MCprep
-# 
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #  This program is free software; you can redistribute it and/or
@@ -90,7 +85,7 @@ def init():
 	setup_path = os.path.join(os.path.dirname(__file__),"mcprep_data.json")
 	if os.path.isfile( os.path.join(os.path.dirname(__file__),\
 			"mcprep_data_update.json") ) == True:
-		
+
 		# remove old json
 		if os.path.isfile(setup_path) == True:
 			os.remove(setup_path)
@@ -114,7 +109,7 @@ def init():
 	thumb_ids = {}
 
 	# actual setup/icon loading in the according files
-	
+
 
 	# -----------------------------------------------
 	# For installing assets
@@ -139,7 +134,7 @@ def init():
 	global update_ready
 	update_ready = False
 
-	# in a background thread, connect to see if ready. 
+	# in a background thread, connect to see if ready.
 	# have an internal count thing that requests to enable checking
 	# or force users to decide after 5 uses, ie blocking the panels
 
@@ -154,12 +149,12 @@ def init():
 	# -----------------------------------------------
 	global skin_list
 	skin_list = [] # each is: [ basename, path ]
-	
+
 	global rig_list
 	global rig_list_sub
 	global rig_categories
-	
-	rig_list = [] # each is: [ relative path+':/:'+name+':/:'+catgry,  
+
+	rig_list = [] # each is: [ relative path+':/:'+name+':/:'+catgry,
 				  #            name.title(),
 				  #            description ]
 	rig_list_sub = [] # shorthand for categories
@@ -199,7 +194,7 @@ def icons_init():
 		if v:print("Old verison of blender, no custom icons available")
 		if v:print("\t"+str(e))
 		preview_collections["main"] = ""
-	
+
 	# initialize the rest
 	preview_collections["skins"] = ""
 	preview_collections["mobs"] = ""
@@ -222,4 +217,4 @@ def unregister():
 	# 		#print("clearing?",pcoll)
 	# 		bpy.utils.previews.remove(pcoll)
 	# 	preview_collections.clear()
-	
+

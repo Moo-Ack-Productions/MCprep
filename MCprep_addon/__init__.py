@@ -1,8 +1,3 @@
-# ##### MCprep #####
-#
-# Developed by Patrick W. Crawford, see more at
-# http://theduckcow.com/dev/blender/MCprep
-# 
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #  This program is free software; you can redistribute it and/or
@@ -33,10 +28,14 @@ which should have been present on the original download page.
 Source code available on github as well as more information:
 https://github.com/TheDuckCow/MCprep
 
+Authors: Patrick W. Crawford, Google LLC
+License: GPLv3
+Disclaimer: This is not an official Google product
+
 """
 
 # -----------------------------------------------------------------------------
-# 
+#
 # -----------------------------------------------------------------------------
 
 
@@ -67,7 +66,7 @@ if "bpy" in locals():
 	importlib.reload(spawner)
 	importlib.reload(world_tools)
 	importlib.reload(tracking)
-	
+
 
 	conf.init()  #initialize global variables
 	if conf.v:print("Reload, verbose is enabled")
@@ -93,7 +92,7 @@ else:
 
 
 def register():
-	
+
 	bpy.utils.register_module(__name__)
 	mcprep_ui.register()
 	materials.register()
@@ -104,7 +103,7 @@ def register():
 
 	# addon updater code and configurations
 	addon_updater_ops.register(bl_info)
-	
+
 
 def unregister():
 

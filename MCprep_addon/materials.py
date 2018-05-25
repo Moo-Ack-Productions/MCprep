@@ -1,8 +1,3 @@
-# ##### MCprep #####
-#
-# Developed by Patrick W. Crawford, see more at
-# http://theduckcow.com/dev/blender/MCprep
-# 
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #  This program is free software; you can redistribute it and/or
@@ -78,7 +73,7 @@ class MCPREP_materialChange(bpy.types.Operator):
 		col.prop(self, "useReflections")
 		col.prop(self, "combineMaterials")
 		# tick box to enable tracking
-	
+
 	def getListDataMats(self):
 
 		reflective = [ 'glass', 'glass_pane_side','ice','ice_packed','iron_bars',
@@ -129,7 +124,7 @@ class MCPREP_materialChange(bpy.types.Operator):
 
 		return {'reflective':reflective, 'water':water, 'solid':solid,
 				'emit':emit}
-	
+
 	# helper function for expanding wildcard naming for generalized materials
 	# maximum 1 wildcard *
 	def checklist(self,matName,alist):
@@ -188,7 +183,7 @@ class MCPREP_materialChange(bpy.types.Operator):
 			mat.use_transparency = True
 			mat.alpha = 0
 			mat.texture_slots[0].alpha_factor = 1
-		   
+
 		if self.useReflections and self.checklist(matGen,listData['reflective']):
 			mat.alpha=0.15
 			mat.raytrace_mirror.use = True
@@ -196,7 +191,7 @@ class MCPREP_materialChange(bpy.types.Operator):
 		else:
 			mat.raytrace_mirror.use = False
 			mat.alpha=0
-	   
+
 		if self.checklist(matGen,listData['emit']):
 			mat.emit = 1
 		else:
@@ -225,7 +220,7 @@ class MCPREP_materialChange(bpy.types.Operator):
 		nodeMix2 = nodes.new('ShaderNodeMixShader')
 		nodeTex = nodes.new('ShaderNodeTexImage')
 		nodeOut = nodes.new('ShaderNodeOutputMaterial')
-		
+
 		# set location and connect
 		nodeTex.location = (-400,0)
 		nodeGloss.location = (0,-150)
@@ -285,10 +280,10 @@ class MCPREP_materialChange(bpy.types.Operator):
 		except:
 			pass
 		return 0
-	
+
 	def execute(self, context):
 
-		# only sends tracking if opted in (and not internal change)
+		# skip tracking if internal change
 		if self.skipUsage==False:
 			tracking.trackUsage("materials",bpy.context.scene.render.engine)
 
@@ -303,7 +298,7 @@ class MCPREP_materialChange(bpy.types.Operator):
 		if len(objList)==0:
 			self.report({'ERROR'}, "No materials found on selected objects")
 			return {'CANCELLED'}
-		
+
 		#check if linked material exists
 		render_engine = context.scene.render.engine
 		count = 0
@@ -350,16 +345,14 @@ class MCPREP_combineMaterials(bpy.types.Operator):
 
 	def execute(self, context):
 
-		# only sends tracking if opted in (and not internal change)
-		if self.skipUsage==False:
-			tracking.trackUsage("combine_materials")
+		# skip tracking if internal change
+		if self.skipUsage==False: tracking.trackUsage("combine_materials")
 
 		removeold = True
 
 		if self.selection_only==True and len(context.selected_objects)==0:
 			self.report({'ERROR',"Either turn selection only off or select objects with materials"})
 			return {'CANCELLED'}
-
 
 		# 2-level structure to hold base name and all
 		# materials blocks with the same base
@@ -407,7 +400,7 @@ class MCPREP_combineMaterials(bpy.types.Operator):
 					if sl.material not in data: continue # selection only
 					sl.material = bpy.data.materials[nameCat[ util.nameGeneralize(sl.material.name) ][0]]
 			# doesn't remove old textures, but gets it to zero users
-			
+
 			postcount = len( ["x" for x in bpy.data.materials if x.users >0] )
 			self.report({"INFO"},
 				"Consolidated {x} materials, down to {y} overall".format(
@@ -418,7 +411,7 @@ class MCPREP_combineMaterials(bpy.types.Operator):
 		# perform the consolidation with one basename set at a time
 		for base in nameCat: # the keys of the dictionary
 			if len(base)<2: continue
-			
+
 			nameCat[base].sort() # in-place sorting
 			baseMat = bpy.data.materials[ nameCat[base][0] ]
 
@@ -427,7 +420,7 @@ class MCPREP_combineMaterials(bpy.types.Operator):
 			for matname in nameCat[base][1:]:
 
 				# skip if fake user set
-				if bpy.data.materials[matname].use_fake_user == True: continue 
+				if bpy.data.materials[matname].use_fake_user == True: continue
 				# otherwise, remap
 				res = util.remap_users(bpy.data.materials[matname],baseMat)
 				if res != 0:
@@ -438,7 +431,7 @@ class MCPREP_combineMaterials(bpy.types.Operator):
 				if removeold==True and old.users==0:
 					if conf.vv:print("removing old:")
 					data.remove( bpy.data.materials[matname] )
-			
+
 			# Final step.. rename to not have .001 if it does
 			genBase = util.nameGeneralize(baseMat.name)
 			if baseMat.name != genBase:
@@ -474,12 +467,11 @@ class MCPREP_combineImages(bpy.types.Operator):
 		default = False,
 		options={'HIDDEN'}
 		)
-	
+
 	def execute(self, context):
 
-		# only sends tracking if opted in (and not internal change)
-		if self.skipUsage==False:
-			tracking.trackUsage("combine_images")
+		# skip tracking if internal change
+		if self.skipUsage==False: tracking.trackUsage("combine_images")
 
 		removeold = True
 
@@ -521,7 +513,7 @@ class MCPREP_combineImages(bpy.types.Operator):
 					if sl.material not in data: continue # selection only
 					sl.material = data[nameCat[ util.nameGeneralize(sl.material.name) ][0]]
 			# doesn't remove old textures, but gets it to zero users
-			
+
 			postcount = len( ["x" for x in bpy.data.materials if x.users >0] )
 			self.report({"INFO"},
 				"Consolidated {x} materials, down to {y} overall".format(
@@ -532,21 +524,21 @@ class MCPREP_combineImages(bpy.types.Operator):
 		# perform the consolidation with one basename set at a time
 		for base in nameCat:
 			if len(base)<2: continue
-			
+
 			nameCat[base].sort() # in-place sorting
 			baseImg = bpy.data.images[ nameCat[base][0] ]
-			
+
 			for imgname in nameCat[base][1:]:
 
 				# skip if fake user set
-				if bpy.data.images[imgname].use_fake_user == True: continue 
+				if bpy.data.images[imgname].use_fake_user == True: continue
 
 				# otherwise, remap
 				util.remap_users(data[imgname],baseImg)
 				old = bpy.data.images[imgname]
 				if removeold==True and old.users==0:
 					bpy.data.images.remove( bpy.data.images[imgname] )
-			
+
 			# Final step.. rename to not have .001 if it does
 			if baseImg.name != util.nameGeneralize(baseImg.name):
 				if util.nameGeneralize(baseImg.name) in data and \
@@ -626,9 +618,8 @@ class MCPREP_scaleUV(bpy.types.Operator):
 
 	def invoke(self, context, event):
 
-		# only sends tracking if opted in (and not internal change)
-		if self.skipUsage==False:
-			tracking.trackUsage("scale_UV_faces")
+		# skip tracking if internal change
+		if self.skipUsage==False: tracking.trackUsage("scale_UV_faces")
 
 		ob = context.object
 		if ob==None:
@@ -640,7 +631,7 @@ class MCPREP_scaleUV(bpy.types.Operator):
 		elif len(ob.data.polygons)==0:
 			self.report({'WARNING'}, "Active object has no faces to delete")
 			return {'CANCELLED'}
-		
+
 		if not ob.data.uv_layers.active:#uv==None:
 			self.report({'WARNING'}, "No active UV map found")
 			return {'CANCELLED'}
@@ -658,7 +649,7 @@ class MCPREP_scaleUV(bpy.types.Operator):
 
 
 	# def execute(self, context):
-		
+
 	# 	# INITIAL WIP
 	# 	"""
 	# 	# WIP
@@ -685,16 +676,16 @@ class MCPREP_scaleUV(bpy.types.Operator):
 	# 	return {'FINISHED'}
 
 	def scale_UV_faces(self, context, ob, factor):
-		
+
 		# transform the scale factor properly to implementation below
 		factor *= -1
 		factor += 1
 		mod = False
 
 		uv = ob.data.uv_layers.active
-		
+
 		for f in ob.data.polygons:
-			
+
 			if f.select!=True:continue # if not selected, won't show up in UV editor
 			# initialize for avergae center on polygon (probably a better way exists)
 			x=0
@@ -741,7 +732,7 @@ class MCPREP_isolate_alpha_uvs(bpy.types.Operator):
 		# if doing multiple objects, iterate over loop of this function
 		ret = self.select_alpha(None, bpy.context, bpy.context.object, 1)
 		bpy.ops.object.mode_set(mode="EDIT")
-		
+
 		return {"FINISHED"}
 
 	def select_alpha(self, context, ob, thresh):
@@ -752,13 +743,13 @@ class MCPREP_isolate_alpha_uvs(bpy.types.Operator):
 			return ("ERROR","Active object must be a mesh")
 		elif len(ob.data.polygons)==0:
 			return ("ERROR","Active object has no faces to delete")
-		 
+
 		uv = ob.data.uv_layers.active
-		
+
 		if uv==None:
 			return ("ERROR","No active UV map found")
 
-		# img = 
+		# img =
 		# if ob.data.uv_textures.active == None: continue
 		for uv_face in ob.data.uv_textures.active.data:
 			uv_face.image = image
@@ -836,7 +827,7 @@ def update_skin_path(self, context):
 def getMatsFromSelected(selected,new_material=False):
 	# pre-expand
 	obj_list = []
-	
+
 	for ob in selected:
 		if ob.type == 'MESH':
 			obj_list.append(ob)
@@ -845,7 +836,7 @@ def getMatsFromSelected(selected,new_material=False):
 				if ch.type == 'MESH': obj_list.append(ch)
 		else:
 			continue
-	
+
 	mat_list = []
 	mat_ret = []
 	for ob in obj_list:
@@ -964,7 +955,7 @@ def loadSkinFile(self, context, filepath, new_material=False):
 		self.report({'ERROR'}, "No image textures found to update")
 		return 1
 	else:
-		pass 
+		pass
 
 	# adjust the UVs if appropriate
 	setUVimage(context.selected_objects,image)
@@ -1050,17 +1041,18 @@ class MCPREP_applyUsernameSkin(bpy.types.Operator):
 		description="Exact name of user to get texture from",
 		default="")
 
-	redownload = bpy.props.BoolProperty(
-		name="Re-download",
-		description="Re-download if already locally found",
-		default=False)
+	skip_redownload = bpy.props.BoolProperty(
+		name="Skip download if skin already local",
+		description="Avoid re-downloading skin and apply local file instead",
+		default=True)
 
 	def invoke(self, context, event):
 		return context.window_manager.invoke_props_dialog(self)
 
 	def draw(self, context):
-		self.layout.label("Enter exact username below")
+		self.layout.label("Enter exact Minecraft username below")
 		self.layout.prop(self,"username",text="")
+		self.layout.prop(self,"skip_redownload")
 		self.layout.label(
 			"and then press OK; blender may pause briefly to download")
 
@@ -1072,24 +1064,21 @@ class MCPREP_applyUsernameSkin(bpy.types.Operator):
 
 		skins = [ str(skin[0]).lower() for skin in conf.skin_list ]
 		paths = [ skin[1] for skin in conf.skin_list ]
-		if self.username.lower() not in skins or self.redownload==True:
+		if self.username.lower() not in skins or self.skip_redownload==False:
 			if conf.v:print("Donwloading skin")
 			self.downloadUser(context)
 		else:
 			if conf.v:print("Reusing downloaded skin")
 			ind = skins.index(self.username.lower())
 			res = loadSkinFile(self, context, paths[ind][1])
-
 		return {'FINISHED'}
 
-
 	def downloadUser(self, context):
-
 		#http://minotar.net/skin/theduckcow
 		src_link = "http://minotar.net/skin/"
 		saveloc = os.path.join(bpy.path.abspath(context.scene.mcskin_path),
 								self.username.lower()+".png")
-		
+
 		#urllib.request.urlretrieve(src_link+self.username.lower(), saveloc)
 		try:
 			if conf.vv:print("Download starting with url: "+src_link+self.username.lower())
@@ -1102,12 +1091,8 @@ class MCPREP_applyUsernameSkin(bpy.types.Operator):
 			self.report({"ERROR"},"URL error, check internet connection")
 			return {'CANCELLED'}
 		except Exception as e:
-			self.report({"ERROR"},"General error occured: "+str(e))
+			self.report({"ERROR"},"Error occured while downloading skin: "+str(e))
 			return {'CANCELLED'}
-
-		# else:
-		# 	self.report({"ERROR"},"Error occurred trying to download skin")
-		# 	return {'CANCELLED'}
 
 		res = loadSkinFile(self, context, saveloc)
 		bpy.ops.mcprep.reload_skins()
@@ -1124,7 +1109,7 @@ class MCPREP_skinFixEyes(bpy.types.Operator):
 	# initial_eye_type: unknown (default), 2x2 square, 1x2 wide.
 
 	def execute(self,context):
-		
+
 		# take the active texture input (based on selection)
 		print("fix eyes")
 		self.report({'ERROR'}, "Work in progress operator")
@@ -1166,6 +1151,7 @@ class MCPREP_addSkin(bpy.types.Operator, ImportHelper):
 		return {'FINISHED'}
 
 
+
 class MCPREP_removeSkin(bpy.types.Operator):
 	bl_idname = "mcprep.remove_skin"
 	bl_label = "Remove skin"
@@ -1197,7 +1183,6 @@ class MCPREP_removeSkin(bpy.types.Operator):
 		# in future, select multiple
 		self.report({"INFO"},"Removed "+bpy.path.basename(file))
 
-		
 		return {'FINISHED'}
 
 
@@ -1231,7 +1216,7 @@ class MCPREP_spawn_with_skin(bpy.types.Operator):
 	clearPose = bpy.props.BoolProperty(
 		name = "Clear Pose",
 		description = "Clear the pose to rest position",
-		default = True 
+		default = True
 		)
 
 	def execute(self, context):
@@ -1272,9 +1257,13 @@ def register():
 
 	# to auto-load the skins
 	if conf.vv:print("Adding reload skin handler to scene")
-	bpy.app.handlers.scene_update_pre.append(handler_skins_enablehack)
+	try:
+		bpy.app.handlers.scene_update_pre.append(handler_skins_enablehack)
+	except:
+		print("Failed to register scene update handler")
+		pass
 	bpy.app.handlers.load_post.append(handler_skins_load)
-	
+
 
 def unregister():
 	del bpy.types.Scene.mcprep_skins_list
