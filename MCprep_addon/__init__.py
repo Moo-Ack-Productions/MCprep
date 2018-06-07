@@ -67,9 +67,8 @@ if "bpy" in locals():
 	importlib.reload(world_tools)
 	importlib.reload(tracking)
 
-
-	conf.init()  #initialize global variables
 	if conf.v:print("Reload, verbose is enabled")
+	if conf.vv:print("MCprep: Very Verbose is enabled")
 
 else:
 	import bpy
@@ -79,6 +78,7 @@ else:
 	# import the rest
 	from . import (
 		mcprep_ui,
+		util_operators,
 		materials,
 		meshswap,
 		spawner,
@@ -94,6 +94,7 @@ else:
 def register():
 
 	bpy.utils.register_module(__name__)
+	util_operators.register()
 	mcprep_ui.register()
 	materials.register()
 	meshswap.register()
@@ -114,6 +115,7 @@ def unregister():
 	meshswap.unregister()
 	spawner.unregister()
 	world_tools.unregister()
+	util_operators.unregister()
 	tracking.unregister()
 
 	# addon updater code and configurations

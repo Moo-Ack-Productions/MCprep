@@ -1,8 +1,3 @@
-# ##### MCprep #####
-#
-# Developed by Patrick W. Crawford, see more at
-# http://theduckcow.com/dev/blender/MCprep
-# 
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #  This program is free software; you can redistribute it and/or
@@ -21,57 +16,19 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-# -----------------------------------------------------------------------------
-# Structure plan
-# -----------------------------------------------------------------------------
-
-"""
-Key funcitonality:
-- Send notice when first installing the addon and enabling (first time only)
--- (Try to get unique identifier to prevent doubling?)
-x Track when functions are used
--- Track how often used, just keep local number/count usage
--- keep unique ID for user... could scramble timestamp first installed+userpath?
--- could do sneaky parsing of other blender folders to see if addon found & has pre-existing ID
--- (relative only pathing ofc)
-xx Try to send in background when using
--- and if failed save to file & set flag to try again later
-- Feedback form?? >> direct emails to support@theduckcow.com could do
-- Consideirng both google analytics pinging as well as DB pushes? one or the other
-- when asking to enable tracking, second popup to say hey, advanced too?
--- open advanced settings, fields for more details/could also be in that conditional popup
-- Request for feedback? popup also after some interval if not used?
-
-Things to track/push
-- when installed (by default, agreed to on download)
-- FORCE them to agree to terms of use in addon panel before doing anything???
-(personal thing/specific to this addon)
-- track date.. different from submission timestamp potentially
-- addon version
-- additional tracking (optional):
--- blender version
-xx OS running
--- optional profiler info? e.g. tick your age range, # eyars experince w/ blender, etc
-
-
-"""
-
-
-"""data testing dump
-
-curl -X POST -d '{"timestamp":0,"version":"v2.9.9","blender":"2.77","status":"New install"}' 'https://mcprep-1aa04.firebaseio.com/1/track/install_dev.json'
-
-curl -X GET 'https://mcprep-1aa04.firebaseio.com/1/SECRET.json'
-
-"""
 
 import os
+import re
+import sys
+import traceback
 import json
 import http.client
 import platform
 import threading
-import bpy
+import textwrap
 from datetime import datetime
+
+import bpy
 
 from . import conf
 
@@ -80,9 +37,13 @@ from . import conf
 # global vars
 # -----------------------------------------------------------------------------
 
-
 idname = "mcprep"
 
+# max data/string lengths to match server-side validation,
+# if exceeded, request will return denied (no data written)
+SHORT_FIELD_MAX = 64
+USER_COMMENT_LENGTH = 512
+ERROR_STRING_LENGTH = 1024
 
 # -----------------------------------------------------------------------------
 # primary class implementation
@@ -177,12 +138,14 @@ class Singleton_tracking(object):
 	def version(self, value):
 		self._version = value
 
-
-
+	@property
+	def addon(self):
+		return self._addon
+	@addon.setter
+	def addon(self, value):
+		self._addon = value
 
 	# number/settings for frequency use before ask for enable tracking
-
-	# 
 
 	# -------------------------------------------------------------------------
 	# Public functions
@@ -197,10 +160,9 @@ class Singleton_tracking(object):
 
 		# update static json
 		self.json["enable_tracking"] = self._tracking_enabled
-		self.save_tracker_json()	
+		self.save_tracker_json()
 
 	def initialize(self, appurl, version):
-
 		self._appurl = appurl
 		self._version = version
 		# load the enable_tracking-preference (ie in or out)
@@ -215,18 +177,14 @@ class Singleton_tracking(object):
 		# create local cache file locations
 		# including search for previous
 
-	# interface request, either launches on main or background
+	# interface request, either launches on main or a background thread
 	def request(self, method, path, payload, background=False, callback=None):
 		if method not in ["POST","PUT","GET"]:
 			raise ValueError("Method must be POST, PUT, or GET")
-
-
 		if background==False:
 			return self.raw_request(method, path, payload, callback)
-			
 		else:
-			# launch the daemon
-
+			# launch the daemon thread
 			# if self._async_checking == True:
 			# 	return
 			if self._verbose: print("Starting background thread")
@@ -246,9 +204,10 @@ class Singleton_tracking(object):
 		connection = http.client.HTTPSConnection(url, self._port)
 		try:
 			connection.connect()
-			if self.verbose:print("Connection made to "+str(path))
+			if self.verbose:
+				print(self._addon + ": Connection made to "+str(path))
 		except:
-			print("Connection not made, verify connectivity; intended: "+str(path))
+			print(self._addon + ": Connection failed, intended report destination: "+str(path))
 			return {'status':'NO_CONNECTION'}
 
 		if method=="POST" or method=="PUT":
@@ -260,14 +219,13 @@ class Singleton_tracking(object):
 
 		raw = connection.getresponse().read()
 		resp = json.loads( raw.decode() )
-		if self._verbose:print("Response: "+str(resp))	
+		if self._verbose:print("Response: "+str(resp))
 
 		if callback != None:
 			if self._verbose:print("Running callback")
 			callback(resp)
 
 		return resp
-
 
 
 	def set_tracker_json(self):
@@ -304,7 +262,6 @@ class Singleton_tracking(object):
 
 
 	def save_tracker_json(self):
-
 		jpath = self._tracker_json
 		outf = open(jpath,'w')
 		data_out = json.dumps(self.json,indent=4)
@@ -315,12 +272,11 @@ class Singleton_tracking(object):
 			print(self.json)
 
 	def save_tracker_idbackup(self):
-
 		jpath = self._tracker_idbackup
-		
+
 		if "install_id" in self.json and self.json["install_id"] != None:
 			outf = open(jpath,'w')
-			idbackup = {"idname":self.json["install_id"], 
+			idbackup = {"idname":self.json["install_id"],
 						"date":self.json["install_date"]}
 			data_out = json.dumps(idbackup,indent=4)
 			outf.write(data_out)
@@ -329,15 +285,14 @@ class Singleton_tracking(object):
 				print("Wrote out backup settings to file, with the contents:")
 				print(idbackup)
 
-
-	# def tracking(set='disable'):
-
-	# def checkenable_tracking(): # ie has initial install check been done?
-	# ^ similar as above, maybe unnecessary
-
-	# def usageStat(function): # actually run push; function is key for what was ran/what to record
-		# allow more complex info?
-
+	def remove_indentifiable_information(self, report):
+		# remove filepath from report logs, which could have included
+		# sensitive information such as usernames or names
+		# re.sub(r'(?i)File "[/\\]{1,2}.*[/\\]{1,2}', 'File "<addon_path>'+os.sep,f)
+		return re.sub(
+				r'(?i)File "[/\\]{1,2}.*[/\\]{1,2}',
+				'File "<addon_path>'+os.sep,
+				report)
 
 
 # -----------------------------------------------------------------------------
@@ -345,9 +300,7 @@ class Singleton_tracking(object):
 # -----------------------------------------------------------------------------
 
 
-
 Tracker = Singleton_tracking()
-
 
 
 # -----------------------------------------------------------------------------
@@ -355,11 +308,13 @@ Tracker = Singleton_tracking()
 # -----------------------------------------------------------------------------
 
 
-
-class toggleenable_tracking(bpy.types.Operator):
-	"""Toggle anonymous usage tracking to help the developers. The only data tracked is what functions are used, and the timestamp of the addon installation"""
+class toggle_enable_tracking(bpy.types.Operator):
+	"""Enabled or disable usage tracking"""
 	bl_idname = idname+".toggle_enable_tracking"
 	bl_label = "Toggle opt-in for analytics tracking"
+	bl_description = "Toggle anonymous usage tracking to help the developers. "+\
+			" The only data tracked is what MCprep functions are used, key "+\
+			"blender/addon information, and the timestamp of the addon installation"
 	options = {'REGISTER', 'UNDO'}
 
 	tracking = bpy.props.EnumProperty(
@@ -381,6 +336,7 @@ class toggleenable_tracking(bpy.types.Operator):
 class popup_feedback(bpy.types.Operator):
 	bl_idname = idname+".popup_feedback"
 	bl_label = "Thanks for using {}!".format(idname)
+	bl_description = "Take a survey to give feedback about the addon"
 	options = {'REGISTER', 'UNDO'}
 
 	def invoke(self, context, event):
@@ -388,34 +344,106 @@ class popup_feedback(bpy.types.Operator):
 
 	def draw(self, context):
 
-		# seems that only the first url open works here,
-		# so many need to create operators that are just url open operations
-		# for the other in-popup items.
-
-		row = self.layout.row()
-		self.layout.split()
-		row = self.layout.row()
-		row.label("See the latest")
-		p = row.operator("wm.url_open","on the website")
-		p.url = "http://theduckcow.com/dev/blender/mcprep/"
-
-		row = self.layout.row()
-		row.label("Want to support development?")
-		p = row.operator("wm.url_open","Consider donating")
-		p.url = "bit.ly/donate2TheDuckCow"
-
 		self.layout.split()
 		col = self.layout.column()
 		col.alignment='CENTER'
-		col.label("PRESS OKAY TO OPEN SURVEY BELOW")
-		self.layout.split()
-		col = self.layout.column()
 		col.scale_y = 0.7
-		col.label("Responding to the survey helps drive what devleopment is worked on")
-		col.label("and identify those nasty bugs. You help everyone by responding!")
+		col.label("Want to help out even more?")
+		col.label("Press OK below to open the MCprep survey")
+		col.label("Responding helps direct development time,")
+		col.label("and identify those nasty bugs.")
+		col.label("You help everyone by responding!")
 
 	def execute(self, context):
 		bpy.ops.wm.url_open(url="bit.ly/MCprepSurvey")
+
+		return {'FINISHED'}
+
+
+class popup_report_error(bpy.types.Operator):
+	bl_idname = idname+".report_error"
+	bl_label = "MCprep ERROR OCCURED"
+	bl_description = "Report error to database, add additional comments for context"
+
+	error_report = bpy.props.StringProperty(default="")
+	comment = bpy.props.StringProperty(default="")
+
+	action = bpy.props.EnumProperty(
+		items = [('report', 'Send', 'Send the error report to developers, fully anonymous'),
+				('ignore', "Don't send", "Ignore this error report")],
+		)
+
+	def invoke(self, context, event):
+		return context.window_manager.invoke_props_dialog(self, width=500)
+
+	def draw_header(self, context):
+		self.layout.label(text="", icon="ERROR") # doesn't work/add to draw
+
+	def draw(self, context):
+		layout = self.layout
+		try:
+			bversion = str(bpy.app.version)
+		except:
+			bversion = "unknown"
+
+		col = layout.column()
+		col.label("Error detected, press OK below to send to developer", icon="ERROR")
+		box = col.box()
+		boxcol = box.column()
+		boxcol.scale_y = 0.7
+		if self.error_report=="":
+			box.label(" # no error code identified # ")
+		else:
+			width = 500
+			report_lines = self.error_report.split("\n")[:-1]
+			tot_ln = 0
+			max_ln = 10
+			for ln in report_lines:
+				sub_lns = textwrap.fill(ln, width-30)
+				spl = sub_lns.split("\n")
+				for i,s in enumerate(spl):
+					boxcol.label(s)
+					tot_ln+=1
+					if tot_ln==max_ln:break
+				if tot_ln==max_ln:break
+		boxcol.label("."*500)
+		# boxcol.label("System & addon information:")
+		sysinfo="Blender version: {}\nMCprep version: {}\nOS: {}\n MCprep install identifier: {}".format(
+				bversion,
+				Tracker.version,
+				get_platform_details(),
+				Tracker.json["install_id"],
+		)
+		for ln in sysinfo.split("\n"):
+			boxcol.label(ln)
+
+		col.label("(Optional) Describe what you were trying to do when the error occured:")
+		col.prop(self,"comment",text="")
+
+		row = col.row(align=True)
+		# spl = layout.split(percentage=80)
+		split = layout.split(percentage=0.6)
+		spcol = split.row()
+		spcol.label("Select 'Send' then press OK to share anonymous report")
+		split_two = split.split(percentage=0.4)
+		spcol_two = split_two.row(align=True)
+		spcol_two.prop(self,"action",text="")
+		spcol_two = split_two.row(align=True)
+		p = spcol_two.operator("wm.url_open", text="How is this used?", icon="QUESTION")
+		p.url = "http://theduckcow.com/dev/blender/mcprep/reporting-errors/"
+
+	def execute(self, context):
+
+		if self.action=="ignore":
+			return {"FINISHED"}
+		# also do followup callback for hey, check here for issues or support?
+		report = {"error":self.error_report,"user_comment":self.comment}
+		if self.action == 'report':
+			res = logError(report)
+			if Tracker.verbose:
+				print("Logged user report, with server response:")
+				print(res)
+			self.report({"INFO"},"Thanks for sharing the report")
 
 		return {'FINISHED'}
 
@@ -426,6 +454,8 @@ class popup_feedback(bpy.types.Operator):
 
 
 def trackInstalled(background=None):
+	"""Send new install event to database"""
+
 	# if already installed, skip
 	if Tracker.json["status"] == None and \
 			Tracker.json["install_id"] != None: return
@@ -437,7 +467,6 @@ def trackInstalled(background=None):
 		background = Tracker.background
 
 	def runInstall(background):
-
 
 		if Tracker.dev==True:
 			location = "/1/track/install_dev.json"
@@ -465,7 +494,7 @@ def trackInstalled(background=None):
 				"version":Tracker.version,
 				"blender":bversion,
 				"status":status,
-				"platform":platform.system()+":"+platform.release()
+				"platform":get_platform_details()
 			})
 
 		resp = Tracker.request('POST', location, payload, background, callback)
@@ -481,7 +510,6 @@ def trackInstalled(background=None):
 		Tracker.save_tracker_json()
 		Tracker.save_tracker_idbackup()
 
-
 	if Tracker.failsafe == True:
 		try:
 			runInstall(background)
@@ -492,6 +520,8 @@ def trackInstalled(background=None):
 
 
 def trackUsage(function, param=None, background=None):
+	"""Send usage operator usage + basic metadata to database"""
+
 	if Tracker.tracking_enabled == False: return # skip if not opted in
 	if conf.internal_change == True: return # skip if internal run
 
@@ -507,7 +537,7 @@ def trackUsage(function, param=None, background=None):
 			location = "/1/track/usage_dev.json"
 		else:
 			location = "/1/track/usage.json"
-		
+
 		# for compatibility to prior blender (2.75?)
 		try:
 			bversion = str(bpy.app.version)
@@ -518,12 +548,12 @@ def trackUsage(function, param=None, background=None):
 				"timestamp":{".sv": "timestamp"},
 				"version":Tracker.version,
 				"blender":bversion,
-				"platform":platform.system()+":"+platform.release(),
+				"platform":get_platform_details(),
 				"function":function,
 				"param":str(param),
 				"ID":Tracker.json["install_id"]
 			})
-
+		print(payload)
 		resp = Tracker.request('POST', location, payload, background)
 
 	if Tracker.failsafe == True:
@@ -533,6 +563,90 @@ def trackUsage(function, param=None, background=None):
 			pass
 	else:
 		runUsage(background)
+
+
+def logError(report, background=None):
+	"""Send error report to database"""
+
+	# if no override set, use default
+	if background == None: background = Tracker.background
+
+	def runError(background):
+		# ie auto sent in background, must adhere to tracking usage
+		if Tracker.tracking_enabled == False: return # skip if not opted in
+
+		if Tracker.dev==True:
+			location = "/1/log/user_report_dev.json"
+		else:
+			location = "/1/log/user_report.json"
+
+		# extract details
+		if "user_comment" in report:
+			user_comment = report["user_comment"]
+		else:
+			user_comment = ""
+		if "error" in report:
+			error = report["error"]
+		else:
+			error = ""
+			print("No error passed through")
+			return
+
+		try:
+			bversion = str(bpy.app.version)
+		except:
+			bversion = "unknown"
+
+		# Comply with server-side validation, don't exceed lengths
+		if len(user_comment) > USER_COMMENT_LENGTH:
+			user_comment = user_comment[:USER_COMMENT_LENGTH-1] + "|"
+		if len(error) > ERROR_STRING_LENGTH:
+			# TODO: make smarter, perhaps grabbing portion of start of error
+			# and portion of end to get all needed info
+			end_bound = len(error)-ERROR_STRING_LENGTH+1
+			error = "|" + error[end_bound:]
+
+		payload = json.dumps({
+				"timestamp":{".sv": "timestamp"},
+				"version":Tracker.version,
+				"blender":bversion,
+				"platform":get_platform_details(),
+				"error":error,
+				"user_comment":user_comment,
+				"ID":Tracker.json["install_id"]
+			})
+		resp = Tracker.request('POST', location, payload, background)
+
+	if Tracker.failsafe == True:
+		try:
+			runError(background)
+		except:
+			pass
+	else:
+		runError(background)
+
+
+def report_error(function):
+	"""Decorator for the execute(self, context) function of operators"""
+
+	def wrapper(self, context):
+		try:
+			return function(self, context)
+		except:
+			s = traceback.format_exc()
+			print(s) # always print raw traceback
+			s = Tracker.remove_indentifiable_information(s)
+			bpy.ops.mcprep.report_error('INVOKE_DEFAULT',error_report=s)
+			return {"CANCELLED"}
+	return wrapper
+
+
+def get_platform_details():
+	"""OS related information"""
+	res = platform.system()+":"+platform.release()
+	if len(res) > SHORT_FIELD_MAX:
+		res = res[:SHORT_FIELD_MAX-1] + "|"
+	return str(res)
 
 
 # -----------------------------------------------------------------------------
@@ -550,7 +664,7 @@ def register(bl_info):
 	Tracker.dev = conf.dev # True or False
 
 	if Tracker.dev == True:
-		Tracker.verbose = False
+		Tracker.verbose = True
 		Tracker.background = True # test either way
 		Tracker.failsafe = False # test either way
 		Tracker.tracking_enabled = True # enabled automatically for testing
@@ -562,6 +676,7 @@ def register(bl_info):
 
 	# try running install
 	trackInstalled()
+
 
 def unregister():
 	pass
