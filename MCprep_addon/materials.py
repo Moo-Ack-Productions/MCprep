@@ -29,6 +29,7 @@ from bpy.app.handlers import persistent
 # addon imports
 from . import conf
 from . import util
+from . import material_generation
 from . import tracking
 
 
@@ -38,9 +39,9 @@ from . import tracking
 
 
 
-class MCPREP_materialChange(bpy.types.Operator):
+class McprepPrepMaterials(bpy.types.Operator):
 	"""Fixes materials and textures on selected objects for Minecraft rendering"""
-	bl_idname = "mcprep.mat_change"
+	bl_idname = "mcprep.prep_materials"
 	bl_label = "MCprep Materials"
 	bl_options = {'REGISTER', 'UNDO'}
 
@@ -49,20 +50,29 @@ class MCPREP_materialChange(bpy.types.Operator):
 		description = "Allow appropriate materials to be rendered reflective",
 		default = True
 		)
-
 	combineMaterials = bpy.props.BoolProperty(
 		name = "Combine materials",
 		description = "Consolidate duplciate materials & textures",
 		default = False
 		)
+	usePrincipledShader = bpy.props.BoolProperty(
+		name = "Use Principled Shader (if available)",
+		description = "If available and using cycles, build materials using the "+\
+				"principled shader",
+		default = True
+		)
+	autoFindMissingTextures = bpy.props.BoolProperty(
+		name = "Auto-find missing images",
+		description = "If the texture for an existing material is missing, try "+\
+				"to load from the default texturepack instead",
+		default = True
+		)
 	skipUsage = bpy.props.BoolProperty(
 		default = False,
-		options={'HIDDEN'}
+		options = {'HIDDEN'}
 		)
 
-	# prop: consolidate textures consolidateTextures
-	# prop: set all blocks as solid (no transparency)
-	# set transparency type (z versus ray)
+	# prop: set all blocks as solid (no transparency), assume has trans, or compute check
 
 	def invoke(self, context, event):
 		return context.window_manager.invoke_props_dialog(self)
@@ -72,247 +82,43 @@ class MCPREP_materialChange(bpy.types.Operator):
 		col = row.column()
 		col.prop(self, "useReflections")
 		col.prop(self, "combineMaterials")
-		# tick box to enable tracking
+		col.prop(self, "usePrincipledShader")
+		col.prop(self, "autoFindMissingTextures")
+		if context.scene.render.engine=="CYCLES":
+			col.prop(self, "usePrincipledShader")
 
-	def getListDataMats(self):
-
-		reflective = [ 'glass', 'glass_pane_side','ice','ice_packed','iron_bars',
-				'door_iron_top','door_iron_bottom','diamond_block','iron_block',
-				'gold_block','emerald_block','iron_trapdoor','glass_*',
-				'Iron_Door','Glass_Pane','Glass','Stained_Glass_Pane',
-				'Iron_Trapdoor','Block_of_Iron','Block_of_Diamond',
-				'Stained_Glass','Block_of_Gold','Block_of_Emerald',
-				'Packed_Ice','Ice']
-		water = ['water','water_flowing','Stationary_Water']
-		# things are transparent by default to be safe, but if something is solid
-		# it is better to make it solid (faster render and build times)
-		solid = ['sand','dirt','dirt_grass_side','dirt_grass_top',
-				'dispenser_front','furnace_top','redstone_block','gold_block',
-				'stone','iron_ore','coal_ore','wool_*','stained_clay_*',
-				'stone_brick','cobblestone','plank_*','log_*','farmland_wet',
-				'farmland_dry','cobblestone_mossy','nether_brick','gravel',
-				'*_ore','red_sand','dirt_podzol_top','stone_granite_smooth',
-				'stone_granite','stone_diorite','stone_diorite_smooth',
-				'stone_andesite','stone_andesite_smooth','brick','snow',
-				'hardened_clay','sandstone_side','sandstone_side_carved',
-				'sandstone_side_smooth','sandstone_top','red_sandstone_top',
-				'red_sandstone_normal','bedrock','dirt_mycelium_top',
-				'stone_brick_mossy','stone_brick_cracked','stone_brick_circle',
-				'stone_slab_side','stone_slab_top','netherrack','soulsand',
-				'*_block','endstone','Grass_Block','Dirt','Stone_Slab','Stone',
-				'Oak_Wood_Planks','Wooden_Slab','Sand','Carpet','Wool',
-				'Stained_Clay','Gravel','Sandstone','*_Fence','Wood',
-				'Acacia/Dark_Oak_Wood','Farmland','Brick','Snow','Bedrock',
-				'Netherrack','Soul_Sand','End_Stone']
-		emit = ['redstone_block','redstone_lamp_on','glowstone','lava',
-				'lava_flowing','fire','sea_lantern','Glowstone',
-				'Redstone_Lamp_(on)','Stationary_Lava','Fire','Sea_Lantern',
-				'Block_of_Redstone','torch_flame_noimport','Sea-Lantern']
-
-		######## CHANGE TO MATERIALS LIBRARY
-		# if v and not importedMats:print("Parsing library file for materials")
-		# #attempt to LOAD information from an asset file...
-		# matLibPath = bpy.context.scene.MCprep_material_path
-		# if not(os.path.isfile(matLibPath)):
-		# 	#extract actual path from the relative one
-		# 	matLibPath = bpy.path.abspath(matLibPath)
-
-		# WHAT IT SHOULD DO: check the NAME of the current material,
-		# and ONLY import that one if it's there. maybe split this into another function
-		# imported mats is a bool so we only attempt to load one time instead of like fifty.
-		# now go through the new materials and change them for the old...?
-
-		return {'reflective':reflective, 'water':water, 'solid':solid,
-				'emit':emit}
-
-	# helper function for expanding wildcard naming for generalized materials
-	# maximum 1 wildcard *
-	def checklist(self,matName,alist):
-		if matName in alist:
-			return True
-		else:
-			for name in alist:
-				if '*' in name:
-					x = name.split('*')
-					if x[0] != '' and x[0] in matName:
-						return True
-					elif x[1] != '' and x[1] in matName:
-						return True
-			return False
-
-	## HERE functions for GENERAL material setup (cycles and BI)
-	def materialsInternal(self, mat):
-
-		# defines lists for materials with special default settings.
-		listData = self.getListDataMats()
-		try:
-			newName = mat.name+'_tex' # add exception to skip? with warning?
-			texList = mat.texture_slots.values()
-		except:
-			if conf.v:print('\tissue: '+obj.name+' has no active material')
-			return
-		### Check material texture exists and set name
-		try:
-			bpy.data.textures[texList[0].name].name = newName
-		except:
-			if conf.v:print('\twarning: material '
-				+mat.name+' has no texture slot. skipping...')
-			return
-
-		# disable all but first slot, ensure first slot enabled
-		mat.use_textures[0] = True
-		for index in range(1,len(texList)):
-			mat.use_textures[index] = False
-
-		# strip out the .00#
-		matGen = util.nameGeneralize(mat.name)
-		mat.use_nodes = False
-
-		mat.use_transparent_shadows = True #all materials receive trans
-		mat.specular_intensity = 0
-		mat.texture_slots[0].texture.use_interpolation = False
-		mat.texture_slots[0].texture.filter_type = 'BOX'
-		mat.texture_slots[0].texture.filter_size = 0
-		mat.texture_slots[0].use_map_color_diffuse = True
-		mat.texture_slots[0].diffuse_color_factor = 1
-		mat.use_textures[1] = False
-
-		if not self.checklist(matGen,listData['solid']): # alpha default on
-			bpy.data.textures[newName].use_alpha = True
-			mat.texture_slots[0].use_map_alpha = True
-			mat.use_transparency = True
-			mat.alpha = 0
-			mat.texture_slots[0].alpha_factor = 1
-
-		if self.useReflections and self.checklist(matGen,listData['reflective']):
-			mat.alpha=0.15
-			mat.raytrace_mirror.use = True
-			mat.raytrace_mirror.reflect_factor = 0.3
-		else:
-			mat.raytrace_mirror.use = False
-			mat.alpha=0
-
-		if self.checklist(matGen,listData['emit']):
-			mat.emit = 1
-		else:
-			mat.emit = 0
-		return 0
-
-	### Function for default cycles materials
-	def materialsCycles(self, mat):
-		# get the texture, but will fail if NoneType
-		try:
-			imageTex = mat.texture_slots[0].texture.image
-		except:
-			return
-		matGen = util.nameGeneralize(mat.name)
-		listData = self.getListDataMats()
-
-		#enable nodes
-		mat.use_nodes = True
-		nodes = mat.node_tree.nodes
-		links = mat.node_tree.links
-		nodes.clear()
-		nodeDiff = nodes.new('ShaderNodeBsdfDiffuse')
-		nodeGloss = nodes.new('ShaderNodeBsdfGlossy')
-		nodeTrans = nodes.new('ShaderNodeBsdfTransparent')
-		nodeMix1 = nodes.new('ShaderNodeMixShader')
-		nodeMix2 = nodes.new('ShaderNodeMixShader')
-		nodeTex = nodes.new('ShaderNodeTexImage')
-		nodeOut = nodes.new('ShaderNodeOutputMaterial')
-
-		# set location and connect
-		nodeTex.location = (-400,0)
-		nodeGloss.location = (0,-150)
-		nodeDiff.location = (-200,-150)
-		nodeTrans.location = (-200,0)
-		nodeMix1.location = (0,0)
-		nodeMix2.location = (200,0)
-		nodeOut.location = (400,0)
-		links.new(nodeTex.outputs["Color"],nodeDiff.inputs[0])
-		links.new(nodeDiff.outputs["BSDF"],nodeMix1.inputs[2])
-		links.new(nodeTex.outputs["Alpha"],nodeMix1.inputs[0])
-		links.new(nodeTrans.outputs["BSDF"],nodeMix1.inputs[1])
-		links.new(nodeGloss.outputs["BSDF"],nodeMix2.inputs[2])
-		links.new(nodeMix1.outputs["Shader"],nodeMix2.inputs[1])
-		links.new(nodeMix2.outputs["Shader"],nodeOut.inputs[0])
-		nodeTex.image = imageTex
-		nodeTex.interpolation = 'Closest'
-
-		#set other default values, e.g. the mixes
-		nodeMix2.inputs[0].default_value = 0 # factor mix with glossy
-		nodeGloss.inputs[1].default_value = 0.1 # roughness
-
-		# the above are all default nodes. Now see if in specific lists
-		if self.useReflections and self.checklist(matGen,listData['reflective']):
-			nodeMix2.inputs[0].default_value = 0.3  # mix factor
-			nodeGloss.inputs[1].default_value = 0.005 # roughness
-		if self.checklist(matGen,listData['emit']):
-			# add an emit node, insert it before the first mix node
-			nodeMixEmitDiff = nodes.new('ShaderNodeMixShader')
-			nodeEmit = nodes.new('ShaderNodeEmission')
-			nodeEmit.location = (-400,-150)
-			nodeMixEmitDiff.location = (-200,-150)
-			nodeDiff.location = (-400,0)
-			nodeTex.location = (-600,0)
-
-			links.new(nodeTex.outputs["Color"],nodeEmit.inputs[0])
-			links.new(nodeDiff.outputs["BSDF"],nodeMixEmitDiff.inputs[1])
-			links.new(nodeEmit.outputs["Emission"],nodeMixEmitDiff.inputs[2])
-			links.new(nodeMixEmitDiff.outputs["Shader"],nodeMix1.inputs[2])
-
-			nodeMixEmitDiff.inputs[0].default_value = 0.9
-			nodeEmit.inputs[1].default_value = 2.5
-			# emit value
-		if self.checklist(matGen,listData['water']):
-			# setup the animation??
-			nodeMix2.inputs[0].default_value = 0.2
-			nodeGloss.inputs[1].default_value = 0.01 # copy of reflective for now
-		if self.checklist(matGen,listData['solid']):
-			#links.remove(nodeTrans.outputs["BSDF"],nodeMix1.inputs[1])
-			nodeMix1.inputs[0].default_value = 0 # no transparency
-		try:
-			if nodeTex.image.source =='SEQUENCE':
-				nodeTex.image_user.use_cyclic = True
-				nodeTex.image_user.use_auto_refresh = True
-				intlength = mat.texture_slots[0].texture.image_user.frame_duration
-				nodeTex.image_user.frame_duration = intlength
-		except:
-			pass
-		return 0
-
+	@tracking.report_error
 	def execute(self, context):
-
 		# skip tracking if internal change
 		if self.skipUsage==False:
 			tracking.trackUsage("materials",bpy.context.scene.render.engine)
 
-		#get list of selected objects
-		objList = context.selected_objects
-		if len(objList)==0:
+		# get list of selected objects
+		obj_list = context.selected_objects
+		if len(obj_list)==0:
 			self.report({'ERROR'}, "No objects selected")
 			return {'CANCELLED'}
 
 		# gets the list of materials (without repetition) from selected
-		matList = util.materialsFromObj(objList)
-		if len(objList)==0:
+		mat_list = util.materialsFromObj(obj_list)
+		if len(obj_list)==0:
 			self.report({'ERROR'}, "No materials found on selected objects")
 			return {'CANCELLED'}
 
-		#check if linked material exists
+		# check if linked material exists
 		render_engine = context.scene.render.engine
 		count = 0
 
-		for mat in matList:
-			#if linked false:
+		for mat in mat_list:
+			#if linked false: # TODO: run differently if a linked material
 			if (True):
 				if (render_engine == 'BLENDER_RENDER'):
-					#print('BI mat')
-					res = self.materialsInternal(mat)
+					res = material_generation.matprep_internal(
+							mat,self.useReflections)
 					if res==0: count+=1
 				elif (render_engine == 'CYCLES'):
-					#print('cycles mat')
-					res = self.materialsCycles(mat)
+					res = material_generation.matprep_cycles(
+							mat,self.useReflections,self.usePrincipledShader)
 					if res==0: count+=1
 				else:
 					self.report({'ERROR'},"Only blender internal or cycles supported")
@@ -326,8 +132,95 @@ class MCPREP_materialChange(bpy.types.Operator):
 		return {'FINISHED'}
 
 
+class McprepSwapTexturePack(bpy.types.Operator, ImportHelper):
+	"""Swap current textures for that of a texture pack folder"""
+	bl_idname = "mcprep.swap_texture_pack"
+	bl_label = "Swap Texture Pack"
+	bl_description = "Change the texture pack for all materials of selected objects, "+\
+				"select a folder path for an unzipped resource pack or texture folder"
+	bl_options = {'REGISTER', 'UNDO'}
 
-class MCPREP_combineMaterials(bpy.types.Operator):
+	# filename_ext = ".zip"
+	# filter_glob = bpy.props.StringProperty(
+	# 		default="*",
+	# 		options={'HIDDEN'},
+	# 		)
+	# fileselectparams = "use_filter_blender"
+	# files = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
+	filter_glob = bpy.props.StringProperty(
+		default="",
+		options = {'HIDDEN'}
+		)
+	use_filter_folder = True
+	fileselectparams = "use_filter_blender"
+	filepath = bpy.props.StringProperty(subtype='DIR_PATH')
+	# files = bpy.props.CollectionProperty(
+	# 	type=bpy.types.PropertyGroup,
+	# 	options={'HIDDEN', 'SKIP_SAVE'}
+	# 	)
+	filter_image = bpy.props.BoolProperty(
+		default=True,
+		options={'HIDDEN', 'SKIP_SAVE'}
+		)
+	filter_folder = bpy.props.BoolProperty(
+		default=True,
+		options={'HIDDEN', 'SKIP_SAVE'}
+		)
+	extra_passes = bpy.props.BoolProperty(
+		name = "Extra passes",
+		description = "If enabled, load other image passes like normal and spec"+\
+				" maps if available",
+		default = True,
+		)
+	skipUsage = bpy.props.BoolProperty(
+		default = False,
+		options={'HIDDEN'}
+		)
+
+	@tracking.report_error
+	def execute(self,context):
+		# skip tracking if internal change
+		if self.skipUsage==False: tracking.trackUsage("texture_pack")
+
+		# check folder exist, but keep relative if relevant
+		folder = self.filepath
+		if os.path.isfile(bpy.path.abspath(folder)):
+			folder = os.path.dirname(folder)
+		if conf.v:print("Folder: ", folder)
+		print("FOLLLDER",folder)
+
+		if not os.path.isdir(bpy.path.abspath(folder)):
+			self.report({'ERROR'}, "Selected folder does not exist")
+			return {'CANCELLED'}
+
+		# get list of selected objects
+		obj_list = context.selected_objects
+		if len(obj_list)==0:
+			self.report({'ERROR'}, "No objects selected")
+			return {'CANCELLED'}
+
+		# gets the list of materials (without repetition) from selected
+		mat_list = util.materialsFromObj(obj_list)
+		if len(obj_list)==0:
+			self.report({'ERROR'}, "No materials found on selected objects")
+			return {'CANCELLED'}
+
+		# # check if linked material exists
+		# render_engine = context.scene.render.engine
+		print("here2")
+		if conf.v:print("hereCONF")
+		print(len(mat_list))
+		if conf.v:print("Materials detected:",len(mat_list))
+
+		res = 0
+		for mat in mat_list:
+			res += material_generation.set_texture_pack(mat, folder, self.extra_passes)
+		self.report({'INFO'},"{} materials affected".format(res))
+
+		return {'FINISHED'}
+
+
+class McprepCombineMaterials(bpy.types.Operator):
 	bl_idname = "mcprep.combine_materials"
 	bl_label = "Combine materials"
 	bl_description = "Consolidate the same materials together e.g. mat.001 and mat.002"
@@ -340,9 +233,9 @@ class MCPREP_combineMaterials(bpy.types.Operator):
 		)
 	skipUsage = bpy.props.BoolProperty(
 		default = False,
-		options={'HIDDEN'}
+		options = {'HIDDEN'}
 		)
-
+	@tracking.report_error
 	def execute(self, context):
 
 		# skip tracking if internal change
@@ -356,8 +249,7 @@ class MCPREP_combineMaterials(bpy.types.Operator):
 
 		# 2-level structure to hold base name and all
 		# materials blocks with the same base
-		nameCat = {}
-
+		name_cat = {}
 
 		def getMaterials(self, context):
 			if self.selection_only == False:
@@ -384,10 +276,10 @@ class MCPREP_combineMaterials(bpy.types.Operator):
 		# get and categorize all materials names
 		for mat in data:
 			base = util.nameGeneralize(mat.name)
-			if base not in nameCat:
-				nameCat[base] = [mat.name]
-			elif mat.name not in nameCat[base]:
-				nameCat[base].append(mat.name)
+			if base not in name_cat:
+				name_cat[base] = [mat.name]
+			elif mat.name not in name_cat[base]:
+				name_cat[base].append(mat.name)
 			else:
 				if conf.vv:print("Skipping, already added material")
 
@@ -398,7 +290,7 @@ class MCPREP_combineMaterials(bpy.types.Operator):
 				for sl in ob.material_slots:
 					if sl == None or sl.material == None:continue
 					if sl.material not in data: continue # selection only
-					sl.material = bpy.data.materials[nameCat[ util.nameGeneralize(sl.material.name) ][0]]
+					sl.material = bpy.data.materials[name_cat[ util.nameGeneralize(sl.material.name) ][0]]
 			# doesn't remove old textures, but gets it to zero users
 
 			postcount = len( ["x" for x in bpy.data.materials if x.users >0] )
@@ -409,15 +301,15 @@ class MCPREP_combineMaterials(bpy.types.Operator):
 			return {'FINISHED'}
 
 		# perform the consolidation with one basename set at a time
-		for base in nameCat: # the keys of the dictionary
+		for base in name_cat: # the keys of the dictionary
 			if len(base)<2: continue
 
-			nameCat[base].sort() # in-place sorting
-			baseMat = bpy.data.materials[ nameCat[base][0] ]
+			name_cat[base].sort() # in-place sorting
+			baseMat = bpy.data.materials[ name_cat[base][0] ]
 
-			if conf.vv:print(nameCat[base], "##", baseMat )
+			if conf.vv:print(name_cat[base], "##", baseMat )
 
-			for matname in nameCat[base][1:]:
+			for matname in name_cat[base][1:]:
 
 				# skip if fake user set
 				if bpy.data.materials[matname].use_fake_user == True: continue
@@ -452,7 +344,7 @@ class MCPREP_combineMaterials(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class MCPREP_combineImages(bpy.types.Operator):
+class McprepCombineImages(bpy.types.Operator):
 	bl_idname = "mcprep.combine_images"
 	bl_label = "Combine images"
 	bl_description = "Consolidate the same images together e.g. img.001 and img.002"
@@ -465,9 +357,10 @@ class MCPREP_combineImages(bpy.types.Operator):
 		)
 	skipUsage = bpy.props.BoolProperty(
 		default = False,
-		options={'HIDDEN'}
+		options = {'HIDDEN'}
 		)
 
+	@tracking.report_error
 	def execute(self, context):
 
 		# skip tracking if internal change
@@ -481,7 +374,6 @@ class MCPREP_combineImages(bpy.types.Operator):
 
 		# 2-level structure to hold base name and all
 		# images blocks with the same base
-
 		if (bpy.app.version[0]>=2 and bpy.app.version[1] >= 78) == False:
 			self.report({'ERROR',"Must use blender 2.78 or higher to use this operator"})
 			return {'CANCELLED'}
@@ -490,7 +382,7 @@ class MCPREP_combineImages(bpy.types.Operator):
 			self.report({'ERROR'},"Combine images does not yet work for selection only, retry with option disabled")
 			return {'CANCELLED'}
 
-		nameCat = {}
+		name_cat = {}
 		data = bpy.data.images
 
 		precount = len(data)
@@ -498,20 +390,20 @@ class MCPREP_combineImages(bpy.types.Operator):
 		# get and categorize all image names
 		for im in bpy.data.images:
 			base = util.nameGeneralize(im.name)
-			if base not in nameCat:
-				nameCat[base] = [im.name]
-			elif im.name not in nameCat[base]:
-				nameCat[base].append(im.name)
+			if base not in name_cat:
+				name_cat[base] = [im.name]
+			elif im.name not in name_cat[base]:
+				name_cat[base].append(im.name)
 			else:
 				if conf.vv:print("Skipping, already added image")
 
 		# pre 2.78 solution, deep loop
-		if (bpy.app.version[0]>=2 and bpy.app.version[1] >= 78) == False:
+		if bpy.app.version < (2,78):
 			for ob in bpy.data.objects:
 				for sl in ob.material_slots:
 					if sl == None or sl.material == None:continue
 					if sl.material not in data: continue # selection only
-					sl.material = data[nameCat[ util.nameGeneralize(sl.material.name) ][0]]
+					sl.material = data[name_cat[ util.nameGeneralize(sl.material.name) ][0]]
 			# doesn't remove old textures, but gets it to zero users
 
 			postcount = len( ["x" for x in bpy.data.materials if x.users >0] )
@@ -522,13 +414,13 @@ class MCPREP_combineImages(bpy.types.Operator):
 			return {'FINISHED'}
 
 		# perform the consolidation with one basename set at a time
-		for base in nameCat:
+		for base in name_cat:
 			if len(base)<2: continue
 
-			nameCat[base].sort() # in-place sorting
-			baseImg = bpy.data.images[ nameCat[base][0] ]
+			name_cat[base].sort() # in-place sorting
+			baseImg = bpy.data.images[ name_cat[base][0] ]
 
-			for imgname in nameCat[base][1:]:
+			for imgname in name_cat[base][1:]:
 
 				# skip if fake user set
 				if bpy.data.images[imgname].use_fake_user == True: continue
@@ -558,8 +450,7 @@ class MCPREP_combineImages(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-
-class MCPREP_scaleUV(bpy.types.Operator):
+class McprepScaleUV(bpy.types.Operator):
 	bl_idname = "mcprep.scale_uv"
 	bl_label = "Scale Faces"
 	bl_description = "Scale all selected UV faces"
@@ -571,7 +462,7 @@ class MCPREP_scaleUV(bpy.types.Operator):
 	initial_UV = []
 	skipUsage = bpy.props.BoolProperty(
 		default = False,
-		options={'HIDDEN'}
+		options = {'HIDDEN'}
 		)
 
 	# 1) Need to save orig_center (x,y) point of all selected faces
@@ -617,7 +508,6 @@ class MCPREP_scaleUV(bpy.types.Operator):
 		return {'RUNNING_MODAL'}
 
 	def invoke(self, context, event):
-
 		# skip tracking if internal change
 		if self.skipUsage==False: tracking.trackUsage("scale_UV_faces")
 
@@ -685,12 +575,10 @@ class MCPREP_scaleUV(bpy.types.Operator):
 		uv = ob.data.uv_layers.active
 
 		for f in ob.data.polygons:
-
-			if f.select!=True:continue # if not selected, won't show up in UV editor
+			# if not selected, won't show up in UV editor
+			if f.select!=True:continue
 			# initialize for avergae center on polygon (probably a better way exists)
-			x=0
-			y=0
-			n=0 # number of verts in loop for average purpose
+			x=y=n=0 # x,y,number of verts in loop for average purpose
 			for i in f.loop_indices:
 				l = ob.data.loops[i] # The loop entry this polygon point refers to
 				v = ob.data.vertices[l.vertex_index]  # The vertex data that loop entry refers to
@@ -714,7 +602,7 @@ class MCPREP_scaleUV(bpy.types.Operator):
 		return None
 
 
-class MCPREP_isolate_alpha_uvs(bpy.types.Operator):
+class McprepIsolate_alpha_uvs(bpy.types.Operator):
 	bl_idname = "mcprep.isolate_alpha_uvs"
 	bl_label = "Alpha faces"
 	bl_description = "Select or delete alpha faces of a mesh"
@@ -723,15 +611,23 @@ class MCPREP_isolate_alpha_uvs(bpy.types.Operator):
 	# deleteAlpha = False
 	skipUsage = bpy.props.BoolProperty(
 		default = False,
-		options={'HIDDEN'}
+		options = {'HIDDEN'}
+		)
+	delete = bpy.props.BoolProperty(
+		name="Delete faces",
+		description="Select and auto-delete transparent faces, based on active image per face",
+		default = False,
 		)
 
+	@tracking.report_error
 	def execute(self, context):
 
-		bpy.ops.object.mode_set(mode="OBJECT")
+		# bpy.ops.object.mode_set(mode="OBJECT")
+		# bpy.ops.object.mode_set(mode="EDIT")
 		# if doing multiple objects, iterate over loop of this function
 		ret = self.select_alpha(None, bpy.context, bpy.context.object, 1)
-		bpy.ops.object.mode_set(mode="EDIT")
+		if ret==True:
+			if self.delete: print("DELETE faces")
 
 		return {"FINISHED"}
 
@@ -742,10 +638,9 @@ class MCPREP_isolate_alpha_uvs(bpy.types.Operator):
 		elif ob.type != 'MESH':
 			return ("ERROR","Active object must be a mesh")
 		elif len(ob.data.polygons)==0:
-			return ("ERROR","Active object has no faces to delete")
+			return ("ERROR","Active object has no faces")
 
 		uv = ob.data.uv_layers.active
-
 		if uv==None:
 			return ("ERROR","No active UV map found")
 
@@ -757,29 +652,15 @@ class MCPREP_isolate_alpha_uvs(bpy.types.Operator):
 		return ("WARNING","Not implemented yet")
 
 
-
-class MCPREP_improveUI(bpy.types.Operator):
-	"""Improve the UI with specific view settings"""
-	bl_idname = "mcprep.improve_ui"
-	bl_label = "Improve UI"
-	bl_description = "Improve UI for minecraft textures: disable mipmaps & set texture solid"
-	bl_options = {'REGISTER', 'UNDO'}
-
-	def execute(self, context):
-		context.space_data.show_textured_solid = True
-		context.user_preferences.system.use_mipmaps = False
-
-		return {'FINISHED'}
-
-
 # -----------------------------------------------------------------------------
 # Skin swapping lists
 # -----------------------------------------------------------------------------
 
 
 # for asset listing UIList drawing
-class MCPREP_skin_UIList(bpy.types.UIList):
-	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
+class McprepSkinUiList(bpy.types.UIList):
+	def draw_item(self, context, layout, data, set, icon,
+					active_data, active_propname, index):
 		layout.prop(set, "name", text="", emboss=False)
 		# extra code for placing warning if skin is
 		# not square, ie old texture and reocmmend converting it
@@ -825,7 +706,8 @@ def update_skin_path(self, context):
 
 
 def getMatsFromSelected(selected,new_material=False):
-	# pre-expand
+	"""Get materials, and if new material provided, ensure material slot
+	is added"""
 	obj_list = []
 
 	for ob in selected:
@@ -840,7 +722,6 @@ def getMatsFromSelected(selected,new_material=False):
 	mat_list = []
 	mat_ret = []
 	for ob in obj_list:
-		# get all materials
 		if new_material==False:
 			for slot in ob.material_slots:
 				if slot.material==None:continue
@@ -869,19 +750,6 @@ def getMatsFromSelected(selected,new_material=False):
 	return mat_ret
 
 
-# called for any texture changing
-# input a list of material & an already loaded image datablock
-def changeTexture(image, materials):
-	render_engine = bpy.context.scene.render.engine
-	if (render_engine == 'BLENDER_RENDER'):
-		if conf.vv:print("Blender internal skin swapping")
-		status = swapInternal(image, materials)
-	elif (render_engine == 'CYCLES'):
-		if conf.vv:print("Cycles skin swapping")
-		status =swapCycles(image, materials)
-	return status
-
-
 # scene update to auto load skins on load after new file
 def handler_skins_enablehack(scene):
 	try:
@@ -904,63 +772,30 @@ def handler_skins_load(scene):
 		pass
 
 
-# input is either UV image itself or filepath
-def swapCycles(image, mats):
-	if conf.vv:print("Texture swapping cycles")
-	changed = 0
-	for mat in mats:
-		if mat.node_tree == None:continue
-		for node in mat.node_tree.nodes:
-			if node.type != "TEX_IMAGE": continue
-			node.image = image
-			changed+=1
-
-	if changed == 0:
-		return False # nothing updated
-	else:
-		return True # updated at least one texture (the first)
-
-
-# input is either UV image itself or filepath
-def swapInternal(image, mats):
-	changed = 0
-	for mat in mats:
-		for sl in mat.texture_slots:
-			if sl==None or sl.texture == None or sl.texture.type != 'IMAGE': continue
-			#print("Found a good texture slot! orig image: "+str(sl.texture.image.name))
-			sl.texture.image = image
-			changed += 1
-			break
-	if changed == 0:
-		return False # nothing updated
-	else:
-		return True # updated at least one texture (the first)
-
-
 def loadSkinFile(self, context, filepath, new_material=False):
 	if os.path.isfile(filepath)==False:
 		self.report({'ERROR'}, "Image file not found")
 		# special message for library linking?
 
+	# always create a new image block, even if the name already existed
 	image = util.loadTexture(filepath)
+
 	mats = getMatsFromSelected(context.selected_objects,new_material)
 	if len(mats)==0:
 		self.report({'ERROR'}, "No materials found to update")
 		# special message for library linking?
 		return 1
 
-	# do th change, will update according to render engine
-	status = changeTexture(image, mats)
+	status = material_generation.assert_textures_on_materials(image, mats)
 	if status == False:
 		self.report({'ERROR'}, "No image textures found to update")
 		return 1
 	else:
 		pass
 
-	# adjust the UVs if appropriate
 	setUVimage(context.selected_objects,image)
 
-	# and fix eyes if appropriate
+	# TODO: adjust the UVs if appropriate, and fix eyes
 	if image.size[1]/image.size[0] != 1:
 		self.report({'INFO'}, "Skin swapper works best on 1.8 skins")
 		return 0
@@ -974,13 +809,13 @@ def setUVimage(objs,image):
 		for uv_face in ob.data.uv_textures.active.data:
 			uv_face.image = image
 
+
 # -----------------------------------------------------------------------------
 # Skin swapping classes
 # -----------------------------------------------------------------------------
 
 
-
-class MCPREP_skinSwapper(bpy.types.Operator, ImportHelper):
+class McprepSkinSwapper(bpy.types.Operator, ImportHelper):
 	"""Swap the skin of a (character) with another file"""
 	bl_idname = "mcprep.skin_swapper"
 	bl_label = "Swap skin"
@@ -995,6 +830,7 @@ class MCPREP_skinSwapper(bpy.types.Operator, ImportHelper):
 	fileselectparams = "use_filter_blender"
 	files = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
 
+	@tracking.report_error
 	def execute(self,context):
 		tracking.trackUsage("skin","file import")
 		res = loadSkinFile(self, context, self.filepath)
@@ -1004,7 +840,7 @@ class MCPREP_skinSwapper(bpy.types.Operator, ImportHelper):
 		return {'FINISHED'}
 
 
-class MCPREP_applySkin(bpy.types.Operator):
+class McprepApplySkin(bpy.types.Operator):
 	"""Apply the active UIlist skin to select characters"""
 	bl_idname = "mcprep.applyskin"
 	bl_label = "Apply skin"
@@ -1012,14 +848,17 @@ class MCPREP_applySkin(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 
 	filepath = bpy.props.StringProperty(
-		name="Skin",
-		description="selected",
+		name = "Skin",
+		description = "selected",
+		options = {'HIDDEN'}
 		)
 	new_material = bpy.props.BoolProperty(
-		name="New Material",
-		description="Create a new material instead of overwriting existing one",
-		default=True)
+		name = "New Material",
+		description = "Create a new material instead of overwriting existing one",
+		default = True,
+		options = {'HIDDEN'})
 
+	@tracking.report_error
 	def execute(self,context):
 		tracking.trackUsage("skin","ui list")
 		res = loadSkinFile(self, context, self.filepath, self.new_material)
@@ -1029,7 +868,7 @@ class MCPREP_applySkin(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class MCPREP_applyUsernameSkin(bpy.types.Operator):
+class McprepApplyUsernameSkin(bpy.types.Operator):
 	"""Apply the active UIlist skin to select characters"""
 	bl_idname = "mcprep.applyusernameskin"
 	bl_label = "Skin from user"
@@ -1056,6 +895,7 @@ class MCPREP_applyUsernameSkin(bpy.types.Operator):
 		self.layout.label(
 			"and then press OK; blender may pause briefly to download")
 
+	@tracking.report_error
 	def execute(self,context):
 		if self.username == "":
 			self.report({"ERROR","Invalid username"})
@@ -1079,10 +919,10 @@ class MCPREP_applyUsernameSkin(bpy.types.Operator):
 		saveloc = os.path.join(bpy.path.abspath(context.scene.mcskin_path),
 								self.username.lower()+".png")
 
-		#urllib.request.urlretrieve(src_link+self.username.lower(), saveloc)
 		try:
-			if conf.vv:print("Download starting with url: "+src_link+self.username.lower())
-			if conf.vv:print("to save location: "+saveloc)
+			if conf.vv:
+				print("Download starting with url: "+src_link+self.username.lower())
+				print("to save location: "+saveloc)
 			urllib.request.urlretrieve(src_link+self.username.lower(), saveloc)
 		except urllib.error.HTTPError as e:
 			self.report({"ERROR"},"Could not find username")
@@ -1098,8 +938,7 @@ class MCPREP_applyUsernameSkin(bpy.types.Operator):
 		bpy.ops.mcprep.reload_skins()
 
 
-
-class MCPREP_skinFixEyes(bpy.types.Operator):
+class McprepSkinFixEyes(bpy.types.Operator):
 	"""AFix the eyes of a rig to fit a rig"""
 	bl_idname = "mcprep.fix_skin_eyes"
 	bl_label = "Fix eyes"
@@ -1108,6 +947,7 @@ class MCPREP_skinFixEyes(bpy.types.Operator):
 
 	# initial_eye_type: unknown (default), 2x2 square, 1x2 wide.
 
+	@tracking.report_error
 	def execute(self,context):
 
 		# take the active texture input (based on selection)
@@ -1118,8 +958,7 @@ class MCPREP_skinFixEyes(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-
-class MCPREP_addSkin(bpy.types.Operator, ImportHelper):
+class McprepAddSkin(bpy.types.Operator, ImportHelper):
 	bl_idname = "mcprep.add_skin"
 	bl_label = "Add skin"
 	bl_description = "Add a new skin to the active folder"
@@ -1133,6 +972,7 @@ class MCPREP_addSkin(bpy.types.Operator, ImportHelper):
 	fileselectparams = "use_filter_blender"
 	files = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
 
+	@tracking.report_error
 	def execute(self,context):
 
 		new_skin = bpy.path.abspath(self.filepath)
@@ -1151,16 +991,16 @@ class MCPREP_addSkin(bpy.types.Operator, ImportHelper):
 		return {'FINISHED'}
 
 
-
-class MCPREP_removeSkin(bpy.types.Operator):
+class McprepRemoveSkin(bpy.types.Operator):
 	bl_idname = "mcprep.remove_skin"
 	bl_label = "Remove skin"
 	bl_description = "Remove a skin from the active folder"
 	bl_options = {'REGISTER', 'UNDO'}
 
 	index = bpy.props.IntProperty(
-			default=0)
+			default=0, options={'HIDDEN'})
 
+	@tracking.report_error
 	def execute(self,context):
 
 		if self.index >= len(conf.skin_list):
@@ -1186,19 +1026,18 @@ class MCPREP_removeSkin(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-
-class MCPREP_reloadSkins(bpy.types.Operator):
+class McprepReloadSkins(bpy.types.Operator):
 	bl_idname = "mcprep.reload_skins"
 	bl_label = "Reload skin"
 	bl_description = "Reload the skins folder"
 
+	@tracking.report_error
 	def execute(self, context):
 		reloadSkinList(context)
 		return {'FINISHED'}
 
 
-
-class MCPREP_spawn_with_skin(bpy.types.Operator):
+class McprepSpawn_with_skin(bpy.types.Operator):
 	bl_idname = "mcprep.spawn_with_skin"
 	bl_label = "Spawn with skin"
 	bl_description = "Spawn rig and apply selected skin"
@@ -1206,7 +1045,7 @@ class MCPREP_spawn_with_skin(bpy.types.Operator):
 	relocation = bpy.props.EnumProperty(
 		items = [('None', 'Cursor', 'No relocation'),
 				('Clear', 'Origin', 'Move the rig to the origin'),
-				('Offset', 'Offset root', 'Offset the root bone to curse while moving the rest pose to the origin')],
+				('Offset', 'Offset root','Offset the root bone to curse while moving the rest pose to the origin')],
 		name = "Relocation")
 	toLink = bpy.props.BoolProperty(
 		name = "Library Link",
@@ -1219,6 +1058,7 @@ class MCPREP_spawn_with_skin(bpy.types.Operator):
 		default = True
 		)
 
+	@tracking.report_error
 	def execute(self, context):
 		if len (conf.skin_list)>0:
 			skinname = bpy.path.basename(
@@ -1247,7 +1087,6 @@ class MCPREP_spawn_with_skin(bpy.types.Operator):
 #	Above for UI
 #	Below for register
 # -----------------------------------------------------------------------------
-
 
 
 def register():

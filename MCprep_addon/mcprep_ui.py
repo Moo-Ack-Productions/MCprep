@@ -34,85 +34,10 @@ from . import addon_updater_ops
 from . import tracking
 
 
-
-# -----------------------------------------------------------------------------
-# Operators
-# -----------------------------------------------------------------------------
-
-
-class showMCprefs(bpy.types.Operator):
-	"""Show MCprep preferences"""
-	bl_idname = "mcprep.open_preferences"
-	bl_label = "Show MCprep preferences"
-
-	tab = bpy.props.EnumProperty(
-		items = [('settings', 'Open settings', 'Open MCprep preferences settings'),
-				('tutorials', 'Open tutorials', 'View tutorials'),
-				('tracker_updater', 'Open tracker/updater settings', 'Open user tracking & addon updating settings')],
-		name = "Exporter")
-
-	def execute(self,context):
-		bpy.ops.screen.userpref_show('INVOKE_AREA')
-		context.user_preferences.active_section = "ADDONS"
-		bpy.data.window_managers["WinMan"].addon_search = "MCprep"
-		try:
-			#  if info["show_expanded"] != True:
-
-			#
-			#, where info comes from for mod, info in addons:
-			# and addons is:
-			# import addon_utils
-			# addons = [(mod, addon_utils.module_bl_info(mod)) for mod in addon_utils.modules(refresh=False)]
-			#
-			# ie, get MCprep from mod in addon_utils.modules(refresh=False)
-			# and then just 	grab
-			# [addon_utils.module_bl_info(mod)]
-
-
-			# less ideal way but works
-			# for mod in
-			# addon = addon_utils.module_bl_info(mode)
-			import addon_utils
-			addon = addon_utils.module_bl_info(__package__)
-			if addon["show_expanded"] != True:
-				print("not expanded, expanding?")
-				bpy.ops.wm.addon_expand(module=__package__)
-		except:
-			if conf.v: print("Couldn't toggle MCprep preferences being expended")
-
-		preferences_tab = self.tab
-		# # just toggles not sets it, not helpful. need to SET it to expanded
-		return {'FINISHED'}
-
-
-class openFolder(bpy.types.Operator):
-	"""Open a folder in the host operating system"""
-	bl_idname = "mcprep.openfolder"
-	bl_label = "Open folder"
-
-	folder = bpy.props.StringProperty(
-		name="Folderpath",
-		default="//")
-
-	def execute(self,context):
-
-		if os.path.isdir(bpy.path.abspath(self.folder))==False:
-			self.report({'ERROR'}, "Invalid folder path: {x}".format(x=self.folder))
-			return {'CANCELLED'}
-
-		res = util.open_folder_crossplatform(self.folder)
-		if res==False:
-			self.report({'ERROR'},
-				"Didn't open folder, navigate to it manually: {x}".format(x=self.folder))
-			return {'CANCELLED'}
-		return {'FINISHED'}
-
-
 # -----------------------------------------------------------------------------
 #	Above for class functions/operators
 #	Below for UI
 # -----------------------------------------------------------------------------
-
 
 
 # Menu for placing in the shift-A add object menu
@@ -155,7 +80,6 @@ class mobSpawnerMenu(bpy.types.Menu):
 		# 					).mcmob_type = mob[0]
 
 
-
 # Menu for all the meshswap objects
 class meshswapPlaceMenu(bpy.types.Menu):
 	bl_label = "Meshswap Objects"
@@ -184,7 +108,6 @@ class meshswapPlaceMenu(bpy.types.Menu):
 			p.location = context.scene.cursor_location
 
 
-
 # Menu for root level of shift-A > MCprep
 class mcprepQuickMenu(bpy.types.Menu):
 	bl_label = "MCprep"
@@ -203,7 +126,6 @@ class mcprepQuickMenu(bpy.types.Menu):
 			spawner=None
 			meshswap=None
 
-
 		if len(conf.rig_list)==0 or len(conf.meshswap_list)==0:
 			row = layout.row()
 			row.operator("mcprep.reload_spawners", text="Load spawners", icon='HAND')
@@ -212,13 +134,13 @@ class mcprepQuickMenu(bpy.types.Menu):
 			return
 
 		#layout.operator_menu_enum("object.modifier_add", "type")
-		if spawner!=None:
+		if spawner is not None:
 			#layout.operator_menu_enum("mcprep.mob_spawner", "mcmob_type",icon=spawner.icon_id)
 			layout.menu(mobSpawnerMenu.bl_idname,icon_value=spawner.icon_id)
 		else:
 			#layout.operator_menu_enum("mcprep.mob_spawner", "mcmob_type")
 			layout.menu(mobSpawnerMenu.bl_idname)
-		if meshswap!=None:
+		if meshswap is not None:
 			layout.menu(meshswapPlaceMenu.bl_idname,icon_value=meshswap.icon_id)
 		else:
 			layout.menu(meshswapPlaceMenu.bl_idname)
@@ -244,20 +166,8 @@ def mineways_update(self, context):
 	return
 
 
-# pop-up declaring some button is WIP still =D
-class WIP(bpy.types.Menu):
-	bl_label = "wip_warning"
-	bl_idname = "view3D.wip_warning"
-
-	# Set the menu operators and draw functions
-	def draw(self, context):
-		layout = self.layout
-		row1 = layout.row()
-		row1.label(text="This addon is a work in progress, this function is not yet implemented")
-
-
 # preferences UI
-class MCprepPreference(bpy.types.AddonPreferences):
+class MCPREP_Preference(bpy.types.AddonPreferences):
 	bl_idname = __package__
 	scriptdir = bpy.path.abspath(os.path.dirname(__file__))
 
@@ -266,14 +176,20 @@ class MCprepPreference(bpy.types.AddonPreferences):
 
 	meshswap_path = bpy.props.StringProperty(
 		name = "Meshswap path",
-		description = "Asset file for meshswapable objects and groups",
+		description = "Default path to the meshswap asset file, for meshswapable objects and groups",
 		subtype = 'FILE_PATH',
-		default = scriptdir + "/MCprep_resources/default_mcprep/mcprep_meshSwap.blend")
+		default = scriptdir + "/MCprep_resources/mcprep_meshSwap.blend")
 	mcrig_path = bpy.props.StringProperty(
 		name = "Rig path",
-		description = "Folder for rigs to spawn in, default for new blender instances",
+		description = "Default folder for rig loads/spawns in new blender instances",
 		subtype = 'DIR_PATH',
-		default = scriptdir + "/MCprep_resources/default_mcprep/rigs/")
+		default = scriptdir + "/MCprep_resources/rigs/")
+	custom_texturepack_path = bpy.props.StringProperty(
+		name = "Texturepack path",
+		description = "Path to a folder containing resources and textures to use"+\
+			"with material prepping",
+		subtype = 'DIR_PATH',
+		default = scriptdir + "/MCprep_resources/resourcepacks/mcprep_default/")
 	mcskin_path = bpy.props.StringProperty(
 		name = "Skin path",
 		description = "Folder for skin textures, used in skin swapping",
@@ -332,7 +248,6 @@ class MCprepPreference(bpy.types.AddonPreferences):
 	# 	subtype = 'FILE_PATH',
 	# 	default = "mineways.app")
 
-
 	# addon updater preferences
 
 	auto_check_update = bpy.props.BoolProperty(
@@ -368,7 +283,6 @@ class MCprepPreference(bpy.types.AddonPreferences):
 		)
 
 
-
 	def draw(self, context):
 		layout = self.layout
 		row = layout.row()
@@ -377,6 +291,7 @@ class MCprepPreference(bpy.types.AddonPreferences):
 
 		if self.preferences_tab == "settings":
 			row = layout.row()
+
 			row.label("World Importing & Meshswapping")
 			layout = layout.box()
 			split = layout.split(percentage=0.3)
@@ -384,32 +299,49 @@ class MCprepPreference(bpy.types.AddonPreferences):
 			col.label("Default Exporter:")
 			col = split.column()
 			col.prop(self, "MCprep_exporter_type", text="")
-
 			split = layout.split(percentage=0.3)
 			col = split.column()
 			col.label("jmc2obj executable")
 			col = split.column()
 			col.prop(self, "open_jmc2obj_path", text="")
-
 			split = layout.split(percentage=0.3)
 			col = split.column()
 			col.label("Mineways executable")
 			col = split.column()
 			col.prop(self, "open_mineways_path", text="")
-
 			split = layout.split(percentage=0.3)
 			col = split.column()
 			col.label("World OBJ Exports Folder")
 			col = split.column()
 			col.prop(self, "world_obj_path", text="")
-
+			split = layout.split(percentage=0.3)
+			col = split.column()
+			col.label("Default texture pack")
+			col = split.column()
+			col.prop(self, "", text="")
 			split = layout.split(percentage=0.3)
 			col = split.column()
 			col.label("Meshwap assets")
 			col = split.column()
 			col.prop(self, "meshswap_path", text="")
 
-			layout = self.layout
+			row = layout.row()
+			row.label("Texture / Resource packs")
+			layout = layout.box()
+			split = layout.split(percentage=0.3)
+			col = split.column()
+			col.label("Texture pack folder")
+			col = split.column()
+			col.prop(self, "custom_texturepack_path", text="")
+			split = layout.split(percentage=0.3)
+			col = split.column()
+			col.label("Install to folder")
+			col = split.column()
+			col.operator("mcprep.skin_swapper", text="Install resource pack")
+			col = split.column()
+			p = col.operator("mcprep.openfolder", text="Open texture pack folder")
+			p.folder = self.custom_texturepack_path
+
 			row = layout.row()
 			row.label("Mob spawning")
 			layout = layout.box()
@@ -427,7 +359,6 @@ class MCprepPreference(bpy.types.AddonPreferences):
 			p = col.operator("mcprep.openfolder", text="Open rig folder")
 			p.folder = context.scene.mcrig_path
 
-			layout = self.layout
 			row = layout.row()
 			row.label("Skin swapping")
 			layout = layout.box()
@@ -446,7 +377,6 @@ class MCprepPreference(bpy.types.AddonPreferences):
 			p.folder = self.mcskin_path
 
 			# misc settings
-			layout = self.layout
 			row = layout.row()
 			col = row.column()
 			col.prop(self, "verbose")
@@ -510,7 +440,7 @@ class MCprepPreference(bpy.types.AddonPreferences):
 
 # ---------
 # World importing related & material settings
-class MCpanel(bpy.types.Panel):
+class MCPREP_world_imports(bpy.types.Panel):
 	"""MCprep addon panel"""
 	bl_label = "World Imports"
 	bl_space_type = 'VIEW_3D'
@@ -527,6 +457,7 @@ class MCpanel(bpy.types.Panel):
 
 	def draw(self, context):
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
+		scn_props = context.scene.mcprep_props
 
 		# check for update in background thread if appropraite
 		addon_updater_ops.check_for_update_background()
@@ -550,25 +481,28 @@ class MCpanel(bpy.types.Panel):
 
 		wpath = addon_prefs.world_obj_path
 		col.operator("import_scene.obj","OBJ world import").filepath = wpath
-		# row = col.row(align=True)
 
 		split = layout.split()
 		col = split.column(align=True)
-
 		col.label("MCprep tools")
 		col.operator("mcprep.mat_change",
-				text="Prep Materials", icon='MATERIAL')
+				text="Prep Materials", icon="MATERIAL")
+		p = col.operator("mcprep.swap_texture_pack", icon="GHOST")
+		p.filepath = context.scene.mcprep_custom_texturepack_path
+		col.operator("mcprep.meshswap", text="Mesh Swap", icon="LINK_BLEND")
 
-		col.operator("mcprep.combine_materials",
-				text="Combine Materials",
-				icon="GHOST").selection_only=True
-		if (bpy.app.version[0]	==2 and bpy.app.version[1] > 77) or (bpy.app.version[0]>2):
-			col.operator("mcprep.combine_images",
-					text="Combine Images",
-					icon="GHOST")
+		#the UV's pixels into actual 3D geometry (but same material, or modified to fit)
+		#col.operator("object.solidify_pixels", text="Solidify Pixels", icon='MOD_SOLIDIFY')
+		split = layout.split()
+		col = split.column(align=True)
+		if addon_prefs.MCprep_exporter_type == "(choose)":
+			col.label(text="Select exporter!",icon='ERROR')
 
+		# Advanced material settings
+		texviewable = ['SOLID','TEXTURED','MATEIRAL','RENDERED']
 		if context.space_data.show_textured_solid == True and \
-				context.user_preferences.system.use_mipmaps == False:
+				context.user_preferences.system.use_mipmaps == False and \
+				context.space_data.viewport_shade in texviewable:
 			row = col.row(align=True)
 			row.enabled = False
 			row.operator("mcprep.improve_ui",
@@ -576,45 +510,37 @@ class MCpanel(bpy.types.Panel):
 		else:
 			col.operator("mcprep.improve_ui",
 					text="Improve UI", icon='SETTINGS')
-
-		col.operator("mcprep.meshswap", text="Mesh Swap", icon='LINK_BLEND')
-		#the UV's pixels into actual 3D geometry (but same material, or modified to fit)
-		#col.operator("object.solidify_pixels", text="Solidify Pixels", icon='MOD_SOLIDIFY')
-		split = layout.split()
-		row = split.row(align=True)
-		if addon_prefs.MCprep_exporter_type == "(choose)":
-			row.label(text="Select exporter!",icon='ERROR')
-		# elif addon_prefs.MCprep_exporter_type == "Mineways":
-		# 	col.label (text="Check block size is")
-		# 	col.label (text="1x1x1, not .1x.1.x.1")
-		# 	# Attempt AutoFix, another button
-		# 	col.operator("object.fixmeshswapsize", text="Quick upscale from 0.1")
-		# else:
-		# 	row.label('jmc2obj works best :)')
-
-		split = layout.split()
-		col = split.column(align=True)
-		row = col.row(align=True)
-
-
-		if not context.scene.mcprep_props.mcprep_showsettings:
-			row.prop(context.scene.mcprep_props,"mcprep_showsettings",
-					text="settings", icon="TRIA_RIGHT")
-			row.operator("mcprep.open_preferences",
-					icon="PREFERENCES",text='').tab = "settings"
-
+		# collapsed settings
+		if not scn_props.show_settings_material:
+			col.prop(scn_props,"show_settings_material",
+					text="Settings", icon="TRIA_RIGHT")
 		else:
-			row.prop(context.scene.mcprep_props,
-					"mcprep_showsettings",
-					text="settings", icon="TRIA_DOWN")
-			row.operator("mcprep.open_preferences",
-					icon="PREFERENCES",text='').tab = "settings"
-			layout = layout.box()
+			col.prop(scn_props,"show_settings_material",
+					text="Settings", icon="TRIA_DOWN")
+			box = col.box()
+			b_row = box.row()
+			b_col = b_row.column(align=False)
+			b_col.prop(scn_props, "use_custom_texturepack")
+			row = b_col.row(align=True)
+			row.enabled = scn_props.use_custom_texturepack
+			row.prop(context.scene, "mcprep_custom_texturepack_path", text="")
 
-			split = layout.split(percentage=1)
-			col = split.column(align=True)
-			col.label(text="Meshswap source:")
-			col.prop(addon_prefs,"meshswap_path",text="")
+			b_row = box.row()
+			b_col = b_row.column(align=True)
+			b_col.operator("mcprep.improve_ui", text="[WIP]Find missing")
+
+			# TODO: operator to make all local, all packed, or set to other location
+			b_col.operator("mcprep.improve_ui", text="[WIP]Set tex location")
+			b_col.operator("mcprep.combine_materials",
+					text="Combine Materials").selection_only=True
+			if bpy.app.version > (2,77):
+				b_col.operator("mcprep.combine_images",text="Combine Images")
+
+			b_col.label(text="Meshswap source:")
+			b_col.prop(addon_prefs,"meshswap_path",text="")
+			b_col.operator("mcprep.open_preferences",
+					icon="PREFERENCES",text='Open preferences').tab = "settings"
+
 
 		layout = self.layout # clear out the box formatting
 		split = layout.split()
@@ -626,7 +552,7 @@ class MCpanel(bpy.types.Panel):
 
 # ---------
 # World settings and tools
-class MCpanelWorldTools(bpy.types.Panel):
+class MCPREP_WorldToolsPanel(bpy.types.Panel):
 	"""MCprep addon panel"""
 	bl_label = "World Tools"
 	bl_space_type = 'VIEW_3D'
@@ -661,7 +587,7 @@ class MCpanelWorldTools(bpy.types.Panel):
 # ---------
 # MCprep panel for skin swapping
 # (multiple contexts)
-class MCpanelSkins(bpy.types.Panel):
+class MCPREP_SkinsPanel(bpy.types.Panel):
 	"""MCprep addon panel"""
 	bl_label = "Skin Swapper"
 	bl_space_type = 'VIEW_3D'
@@ -680,7 +606,7 @@ class MCpanelSkins(bpy.types.Panel):
 		if (is_sortable):
 			rows = 4
 
-		col.prop(context.scene,"mcskin_path", text="Skin folder")
+		col.prop(context.scene,"mcskin_path", text="Skins")
 
 		# any other conditions for needing reloading?
 		if len(conf.skin_list)==0:
@@ -746,7 +672,7 @@ class MCpanelSkins(bpy.types.Panel):
 
 # ---------
 # MCprep panel for mob spawning
-class MCpanelSpawn(bpy.types.Panel):
+class MCPREP_SpawnPanel(bpy.types.Panel):
 	"""MCprep spawning panel"""
 	bl_label = "Spawner"
 	bl_space_type = 'VIEW_3D'
@@ -871,30 +797,6 @@ class MCpanelSpawn(bpy.types.Panel):
 		# col.label(datapass.split("/")[0])
 
 
-
-
-
-# ---------
-# WIP OK button general purpose
-# class dialogue(bpy.types.Operator):
-# 	bl_idname = "mcprep.dialogue"
-# 	bl_label = "dialogue"
-# 	message = "Library error, check path to assets has the meshSwap blend"
-
-# 	def execute(self, context):
-# 		self.report({'INFO'}, self.message)
-# 		print(self.message)
-# 		return {'FINISHED'}
-
-# 	def invoke(self, context, event):
-# 		wm = context.window_manager
-# 		return wm.invoke_popup(self, width=400, height=200)
-
-# 	def draw(self, context):
-# 		self.layout.label(self.message)
-
-
-
 # -----------------------------------------------------------------------------
 #	Above for UI
 #	Below for registration stuff
@@ -919,16 +821,45 @@ class MCprep_props(bpy.types.PropertyGroup):
 	# not available here
 	addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
 
-	mcprep_showsettings = bpy.props.BoolProperty(
+	# depreciated, keeping to prevent re-registration errors
+	show_settings_material = bpy.props.BoolProperty(
 		name = "mcprep_showsettings",
-		description = "Show extra settings in the MCprep panel",
+		description = "Show extra MCprep panel settings",
 		default = False)
+	use_reflections = bpy.props.BoolProperty(
+		name = "Use reflections",
+		description = "Allow appropriate materials to be rendered reflective",
+		default = True
+		)
+	combine_materials = bpy.props.BoolProperty(
+		name = "Combine materials",
+		description = "Consolidate duplciate materials & textures",
+		default = False
+		)
+	use_principled_shader = bpy.props.BoolProperty(
+		name = "Use Principled Shader",
+		description = "If available and using cycles, build materials using the principled shader",
+		default = True
+		)
+	use_custom_texturepack = bpy.props.BoolProperty(
+		name = "Use texturepack",
+		description = "Use textures found in this folder, must match material"+\
+			"names matching material names in jm2cobj, Mineways, or Minecraft itself",
+		default = False
+		)
+	autoFindMissingTextures = bpy.props.BoolProperty(
+		name = "Auto-find missing images",
+		description = "If the texture for an existing material is missing, "+\
+			"try to load from the default texturepack instead",
+		default = True  # decide this behavior
+		)
 
+	# Rig settings
 	spawn_rig_category = bpy.props.EnumProperty(
 		name="Mob category",
 		description="Category of mobs & character rigs to spawn",
 		update=spawner.spawn_rigs_category_load,
-		items=spawner.spawn_rigs_categories #
+		items=spawner.spawn_rigs_categories
 	)
 	spawn_mode = bpy.props.EnumProperty(
 		name="Spawn Mode",
@@ -937,6 +868,7 @@ class MCprep_props(bpy.types.PropertyGroup):
 				('meshswap', 'Meshswap', 'Show meshswap spawner')]
 	)
 
+	# World settings
 	world_time = bpy.props.IntProperty(
 		name="Time",
 		description="Set world time. 0=Day start, 12000=nightfall",
@@ -979,6 +911,13 @@ def register():
 		subtype = 'FILE_PATH',
 		update = meshswap.update_meshswap_path,
 		default = addon_prefs.meshswap_path)
+	bpy.types.Scene.mcprep_custom_texturepack_path = bpy.props.StringProperty(
+		name = "Path to texturepack",
+		subtype = 'DIR_PATH',
+		description = "Path to a folder containing resources and textures to use"+\
+			"with material prepping",
+		default=addon_prefs.custom_texturepack_path,
+		)
 
 	conf.v = addon_prefs.verbose
 
@@ -992,4 +931,5 @@ def unregister():
 	del bpy.types.Scene.mcprep_props
 	del bpy.types.Scene.mcrig_path
 	del bpy.types.Scene.mcskin_path
+
 

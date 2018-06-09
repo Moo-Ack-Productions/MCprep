@@ -111,6 +111,7 @@ class MCPREP_spawnPathReset(bpy.types.Operator):
 	bl_label = "Reset meshswap path"
 	bl_options = {'REGISTER', 'UNDO'}
 
+	@tracking.report_error
 	def execute(self,context):
 
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
@@ -163,6 +164,7 @@ class MCPREP_meshswapSpawner(bpy.types.Operator):
 	# 	)
 	# instantiate if group?
 
+	@tracking.report_error
 	def execute(self, context):
 
 		tracking.trackUsage("meshswapSpawner",self.meshswap_block)
@@ -244,6 +246,7 @@ class MCPREP_reloadMeshswap(bpy.types.Operator):
 	bl_idname = "mcprep.reload_meshswap"
 	bl_label = "Reload the meshswap and cache"
 
+	@tracking.report_error
 	def execute(self,context):
 		updateMeshswapList(context)
 		return {'FINISHED'}
@@ -533,7 +536,7 @@ class meshSwap(bpy.types.Operator):
 		obj.location[2] -= .5
 		bpy.context.scene.objects.active = active
 
-
+	@tracking.report_error
 	def execute(self, context):
 
 		tracking.trackUsage("meshswap",None)
@@ -924,6 +927,7 @@ class fixMinewaysScale(bpy.types.Operator):
 	bl_label = "Mineways quick upscale"
 	bl_options = {'REGISTER', 'UNDO'}
 
+	@tracking.report_error
 	def execute(self, context):
 		if conf.v:print("Attempting to fix Mineways scaling for meshswap")
 		# get cursor loc first? shouldn't matter which mode/location though

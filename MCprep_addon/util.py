@@ -25,7 +25,7 @@ from subprocess import Popen, PIPE, call
 from . import conf
 
 # -----------------------------------------------------------------------------
-# GENERAL SUPPORTING FUNCTIONS
+# GENERAL SUPPORTING FUNCTIONS (no registration required)
 # -----------------------------------------------------------------------------
 
 # ---------
@@ -225,7 +225,9 @@ def open_program(executable):
 # ---------
 # cross platform way to open folder in host operating system
 def open_folder_crossplatform(folder):
-	folder = bpy.path.abspath(self.folder)
+	folder = bpy.path.abspath(folder)
+	if not os.path.isdir(folder):
+		return False
 	try:
 		# windows... untested
 		subprocess.Popen('explorer "{x}"'.format(x=folder))

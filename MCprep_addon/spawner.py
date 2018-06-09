@@ -182,7 +182,8 @@ class reloadSpawners(bpy.types.Operator):
 	bl_idname = "mcprep.reload_spawners"
 	bl_label = "Reload meshswap and mob spawners"
 
-	def execute(self,context):
+	@tracking.report_error
+	def execute(self, context):
 
 		bpy.ops.mcprep.reload_meshswap()
 		bpy.ops.mcprep.reload_mobs()
@@ -195,7 +196,8 @@ class MCPREP_reloadMobs(bpy.types.Operator):
 	bl_idname = "mcprep.reload_mobs"
 	bl_label = "Reload the rigs and cache"
 
-	def execute(self,context):
+	@tracking.report_error
+	def execute(self, context):
 		updateRigList(context)
 		return {'FINISHED'}
 
@@ -230,6 +232,7 @@ class MCPREP_mobSpawner_direct(bpy.types.Operator):
 		default = True
 		)
 
+	@tracking.report_error
 	def execute(self, context):
 
 		print(conf.rig_list_sub)
@@ -328,8 +331,7 @@ class MCPREP_mobSpawner(bpy.types.Operator):
 		# should be the consolidated code for
 		# both linking and appending below, .. they branched right now.
 
-
-
+	@tracking.report_error
 	def execute(self, context):
 
 		# only sends tracking if opted in
@@ -705,6 +707,7 @@ class MCPREP_installMob(bpy.types.Operator, ImportHelper):
 
 		return {'FINISHED'}
 
+	@tracking.report_error
 	def execute(self, context):
 		# addon_prefs.mcmob_install_new_path = "//" # clear the path after install, to show it's not like a saved thing.
 		# self.filepath = "//"
@@ -717,6 +720,7 @@ class MCPREP_openRigFolder(bpy.types.Operator):
 	bl_idname = "mcprep.openrigpath"
 	bl_label = "Open rig folder"
 
+	@tracking.report_error
 	def execute(self,context):
 		#addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
 
@@ -735,6 +739,7 @@ class MCPREP_spawnPathReset(bpy.types.Operator):
 	bl_label = "Reset spawn path"
 	bl_options = {'REGISTER', 'UNDO'}
 
+	@tracking.report_error
 	def execute(self,context):
 
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
@@ -805,6 +810,7 @@ class MCPREP_uninstallMob(bpy.types.Operator):
 		else:
 			row.label("Press okay to remove mob and file")
 
+	@tracking.report_error
 	def execute(self,context):
 
 		mob = conf.rig_list_sub[context.scene.mcprep_mob_list_index]
