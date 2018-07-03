@@ -25,9 +25,9 @@ import mathutils
 import random
 
 # addon imports
-from . import conf
-from . import util
-from . import tracking
+from .. import conf
+from .. import util
+from .. import tracking
 
 
 # -----------------------------------------------------------------------------
@@ -38,7 +38,7 @@ from . import tracking
 def getMeshswapList(context):
 
 	# test the link path first!
-	# rigpath = bpy.path.abspath(context.scene.mcrig_path) #addon_prefs.mcrig_path
+	# rigpath = bpy.path.abspath(context.scene.mcprep_mob_path)
 	# blendFiles = []
 	# riglist = []
 
@@ -72,7 +72,6 @@ def updateMeshswapList(context):
 			if util.nameGeneralize(name).lower() == "Rigidbodyworld".lower():
 				continue
 
-
 			description = "Place {x} block".format(x=name)
 			meshswap_list.append( ("Group/"+name,name.title(),description) )
 			temp_meshswap_list.append(util.nameGeneralize(name).lower())
@@ -105,7 +104,7 @@ def updateMeshswapList(context):
 # -----------------------------------------------------------------------------
 
 
-class MCPREP_spawnPathReset(bpy.types.Operator):
+class McprepSpawnPathReset(bpy.types.Operator):
 	"""Reset the spawn path to the default specified in the addon preferences panel"""
 	bl_idname = "mcprep.meshswap_pathreset"
 	bl_label = "Reset meshswap path"
@@ -114,13 +113,13 @@ class MCPREP_spawnPathReset(bpy.types.Operator):
 	@tracking.report_error
 	def execute(self,context):
 
-		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
+		addon_prefs = util.get_prefs()
 		context.scene.meshswap_path = addon_prefs.meshswap_path
 		updateMeshswapList(context)
 		return {'FINISHED'}
 
 
-class MCPREP_meshswapSpawner(bpy.types.Operator):
+class McprepMeshswapSpawner(bpy.types.Operator):
 	"""Instantly spawn built-in meshswap blocks into a scene"""
 	bl_idname = "mcprep.meshswap_spawner"
 	bl_label = "Meshswap Spawner"
@@ -188,7 +187,7 @@ class MCPREP_meshswapSpawner(bpy.types.Operator):
 			importedObj["MCprep_noSwap"] = "True"
 			importedObj.location = self.location
 			if self.prep_materials==True:
-				bpy.ops.mcprep.mat_change(skipUsage=True) # if cycles
+				bpy.ops.mcprep.prep_materials(skipUsage=True) # if cycles
 		else:
 			# Group method
 
@@ -219,7 +218,7 @@ class MCPREP_meshswapSpawner(bpy.types.Operator):
 			if self.prep_materials==True:
 				for ob in objlist:
 					ob.select=True
-				bpy.ops.mcprep.mat_change(skipUsage=True) # if cycles
+				bpy.ops.mcprep.prep_materials(skipUsage=True) # if cycles
 				bpy.ops.object.select_all(action='DESELECT')
 
 			for ob in objlist:
@@ -241,7 +240,7 @@ class MCPREP_meshswapSpawner(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class MCPREP_reloadMeshswap(bpy.types.Operator):
+class McprepReloadMeshswap(bpy.types.Operator):
 	"""Force reload the mob spawner rigs, use after manually adding rigs to folders"""
 	bl_idname = "mcprep.reload_meshswap"
 	bl_label = "Reload the meshswap and cache"
@@ -253,7 +252,7 @@ class MCPREP_reloadMeshswap(bpy.types.Operator):
 
 
 # for asset listing UIList drawing
-class MCPREP_meshswap_UIList(bpy.types.UIList):
+class McprepMeshswap_UIList(bpy.types.UIList):
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
 
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
@@ -283,7 +282,7 @@ class MCPREP_meshswap_UIList(bpy.types.UIList):
 class meshSwap(bpy.types.Operator):
 	"""Swap minecraft objects from world imports for custom 3D models in the according meshSwap blend file"""
 	bl_idname = "mcprep.meshswap"
-	bl_label = "MCprep meshSwap"
+	bl_label = "Mesh Swap"
 	bl_options = {'REGISTER', 'UNDO'}
 
 	#used for only occasionally refreshing the 3D scene while mesh swapping
@@ -332,7 +331,7 @@ class meshSwap(bpy.types.Operator):
 
 	@classmethod
 	def poll(cls, context):
-		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
+		addon_prefs = util.get_prefs()
 		return addon_prefs.MCprep_exporter_type != "(choose)"
 
 	# force use UI
@@ -377,7 +376,7 @@ class meshSwap(bpy.types.Operator):
 	# called for each object in the loop as soon as possible
 	def checkExternal(self, context, name):
 		if conf.v:print("Checking external library")
-		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
+		addon_prefs = util.get_prefs()
 
 		meshSwapPath = context.scene.meshswap_path
 		rmable = []
@@ -544,8 +543,7 @@ class meshSwap(bpy.types.Operator):
 		runcount = 0 # counter.. if zero by end, raise error that no selected objects matched
 		## debug, restart check
 		if conf.v:print('###################################')
-		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
-		# if checkOptin():usageStat('meshSwap'+':'+addon_prefs.MCprep_exporter_type)
+		addon_prefs = util.get_prefs()
 		direc = context.scene.meshswap_path
 
 		#check library file exists
@@ -887,7 +885,8 @@ class meshSwap(bpy.types.Operator):
 				bpy.context.scene.objects.active = dupedObj[0]
 				for d in dupedObj:
 					d.select = True
-
+				if context.mode != "OBJECT":
+					bpy.ops.object.mode_set(mode='OBJECT')
 				bpy.ops.object.join()
 
 			bpy.ops.object.select_all(action='DESELECT')

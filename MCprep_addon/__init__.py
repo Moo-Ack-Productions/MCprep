@@ -34,16 +34,11 @@ Disclaimer: This is not an official Google product
 
 """
 
-# -----------------------------------------------------------------------------
-#
-# -----------------------------------------------------------------------------
-
-
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",
 	"version": (3, 0, 3),
-	"blender": (2, 78, 0),
+	"blender": (2, 72, 0),
 	"location": "3D window toolshelf > MCprep tab",
 	"description": "Minecraft workflow addon for rendering and animation",
 	"warning": "",
@@ -52,74 +47,24 @@ bl_info = {
 	"tracker_url":"https://github.com/TheDuckCow/MCprep/issues"
 }
 
+import importlib
 
-if "bpy" in locals():
-
-	import importlib
-	try:
-		conf.init()
-	except:
-		print("Issue in re-running conf.init()")
-	importlib.reload(mcprep_ui)
-	importlib.reload(materials)
-	importlib.reload(meshswap)
-	importlib.reload(spawner)
-	importlib.reload(world_tools)
-	importlib.reload(tracking)
-
-	if conf.v:print("Reload, verbose is enabled")
-	if conf.vv:print("MCprep: Very Verbose is enabled")
-
+if "load_modules" in locals():
+	importlib.reload(load_modules)
 else:
-	import bpy
-	from . import conf
-	conf.init()  #initialize global variables
+	from . import load_modules
 
-	# import the rest
-	from . import (
-		mcprep_ui,
-		util_operators,
-		materials,
-		meshswap,
-		spawner,
-		world_tools,
-		addon_updater_ops,
-		tracking
-	)
-
-	if conf.v:print("MCprep: Verbose is enabled")
-	if conf.vv:print("MCprep: Very Verbose is enabled")
+import bpy
 
 
 def register():
-
 	bpy.utils.register_module(__name__)
-	util_operators.register()
-	mcprep_ui.register()
-	materials.register()
-	meshswap.register()
-	spawner.register()
-	world_tools.register()
-	tracking.register(bl_info)
-
-	# addon updater code and configurations
-	addon_updater_ops.register(bl_info)
+	load_modules.register(bl_info)
 
 
 def unregister():
-
 	bpy.utils.unregister_module(__name__)
-	conf.unregister()
-	mcprep_ui.unregister()
-	materials.unregister()
-	meshswap.unregister()
-	spawner.unregister()
-	world_tools.unregister()
-	util_operators.unregister()
-	tracking.unregister()
-
-	# addon updater code and configurations
-	addon_updater_ops.unregister()
+	load_modules.unregister(bl_info)
 
 
 if __name__ == "__main__":

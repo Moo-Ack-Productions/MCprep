@@ -29,13 +29,12 @@ from . import tracking
 # General utility operator classes
 # -----------------------------------------------------------------------------
 
-class MCPREP_improveUI(bpy.types.Operator):
-	"""Improve the UI with specific view settings"""
+
+class McprepImproveUi(bpy.types.Operator):
+	"""Improve UI for minecraft textures: disable mipmaps, set texture solid
+	in viewport, and set rendermode to at least solid view"""
 	bl_idname = "mcprep.improve_ui"
 	bl_label = "Improve UI"
-	bl_description = "Improve UI for minecraft textures: disable mipmaps,"+\
-						"set texture solid in viewport, and set rendermode"+\
-						"to at least solid view"
 	bl_options = {'REGISTER', 'UNDO'}
 
 	@tracking.report_error
@@ -50,12 +49,11 @@ class MCPREP_improveUI(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class MCPREP_showPrefs(bpy.types.Operator):
-	"""Show MCprep preferences"""
+class McprepShowPreferences(bpy.types.Operator):
+	"""Open user preferences and display the MCprep settings. Note, you may
+	need to press the triangle icon to expand"""
 	bl_idname = "mcprep.open_preferences"
 	bl_label = "Show MCprep preferences"
-	bl_description = "Open user preferences and display the MCprep settings. "+\
-					"Note, you may need to press the triangle icon to expand"
 
 	tab = bpy.props.EnumProperty(
 		items = [('settings', 'Open settings', 'Open MCprep preferences settings'),
@@ -95,7 +93,7 @@ class MCPREP_showPrefs(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class MCPREP_openFolder(bpy.types.Operator):
+class McprepOpenFolder(bpy.types.Operator):
 	"""Open a folder in the host operating system"""
 	bl_idname = "mcprep.openfolder"
 	bl_label = "Open folder"
@@ -118,6 +116,51 @@ class MCPREP_openFolder(bpy.types.Operator):
 			return {'CANCELLED'}
 		return {'FINISHED'}
 
+
+class McprepOpenHelp(bpy.types.Operator):
+	"""Support operator for opening url in UI, but indicating through popup
+	text that it is a supporting/help button."""
+	bl_idname = "mcprep.open_help"
+	bl_label = "Open folder"
+	bl_description = "Need help? Click to open."
+
+	url = bpy.props.StringProperty(
+		name="Url",
+		default="")
+
+	@tracking.report_error
+	def execute(self,context):
+		if self.url == "":
+			return {'CANCELLED'}
+		else:
+			bpy.ops.wm.url_open(url=self.url)
+		return {'FINISHED'}
+
+
+class McprepPrepMaterialLegacy(bpy.types.Operator):
+	"""Legacy operator which calls new operator, use mcprep.prep_material"""
+	bl_idname = "mcprep.mat_change"
+	bl_label = "MCprep Materials"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	useReflections = bpy.props.BoolProperty(
+		name = "Use reflections",
+		description = "Allow appropriate materials to be rendered reflective",
+		default = True
+		)
+	combineMaterials = bpy.props.BoolProperty(
+		name = "Combine materials",
+		description = "Consolidate duplciate materials & textures",
+		default = False
+		)
+
+	def execute(self, context):
+		print("Using legacy operator call for MCprep materials")
+		bpy.ops.mcprep.prep_materials(
+			useReflections = self.useReflections,
+			combineMaterials = self.combineMaterials
+		)
+		return {'FINISHED'}
 
 # -----------------------------------------------------------------------------
 # Registration

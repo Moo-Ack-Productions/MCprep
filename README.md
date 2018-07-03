@@ -22,11 +22,11 @@ Demo Usage
 
 
 *[Mob spawner demo](https://www.youtube.com/watch?v=C3YoZx-seFE)*
- 
+
  [![Mob spawner gif](/visuals/spawner-gif.gif)](https://www.youtube.com/watch?v=C3YoZx-seFE)
 
 *[Pre-release demo, materials & meshswapping demo](https://www.youtube.com/watch?v=Nax7iuCTovk)*
- 
+
  [![Alt text](/visuals/meshswap.demo.gif "Meshswap Preview")](https://www.youtube.com/watch?v=Nax7iuCTovk)
 
 Other video demos:
@@ -120,7 +120,7 @@ Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow),
 | Zombie | [HissingCreeper](https://www.youtube.com/channel/UCHV3_5kFI93fFOl6KbmhkQA) (No direct link yet) |
 
 
-| Friedly/Utility Rigs   |      Creator      |
+| Friendly/Utility Rigs   |      Creator      |
 |----------|:-------------:|
 | Horse | [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) ([Rig link](http://www.blendswap.com/blends/view/73064)) |
 | Iron Golem | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) ([Rig link](http://www.blendswap.com/blends/view/79455)) |
@@ -151,7 +151,7 @@ How to use this addon
 
 
 ### Meshswap:
-- **Purpose:** To automatically swap in extra assets such as 3D grass, light emitting torches and lamps, and so forth. Note that all the objects to be swapped in are in the blend file part of this download. Also note that swapping is done based on the name of the material. If you are unsure why your object is not swapping in, check the material name matches the counterpart object/material in the meshSwap.blend file. Note it can search for both appendable objects as well as groups, containing particles and so forth. Modifiers on the mesh in the original file will be brought over, so notice for example how the tall grass when replaced will be "pre-simulated" as it has displacement modifiers setup already with animation.
+- **Purpose:** To automatically swap in extra assets such as 3D grass, light emitting torches and lamps, and so forth. Note that all the objects to be swapped in are in the blend file part of this download. Also note that swapping is done based on the name of the material. If you are unsure why your object is not swapping in, check the material name matches the counterpart object/material in the meshSwap.blend file. Note it can search for both append-able objects as well as groups, containing particles and so forth. Modifiers on the mesh in the original file will be brought over, so notice for example how the tall grass when replaced will be "pre-simulated" as it has displacement modifiers setup already with animation.
 - **Step 0:** By default this is already done for you; set the MeshSwap blend path to the "mcprep_meshSwap.blend" or custom blend file, and make sure the world export has blocks of size 1m (100cm).
 - **Step 1:** Select the objects that you wish to be meshSwapped. Swappable objects are determined *automatically* based on the contents of the blend file selected above. If an object is not found or swappable, it will just be skipped - no harm done by "overselecting" (so select all objects to make sure everything that can be swapped gets swapped!)
 - **Step 2:** Press Mesh Swap (there will be a small delay, meshswapping large areas such as fields of grass may take awhile).
@@ -166,15 +166,15 @@ How to use this addon
 To add your own objects to meshswap (or groupswap):
 - **Step 1:** Check your imported world object and see the name of the material for the object you want to setup. You might think it is "glass plane", but if the importer names the material "glass_plane", you need to note this name down for step 3.
 - **Step 2:** Model you object in the mcprep_meshSwap.blend file, or append it.
-- **Step 3:** Rename your object to exactly match the previously noted material name. If you want to have a group swappable, then name the group to match the name above.  
-  * So the MATERIAL name found in the 3D imported world should match the OBJECT name of the model in the meshswap file to work  
-  * Note if both a group and an object have matching names, the script will prefer the group and meswap that over the object.  
-- **Step 4:** Add necessary properties to special blocks as needed. See the meshSwap file included for examples, but the properties to add are:  
+- **Step 3:** Rename your object to exactly match the previously noted material name. If you want to have a group swappable, then name the group to match the name above.
+  * So the MATERIAL name found in the 3D imported world should match the OBJECT name of the model in the meshswap file to work
+  * Note if both a group and an object have matching names, the script will prefer the group and meshswap that over the object.
+- **Step 4:** Add necessary properties to special blocks as needed. See the meshSwap file included for examples, but the properties to add are:
   * "variance": Objects with this property when meshswapped will have some x/y variance added. If the property is set to 1, it will also have (only negative) z variance. If it is set to 0, it will only have xy variance. For instance, tall_grass is given a value of 1 so some grass is shorter than others, but flowers are given a value of 0 so they always have the same height but still have some variance in placement.
-  * "edgeFloat": objects like vines, ladders, and lillypads which float off the edge of other blocks.  
+  * "edgeFloat": objects like vines, ladders, and lillypads which float off the edge of other blocks.
   * "torchlike": objects that can have rotations like a torch on a wall. Objects with this property will be determined to be either on top of a block or placed on the side of another block according to the mesh.
   * **Note:** there is no UI for adding properties to a group, so if you want to add a property to a group (say a torch which has a pre-animated light and particle system, as the included blend file does) you must go into the python consol and add the property like so:  <code>bpy.data.groups['groupName']['propertyName'] = 1</code>  (the value only matters for the variance property)
-  * **Example:** <code>bpy.data.groups['torch']['torchlike'] = 1</code> will add the torchlike property to the torch group, allowing it to have correct rotaitons when meshSwapped in.
+  * **Example:** <code>bpy.data.groups['torch']['torchlike'] = 1</code> will add the torchlike property to the torch group, allowing it to have correct rotations when meshSwapped in.
 
 
 
@@ -189,12 +189,12 @@ To add your own objects to meshswap (or groupswap):
 
 
 ### Mob Spawner:
-- **Purpose:** To provide quick, one-click importing/linking of quality minecraft mob and player rigs in blender.
+- **Purpose:** To provide quick, one-click importing/linking of quality Minecraft mob and player rigs in blender.
 - **Step 0:** By default this is already done for you; make sure the mob spawner path is a directory with valid blend files setup for linking (addon preferences > MCprep). When installed, this path will already be setup and valid pointing to the included rigs with this release, as defined in the credits section above. This rigs are place in the addon's local directory provided by blender and will not be placed anywhere else on the user's machine.
 - **Step 1:** Either press the "mob spawner" button in the MCprep panel, or go to the shift-a menu: armature > mob spawner > [mob name] to instantly append or link in a rig.
 - **Step 2:** Check the redo last menu for additional settings, such as relocation of the rig, library linking, and even changing which rig to spawn. These are the following options:
   - mcmob_type: Change the mob spawned, e.g. from a creeper to a wolf
-  - Relocation: Change where the spawned rig appears. 
+  - Relocation: Change where the spawned rig appears.
     - Cursor (default): Place the rig at the cursor's location
     - Origin: Move the rig to the origin
     - Offset root: Move the rig to the origin, but offset the root bone to the cursor's location (note: doesn't work with all rigs correctly right now, will be improved in the future)
@@ -225,11 +225,11 @@ To add your own rigs to the Mob Spawner:
 - **Step 1:** Navigate to the spawner panel and select meshswap
 - **Step 2:** Highlight the desired block
 - **Step 3:** Press meshswap, and see the block placed in the scene
-- **Step 4:** Modify redo last settings as needed (also accesible by pressing F6 after spawning). Options include:
+- **Step 4:** Modify redo last settings as needed (also accessible by pressing F6 after spawning). Options include:
   - Meshswap block: You can change here which block you wanted to add
   - Location: Set the location where the block is placed
   - Append layer: layer to append contents of the group to; default is layer 20, setting to 0 will use the currently active layer(s) as the layers for the group
-  - Prep materials: run prep materials on the imported objects, particuarly useful if using cycles
+  - Prep materials: run prep materials on the imported objects, particularly useful if using cycles
   - Snapping dropdown: Snap the placed block to a rounded coordinate. Optional offset by 0.5 as well
   - Make real: Instance the groups so they are made real, thus allowing you to individually modify the objects within the group. Note: this may clear any pre-applied animation.
 
@@ -237,9 +237,9 @@ To add your own rigs to the Mob Spawner:
 Known Bugs
 ======
 - SOMETIMES UNDO (control/command z) MAY CRASH AFTER MESHSWAPPING, recommended to save before using to be safe but generally is fine.
-- Currently meshwapassumes that the block size is 1x1x1, note that by default Mineways has a block size 0.1x0.1x0.1, please set it to 1m or 100cm on export or use the upscale function.
+- Currently meshwap assumes that the block size is 1x1x1, note that by default Mineways has a block size 0.1x0.1x0.1, please set it to 1m or 100cm on export or use the upscale function.
 - Motion blur glitches on wind-swaying elements, e.g. grass: This is a bug with blender, where solidify plus the displacement modifiers and split edges modifiers can create bad motion blur effects. The easy fix is to remove split edges and let the grass be shaded smoothly instead.
-- **Both mineways and jmc2obj oddities:**
+- **Both Mineways and jmc2obj oddities:**
   - Redstone items like repeaters, dust, and so forth generally don't swap properly, and is a much more difficult problem to solve.
   - Rails: for jmc2obj, all rails should at least be placed in the correct position, but not necessarily rotated correctly.
   - Some materials such as fire are pre-setup with animated image sequences (yay!), but blender cannot pack image sequences into a blend file. If animated textures go missing (e.g. after moving a blend file around), reconnect them back to the according folder/file, such as /textures/fire/fire_0001.png. Note this should not be a problem if the default meshwap path/file is used, provided the addon is not uninstalled.
@@ -252,12 +252,12 @@ Known Bugs
 
 Future Plans
 ======
-Future deveploment plans are now recorded and updated as milestones and enhancement issues on github.
+Future development plans are now recorded and updated as milestones and enhancement issues on GitHub.
 
 
 Additional Help
 ======
 
-If you have troubles getting this addon to work, please contact me at support@TheDuckCow.com or [on twitter](https://twitter.com/TheDuckCow), and I will do my best to respond promptly to your questions. This addon is still heavily under construction, so check back for updates (you can reference the version number and take last modified). Your feedback helps stabilize the addon and make it work better for everyone else!
+If you have troubles getting this addon to work, please contact me at support[at]TheDuckCow.com or [on twitter](https://twitter.com/TheDuckCow), and I will do my best to respond promptly to your questions. This addon is still heavily under construction, so check back for updates (you can reference the version number and take last modified). Your feedback helps stabilize the addon and make it work better for everyone else!
 
 Moo-Ack!

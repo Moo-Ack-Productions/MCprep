@@ -16,13 +16,10 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-
-# -----------------------------------------------------------------------------
-# ADDON GLOBAL VARIABLES AND INITIAL SETTINGS
-# -----------------------------------------------------------------------------
+import os
+import json
 
 import bpy
-import os
 
 # check if custom preview icons available
 try:
@@ -30,6 +27,10 @@ try:
 except:
 	print("MCprep: No custom icons in this blender instance")
 	pass
+
+# -----------------------------------------------------------------------------
+# ADDON GLOBAL VARIABLES AND INITIAL SETTINGS
+# -----------------------------------------------------------------------------
 
 def init():
 
@@ -67,35 +68,32 @@ def init():
 	# JSON attributes
 	# -----------------------------------------------
 
-
 	# shouldn't load here, just globalize any json data?
 
 	global data
-	import os
 	# import json
 
 	global json_data # mcprep_data.json
 	json_data = None # later will load addon information etc
 
-	global json_user # mcprep_user.json
-	json_user = None # later will load user saved information
-
-
 	# if existing json_data_update exists, overwrite it
-	setup_path = os.path.join(os.path.dirname(__file__),"mcprep_data.json")
-	if os.path.isfile( os.path.join(os.path.dirname(__file__),\
-			"mcprep_data_update.json") ) == True:
+	global json_path
+	json_path = os.path.join(
+		os.path.dirname(__file__),
+		"MCprep_resources",
+		"mcprep_data.json")
+	json_path_update = os.path.join(
+		os.path.dirname(__file__),
+		"MCprep_resources",
+		"mcprep_data_update.json")
 
-		# remove old json
-		if os.path.isfile(setup_path) == True:
-			os.remove(setup_path)
-		# change to new name
-		os.rename(os.path.join(os.path.dirname(__file__),\
-			"mcprep_data_update.json"), setup_path)
+	# if new update file found from install, replace old one with new
+	if os.path.isfile(json_path_update):
+		if os.path.isfile(json_path) == True:
+			os.remove(json_path)
+		os.rename(json_path_update, json_path)
 
-
-	# if os.path.isdir(MCprep_resources) is false: create it (and then we know assets = 0)
-
+	# lazy load json, ie only load it when needed (util function defined)
 
 	# -----------------------------------------------
 	# For preview icons
@@ -207,7 +205,7 @@ def icons_init():
 
 
 def register():
-	pass
+	init()
 
 
 def unregister():
@@ -217,4 +215,6 @@ def unregister():
 	# 		#print("clearing?",pcoll)
 	# 		bpy.utils.previews.remove(pcoll)
 	# 	preview_collections.clear()
+	global json_data
+	json_data = None  # actively clearing out json data for next open
 

@@ -1,8 +1,3 @@
-# ##### MCprep #####
-#
-# Developed by Patrick W. Crawford, see more at
-# http://theduckcow.com/dev/blender/MCprep
-# 
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #  This program is free software; you can redistribute it and/or
@@ -23,9 +18,11 @@
 
 import bpy
 import random
+import traceback
 
 from . import conf
 from . import util
+from . import tracking
 
 
 # -----------------------------------------------------------------------------
@@ -47,8 +44,15 @@ class MCP_open_jmc2obj(bpy.types.Operator):
 	bl_description = "Open the jmc2obj executbale"
 
 	# poll, and prompt to download if not present w/ tutorial link
+	skipUsage = bpy.props.BoolProperty(
+		default = False,
+		options={'HIDDEN'}
+		)
 
 	def execute(self,context):
+		if self.skipUsage==False:
+			tracking.trackUsage("open_program","jmc2obj")
+
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
 		res = util.open_program(addon_prefs.open_jmc2obj_path)
 
@@ -60,35 +64,37 @@ class MCP_open_jmc2obj(bpy.types.Operator):
 			return {'CANCELLED'}
 		else:
 			self.report({'INFO'},"jmc2obj should open soon")
-		
 		return {'FINISHED'}
 
 
 class MCP_install_jmc2obj(bpy.types.Operator):
-	"""Utility class to prompt Mineways installing"""
+	"""Utility class to prompt jmc2obj installing"""
 	bl_idname = "mcprep.install_jmc2obj"
 	bl_label = "Install jmc2obj"
 	bl_description = "Prompt to install the jmc2obj world exporter"
 
 	# error message
-	
+
 	def invoke(self, context, event):
 		wm = context.window_manager
 		return wm.invoke_popup(self, width=400, height=200)
-	
+
 	def draw(self, context):
 		self.layout.label("Valid program path not found!")
 		self.layout.separator()
 		self.layout.label("Need to install jmc2obj?")
 		self.layout.operator("wm.url_open","Click to download").url =\
 				"http://www.jmc2obj.net/"
-		split = self.layout.split() 
-		self.layout.label("Then, go to MCprep's user preferences and set the jmc2obj")
-		self.layout.label(" path to jmc2obj_ver#.jar, for example")
-		self.layout.operator("mcprep.open_preferences","Open MCprep preferences")
-
-		# tutorial link
-		#self.layout.label("or Mineways.app, for example") 
+		split = self.layout.split()
+		col = self.layout.colunm()
+		col.scale_y = 0.7
+		col.label("Then, go to MCprep's user preferences and set the jmc2obj")
+		col.label(" path to jmc2obj_ver#.jar, for example")
+		row = self.layout.row(align=True)
+		row.operator("mcprep.open_preferences","Open MCprep preferences")
+		row.operator("wm.url_open","Open tutorial").url =\
+				"http://theduckcow.com/dev/blender/mcprep/"
+		return
 
 	def execute(self, context):
 		self.report({'INFO'}, self.message)
@@ -98,14 +104,21 @@ class MCP_install_jmc2obj(bpy.types.Operator):
 
 
 class MCP_open_mineways(bpy.types.Operator):
-	"""Open the mineways executbale"""
+	"""Open the Mineways executbale"""
 	bl_idname = "mcprep.open_mineways"
 	bl_label = "Open Mineways"
 	bl_description = "Open the Mineways executbale"
 
 	# poll, and prompt to download if not present w/ tutorial link
+	skipUsage = bpy.props.BoolProperty(
+		default = False,
+		options={'HIDDEN'}
+		)
 
 	def execute(self,context):
+		if self.skipUsage==False:
+			tracking.trackUsage("open_program","mineways")
+
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
 		res = util.open_program(addon_prefs.open_mineways_path)
 
@@ -117,7 +130,6 @@ class MCP_open_mineways(bpy.types.Operator):
 			return {'CANCELLED'}
 		else:
 			self.report({'INFO'},"Mineways should open soon")
-		
 		return {'FINISHED'}
 
 
@@ -128,24 +140,27 @@ class MCP_install_mineways(bpy.types.Operator):
 	bl_description = "Prompt to install the Mineways world exporter"
 
 	# error message
-	
+
 	def invoke(self, context, event):
 		wm = context.window_manager
 		return wm.invoke_popup(self, width=400, height=200)
-	
+
 	def draw(self, context):
 		self.layout.label("Valid program path not found!")
 		self.layout.separator()
 		self.layout.label("Need to install Mineways?")
 		self.layout.operator("wm.url_open","Click to download").url =\
 				"http://www.realtimerendering.com/erich/minecraft/public/mineways/"
-		split = self.layout.split() 
-		self.layout.label("Then, go to MCprep's user preferences and set the")
-		self.layout.label(" Mineways path to Mineways.exe or Mineways.app, for example")
-		self.layout.operator("mcprep.open_preferences","Open MCprep preferences")
-
-		# tutorial link
-		#self.layout.label("or Mineways.app, for example") 
+		split = self.layout.split()
+		col = self.layout.colunm()
+		col.scale_y = 0.7
+		col.label("Then, go to MCprep's user preferences and set the")
+		col.label(" Mineways path to Mineways.exe or Mineways.app, for example")
+		row = self.layout.row(align=True)
+		row.operator("mcprep.open_preferences","Open MCprep preferences")
+		row.operator("wm.url_open","Open tutorial").url =\
+				"http://theduckcow.com/dev/blender/mcprep/"
+		return
 
 	def execute(self, context):
 		self.report({'INFO'}, self.message)
@@ -165,9 +180,25 @@ class MCP_prep_world(bpy.types.Operator):
 	bl_label = "Prep World"
 	bl_description = "Prep world render settings to something generally useful"
 
+	@tracking.report_error
 	def execute(self, context):
 
 		print("WORK IN PROGRESS")
+		Trigger_intentional_error_here
+
+		#return tracking.error_wrapper(self, context, self.execute_safe)
+		return {'FINISHED'}
+		# try:
+		# 	self.execute_safe(context)
+		# except:
+		# 	s = traceback.format_exc()
+		# 	bpy.ops.mcprep.report_error('INVOKE_DEFAULT',error_report=s)
+		# 	return {"CANCELLED"}
+
+
+	def execute_safe(self, context):
+		print("WORK IN PROGRESS")
+		Trigger_intentional_error_here
 		if True:
 			self.report({"ERROR"},"Not yet developed")
 			return {'CANCELLED'}
@@ -249,7 +280,7 @@ def world_time_update(self, context):
 	# translate time into rotation of sun/moon rig
 	# see: http://minecraft.gamepedia.com/Day-night_cycle
 	# set to the armature.... would be even better if it was somehow driver-set.
-	
+
 	# if real python code requried to set this up, generate and auto-run python
 	# script, though more ideally just set drivers based on the time param
 

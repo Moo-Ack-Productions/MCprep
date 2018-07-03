@@ -17,8 +17,10 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import bpy
-import random
+import json
 import os
+import random
+
 
 from subprocess import Popen, PIPE, call
 
@@ -28,20 +30,19 @@ from . import conf
 # GENERAL SUPPORTING FUNCTIONS (no registration required)
 # -----------------------------------------------------------------------------
 
-# ---------
-# Get base name from datablock
+
 def nameGeneralize(name):
+	# Get base name from datablock
 	if duplicatedDatablock(name) == True:
 		return name[:-4]
 	else:
 		return name
 
 
-# ---------
-# gets all materials on input list of objects
-def materialsFromObj(objList): # old name: getObjectMaterials
+def materialsFromObj(objList):
+	"""Gets all materials on input list of objects. Loop over every object,
+	adding each material if not already added"""
 	matList = []
-	#loop over every object, adding each material if not already added
 	for obj in objList:
 		if obj.dupli_group:
 			for a in obj.dupli_group.objects:
@@ -54,10 +55,10 @@ def materialsFromObj(objList): # old name: getObjectMaterials
 	return matList
 
 
-# ---------
-# gets all textures on input list of materials
-# currently not used, some issue in getting NoneTypes (line if textureID.texture in..)
-def texturesFromMaterials(matList): # original name: getMaterialTextures
+def texturesFromMaterials(matList):
+	"""Gets all textures on input list of materials
+	currently not used, some issue in getting NoneTypes"""
+	# (line if textureID.texture in..)
 	if len(matList)==0: return []
 	texList = []
 	for mat in matList:
@@ -69,11 +70,10 @@ def texturesFromMaterials(matList): # original name: getMaterialTextures
 	return texList
 
 
-# ---------
-# For multiple version compatibility,
-# this function generalized appending/linking
 def bAppendLink(directory,name, toLink, active_layer=True):
-	# blender post 2.71 changed to new append/link methods
+	"""For multiple version compatibility,
+	this function generalized appending/linking
+	blender post 2.71 changed to new append/link methods"""
 
 	if conf.vv:print("Appending ",directory," : ",name)
 	post272 = False
@@ -116,9 +116,13 @@ def bAppendLink(directory,name, toLink, active_layer=True):
 		bpy.ops.wm.link_append(directory=directory, filename=name, link=toLink)
 
 
-# ---------
-# check if a face is on the boundary between two blocks (local coordinates)
+def bv28():
+	"""Check if blender 2.8, for layouts, UI, and properties. """
+	return bpy.app.version >= (2, 80)
+
+
 def onEdge(faceLoc):
+	"""Check if a face is on the boundary between two blocks (local coordinates)."""
 	strLoc = [ str(faceLoc[0]).split('.')[1][0],
 				str(faceLoc[1]).split('.')[1][0],
 				str(faceLoc[2]).split('.')[1][0] ]
@@ -128,9 +132,8 @@ def onEdge(faceLoc):
 		return False
 
 
-# ---------
-# randomization for model imports, add extra statements for exta cases
 def randomizeMeshSawp(swap,variations):
+	"""Randomization for model imports, add extra statements for exta cases."""
 	randi=''
 	if swap == 'torch':
 		randomized = random.randint(0,variations-1)
@@ -143,9 +146,8 @@ def randomizeMeshSawp(swap,variations):
 	return swap+randi
 
 
-# ---------
-# Check if datablock is a duplicate or not, e.g. ending in .00#
 def duplicatedDatablock(name):
+	"""Check if datablock is a duplicate or not, e.g. ending in .00# """
 	try:
 		if name[-4]!=".": return False
 		int(name[-3:])
@@ -154,9 +156,8 @@ def duplicatedDatablock(name):
 		return False
 
 
-# ---------
-# Load texture, reusing existing texture if present
 def loadTexture(texture):
+	"""Load texture, reusing existing texture if present."""
 
 	# load the image only once
 	base = bpy.path.basename(texture)
@@ -176,10 +177,9 @@ def loadTexture(texture):
 	return data_img
 
 
-# ---------
-# Consistent, general way to remap datablock users
-# todo: write equivalent function of user_remap for older blender versions
 def remap_users(old, new):
+	"""Consistent, general way to remap datablock users."""
+	# Todo: write equivalent function of user_remap for older blender versions
 	try:
 		old.user_remap( new )
 		return 0
@@ -187,20 +187,16 @@ def remap_users(old, new):
 		return "not available prior to blender 2.78"
 
 
-# ---------
-# quick script for linking all objects back into a scene
-"""
-import bpy
+def link_selected_objects_to_scene():
+	# Quick script for linking all objects back into a scene
+	# Not used by addon, but shortcut useful in one-off cases to copy/run code
+	for ob in bpy.data.objects:
+		if ob not in list(bpy.context.scene.objects):
+			bpy.context.scene.objects.link(ob)
 
-for ob in bpy.data.objects:
-    if ob not in list(bpy.context.scene.objects):
-        bpy.context.scene.objects.link(ob)
-"""
 
-# ---------
-# Open an external program from filepath/executbale
 def open_program(executable):
-
+	# Open an external program from filepath/executbale
 	if (os.path.isfile(executable) == False):
 		if (os.path.isdir(executable) == False):
 			return -1
@@ -209,7 +205,6 @@ def open_program(executable):
 
 	# for mac, if folder, check that it has .app otherwise throw -1
 	# (right now says will open even if just folder!!)
-
 
 	p = Popen(['open',executable], stdin=PIPE, stdout=PIPE, stderr=PIPE)
 	stdout, err = p.communicate(b"")
@@ -222,9 +217,9 @@ def open_program(executable):
 	return 0
 
 
-# ---------
-# cross platform way to open folder in host operating system
 def open_folder_crossplatform(folder):
+	# Cross platform way to open folder in host operating system
+
 	folder = bpy.path.abspath(folder)
 	if not os.path.isdir(folder):
 		return False
@@ -246,9 +241,9 @@ def open_folder_crossplatform(folder):
 				return False
 
 
-# ---------
-# fix/update the mineways path for any oddities
 def exec_path_expand(self, context):
+	# Fix/update the mineways path for any oddities
+
 	# code may trigger twice
 	path = self.open_mineways_path
 
@@ -268,9 +263,8 @@ def exec_path_expand(self, context):
 		# >> end command SHOULD be open Mineways.app.
 
 
-# ---------
-# add object instance not working, so workaround function:
 def addGroupInstance(groupName,loc):
+	"""Add object instance not working, so workaround function."""
 	scene = bpy.context.scene
 	ob = bpy.data.objects.new(groupName, None)
 	ob.dupli_type = 'GROUP'
@@ -280,6 +274,46 @@ def addGroupInstance(groupName,loc):
 	ob.select = True
 	return ob
 
+
+def load_mcprep_json():
+	"""Load in the json file, defered so not at addon enable time."""
+	path = conf.json_path
+	default = {
+	"blocks":{
+		"reflective":[],
+		"water":[],
+		"solid":[],
+		"emit":[],
+		"solid":[],
+		"desaturated":[],
+		"animated":[],
+		"block_mapping_mc":{},
+		"block_mapping_jmc":{},
+		"block_mapping_mineways":{}
+		}
+	}
+	if not os.path.isfile(path):
+		if conf.v:
+			print("Error, json file does not exist: ")
+			print(path)
+			# could pull from online
+		conf.json_data = default
+		return False
+	with open(path) as data_file:
+		try:
+			conf.json_data = json.load(data_file)
+			if conf.v:
+				print("Successfully read the JSON file")
+			return True
+		except Exception as e:
+			print("Failed to load json file:")
+			print(e)
+			conf.json_data = default
+
+
+def get_prefs():
+	"""Function to easily get prefs even in subclasses and folders."""
+	return bpy.context.user_preferences.addons[__package__].preferences
 
 # ---------
 # or instead of this, a class which keeps record of inputs and interprets

@@ -19,7 +19,6 @@
 
 import os
 import re
-import sys
 import traceback
 import json
 import http.client
@@ -37,7 +36,7 @@ from . import conf
 # global vars
 # -----------------------------------------------------------------------------
 
-idname = "mcprep"
+IDNAME = "mcprep"
 
 # max data/string lengths to match server-side validation,
 # if exceeded, request will return denied (no data written)
@@ -67,6 +66,7 @@ class Singleton_tracking(object):
 							self._addon+"_tracker.json")
 		self._tracker_idbackup = os.path.join(os.path.dirname(__file__),
 							os.pardir,self._addon+"_trackerid.json")
+		self._handling_error = False
 		self.json = {}
 
 
@@ -153,7 +153,7 @@ class Singleton_tracking(object):
 
 	def enable_tracking(self, toggle=True, enable=True):
 		# respect toggle primarily
-		if toggle == True:
+		if toggle:
 			self._tracking_enabled = not self._tracking_enabled
 		else:
 			self._tracking_enabled = enable
@@ -163,40 +163,33 @@ class Singleton_tracking(object):
 		self.save_tracker_json()
 
 	def initialize(self, appurl, version):
+		""" Load the enable_tracking-preference (ie in or out),
+		and create tracker data"""
 		self._appurl = appurl
 		self._version = version
-		# load the enable_tracking-preference (ie in or out)
-
-		# load or create the tracker data
-		self.set_tracker_json()
-
-		return
-
 		# create the local file
 		# push into BG push update info if true
 		# create local cache file locations
 		# including search for previous
+		self.set_tracker_json()
+		return
 
-	# interface request, either launches on main or a background thread
 	def request(self, method, path, payload, background=False, callback=None):
-		if method not in ["POST","PUT","GET"]:
+		"""Interface request, either launches on main or a background thread."""
+		if method not in ["POST", "PUT", "GET"]:
 			raise ValueError("Method must be POST, PUT, or GET")
-		if background==False:
+		if background is False:
 			return self.raw_request(method, path, payload, callback)
 		else:
-			# launch the daemon thread
-			# if self._async_checking == True:
-			# 	return
 			if self._verbose: print("Starting background thread")
 			bg_thread = threading.Thread(target=self.raw_request, args=(method, path, payload, callback))
 			bg_thread.daemon = True
 			#self._bg_threads.append(bg_thread)
 			bg_thread.start()
-
 			return "Thread launched"
 
-	# raw request, may be in background thread or main
 	def raw_request(self, method, path, payload, callback=None):
+		# raw request, may be in background thread or main
 		# convert url into domain
 		url = self._appurl.split("//")[1]
 		url = url.split("/")[0]
@@ -212,30 +205,29 @@ class Singleton_tracking(object):
 
 		if method=="POST" or method=="PUT":
 			connection.request(method, path, payload)
-		elif method == "GET": # GET
+		elif method == "GET":
 			connection.request(method, path)
 		else:
 			raise ValueError("raw_request input must be GET, POST, or PUT")
 
 		raw = connection.getresponse().read()
-		resp = json.loads( raw.decode() )
-		if self._verbose:print("Response: "+str(resp))
+		resp = json.loads(raw.decode())
+		if self._verbose: print("Response: "+str(resp))
 
 		if callback != None:
-			if self._verbose:print("Running callback")
+			if self._verbose: print("Running callback")
 			callback(resp)
 
 		return resp
 
-
 	def set_tracker_json(self):
-		if self._tracker_json == None:
+		if self._tracker_json is None:
 			raise ValueError("tracker_json is not defined")
 
-		if os.path.isfile(self._tracker_json)==True:
+		if os.path.isfile(self._tracker_json) is True:
 			with open(self._tracker_json) as data_file:
 				self.json = json.load(data_file)
-				if self._verbose:print("Read in json settings from tracker file")
+				if self._verbose: print("Read in json settings from tracker file")
 		else:
 			# set data structure
 			self.json = {
@@ -249,9 +241,9 @@ class Singleton_tracking(object):
 			if os.path.isfile(self._tracker_idbackup):
 				with open(self._tracker_idbackup) as data_file:
 					idbackup = json.load(data_file)
-					if self._verbose:print("Reinstall, getting idname")
-					if "idname" in idbackup:
-						self.json["install_id"] = idbackup["idname"]
+					if self._verbose: print("Reinstall, getting IDNAME")
+					if "IDNAME" in idbackup:
+						self.json["install_id"] = idbackup["IDNAME"]
 						self.json["status"] = "re-install"
 						self.json["install_date"] = idbackup["date"]
 
@@ -260,11 +252,11 @@ class Singleton_tracking(object):
 		# update any other properties if necessary from json
 		self._tracking_enabled = self.json["enable_tracking"]
 
-
 	def save_tracker_json(self):
+		"""Save out current state of the tracker json to file."""
 		jpath = self._tracker_json
-		outf = open(jpath,'w')
-		data_out = json.dumps(self.json,indent=4)
+		outf = open(jpath, 'w')
+		data_out = json.dumps(self.json, indent=4)
 		outf.write(data_out)
 		outf.close()
 		if self._verbose:
@@ -272,11 +264,13 @@ class Singleton_tracking(object):
 			print(self.json)
 
 	def save_tracker_idbackup(self):
+		"""Save copy of the ID file to parent folder location, for detecting
+		reinstalls in the future if the folder is deleted"""
 		jpath = self._tracker_idbackup
 
 		if "install_id" in self.json and self.json["install_id"] != None:
-			outf = open(jpath,'w')
-			idbackup = {"idname":self.json["install_id"],
+			outf = open(jpath, 'w')
+			idbackup = {"IDNAME":self.json["install_id"],
 						"date":self.json["install_date"]}
 			data_out = json.dumps(idbackup,indent=4)
 			outf.write(data_out)
@@ -286,9 +280,8 @@ class Singleton_tracking(object):
 				print(idbackup)
 
 	def remove_indentifiable_information(self, report):
-		# remove filepath from report logs, which could have included
-		# sensitive information such as usernames or names
-		# re.sub(r'(?i)File "[/\\]{1,2}.*[/\\]{1,2}', 'File "<addon_path>'+os.sep,f)
+		"""Remove filepath from report logs, which could have included
+		sensitive information such as usernames or names"""
 		return re.sub(
 				r'(?i)File "[/\\]{1,2}.*[/\\]{1,2}',
 				'File "<addon_path>'+os.sep,
@@ -310,7 +303,7 @@ Tracker = Singleton_tracking()
 
 class toggle_enable_tracking(bpy.types.Operator):
 	"""Enabled or disable usage tracking"""
-	bl_idname = idname+".toggle_enable_tracking"
+	bl_idname = IDNAME+".toggle_enable_tracking"
 	bl_label = "Toggle opt-in for analytics tracking"
 	bl_description = "Toggle anonymous usage tracking to help the developers. "+\
 			" The only data tracked is what MCprep functions are used, key "+\
@@ -334,8 +327,8 @@ class toggle_enable_tracking(bpy.types.Operator):
 
 
 class popup_feedback(bpy.types.Operator):
-	bl_idname = idname+".popup_feedback"
-	bl_label = "Thanks for using {}!".format(idname)
+	bl_idname = IDNAME+".popup_feedback"
+	bl_label = "Thanks for using {}!".format(IDNAME)
 	bl_description = "Take a survey to give feedback about the addon"
 	options = {'REGISTER', 'UNDO'}
 
@@ -361,12 +354,15 @@ class popup_feedback(bpy.types.Operator):
 
 
 class popup_report_error(bpy.types.Operator):
-	bl_idname = idname+".report_error"
+	bl_idname = IDNAME+".report_error"
 	bl_label = "MCprep ERROR OCCURED"
 	bl_description = "Report error to database, add additional comments for context"
 
 	error_report = bpy.props.StringProperty(default="")
-	comment = bpy.props.StringProperty(default="")
+	comment = bpy.props.StringProperty(
+		default="",
+		maxlen=USER_COMMENT_LENGTH,
+		options={'SKIP_SAVE'})
 
 	action = bpy.props.EnumProperty(
 		items = [('report', 'Send', 'Send the error report to developers, fully anonymous'),
@@ -404,8 +400,8 @@ class popup_report_error(bpy.types.Operator):
 				for i,s in enumerate(spl):
 					boxcol.label(s)
 					tot_ln+=1
-					if tot_ln==max_ln:break
-				if tot_ln==max_ln:break
+					if tot_ln==max_ln: break
+				if tot_ln==max_ln: break
 		boxcol.label("."*500)
 		# boxcol.label("System & addon information:")
 		sysinfo="Blender version: {}\nMCprep version: {}\nOS: {}\n MCprep install identifier: {}".format(
@@ -468,7 +464,7 @@ def trackInstalled(background=None):
 
 	def runInstall(background):
 
-		if Tracker.dev==True:
+		if Tracker.dev is True:
 			location = "/1/track/install_dev.json"
 		else:
 			location = "/1/track/install.json"
@@ -510,7 +506,7 @@ def trackInstalled(background=None):
 		Tracker.save_tracker_json()
 		Tracker.save_tracker_idbackup()
 
-	if Tracker.failsafe == True:
+	if Tracker.failsafe is True:
 		try:
 			runInstall(background)
 		except:
@@ -522,8 +518,8 @@ def trackInstalled(background=None):
 def trackUsage(function, param=None, background=None):
 	"""Send usage operator usage + basic metadata to database"""
 
-	if Tracker.tracking_enabled == False: return # skip if not opted in
-	if conf.internal_change == True: return # skip if internal run
+	if Tracker.tracking_enabled is False: return # skip if not opted in
+	if conf.internal_change is True: return # skip if internal run
 
 	if Tracker.verbose: print("Tracking usage: "+function +", param: "+str(param))
 
@@ -533,7 +529,7 @@ def trackUsage(function, param=None, background=None):
 
 	def runUsage(background):
 
-		if Tracker.dev==True:
+		if Tracker.dev is True:
 			location = "/1/track/usage_dev.json"
 		else:
 			location = "/1/track/usage.json"
@@ -556,7 +552,7 @@ def trackUsage(function, param=None, background=None):
 		print(payload)
 		resp = Tracker.request('POST', location, payload, background)
 
-	if Tracker.failsafe == True:
+	if Tracker.failsafe is True:
 		try:
 			runUsage(background)
 		except:
@@ -573,9 +569,9 @@ def logError(report, background=None):
 
 	def runError(background):
 		# ie auto sent in background, must adhere to tracking usage
-		if Tracker.tracking_enabled == False: return # skip if not opted in
+		if Tracker.tracking_enabled is False: return # skip if not opted in
 
-		if Tracker.dev==True:
+		if Tracker.dev is True:
 			location = "/1/log/user_report_dev.json"
 		else:
 			location = "/1/log/user_report.json"
@@ -617,7 +613,7 @@ def logError(report, background=None):
 			})
 		resp = Tracker.request('POST', location, payload, background)
 
-	if Tracker.failsafe == True:
+	if Tracker.failsafe is True:
 		try:
 			runError(background)
 		except:
@@ -631,12 +627,20 @@ def report_error(function):
 
 	def wrapper(self, context):
 		try:
-			return function(self, context)
+			res = function(self, context)
+			Tracker._handling_error = False
+			return res
 		except:
-			s = traceback.format_exc()
-			print(s) # always print raw traceback
-			s = Tracker.remove_indentifiable_information(s)
-			bpy.ops.mcprep.report_error('INVOKE_DEFAULT',error_report=s)
+			err = traceback.format_exc()
+			print(err) # always print raw traceback
+			err = Tracker.remove_indentifiable_information(err)
+
+			# Prevent recusrive popups for errors if operators call other
+			# operators, only show the inner-most errors
+			if Tracker._handling_error is False:
+				Tracker._handling_error = True
+				bpy.ops.mcprep.report_error('INVOKE_DEFAULT',error_report=err)
+
 			return {"CANCELLED"}
 	return wrapper
 
@@ -663,7 +667,7 @@ def register(bl_info):
 	# used to define which server source, not just if's below
 	Tracker.dev = conf.dev # True or False
 
-	if Tracker.dev == True:
+	if Tracker.dev is True:
 		Tracker.verbose = True
 		Tracker.background = True # test either way
 		Tracker.failsafe = False # test either way
@@ -683,5 +687,4 @@ def unregister():
 
 
 if __name__ == "__main__":
-	register({"bl_info":(2,99,0)})
-
+	register({"bl_info":(2, 99, 0)})
