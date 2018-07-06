@@ -222,7 +222,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 				('tracker_updater', 'Tracking/Updater', 'Change tracking and updating settings')],
 		name = "Exporter")
 	verbose = bpy.props.BoolProperty(
-		name = "Verbose",
+		name = "Verbose logging",
 		description = "Print out more information in the console",
 		default = False,
 		update = change_verbose)
@@ -288,8 +288,8 @@ class McprepPreference(bpy.types.AddonPreferences):
 			row = layout.row()
 
 			row.label("World Importing & Meshswapping")
-			layout = layout.box()
-			split = layout.split(percentage=0.3)
+			box = layout.box()
+			split = box.split(percentage=0.3)
 			col = split.column()
 			col.label("Default Exporter:")
 			col = split.column()
@@ -322,8 +322,8 @@ class McprepPreference(bpy.types.AddonPreferences):
 
 			row = layout.row()
 			row.label("Texture / Resource packs")
-			layout = layout.box()
-			split = layout.split(percentage=0.3)
+			box = layout.box()
+			split = box.split(percentage=0.3)
 			col = split.column()
 			col.label("Texture pack folder")
 			col = split.column()
@@ -339,8 +339,8 @@ class McprepPreference(bpy.types.AddonPreferences):
 
 			row = layout.row()
 			row.label("Mob spawning")
-			layout = layout.box()
-			split = layout.split(percentage=0.3)
+			box = layout.box()
+			split = box.split(percentage=0.3)
 			col = split.column()
 			col.label("Rig Folder")
 			col = split.column()
@@ -356,8 +356,8 @@ class McprepPreference(bpy.types.AddonPreferences):
 
 			row = layout.row()
 			row.label("Skin swapping")
-			layout = layout.box()
-			split = layout.split(percentage=0.3)
+			box = layout.box()
+			split = box.split(percentage=0.3)
 			col = split.column()
 			col.label("Skin Folder")
 			col = split.column()
@@ -515,10 +515,9 @@ class McprepWorldImports(bpy.types.Panel):
 			box = col.box()
 			b_row = box.row()
 			b_col = b_row.column(align=False)
-			b_col.prop(scn_props, "use_custom_texturepack")
 			row = b_col.row(align=True)
-			row.enabled = scn_props.use_custom_texturepack
 			row.prop(context.scene, "mcprep_custom_texturepack_path", text="")
+			row.operator("mcprep.reset_texture_path", text="", icon="LOAD_FACTORY")
 
 			b_row = box.row()
 			b_col = b_row.column(align=True)
@@ -853,12 +852,6 @@ class McprepProps(bpy.types.PropertyGroup):
 		name = "Use Principled Shader",
 		description = "If available and using cycles, build materials using the principled shader",
 		default = True
-		)
-	use_custom_texturepack = bpy.props.BoolProperty(
-		name = "Use texturepack",
-		description = "Use textures found in this folder, must match material"+\
-			"names matching material names in jm2cobj, Mineways, or Minecraft itself",
-		default = False
 		)
 	autoFindMissingTextures = bpy.props.BoolProperty(
 		name = "Auto-find missing images",

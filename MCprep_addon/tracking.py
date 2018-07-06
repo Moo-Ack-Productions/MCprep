@@ -181,7 +181,7 @@ class Singleton_tracking(object):
 		if background is False:
 			return self.raw_request(method, path, payload, callback)
 		else:
-			if self._verbose: print("Starting background thread")
+			if self._verbose: print("Starting background thread for track call")
 			bg_thread = threading.Thread(target=self.raw_request, args=(method, path, payload, callback))
 			bg_thread.daemon = True
 			#self._bg_threads.append(bg_thread)
@@ -549,7 +549,6 @@ def trackUsage(function, param=None, background=None):
 				"param":str(param),
 				"ID":Tracker.json["install_id"]
 			})
-		print(payload)
 		resp = Tracker.request('POST', location, payload, background)
 
 	if Tracker.failsafe is True:

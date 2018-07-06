@@ -338,10 +338,12 @@ def set_cycles_texture(image, material, extra_passes=False):
 	return changed
 
 
-# input is image datablock,
-# TODO: when going through layers, see if enabled already for normal / spec or not
-# and enabled/disable accordingly (e.g. if was resource with normal, now is not)
 def set_internal_texture(image, material, extra_passes=False):
+	"""Set texture for internal engine. Input is image datablock."""
+	# TODO: when going through layers, see if enabled already for normal /
+	# spec or not and enabled/disable accordingly (e.g. if was resource
+	# with normal, now is not)
+
 	# check if there is more data to see pass types
 	img_sets = {}
 	if extra_passes:
@@ -379,7 +381,7 @@ def set_internal_texture(image, material, extra_passes=False):
 	for i,sl in enumerate(material.texture_slots):
 
 		if i==base:continue # skip primary texture set
-		if "normal" in img_sets: # pop item each time
+		if "normal" in img_sets and img_sets["normal"]: # pop item each time
 			if tex and tex.name+"_n" in bpy.data.textures:
 				new_tex = bpy.data.textures[tex.name+"_n"]
 			else:
@@ -392,7 +394,7 @@ def set_internal_texture(image, material, extra_passes=False):
 			sl.use_map_color_diffuse = False
 			sl.use_map_specular = False
 			sl.use = True
-		elif "spec" in img_sets:
+		elif "spec" in img_sets and img_sets["spec"]:
 			if tex and tex.name+"_s" in bpy.data.textures:
 				new_tex = bpy.data.textures[tex.name+"_s"]
 			f = img_sets.pop("normal")
@@ -407,8 +409,58 @@ def set_internal_texture(image, material, extra_passes=False):
 	return True
 
 
+def get_node_for_pass(material, pass_name):
+	"""Assumes cycles material, returns texture node for given pass in mat."""
+	if pass_name not in ["diffuse", "specular", "normal", "displace"]:
+		return None
+	if not material.node_tree:
+		return None
+	return_node = None
+	for node in material.node_tree.nodes:
+		if node.type != "TEX_IMAGE":
+			continue
+		elif "MCPREP_diffuse" in node and pass_name == "diffuse":
+			return_node = node
+		elif "MCPREP_normal" in node and pass_name == "normal":
+			return_node = node
+		elif "MCPREP_specular" in node and pass_name == "specular":
+			return_node = node
+		elif "MCPREP_specular" in node and pass_name == "displace":
+			return_node = node
+		else:
+			if not return_node:
+				return_node = node
+	print("RETURNING NODE: "+str(return_node))
+	return return_node
+
+
+def get_texlayer_for_pass(material, pass_name):
+	"""Assumes BI material, returns texture layer for given pass in mat."""
+	if pass_name not in ["diffuse", "specular", "normal", "displace"]:
+		return None
+
+	if not hasattr(material, "texture_slots"):
+		return None
+
+	for sl in material.texture_slots:
+		if not (sl and sl.use and sl.texture!=None
+				and hasattr(sl.texture, "image")
+				and sl.texture.image!=None): continue
+		if sl.use_map_color_diffuse and pass_name == "diffuse":
+			return sl.texture
+		elif sl.use_map_normal and pass_name == "normal":
+			return sl.texture
+		elif sl.use_map_specular and pass_name == "normal":
+			return sl.texture
+		elif sl.use_map_displacement and pass_name == "displace":
+			return sl.texture
+
+
 def get_textures(material):
-	"""Extract the image datablocks for a given material."""
+	"""Extract the image datablocks for a given material.
+
+	Returns {"diffuse":texture, "normal":None, ...}
+	"""
 	image_block = None
 	passes = {"diffuse":None, "specular":None, "normal":None,
 				"displace":None}
@@ -416,8 +468,9 @@ def get_textures(material):
 	# first try cycles materials, fall back to internal if not present
 	if material.use_nodes == True:
 		for node in material.node_tree.nodes:
-			if node.type != "TEX_IMAGE": continue
-			if "MCPREP_diffuse" in node:
+			if node.type != "TEX_IMAGE":
+				continue
+			elif "MCPREP_diffuse" in node:
 				passes["diffuse"] = node.image
 			elif "MCPREP_normal" in node:
 				passes["normal"] = node.image
@@ -428,6 +481,7 @@ def get_textures(material):
 					passes["diffuse"] = node.image
 
 	# look through internal, unless already found main diffuse pass
+	# TODO: Consider checking more explicitly checking based on selected engine
 	if hasattr(material, "texture_slots") and not passes["diffuse"]:
 		for sl in material.texture_slots:
 			if not (sl and sl.use and sl.texture!=None
@@ -448,7 +502,8 @@ def get_textures(material):
 def find_additional_passes(image_file):
 	"""Find relevant passes like normal and spec in same folder as image."""
 	abs_img_file = bpy.path.abspath(image_file)
-	if not os.path.isfile(abs_img_file): return []
+	if not os.path.isfile(abs_img_file):
+		return {}
 
 	img_dir = os.path.dirname(abs_img_file)
 	img_base = os.path.basename(abs_img_file)
@@ -459,24 +514,24 @@ def find_additional_passes(image_file):
 	normal = [" n","_n","-n","normal","norm","nrm","normals"]
 	spec = [" s","_s","-s","specular","spec"]
 	disp = [" d","_d","-d","displace","disp","bump"," b","_b","-b"]
-	res = {}
+	res = {"diffuse":image_file}
 
 	# find lowercase base name matching with valid extentions
 	filtered_files = [f for f in os.listdir(img_dir)
 					if os.path.isfile(os.path.join(img_dir,f)) and
-					f.lower().startswith(img_base.lower()) and
+					f.lower().startswith(base_name.lower()) and
 					os.path.splitext(f)[-1].lower() in exts
 					]
-	for f in filtered_files:
+	for filtered in filtered_files:
 		for npass in normal:
-			if f.lower().endswith(npass):
-				res["normal"]=os.path.join(img_dir,f)
+			if filtered.lower().endswith(npass):
+				res["normal"]=os.path.join(img_dir,filtered)
 		for spass in spec:
-			if f.lower().endswith(spass):
-				res["specular"]=os.path.join(img_dir,f)
+			if filtered.lower().endswith(spass):
+				res["specular"]=os.path.join(img_dir,filtered)
 		for dpass in disp:
-			if f.lower().endswith(dpass):
-				res["displace"]=os.path.join(img_dir,f)
+			if filtered.lower().endswith(dpass):
+				res["displace"]=os.path.join(img_dir,filtered)
 	return res
 
 
@@ -486,7 +541,6 @@ def replace_missing_texture(image):
 	if image == None:
 		if conf.v: print("Image block is none:" + str(image))
 		return 0
-
 
 	if image.size[0] != 0 and image.size[1] != 0:
 		return 0
@@ -507,8 +561,8 @@ def matgen_cycles_principled(mat, passes, use_reflections):
 
 	# get the texture, but will fail if NoneType
 	image_diff = passes["diffuse"]
-	image_norm = passes["diffuse"]
-	image_spec = passes["diffuse"]
+	image_norm = passes["normal"]
+	image_spec = passes["specular"]
 	image_disp = None # not used
 
 	if image_diff==None:
@@ -595,7 +649,7 @@ def matgen_cycles_principled(mat, passes, use_reflections):
 		nodeTexDiff.location = (-600,0)
 
 		links.new(nodeTexDiff.outputs["Color"],nodeEmit.inputs[0])
-		links.new(nodeDiff.outputs["BSDF"],nodeMixEmitDiff.inputs[1])
+		# links.new(nodeDiff.outputs["BSDF"],nodeMixEmitDiff.inputs[1])
 		links.new(nodeEmit.outputs["Emission"],nodeMixEmitDiff.inputs[2])
 		links.new(nodeMixEmitDiff.outputs["Shader"],nodeMix1.inputs[2])
 
@@ -606,8 +660,8 @@ def matgen_cycles_original(mat, passes, use_reflections):
 	"""Generate basic cycles material, defaults to using transparency node."""
 
 	image_diff = passes["diffuse"]
-	image_norm = passes["diffuse"]
-	image_spec = passes["diffuse"]
+	image_norm = passes["normal"]
+	image_spec = passes["specular"]
 	image_disp = None # not used
 
 	if image_diff==None:

@@ -287,6 +287,17 @@ class McprepSwapTexturePack(bpy.types.Operator, ImportHelper):
 		return {'FINISHED'}
 
 
+class McprepResetTexturepackPath(bpy.types.Operator):
+	bl_idname = "mcprep.reset_texture_path"
+	bl_label = "Reset texturepack path"
+	bl_description = "Resets the texturepack folder to the MCprep default saved in preferences"
+
+	@tracking.report_error
+	def execute(self, context):
+		addon_prefs = util.get_prefs()
+		context.scene.mcprep_custom_texturepack_path = addon_prefs.custom_texturepack_path
+		return {'FINISHED'}
+
 class McprepCombineMaterials(bpy.types.Operator):
 	bl_idname = "mcprep.combine_materials"
 	bl_label = "Combine materials"
