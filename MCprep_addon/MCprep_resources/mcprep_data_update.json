@@ -3,6 +3,7 @@
 	"reflective":["glass*","frosted_ice_*", "ice","ice_packed", "door_iron_upper",
 		"door_iron_lower","diamond_block","iron_block","gold_block",
 		"emerald_block","iron_trapdoor","iron_bars","Ice","Packed_Ice",
+		"water_flow", "water_overlay", "water_still",
 
 		"Block_of_Diamond","Block_of_Emerald","Block_of_Gold",
 		"Block_of_Iron","Glass","Glass_Pane","Stained_Glass*"
@@ -18,7 +19,9 @@
 		"magma","beacon","lava",
 
 		"Beacon","Fire","Glowstone","Redstone_Lamp_(active)","Sea_Lantern",
-		"Stationary_Lava"
+		"Stationary_Lava",
+
+		"torch_flame"
 	],
 	"desaturated":["vine","tallgrass","waterlily","leaves*",
 		"melon_stem_connected","melon_stem_disconnected",
@@ -29,18 +32,39 @@
 		"grass_side_overlay","grass_top","leaves_acacia","leaves_big_oak",
 		"leaves_birch","leaves_jungle","leaves_oak","leaves_spruce"
 	],
-	"animated":["lava_still","entity/end_portal","lava_flow","portal","sea_lantern:flipper",
-		"water_flow","water_still","fire_layer_0","fire_layer_1","magma",
-		"repeating_command_block_back","command_block_side",
-		"repeating_command_block_conditional","repeating_command_block_front",
-		"repeating_command_block_side","chain_command_block_back",
-		"chain_command_block_conditional","chain_command_block_front",
-		"chain_command_block_side","command_block_back",
-		"command_block_conditional","command_block_front",
-		"prismarine_rough",
-
-		"Stationary_Lava"
-	],
+	"animated":{
+		"lava_still":["linear", 2, false],
+		"entity/end_portal":[],
+		"lava_flow":[],
+		"portal":[],
+		"sea_lantern":["flipper"],
+		"water_flow":[],
+		"water_still":[],
+		"fire_layer_0":[],
+		"fire_layer_1":[],
+		"magma":[],
+		"repeating_command_block_back":[],
+		"command_block_side":[],
+		"repeating_command_block_conditional":[],
+		"repeating_command_block_front":[],
+		"repeating_command_block_side":[],
+		"chain_command_block_back":[],
+		"chain_command_block_conditional":[],
+		"chain_command_block_front":[],
+		"chain_command_block_side":[],
+		"command_block_back":[],
+		"command_block_conditional":[],
+		"command_block_front":[],
+		"prismarine_rough":[]
+	},
+	"animated_mineways_index":{
+		"Stationary_Lava":{
+			"lava_still":[3,9],
+			"lava_flow":[5,15]
+		},
+		"fire_layer_0":[0,0],
+		"magma":[24,14]
+	},
 	"solid":["sand","dirt","grass_side","grass_top",
 			"dispenser_front_horizontal","furnace_top","redstone_block","gold_block",
 			"stone","iron_ore","coal_ore","wool_*","stained_clay_*",

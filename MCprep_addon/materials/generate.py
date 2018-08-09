@@ -233,9 +233,12 @@ def matprep_internal(mat, passes, use_reflections):
 
 def matprep_cycles(mat, passes, use_reflections, use_principled):
 	"""Determine how to prep or generate the cycles materials."""
-	# TODO: Detect if there are normal or spec maps
 
-	if use_principled and hasattr(bpy.types, 'ShaderNodeBsdfPrincipled'):
+	matGen = util.nameGeneralize(mat.name)
+	canon, form = get_mc_canonical_name(matGen)
+	if checklist(canon,conf.json_data['blocks']['emit']):
+		res = matgen_cycles_emit(mat, passes)
+	elif use_principled and hasattr(bpy.types, 'ShaderNodeBsdfPrincipled'):
 		res = matgen_cycles_principled(mat, passes, use_reflections)
 	else:
 		res = matgen_cycles_original(mat, passes, use_reflections)
@@ -539,7 +542,7 @@ def replace_missing_texture(image):
 	"""Given image datablock, try to replace image from texturepack if missing."""
 
 	if image == None:
-		if conf.v: print("Image block is none:" + str(image))
+		# if conf.vv: print("\tImage block is none:" + str(image))
 		return 0
 
 	if image.size[0] != 0 and image.size[1] != 0:
@@ -559,6 +562,9 @@ def replace_missing_texture(image):
 def matgen_cycles_principled(mat, passes, use_reflections):
 	"""Generate principled cycles material, defaults to using transparency."""
 
+	matGen = util.nameGeneralize(mat.name)
+	canon, form = get_mc_canonical_name(matGen)
+
 	# get the texture, but will fail if NoneType
 	image_diff = passes["diffuse"]
 	image_norm = passes["normal"]
@@ -572,9 +578,6 @@ def matgen_cycles_principled(mat, passes, use_reflections):
 		print("Source image missing for material: " + mat.name)
 		# TODO: find replacement texture here, if enabled
 		return
-
-	matGen = util.nameGeneralize(mat.name)
-	canon, form = get_mc_canonical_name(matGen)
 
 	#enable nodes
 	mat.use_nodes = True
@@ -591,14 +594,22 @@ def matgen_cycles_principled(mat, passes, use_reflections):
 	nodeNormal = nodes.new('ShaderNodeNormalMap')
 	nodeOut = nodes.new('ShaderNodeOutputMaterial')
 
+	# set names
+	nodeTexDiff.name = "Diffuse Tex"
+	nodeTexDiff.label = "Diffuse Tex"
+	nodeTexNorm.name = "Normal Tex"
+	nodeTexNorm.label = "Normal Tex"
+	nodeTexSpec.name = "Specular Tex"
+	nodeTexSpec.label = "Specular Tex"
+
 	# set location and connect
 	nodeTexDiff.location = (-400,0)
 	nodeTexNorm.location = (-600,-275)
-	nodeTexSpec.location = (-600,275)
+	nodeTexSpec.location = (-600,0)
 	nodeNormal.location = (-400,-275)
-	# principled.location = (0,-150)
-	nodeTrans.location = (-200,0)
-	nodeMix1.location = (0,0)
+	principled.location = (0,0)
+	nodeTrans.location = (-400,100)
+	nodeMix1.location = (200,0)
 	nodeOut.location = (400,0)
 
 	# default links
@@ -611,7 +622,7 @@ def matgen_cycles_principled(mat, passes, use_reflections):
 	links.new(nodeTrans.outputs["BSDF"],nodeMix1.inputs[1])
 	links.new(principled.outputs["BSDF"],nodeMix1.inputs[2])
 
-	links.new(nodeTrans.outputs["BSDF"],nodeOut.inputs[0])
+	links.new(nodeMix1.outputs["Shader"],nodeOut.inputs[0])
 
 	# annotate texture nodes, and load images if available
 	nodeTexDiff["MCPREP_diffuse"] = True
@@ -629,35 +640,34 @@ def matgen_cycles_principled(mat, passes, use_reflections):
 		nodeTexNorm.mute = True
 		nodeNormal.mute = True
 
+	nodeTexDiff.interpolation = 'Closest'
+	nodeTexSpec.interpolation = 'Closest'
 
 	# apply additional settings
+	mat.cycles.sample_as_light = False
 	if use_reflections and checklist(canon,conf.json_data['blocks']['reflective']):
 		principled.inputs[5].default_value = 0.5
+		principled.inputs[7].default_value = 0.1
 	else:
-		principled.inputs[4].default_value = 1  # set metal
+		principled.inputs[4].default_value = 0  # unset metallic (dielectric)
 		principled.inputs[5].default_value = 0  # set specular
-		principled.inputs[7].default_value = 0  # set roughness
+		principled.inputs[7].default_value = 0.1  # set roughness
 
-	if checklist(canon,conf.json_data['blocks']['emit']):
-		# add an emit node, insert it before the first mix node
-		nodeMixEmitDiff = nodes.new('ShaderNodeMixShader')
-		nodeEmit = nodes.new('ShaderNodeEmission')
-		# nodeMixEmitDiff = nodes.new('ShaderNodeMixShader')
-		# nodeEmit = nodes.new('ShaderNodeEmission')
-		nodeEmit.location = (-400,-150)
-		nodeMixEmitDiff.location = (-200,-150)
-		nodeTexDiff.location = (-600,0)
-
-		links.new(nodeTexDiff.outputs["Color"],nodeEmit.inputs[0])
-		# links.new(nodeDiff.outputs["BSDF"],nodeMixEmitDiff.inputs[1])
-		links.new(nodeEmit.outputs["Emission"],nodeMixEmitDiff.inputs[2])
-		links.new(nodeMixEmitDiff.outputs["Shader"],nodeMix1.inputs[2])
+	if checklist(canon,conf.json_data['blocks']['solid']):
+		# nodeMix1.inputs[0].default_value = 1 # no transparency
+		nodes.remove(nodeTrans)
+		nodes.remove(nodeMix1)
+		# nodeDiff.location[1] += 150
+		links.new(principled.outputs["BSDF"],nodeOut.inputs[0])
 
 	return 0 # return 0 once implemented
 
 
 def matgen_cycles_original(mat, passes, use_reflections):
 	"""Generate basic cycles material, defaults to using transparency node."""
+
+	matGen = util.nameGeneralize(mat.name)
+	canon, form = get_mc_canonical_name(matGen)
 
 	image_diff = passes["diffuse"]
 	image_norm = passes["normal"]
@@ -671,9 +681,6 @@ def matgen_cycles_original(mat, passes, use_reflections):
 		print("Source image missing for material: " + mat.name)
 		# TODO: find replacement texture here, if enabled
 		return
-
-	matGen = util.nameGeneralize(mat.name)
-	canon, form = get_mc_canonical_name(matGen)
 
 	#enable nodes
 	mat.use_nodes = True
@@ -691,6 +698,14 @@ def matgen_cycles_original(mat, passes, use_reflections):
 	nodeTexSpec = nodes.new('ShaderNodeTexImage')
 	nodeNormal = nodes.new('ShaderNodeNormalMap')
 	nodeOut = nodes.new('ShaderNodeOutputMaterial')
+
+	# node names
+	nodeTexDiff.name = "Diffuse Tex"
+	nodeTexDiff.label = "Diffuse Tex"
+	nodeTexNorm.name = "Normal Tex"
+	nodeTexNorm.label = "Normal Tex"
+	nodeTexSpec.name = "Specular Tex"
+	nodeTexSpec.label = "Specular Tex"
 
 	# set location and connect
 	nodeTexDiff.location = (-400,0)
@@ -740,6 +755,7 @@ def matgen_cycles_original(mat, passes, use_reflections):
 	nodeGloss.inputs[1].default_value = 0.1 # roughness
 
 	# the above are all default nodes. Now see if in specific lists
+	mat.cycles.sample_as_light = False
 	if use_reflections and checklist(canon,conf.json_data['blocks']['reflective']):
 		nodeMix2.inputs[0].default_value = 0.3  # mix factor
 		nodeGloss.inputs[1].default_value = 0.005 # roughness
@@ -748,39 +764,6 @@ def matgen_cycles_original(mat, passes, use_reflections):
 		nodeMix2.hide = True
 		nodeGloss.mute = True
 		nodeGloss.hide = True
-
-	if checklist(canon,conf.json_data['blocks']['emit']):
-		# TODO: add falloff node, colormixRGB node, LightPass node;
-		# change the input to colormix RGB for 2 to be 2.5,2.5,2.5
-		# and pass isCamerRay into 0 of colormix (factor), and pass
-		# in light pass into 1 of colormix ; this goes into strength
-		# then, disable or replace the diffuse node entirely, and
-		# glossy too (ovveride?)?
-		# rather, REPLACE the diffuse node with the emit, instead of joinging
-		# via another mix shader and nodeDiff
-
-		# add an emit node, insert it before the first mix node
-		nodeMixEmitDiff = nodes.new('ShaderNodeMixShader')
-		nodeEmit = nodes.new('ShaderNodeEmission')
-		# nodeMixEmitDiff = nodes.new('ShaderNodeMixShader')
-		# nodeEmit = nodes.new('ShaderNodeEmission')
-		nodeEmit.location = (-400,-150)
-		nodeMixEmitDiff.location = (-200,-150)
-		nodeDiff.location = (-400,0)
-		nodeTexDiff.location = (-600,0)
-
-		links.new(nodeTexDiff.outputs["Color"],nodeEmit.inputs[0])
-		links.new(nodeDiff.outputs["BSDF"],nodeMixEmitDiff.inputs[1])
-		links.new(nodeEmit.outputs["Emission"],nodeMixEmitDiff.inputs[2])
-		links.new(nodeMixEmitDiff.outputs["Shader"],nodeMix1.inputs[2])
-
-		nodeMixEmitDiff.inputs[0].default_value = 1
-		nodeEmit.inputs[1].default_value = 2.5
-		# emit value
-		# sample as a light
-		mat.cycles.sample_as_light = True
-	else:
-		mat.cycles.sample_as_light = False
 
 	if checklist(canon,conf.json_data['blocks']['water']):
 		# setup the animation??
@@ -802,4 +785,72 @@ def matgen_cycles_original(mat, passes, use_reflections):
 			nodeTexDiff.image_user.frame_duration = intlength
 	except:
 		pass
+	return 0
+
+def matgen_cycles_emit(mat, passes):
+	"""Generates light emiting cycles material, with transaprency."""
+
+	image_diff = passes["diffuse"]
+	# image_norm = passes["normal"]
+	# image_spec = passes["specular"]
+	# image_disp = None # not used
+	if image_diff==None:
+		print("Could not find diffuse image, halting generation: "+mat.name)
+		return
+
+	mat.use_nodes = True
+	nodes = mat.node_tree.nodes
+	links = mat.node_tree.links
+	nodes.clear()
+
+	# if not checklist(canon,conf.json_data['blocks']['emit']):
+	# if calling this method, don't even check type - just assume emit
+
+	# TODO: add falloff node, colormixRGB node, LightPass node;
+	# change the input to colormix RGB for 2 to be 2.5,2.5,2.5
+	# and pass isCamerRay into 0 of colormix (factor), and pass
+	# in light pass into 1 of colormix ; this goes into strength
+
+	# add an emit node, insert it before the first mix node
+	nodeLightPath = nodes.new('ShaderNodeLightPath')
+	nodeTexDiff = nodes.new('ShaderNodeTexImage')
+	nodeTrans = nodes.new('ShaderNodeBsdfTransparent')
+	nodeEmit = nodes.new('ShaderNodeEmission')
+	nodeEmitVisible = nodes.new('ShaderNodeEmission')
+	nodeMixEmits = nodes.new('ShaderNodeMixShader')
+	nodeMix = nodes.new('ShaderNodeMixShader')
+	nodeFalloff = nodes.new('ShaderNodeLightFalloff')
+	nodeOut = nodes.new('ShaderNodeOutputMaterial')
+
+	nodeLightPath.location = (-600, 0)
+	nodeTexDiff.location = (-400, -150)
+	nodeTrans.location = (-200, 0)
+	nodeEmit.location = (-200, -100)
+	nodeEmitVisible.location = (-200, -220)
+	nodeMixEmits.location = (0, 0)
+	nodeMix.location = (200, 0)
+	nodeFalloff.location = (-400, 0)
+	nodeOut.location = (400, 0)
+
+	# links.new(nodeMixEmitDiff.outputs["Color"], nodeEmit.inputs[0])
+	links.new(nodeTexDiff.outputs["Color"], nodeEmit.inputs[0])
+	links.new(nodeTexDiff.outputs["Color"], nodeEmitVisible.inputs[0])
+	links.new(nodeTexDiff.outputs["Alpha"], nodeMix.inputs[0])
+	links.new(nodeFalloff.outputs["Quadratic"], nodeEmit.inputs[1])
+	links.new(nodeLightPath.outputs["Is Camera Ray"], nodeMixEmits.inputs[0])
+	links.new(nodeEmit.outputs["Emission"], nodeMixEmits.inputs[1])
+	links.new(nodeEmitVisible.outputs["Emission"], nodeMixEmits.inputs[2])
+	links.new(nodeTrans.outputs["BSDF"], nodeMix.inputs[1])
+	links.new(nodeMixEmits.outputs["Shader"], nodeMix.inputs[2])
+	links.new(nodeMix.outputs["Shader"], nodeOut.inputs[0])
+
+	nodeTexDiff.interpolation = 'Closest'
+	nodeTexDiff.image = image_diff
+	nodeTexDiff["MCPREP_diffuse"] = True  # or call it emit?
+	nodeEmitVisible.inputs[1].default_value = 1.0
+	nodeFalloff.inputs[0].default_value = 30  # controls actual light emitted
+	nodeFalloff.inputs[1].default_value = 0.03
+
+	mat.cycles.sample_as_light = True
+
 	return 0

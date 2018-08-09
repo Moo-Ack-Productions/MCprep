@@ -20,6 +20,7 @@ import bpy
 import json
 import os
 import random
+import subprocess
 
 
 from subprocess import Popen, PIPE, call
@@ -197,11 +198,19 @@ def link_selected_objects_to_scene():
 
 def open_program(executable):
 	# Open an external program from filepath/executbale
+	executable = bpy.path.abspath(executable)
 	if (os.path.isfile(executable) == False):
 		if (os.path.isdir(executable) == False):
 			return -1
 		elif ".app" not in executable:
 			return -1
+
+	try:  # first attempt to use blender's built-in method
+		res = bpy.ops.wm.path_open(filepath=executable)
+		if res == {"FINISHED"}:
+			return True
+	except:
+		pass
 
 	# for mac, if folder, check that it has .app otherwise throw -1
 	# (right now says will open even if just folder!!)
@@ -218,11 +227,19 @@ def open_program(executable):
 
 
 def open_folder_crossplatform(folder):
-	# Cross platform way to open folder in host operating system
+	"""Cross platform way to open folder in host operating system."""
 
 	folder = bpy.path.abspath(folder)
 	if not os.path.isdir(folder):
 		return False
+
+	try:  # first attempt to use blender's built-in method
+		res = bpy.ops.wm.path_open(filepath=folder)
+		if res == {"FINISHED"}:
+			return True
+	except:
+		pass
+
 	try:
 		# windows... untested
 		subprocess.Popen('explorer "{x}"'.format(x=folder))
@@ -279,17 +296,17 @@ def load_mcprep_json():
 	"""Load in the json file, defered so not at addon enable time."""
 	path = conf.json_path
 	default = {
-	"blocks":{
-		"reflective":[],
-		"water":[],
-		"solid":[],
-		"emit":[],
-		"solid":[],
-		"desaturated":[],
-		"animated":[],
-		"block_mapping_mc":{},
-		"block_mapping_jmc":{},
-		"block_mapping_mineways":{}
+		"blocks":{
+			"reflective":[],
+			"water":[],
+			"solid":[],
+			"emit":[],
+			"solid":[],
+			"desaturated":[],
+			"animated":[],
+			"block_mapping_mc":{},
+			"block_mapping_jmc":{},
+			"block_mapping_mineways":{}
 		}
 	}
 	if not os.path.isfile(path):
@@ -307,7 +324,7 @@ def load_mcprep_json():
 			return True
 		except Exception as e:
 			print("Failed to load json file:")
-			print(e)
+			print('\t',e)
 			conf.json_data = default
 
 

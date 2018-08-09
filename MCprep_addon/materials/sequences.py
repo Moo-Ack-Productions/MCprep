@@ -34,7 +34,7 @@ from .. import util
 # Supporting functions
 # -----------------------------------------------------------------------------
 
-def export_image_to_sequence(image_path, output_folder=None, form=None):
+def export_image_to_sequence(image_path, params, output_folder=None, form=None):
 	"""Convert image tiles into image sequence files.
 
 	image: image filepath source
@@ -57,6 +57,11 @@ def export_image_to_sequence(image_path, output_folder=None, form=None):
 	# use the source image's filepath, or fallback to blend file's,
 	if not output_folder:
 		output_folder = os.path.dirname(image_path)
+	try:  # check parent folder exists/create if needed
+		os.mkdir(output_folder)
+	except OSError as exc:
+		if exc.errno != errno.EEXIST:
+			raise
 
 	basename, ext = os.path.splitext(os.path.basename(image_path))
 
@@ -83,10 +88,12 @@ def export_image_to_sequence(image_path, output_folder=None, form=None):
 	for i in range(tiles):
 		if conf.v:
 			print("Exporting sequence tile " + str(i))
-		tile_name = basename + "_" + str(i).zfill(4)
+		tile_name = basename + "_" + str(i+1).zfill(4)
 		out_path = os.path.join(output_folder, tile_name + ext )
 		if not first_img:
 			first_img = out_path
+
+		revi = tiles-i-1 # to reverse index, based on MC tile order
 
 		# new image for copying pixels over to
 		if form != "minways":
@@ -96,8 +103,8 @@ def export_image_to_sequence(image_path, output_folder=None, form=None):
 
 			if len(img_tile.pixels)*tiles != len(image.pixels):
 				raise Exception("Mis-match of tile size and source sequence")
-			start = int(pxlen/tiles*i)
-			end = int(pxlen/tiles*(i+1))
+			start = int(pxlen/tiles*revi)
+			end = int(pxlen/tiles*(revi+1))
 			img_tile.pixels = image.pixels[start:end]
 			img_tile.save()
 			# verify it now exists
@@ -156,8 +163,8 @@ def set_sequence_to_texnode(node, image_path):
 		print("Loaded in " + str(image_data))
 	image_data.source = 'SEQUENCE'
 	node.image = image_data
-	node.image_user.frame_duration = img_count # shouldn't it be here? -1
-	node.image_user.frame_start = start_img-1
+	node.image_user.frame_duration = img_count
+	node.image_user.frame_start = start_img
 	node.image_user.frame_offset = 0
 	node.image_user.use_cyclic = True
 	node.image_user.use_auto_refresh = True
@@ -364,13 +371,6 @@ class McprepPrepAnimatedTextures(bpy.types.Operator):
 
 			try:  # check parent folder exists/create if needed
 				os.mkdir(os.path.dirname(seq_path))
-			except OSError as exc:
-				if exc.errno == errno.EACCES:
-					raise Exception(perm_denied)
-				elif exc.errno != errno.EEXIST:
-					raise
-			try:  # check folder exists/create if needed
-				os.mkdir(seq_path)
 			except OSError as exc:
 				if exc.errno == errno.EACCES:
 					raise Exception(perm_denied)

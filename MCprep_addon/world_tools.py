@@ -49,6 +49,7 @@ class MCP_open_jmc2obj(bpy.types.Operator):
 		options={'HIDDEN'}
 		)
 
+	@tracking.report_error
 	def execute(self,context):
 		if self.skipUsage==False:
 			tracking.trackUsage("open_program","jmc2obj")
@@ -115,6 +116,7 @@ class MCP_open_mineways(bpy.types.Operator):
 		options={'HIDDEN'}
 		)
 
+	@tracking.report_error
 	def execute(self,context):
 		if self.skipUsage==False:
 			tracking.trackUsage("open_program","mineways")
@@ -186,31 +188,8 @@ class MCP_prep_world(bpy.types.Operator):
 		print("WORK IN PROGRESS")
 		Trigger_intentional_error_here
 
-		#return tracking.error_wrapper(self, context, self.execute_safe)
 		return {'FINISHED'}
-		# try:
-		# 	self.execute_safe(context)
-		# except:
-		# 	s = traceback.format_exc()
-		# 	bpy.ops.mcprep.report_error('INVOKE_DEFAULT',error_report=s)
-		# 	return {"CANCELLED"}
 
-
-	def execute_safe(self, context):
-		print("WORK IN PROGRESS")
-		Trigger_intentional_error_here
-		if True:
-			self.report({"ERROR"},"Not yet developed")
-			return {'CANCELLED'}
-
-		# if blender internal:
-		# set ambient occlusion, sky color (check if any visible sun lamps with atmosphere)
-		# set environment color
-		# if cycles, set sky node
-
-		# set flag/attribute if already prepped to scene
-
-		return {'FINISHED'}
 
 
 class MCP_add_sun_or_moon(bpy.types.Operator):
@@ -219,6 +198,7 @@ class MCP_add_sun_or_moon(bpy.types.Operator):
 	bl_label = "Add sun & moon"
 	bl_description = "Add sun or moon to scene"
 
+	@tracking.report_error
 	def execute(self, context):
 
 		print("WORK IN PROGRESS")
@@ -255,6 +235,7 @@ class MCP_time_set(bpy.types.Operator):
 		default=0
 	)
 
+	@tracking.report_error
 	def execute(self, context):
 
 		print("WORK IN PROGRESS")
@@ -284,7 +265,6 @@ def world_time_update(self, context):
 	# if real python code requried to set this up, generate and auto-run python
 	# script, though more ideally just set drivers based on the time param
 
-
 	return
 
 
@@ -294,9 +274,7 @@ def world_time_update(self, context):
 # -----------------------------------------------------------------------------
 
 
-
 def register():
-
 	pass
 
 def unregister():
