@@ -524,7 +524,7 @@ class McprepWorldImports(bpy.types.Panel):
 			b_col.operator("mcprep.replace_missing_textures", text="Find missing")
 			b_col.operator("mcprep.animated_textures")
 			# TODO: operator to make all local, all packed, or set to other location
-			b_col.operator("mcprep.improve_ui", text="[WIP]Set tex location")
+			# b_col.operator("mcprep.improve_ui", text="[WIP]Set tex location")
 			b_col.operator("mcprep.combine_materials",
 					text="Combine Materials").selection_only=True
 			if bpy.app.version > (2,77):

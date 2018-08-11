@@ -42,9 +42,12 @@ class McprepImproveUi(bpy.types.Operator):
 		context.space_data.show_textured_solid = True
 		context.user_preferences.system.use_mipmaps = False
 
-		texviewable = ['SOLID','TEXTURED','MATEIRAL','RENDERED']
+		texviewable = ['TEXTURED','MATEIRAL','RENDERED']
 		if context.space_data.viewport_shade not in texviewable:
-			context.space_data.viewport_shade = 'SOLID'
+			if bpy.context.scene.render.engine == 'CYCLES':
+				context.space_data.viewport_shade = 'TEXTURED'
+			else:
+				context.space_data.viewport_shade = 'SOLID'
 
 		return {'FINISHED'}
 

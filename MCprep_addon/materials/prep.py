@@ -66,6 +66,10 @@ class McprepPrepMaterials(bpy.types.Operator):
 				"to load from the default texturepack instead",
 		default = True
 		)
+	improveUiSettings = bpy.props.BoolProperty(
+		name = "Improve UI",
+		description = "Automatically improve relevant UI settings",
+		default = True)
 	skipUsage = bpy.props.BoolProperty(
 		default = False,
 		options = {'HIDDEN'}
@@ -83,6 +87,7 @@ class McprepPrepMaterials(bpy.types.Operator):
 		col.prop(self, "autoFindMissingTextures")
 		if context.scene.render.engine=="CYCLES":
 			col.prop(self, "usePrincipledShader")
+		col.prop(self, "improveUiSettings")
 
 	@tracking.report_error
 	def execute(self, context):
@@ -126,6 +131,8 @@ class McprepPrepMaterials(bpy.types.Operator):
 
 		if self.combineMaterials==True:
 			bpy.ops.mcprep.combine_materials(selection_only=True, skipUsage=True)
+		if self.improveUiSettings:
+			bpy.ops.mcprep.improve_ui()
 		self.report({"INFO"},"Modified "+str(count)+" materials")
 		return {'FINISHED'}
 
