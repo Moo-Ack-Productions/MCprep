@@ -545,12 +545,12 @@ class McprepWorldImports(bpy.types.Panel):
 
 # ---------
 # World settings and tools, WIP
-class McprepWorldToolsPanel():  # bpy.types.Panel
+class McprepWorldToolsPanel(bpy.types.Panel):  # bpy.types.Panel
 	"""MCprep addon panel"""
-	# bl_label = "World Tools"
-	# bl_space_type = 'VIEW_3D'
-	# bl_region_type = 'TOOLS'
-	# bl_category = "MCprep"
+	bl_label = "World Tools"
+	bl_space_type = 'VIEW_3D'
+	bl_region_type = 'TOOLS'
+	bl_category = "MCprep"
 
 	def draw(self, context):
 		layout = self.layout
@@ -561,12 +561,12 @@ class McprepWorldToolsPanel():  # bpy.types.Panel
 		if util.bv28():
 			col.label("[not 2.8-ready]", icon="ERROR")
 		elif "mcprep_world" not in bpy.data.groups:
-			col.label("No sun/moon found,", icon="ERROR")
-			col.operator("mcprep.add_sun_or_moon")
+			col.operator("mcprep.add_world_time")
 		else:
-			col.prop(context.scene.mcprep_props,"world_time",text="")
-			p = col.operator("mcprep.time_set")
-			p.day_offset = int(context.scene.mcprep_props.world_time/24000)
+			col.label("MCprep sun already added")
+			# col.prop(context.scene.mcprep_props,"world_time",text="")
+			# p = col.operator("mcprep.time_set")
+			# p.day_offset = int(context.scene.mcprep_props.world_time/24000)
 
 		layout.split()
 
@@ -574,8 +574,8 @@ class McprepWorldToolsPanel():  # bpy.types.Panel
 		col = rw.column(align=True)
 		col.label("World setup")
 		col.operator("mcprep.world")
-		col.operator("mcprep.world", text="Add clouds")
-		col.operator("mcprep.world", text="Set Weather")
+		# col.operator("mcprep.world", text="Add clouds")
+		# col.operator("mcprep.world", text="Set Weather")
 
 
 # ---------

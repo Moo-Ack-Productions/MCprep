@@ -29,6 +29,7 @@ from .. import util
 
 def get_mc_canonical_name(name):
 	"""Convert a material name to standard MC name.
+
 	Returns: canonical name, and form (mc, jmc, or mineways)
 	"""
 
@@ -43,7 +44,6 @@ def get_mc_canonical_name(name):
 			or "block_mapping_mineways" not in conf.json_data["blocks"]:
 		if conf.v: print("Missing key values in json")
 		return general_name, None
-
 	if general_name in conf.json_data["blocks"]["block_mapping_mc"]:
 		canon = conf.json_data["blocks"]["block_mapping_mc"][general_name]
 		form = "mc"
@@ -150,7 +150,7 @@ def getListDataMats():
 			'emit':emit}
 
 
-def checklist(matName,alist):
+def checklist(matName, alist):
 	"""Helper function for expanding single wildcard within generalized
 	material names."""
 	if matName in alist:
@@ -193,7 +193,7 @@ def matprep_internal(mat, passes, use_reflections):
 	for index in range(1,len(texList)):
 		mat.use_textures[index] = False
 
-	if conf.v: print("TODO: selectively add additional passes beyond diffuse")
+	# TODO: selectively add additional passes beyond diffuse
 
 	# strip out the .00#
 	matGen = util.nameGeneralize(mat.name)
