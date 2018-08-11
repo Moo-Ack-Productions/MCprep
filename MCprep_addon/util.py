@@ -376,20 +376,18 @@ class event_stream(): #class event_stream(Object)
 		self.valuestr=None # not sure if needed, but keep value as string for padding
 
 	# streaming functions
-	def stream_transform(val,two_dim=False):
+	def stream_transform(self, val,two_dim=False):
 		# interpret val, and update state
-		if val in neg_vals:
+		if val in self.neg_vals:
 			# if not yet initialized for use, set to True, else toggle
 			self.neg = True if self.neg == None else not self.neg
 		# elif val in ...
 
-	def getKeyval(event):
+	def getKeyval(self, event):
 
-		if event.type in nums:
-			return ["INTEGER",nums_eval[nums.index(event.type)]]
-		elif event.type in neg:
+		if event.type in self.nums:
+			return ["INTEGER", self.nums_eval[self.nums.index(event.type)]]
+		elif event.type in self.neg:
 			return ["NEGATIVE",""]
 		elif event.type == "X":
 			return ["X",""]
-
-

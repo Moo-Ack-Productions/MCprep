@@ -257,8 +257,6 @@ class McprepPrepAnimatedTextures(bpy.types.Operator):
 			self.report({'ERROR'}, "No materials found on selected objects")
 			return {'CANCELLED'}
 
-		packfolder = context.scene.mcprep_custom_texturepack_path
-
 		affectable_materials = 0
 		affected_materials = 0
 		for mat in mats:
@@ -273,7 +271,7 @@ class McprepPrepAnimatedTextures(bpy.types.Operator):
 					print("Animated texture material found: " + mat.name)
 
 			# get the base image from the texturepack (cycles/BI general)
-			image_path_canon = generate.find_from_texturepack(canon, packfolder)
+			image_path_canon = generate.find_from_texturepack(canon)
 			if not image_path_canon:
 				if conf.v:
 					print("Could not fine texturepack image")

@@ -61,10 +61,17 @@ def get_mc_canonical_name(name):
 	return canon, form
 
 
-def find_from_texturepack(blockname, resource_folder):
-	# resource packs have this structure, this function should work with
-	# any level within this structure as the resource_folder:
-	# //pack_name/assets/minecraft/textures/<subfolder>/<blockname.png>
+def find_from_texturepack(blockname, resource_folder=None):
+	"""Given a blockname (and resource fodler), find image filepath.
+
+	Finds textures following any pack which should have this structure, and
+	the input folder or default resource folder could target at any of the
+	following sublevels above the <subfolder> level.
+	//pack_name/assets/minecraft/textures/<subfolder>/<blockname.png>
+	"""
+	if not resource_folder:
+		# default to internal pack
+		resource_folder = bpy.context.scene.mcprep_custom_texturepack_path
 
 	if not os.path.isdir(resource_folder):
 		if conf.v: print("Error, resource folder does not exist")
@@ -76,13 +83,13 @@ def find_from_texturepack(blockname, resource_folder):
 	elif os.path.isdir(os.path.join(resource_folder,"assets","minecraft","textures")):
 		resource_folder = os.path.join(resource_folder,"assets","minecraft","textures")
 
-	if conf.v:print("Final resource folder/subfolder checking:",resource_folder)
+	# if conf.vv:print("\tFinal resource folder/subfolder checking:",resource_folder)
 
 	search_paths = [resource_folder,
 					os.path.join(resource_folder,"blocks"),
 					os.path.join(resource_folder,"items"),
 					os.path.join(resource_folder,"entity"),
-					os.path.join(resource_folder,"models")
+					os.path.join(resource_folder,"models"),
 					]
 	res = None
 
@@ -93,7 +100,7 @@ def find_from_texturepack(blockname, resource_folder):
 		for ext in extensions:
 			if os.path.isfile(os.path.join(resource_folder,newpath+ext)):
 				res = os.path.join(resource_folder,newpath+ext)
-				if conf.v: print("Found resource file via subpath: "+res)
+				if conf.v: print("\tFound resource file via subpath: "+res)
 				return res
 		blockname = os.path.basename(blockname)
 
@@ -103,51 +110,58 @@ def find_from_texturepack(blockname, resource_folder):
 		for ext in extensions:
 			if os.path.isfile(os.path.join(path, blockname+ext)):
 				res = os.path.join(path, blockname+ext)
-				if conf.v: print("Found resource file: "+res)
+				if conf.v: print("\tFound resource file: "+res)
 				return res
-
+	# Mineways fallback
+	for suffix in ["-Alpha", "-RGB", "-RGBA"]:
+		if blockname.endswith(suffix):
+			res = os.path.join(resource_folder,"mineways_assets",
+								"mineways"+suffix+".png")
+			if os.path.isfile(res):
+				return res
 	return res
 
 
-def getListDataMats():
-	# Get mapping of material names to associated material settings
-	# Depreciate this in favor of get_mc_canonical_name
-	# List of materials for special settings
-	# TODO: depreciate and fully delete this list
+# def getListDataMats():
+# 	"""Get mapping of material names to associated material settings.
 
-	reflective = [ 'glass', 'glass_pane_side','ice','ice_packed','iron_bars',
-			'door_iron_top','door_iron_bottom','diamond_block','iron_block',
-			'gold_block','emerald_block','iron_trapdoor','glass_*',
-			'Iron_Door','Glass_Pane','Glass','Stained_Glass_Pane',
-			'Iron_Trapdoor','Block_of_Iron','Block_of_Diamond',
-			'Stained_Glass','Block_of_Gold','Block_of_Emerald',
-			'Packed_Ice','Ice']
-	water = ['water','water_flowing','Stationary_Water']
-	solid = ['sand','dirt','dirt_grass_side','dirt_grass_top',
-			'dispenser_front','furnace_top','redstone_block','gold_block',
-			'stone','iron_ore','coal_ore','wool_*','stained_clay_*',
-			'stone_brick','cobblestone','plank_*','log_*','farmland_wet',
-			'farmland_dry','cobblestone_mossy','nether_brick','gravel',
-			'*_ore','red_sand','dirt_podzol_top','stone_granite_smooth',
-			'stone_granite','stone_diorite','stone_diorite_smooth',
-			'stone_andesite','stone_andesite_smooth','brick','snow',
-			'hardened_clay','sandstone_side','sandstone_side_carved',
-			'sandstone_side_smooth','sandstone_top','red_sandstone_top',
-			'red_sandstone_normal','bedrock','dirt_mycelium_top',
-			'stone_brick_mossy','stone_brick_cracked','stone_brick_circle',
-			'stone_slab_side','stone_slab_top','netherrack','soulsand',
-			'*_block','endstone','Grass_Block','Dirt','Stone_Slab','Stone',
-			'Oak_Wood_Planks','Wooden_Slab','Sand','Carpet','Wool',
-			'Stained_Clay','Gravel','Sandstone','*_Fence','Wood',
-			'Acacia/Dark_Oak_Wood','Farmland','Brick','Snow','Bedrock',
-			'Netherrack','Soul_Sand','End_Stone']
-	emit = ['redstone_block','redstone_lamp_on','glowstone','lava',
-			'lava_flowing','fire','sea_lantern','Glowstone',
-			'Redstone_Lamp_(on)','Stationary_Lava','Fire','Sea_Lantern',
-			'Block_of_Redstone','torch_flame_noimport','Sea-Lantern']
+# 	List of materials for special settings
+# 	"""
+# 	# TODO: already depreciated, fully delete once reference no longer needed
 
-	return {'reflective':reflective, 'water':water, 'solid':solid,
-			'emit':emit}
+# 	reflective = [ 'glass', 'glass_pane_side','ice','ice_packed','iron_bars',
+# 			'door_iron_top','door_iron_bottom','diamond_block','iron_block',
+# 			'gold_block','emerald_block','iron_trapdoor','glass_*',
+# 			'Iron_Door','Glass_Pane','Glass','Stained_Glass_Pane',
+# 			'Iron_Trapdoor','Block_of_Iron','Block_of_Diamond',
+# 			'Stained_Glass','Block_of_Gold','Block_of_Emerald',
+# 			'Packed_Ice','Ice']
+# 	water = ['water','water_flowing','Stationary_Water']
+# 	solid = ['sand','dirt','dirt_grass_side','dirt_grass_top',
+# 			'dispenser_front','furnace_top','redstone_block','gold_block',
+# 			'stone','iron_ore','coal_ore','wool_*','stained_clay_*',
+# 			'stone_brick','cobblestone','plank_*','log_*','farmland_wet',
+# 			'farmland_dry','cobblestone_mossy','nether_brick','gravel',
+# 			'*_ore','red_sand','dirt_podzol_top','stone_granite_smooth',
+# 			'stone_granite','stone_diorite','stone_diorite_smooth',
+# 			'stone_andesite','stone_andesite_smooth','brick','snow',
+# 			'hardened_clay','sandstone_side','sandstone_side_carved',
+# 			'sandstone_side_smooth','sandstone_top','red_sandstone_top',
+# 			'red_sandstone_normal','bedrock','dirt_mycelium_top',
+# 			'stone_brick_mossy','stone_brick_cracked','stone_brick_circle',
+# 			'stone_slab_side','stone_slab_top','netherrack','soulsand',
+# 			'*_block','endstone','Grass_Block','Dirt','Stone_Slab','Stone',
+# 			'Oak_Wood_Planks','Wooden_Slab','Sand','Carpet','Wool',
+# 			'Stained_Clay','Gravel','Sandstone','*_Fence','Wood',
+# 			'Acacia/Dark_Oak_Wood','Farmland','Brick','Snow','Bedrock',
+# 			'Netherrack','Soul_Sand','End_Stone']
+# 	emit = ['redstone_block','redstone_lamp_on','glowstone','lava',
+# 			'lava_flowing','fire','sea_lantern','Glowstone',
+# 			'Redstone_Lamp_(on)','Stationary_Lava','Fire','Sea_Lantern',
+# 			'Block_of_Redstone','torch_flame_noimport','Sea-Lantern']
+
+# 	return {'reflective':reflective, 'water':water, 'solid':solid,
+# 			'emit':emit}
 
 
 def checklist(matName, alist):
@@ -539,16 +553,33 @@ def find_additional_passes(image_file):
 
 
 def replace_missing_texture(image):
-	"""Given image datablock, try to replace image from texturepack if missing."""
+	"""If image missing from image datablock, replace from texture pack.
+
+	Image block name could be the diffuse or any other pass of material, and
+	should handle accordingly
+	"""
 
 	if image == None:
 		# if conf.vv: print("\tImage block is none:" + str(image))
 		return 0
-
 	if image.size[0] != 0 and image.size[1] != 0:
 		return 0
-
 	if conf.v: print("Missing datablock detected: "+image.name)
+
+	name = image.name
+	if len(name)>4 and name[-4] == ".":
+		name = name[:-4]  # cuts off e.g. .png
+	elif len(name)>5 and name[-5] == ".":
+		name = name[:-5]  # cuts off e.g. .jpeg
+	matGen = util.nameGeneralize(name)
+	canon, form = get_mc_canonical_name(matGen)
+	# TODO: detect for pass structure like normal and still look for right pass
+	image_path = find_from_texturepack(canon)
+	if not image_path:
+		return -1
+	image.filepath = image_path
+	# image.reload() # not needed?
+	# pack?
 
 	return 1  # updated image block
 
@@ -786,6 +817,7 @@ def matgen_cycles_original(mat, passes, use_reflections):
 	except:
 		pass
 	return 0
+
 
 def matgen_cycles_emit(mat, passes):
 	"""Generates light emiting cycles material, with transaprency."""
