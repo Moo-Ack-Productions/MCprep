@@ -16,20 +16,30 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+# safe importing, due to rogue python libraries being missing or invalid
+# in bad installs cases (if the rest of the addon works, don't make it
+# fail to work because of this module)
+VALID_IMPORT = True
 
+# critical to at least load these
 import os
-import re
-import traceback
-import json
-import http.client
-import platform
-import threading
-import textwrap
-from datetime import datetime
-
 import bpy
 
-from . import conf
+# remaining, wrap in safe-importing
+try:
+	from . import conf
+	import re
+	import traceback
+	import json
+	import http.client
+	import platform
+	import threading
+	import textwrap
+	from datetime import datetime
+except Exception as err:
+	print("[MCPREP Error] Failed tracker module load, invalid import module:")
+	print('\t'+err)
+	VALID_IMPORT = False
 
 
 # -----------------------------------------------------------------------------
@@ -152,7 +162,8 @@ class Singleton_tracking(object):
 	# -------------------------------------------------------------------------
 
 	def enable_tracking(self, toggle=True, enable=True):
-		# respect toggle primarily
+		if not VALID_IMPORT:
+			return
 		if toggle:
 			self._tracking_enabled = not self._tracking_enabled
 		else:
@@ -163,8 +174,10 @@ class Singleton_tracking(object):
 		self.save_tracker_json()
 
 	def initialize(self, appurl, version):
-		""" Load the enable_tracking-preference (ie in or out),
-		and create tracker data"""
+		"""Load the enable_tracking-preference (in/out), create tracker data."""
+		if not VALID_IMPORT:
+			return
+
 		self._appurl = appurl
 		self._version = version
 		# create the local file
@@ -176,6 +189,8 @@ class Singleton_tracking(object):
 
 	def request(self, method, path, payload, background=False, callback=None):
 		"""Interface request, either launches on main or a background thread."""
+		if not VALID_IMPORT:
+			return
 		if method not in ["POST", "PUT", "GET"]:
 			raise ValueError("Method must be POST, PUT, or GET")
 		if background is False:
@@ -189,11 +204,12 @@ class Singleton_tracking(object):
 			return "Thread launched"
 
 	def raw_request(self, method, path, payload, callback=None):
-		# raw request, may be in background thread or main
-		# convert url into domain
+		"""Raw connection request, background or foreground."""
+		if not VALID_IMPORT:
+			return
+
 		url = self._appurl.split("//")[1]
 		url = url.split("/")[0]
-
 		connection = http.client.HTTPSConnection(url, self._port)
 		try:
 			connection.connect()
@@ -221,6 +237,8 @@ class Singleton_tracking(object):
 		return resp
 
 	def set_tracker_json(self):
+		if not VALID_IMPORT:
+			return
 		if self._tracker_json is None:
 			raise ValueError("tracker_json is not defined")
 
@@ -254,6 +272,8 @@ class Singleton_tracking(object):
 
 	def save_tracker_json(self):
 		"""Save out current state of the tracker json to file."""
+		if not VALID_IMPORT:
+			return
 		jpath = self._tracker_json
 		outf = open(jpath, 'w')
 		data_out = json.dumps(self.json, indent=4)
@@ -266,6 +286,8 @@ class Singleton_tracking(object):
 	def save_tracker_idbackup(self):
 		"""Save copy of the ID file to parent folder location, for detecting
 		reinstalls in the future if the folder is deleted"""
+		if not VALID_IMPORT:
+			return
 		jpath = self._tracker_idbackup
 
 		if "install_id" in self.json and self.json["install_id"] != None:
@@ -282,6 +304,8 @@ class Singleton_tracking(object):
 	def remove_indentifiable_information(self, report):
 		"""Remove filepath from report logs, which could have included
 		sensitive information such as usernames or names"""
+		if not VALID_IMPORT:
+			return report
 		return re.sub(
 				r'(?i)File "[/\\]{1,2}.*[/\\]{1,2}',
 				'File "<addon_path>'+os.sep,
@@ -317,6 +341,9 @@ class toggle_enable_tracking(bpy.types.Operator):
 		name = "tracking")
 
 	def execute(self, context):
+		if not VALID_IMPORT:
+			self.report({"ERROR"}, "Invalid import, all reporting disabled.")
+			return {'CANCELLED'}
 		if self.tracking == "toggle":
 			Tracker.enable_tracking(toggle=True)
 		elif self.tracking == "enable":
@@ -429,6 +456,9 @@ class popup_report_error(bpy.types.Operator):
 		p.url = "http://theduckcow.com/dev/blender/mcprep/reporting-errors/"
 
 	def execute(self, context):
+		if not VALID_IMPORT:
+			self.report({"ERROR"}, "Invalid import, all reporting disabled.")
+			return {'CANCELLED'}
 
 		if self.action=="ignore":
 			return {"FINISHED"}
@@ -450,7 +480,9 @@ class popup_report_error(bpy.types.Operator):
 
 
 def trackInstalled(background=None):
-	"""Send new install event to database"""
+	"""Send new install event to database."""
+	if not VALID_IMPORT:
+		return
 
 	# if already installed, skip
 	if Tracker.json["status"] == None and \
@@ -516,7 +548,9 @@ def trackInstalled(background=None):
 
 
 def trackUsage(function, param=None, background=None):
-	"""Send usage operator usage + basic metadata to database"""
+	"""Send usage operator usage + basic metadata to database."""
+	if not VALID_IMPORT:
+		return
 
 	if Tracker.tracking_enabled is False: return # skip if not opted in
 	if conf.internal_change is True: return # skip if internal run
@@ -561,7 +595,9 @@ def trackUsage(function, param=None, background=None):
 
 
 def logError(report, background=None):
-	"""Send error report to database"""
+	"""Send error report to database."""
+	if not VALID_IMPORT:
+		return
 
 	# if no override set, use default
 	if background == None: background = Tracker.background
@@ -625,6 +661,7 @@ def report_error(function):
 	"""Decorator for the execute(self, context) function of operators"""
 
 	def wrapper(self, context):
+
 		try:
 			res = function(self, context)
 			Tracker._handling_error = False
@@ -645,10 +682,14 @@ def report_error(function):
 
 
 def get_platform_details():
-	"""OS related information"""
-	res = platform.system()+":"+platform.release()
-	if len(res) > SHORT_FIELD_MAX:
-		res = res[:SHORT_FIELD_MAX-1] + "|"
+	"""OS related information."""
+	try:
+		res = platform.system()+":"+platform.release()
+		if len(res) > SHORT_FIELD_MAX:
+			res = res[:SHORT_FIELD_MAX-1] + "|"
+	except Exception as err:
+		print("Error getting platform info: " + str(err))
+		return "unknown:unknown"
 	return str(res)
 
 
@@ -664,7 +705,10 @@ def register(bl_info):
 		)
 
 	# used to define which server source, not just if's below
-	Tracker.dev = conf.dev # True or False
+	if VALID_IMPORT:
+		Tracker.dev = conf.dev # True or False
+	else:
+		Tracker.dev = False
 
 	if Tracker.dev is True:
 		Tracker.verbose = True
