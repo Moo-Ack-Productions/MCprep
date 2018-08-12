@@ -272,10 +272,10 @@ def set_texture_pack(material, folder, use_extra_passes):
 	# TODO: relate image to existing image datablock, or load it in
 	# default for now, just always create new data block
 	image_data = util.loadTexture(image)
-
-	if (bpy.context.scene.render.engine == 'CYCLES'):
+	engine = bpy.context.scene.render.engine
+	if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 		status = set_cycles_texture(image_data, material)
-	else:
+	elif engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
 		status = set_internal_texture(image_data, material)
 	return 1
 
@@ -284,14 +284,14 @@ def assert_textures_on_materials(image, materials):
 	"""Called for any texture changing, e.g. skin, input a list of material and
 	an already loaded image datablock."""
 	# TODO: Add option to search for or ignore/remove extra maps (normal, etc)
-	render_engine = bpy.context.scene.render.engine
+	engine = bpy.context.scene.render.engine
 	count = 0
 
-	if (render_engine == 'BLENDER_RENDER' or render_engine == 'BLENDER_GAME'):
+	if 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
 		for mat in materials:
 			status = set_internal_texture(image, mat)
 			if status: count+=1
-	elif (render_engine == 'CYCLES'):
+	elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 		for mat in materials:
 			status = set_cycles_texture(image, mat)
 			if status: count+=1

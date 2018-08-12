@@ -38,6 +38,8 @@ def export_image_to_sequence(image_path, params, output_folder=None, form=None):
 	"""Convert image tiles into image sequence files.
 
 	image: image filepath source
+	params: Settings from the json file or otherwise on *how* to animate it
+		e.g. ["linear", 2, false] = linear animation, 2 seconds long, and _?
 	form: jmc2obj, Mineways, or None (default)
 	Returns full path of first image.
 	Does not auto load new images (or keep temporary ones created around)
@@ -85,6 +87,7 @@ def export_image_to_sequence(image_path, params, output_folder=None, form=None):
 
 	first_img = None
 
+
 	for i in range(tiles):
 		if conf.v:
 			print("Exporting sequence tile " + str(i))
@@ -113,6 +116,7 @@ def export_image_to_sequence(image_path, params, output_folder=None, form=None):
 			bpy.data.images.remove(img_tile)
 		else:
 			img_tile = None
+
 			Exception("Not yet supported for mineways")
 
 
@@ -259,6 +263,7 @@ class McprepPrepAnimatedTextures(bpy.types.Operator):
 
 		affectable_materials = 0
 		affected_materials = 0
+		engine = context.scene.render.engine
 		for mat in mats:
 			mat_gen = util.nameGeneralize(mat.name)
 			canon, form = generate.get_mc_canonical_name(mat_gen)
@@ -288,14 +293,14 @@ class McprepPrepAnimatedTextures(bpy.types.Operator):
 				if not tile_path_dict[pass_name]:  # ie ''
 					if conf.v: print("Skipping passname: " + pass_name)
 					continue
-				if context.scene.render.engine == "CYCLES":
+				if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 					node = generate.get_node_for_pass(mat, pass_name)
 					if not node:
 						print("Did not get node for pass "+pass_name)
 						continue
 					set_sequence_to_texnode(node, tile_path_dict[pass_name])
 					affected_materials += 1
-				elif context.scene.render.engine == "INTERNAL":
+				elif engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
 					texture = generate.get_texlayer_for_pass(mat, pass_name)
 					if not texture:
 						print("Did not get texture for pass "+pass_name)
@@ -319,7 +324,7 @@ class McprepPrepAnimatedTextures(bpy.types.Operator):
 		"""Generate sequence for single material given image passes found.
 
 		Returns Dictionary of the image paths to the first tile of each
-			material pass type detected (e.g. diffuse, specular, normal)
+		material pass type detected (e.g. diffuse, specular, normal)
 		"""
 
 		# get the currently assigned image passes (normal, spec. etc)
@@ -366,9 +371,8 @@ class McprepPrepAnimatedTextures(bpy.types.Operator):
 			if conf.v:
 				print("Using sequence directory: "+seq_path)
 
-
 			try:  # check parent folder exists/create if needed
-				os.mkdir(os.path.dirname(seq_path))
+				os.mkdir(seq_path)  # as opposed to dirname(seq_path)
 			except OSError as exc:
 				if exc.errno == errno.EACCES:
 					raise Exception(perm_denied)
@@ -376,6 +380,8 @@ class McprepPrepAnimatedTextures(bpy.types.Operator):
 					raise
 
 			# overwrite the files found if not cached
+			if not os.path.isdir(seq_path):
+				raise Exception("Path does not exist: "+seq_path)
 			cached = [tile for tile in os.listdir(seq_path)
 					if os.path.isfile(os.path.join(seq_path, tile))
 					and tile.startswith(pass_name)]

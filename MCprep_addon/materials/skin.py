@@ -162,11 +162,12 @@ def getMatsFromSelected(selected,new_material=False):
 					slot.material = mat_ret[ mat_list.index(slot.material) ]
 
 	# if internal, also ensure textures are made unique per new mat
-	if new_material and bpy.context.scene.render.engine == 'BLENDER_RENDER':
+	engine = bpy.context.scene.render.engine
+	if new_material and (engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME'):
 		for m in mat_ret:
 			for tx in m.texture_slots:
-				if tx is None: continue
-				if tx.texture is None: continue
+				if tx is None or tx.texture is None:
+					continue
 				tx.texture = tx.texture.copy()
 
 	return mat_ret

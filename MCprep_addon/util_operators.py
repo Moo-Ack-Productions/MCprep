@@ -43,12 +43,12 @@ class McprepImproveUi(bpy.types.Operator):
 		context.user_preferences.system.use_mipmaps = False
 
 		texviewable = ['TEXTURED','MATEIRAL','RENDERED']
+		engine = bpy.context.scene.render.engine
 		if context.space_data.viewport_shade not in texviewable:
-			if bpy.context.scene.render.engine == 'CYCLES':
+			if engine == 'CYCLES':  # or engine == 'BLENDER_EEVEE'
 				context.space_data.viewport_shade = 'TEXTURED'
 			else:
 				context.space_data.viewport_shade = 'SOLID'
-
 		return {'FINISHED'}
 
 

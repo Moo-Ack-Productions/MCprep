@@ -184,10 +184,10 @@ class MCP_prep_world(bpy.types.Operator):
 
 	@tracking.report_error
 	def execute(self, context):
-
-		if bpy.context.scene.render.engine == 'CYCLES':
+		engine = bpy.context.scene.render.engine
+		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 			self.prep_world_cycles(context)
-		elif bpy.context.scene.render.engine == 'BLENDER_RENDER':
+		elif engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
 			self.prep_world_internal(context)
 		else:
 			self.report({'ERROR'}, "Must be cycles or blender internal renderer")
@@ -295,7 +295,8 @@ class MCP_add_world_time(bpy.types.Operator):
 		context.scene.objects.link(obj)
 		context.scene.update()
 		# update horizon info
-		if bpy.context.scene.render.engine == 'BLENDER_RENDER':
+		engine = bpy.context.scene.render.engine
+		if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
 			context.scene.world.horizon_color = (0.00938029, 0.0125943, 0.0140572)
 			obj.data.sky.use_sky = True  # use sun orientation settings if BI
 			obj.data.shadow_method = 'RAY_SHADOW'

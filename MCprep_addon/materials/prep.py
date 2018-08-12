@@ -85,7 +85,7 @@ class McprepPrepMaterials(bpy.types.Operator):
 		col.prop(self, "useReflections")
 		col.prop(self, "combineMaterials")
 		col.prop(self, "autoFindMissingTextures")
-		if context.scene.render.engine=="CYCLES":
+		if context.scene.render.engine=='CYCLES' or context.scene.render.engine=='BLENDER_EEVEE':
 			col.prop(self, "usePrincipledShader")
 		col.prop(self, "improveUiSettings")
 
@@ -93,7 +93,7 @@ class McprepPrepMaterials(bpy.types.Operator):
 	def execute(self, context):
 		# skip tracking if internal change
 		if self.skipUsage==False:
-			tracking.trackUsage("materials",bpy.context.scene.render.engine)
+			tracking.trackUsage("materials", bpy.context.scene.render.engine)
 
 		# get list of selected objects
 		obj_list = context.selected_objects
@@ -108,7 +108,7 @@ class McprepPrepMaterials(bpy.types.Operator):
 			return {'CANCELLED'}
 
 		# check if linked material exists
-		render_engine = context.scene.render.engine
+		engine = context.scene.render.engine
 		count = 0
 
 		for mat in mat_list:
@@ -117,11 +117,11 @@ class McprepPrepMaterials(bpy.types.Operator):
 			if self.autoFindMissingTextures:
 				for pass_name in passes:
 					generate.replace_missing_texture(passes[pass_name])
-			if render_engine == 'BLENDER_RENDER' or render_engine == "BLENDER_GAME":
+			if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
 				res = generate.matprep_internal(
 						mat, passes, self.useReflections)
 				if res==0: count+=1
-			elif render_engine == 'CYCLES':
+			elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 				res = generate.matprep_cycles(
 						mat, passes, self.useReflections, self.usePrincipledShader)
 				if res==0: count+=1
@@ -279,13 +279,7 @@ class McprepSwapTexturePack(bpy.types.Operator, ImportHelper):
 			self.report({'ERROR'}, "No materials found on selected objects")
 			return {'CANCELLED'}
 
-		# # check if linked material exists
-		# render_engine = context.scene.render.engine
-		print("here2")
-		if conf.v: print("hereCONF")
-		print(len(mat_list))
 		if conf.v: print("Materials detected:",len(mat_list))
-
 		res = 0
 		for mat in mat_list:
 			res += generate.set_texture_pack(mat, folder, self.extra_passes)
