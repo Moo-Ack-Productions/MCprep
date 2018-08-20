@@ -61,7 +61,7 @@ class MCP_open_jmc2obj(bpy.types.Operator):
 			bpy.ops.mcprep.install_jmc2obj('INVOKE_DEFAULT')
 			return {'CANCELLED'}
 		elif res !=0:
-			self.report({'ERROR'},res)
+			self.report({'ERROR'},str(res))
 			return {'CANCELLED'}
 		else:
 			self.report({'INFO'},"jmc2obj should open soon")
@@ -87,7 +87,7 @@ class MCP_install_jmc2obj(bpy.types.Operator):
 		self.layout.operator("wm.url_open","Click to download").url =\
 				"http://www.jmc2obj.net/"
 		split = self.layout.split()
-		col = self.layout.colunm()
+		col = self.layout.column()
 		col.scale_y = 0.7
 		col.label("Then, go to MCprep's user preferences and set the jmc2obj")
 		col.label(" path to jmc2obj_ver#.jar, for example")
@@ -128,7 +128,7 @@ class MCP_open_mineways(bpy.types.Operator):
 			bpy.ops.mcprep.install_mineways('INVOKE_DEFAULT')
 			return {'CANCELLED'}
 		elif res !=0:
-			self.report({'ERROR'},res)
+			self.report({'ERROR'},str(res))
 			return {'CANCELLED'}
 		else:
 			self.report({'INFO'},"Mineways should open soon")
@@ -154,7 +154,7 @@ class MCP_install_mineways(bpy.types.Operator):
 		self.layout.operator("wm.url_open","Click to download").url =\
 				"http://www.realtimerendering.com/erich/minecraft/public/mineways/"
 		split = self.layout.split()
-		col = self.layout.colunm()
+		col = self.layout.column()
 		col.scale_y = 0.7
 		col.label("Then, go to MCprep's user preferences and set the")
 		col.label(" Mineways path to Mineways.exe or Mineways.app, for example")
@@ -211,6 +211,15 @@ class MCP_prep_world(bpy.types.Operator):
 		world_links.new(background.outputs["Background"], output.inputs[0])
 
 		context.scene.world.light_settings.use_ambient_occlusion = False
+		context.scene.cycles.caustics_reflective = False
+		context.scene.cycles.caustics_refractive = False
+
+		# higher = faster, though potentially noisier
+		# this is better balance than default
+		context.scene.cycles.light_sampling_threshold = 0.1
+
+		context.scene.cycles.max_bounces = 8
+
 
 
 	def prep_world_internal(self, context):

@@ -21,7 +21,7 @@
 		"Beacon","Fire","Glowstone","Redstone_Lamp_(active)","Sea_Lantern",
 		"Stationary_Lava",
 
-		"torch_flame"
+		"torch_flame", "lava_flowing","lava"
 	],
 	"desaturated":["vine","tallgrass","waterlily","leaves*",
 		"melon_stem_connected","melon_stem_disconnected",

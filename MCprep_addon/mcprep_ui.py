@@ -294,27 +294,27 @@ class McprepPreference(bpy.types.AddonPreferences):
 			col.label("Default Exporter:")
 			col = split.column()
 			col.prop(self, "MCprep_exporter_type", text="")
-			split = layout.split(percentage=0.3)
+			split = box.split(percentage=0.3)
 			col = split.column()
 			col.label("jmc2obj executable")
 			col = split.column()
 			col.prop(self, "open_jmc2obj_path", text="")
-			split = layout.split(percentage=0.3)
+			split = box.split(percentage=0.3)
 			col = split.column()
 			col.label("Mineways executable")
 			col = split.column()
 			col.prop(self, "open_mineways_path", text="")
-			split = layout.split(percentage=0.3)
+			split = box.split(percentage=0.3)
 			col = split.column()
 			col.label("World OBJ Exports Folder")
 			col = split.column()
 			col.prop(self, "world_obj_path", text="")
-			split = layout.split(percentage=0.3)
+			split = box.split(percentage=0.3)
 			col = split.column()
 			col.label("Default texture pack")
 			col = split.column()
 			col.prop(self, "custom_texturepack_path", text="")
-			split = layout.split(percentage=0.3)
+			split = box.split(percentage=0.3)
 			col = split.column()
 			col.label("Meshwap assets")
 			col = split.column()
@@ -328,7 +328,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 			col.label("Texture pack folder")
 			col = split.column()
 			col.prop(self, "custom_texturepack_path", text="")
-			split = layout.split(percentage=0.3)
+			split = box.split(percentage=0.3)
 			col = split.column()
 			col.label("Install to folder")
 			col = split.column()
@@ -345,7 +345,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 			col.label("Rig Folder")
 			col = split.column()
 			col.prop(self, "mob_path", text="")
-			split = layout.split(percentage=0.3)
+			split = box.split(percentage=0.3)
 			col = split.column()
 			col.label("Select/install mobs")
 			col = split.column()
@@ -362,7 +362,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 			col.label("Skin Folder")
 			col = split.column()
 			col.prop(self, "skin_path", text="")
-			split = layout.split(percentage=0.3)
+			split = box.split(percentage=0.3)
 			col = split.column()
 			col.label("Install skins")
 			col = split.column()
@@ -380,19 +380,23 @@ class McprepPreference(bpy.types.AddonPreferences):
 		elif self.preferences_tab == "tutorials":
 			layout.label("Unsure on how to use the addon? Check out these resources")
 			col = layout.column()
+			col.scale_y = 3
 			col.operator("wm.url_open",
 					text="MCprep page for instructions and updates",
 					icon="WORLD").url = "http://theduckcow.com/dev/blender/mcprep/"
 			row = layout.row()
 			col = row.column()
+			col.scale_y = 2
 			col.operator("wm.url_open",
 					text="Import Minecraft worlds").url = \
 					"http://theduckcow.com/dev/blender/mcprep/mcprep-minecraft-world-imports/"
 			col = row.column()
+			col.scale_y = 2
 			col.operator("wm.url_open",
 					text="Mob (rig) spawning").url = \
 					"https://youtu.be/asB4UcBuWBw?list=PL8X_CzUEVBfaajwyguIj_utPXO4tEOr7a"
 			col = row.column()
+			col.scale_y = 2
 			col.operator("wm.url_open",
 					text="Demo video/trailer").url = \
 					"https://youtu.be/C3YoZx-seFE?list=PL8X_CzUEVBfaajwyguIj_utPXO4tEOr7a"

@@ -71,23 +71,22 @@ def texturesFromMaterials(matList):
 	return texList
 
 
-def bAppendLink(directory,name, toLink, active_layer=True):
+def bAppendLink(directory, name, toLink, active_layer=True):
 	"""For multiple version compatibility,
 	this function generalized appending/linking
 	blender post 2.71 changed to new append/link methods"""
 
-	if conf.vv:print("Appending ",directory," : ",name)
+	if conf.vv:print("Appending ", directory, " : ", name)
 	post272 = False
 	try:
 		version = bpy.app.version
 		post272 = True
-		post280 = bpy.app.version >= (2, 80)
+		post280 = bv28()
 	except:
 		pass #  "version" didn't exist before 72!
 	#if (version[0] >= 2 and version[1] >= 72):
 
 	print("DEBUG 2.8 loader",version, post272, post280)
-
 	# for compatibility, add ending character
 	if directory[-1] != "/" and directory[-1] != os.path.sep:
 		directory += os.path.sep
@@ -101,20 +100,55 @@ def bAppendLink(directory,name, toLink, active_layer=True):
 		elif post280==True:
 			bpy.ops.wm.append(
 					directory=directory,
-					filename=name,
+					filename=name
 					)
 		else:
 			bpy.ops.wm.append(
 					directory=directory,
 					filename=name,
-					active_layer=active_layer,
+					active_layer=active_layer
 					) #, activelayer=True
-			# if active_layer==True:
-
 	else:
 		# OLD method of importing
 		if conf.vv:print("Using old method of append/link, 2.72 <=")
 		bpy.ops.wm.link_append(directory=directory, filename=name, link=toLink)
+
+def obj_copy(base, context=None, vertex_groups=True, modifiers=True):
+	"""Copy an object's data, vertex groups, and modifiers without operators.
+
+	Input must be a valid object in bpy.data.objects
+	"""
+
+	if not base or base.name not in bpy.data.objects:
+		raise Exception("Invalid object passed")
+
+	new_ob = bpy.data.objects.new(base.name, base.data.copy())
+	if context:
+		context.scene.objects.link(new_ob)
+	else:
+		bpy.context.scene.objects.link(new_ob)
+
+	if vertex_groups:
+		verts = len(base.data.vertices)
+		for vgroup in base.vertex_groups:
+			print("Running vertex group: ", vgroup.name)
+			new_g = new_ob.vertex_groups.new(vgroup.name)
+			for i in range(0, verts):
+				try:
+					new_g.add([i], vgroup.weight(i), "REPLACE")
+				except:
+					pass  # no way to check if a given vertex is part of src group
+
+	if modifiers:
+		for mod_src in base.modifiers:
+			dest = new_ob.modifiers.get(mod_src.name, None)
+			if not dest:
+				dest = new_ob.modifiers.new(mod_src.name, mod_src.type)
+			properties = [p.identifier for p in mod_src.bl_rna.properties
+					  if not p.is_readonly]
+			for prop in properties:
+				setattr(dest, prop, getattr(mod_src, prop))
+	return new_ob
 
 
 def bv28():
@@ -162,7 +196,6 @@ def loadTexture(texture):
 
 	# load the image only once
 	base = bpy.path.basename(texture)
-	# HERE load the iamge and set
 	if base in bpy.data.images:
 		if bpy.path.abspath(bpy.data.images[base].filepath) == bpy.path.abspath(texture):
 			data_img = bpy.data.images[base]
@@ -280,7 +313,7 @@ def exec_path_expand(self, context):
 		# >> end command SHOULD be open Mineways.app.
 
 
-def addGroupInstance(groupName,loc):
+def addGroupInstance(groupName, loc, select=True):
 	"""Add object instance not working, so workaround function."""
 	scene = bpy.context.scene
 	ob = bpy.data.objects.new(groupName, None)
@@ -288,7 +321,7 @@ def addGroupInstance(groupName,loc):
 	ob.dupli_group = bpy.data.groups.get(groupName) #.. why not more directly?
 	scene.objects.link(ob)
 	ob.location = loc
-	ob.select = True
+	ob.select = select
 	return ob
 
 
