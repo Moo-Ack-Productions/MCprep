@@ -803,6 +803,7 @@ class McprepSpawnPanel(bpy.types.Panel):
 			b_col = b_row.column(align=False)
 			b_col.label("Meshswap file")
 			b_col.prop(context.scene,"meshswap_path", text="")
+			b_col.operator("mcprep.reload_meshswap")
 
 
 # -----------------------------------------------------------------------------

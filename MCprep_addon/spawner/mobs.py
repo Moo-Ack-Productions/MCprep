@@ -280,8 +280,8 @@ class McprepMobSpawner(bpy.types.Operator):
 		)
 
 	def draw(self, context):
-		row = self.layout.row()
-		row.prop(self,"mcmob_type")
+		# row = self.layout.row()
+		# row.prop(self,"mcmob_type")
 		row = self.layout.row()
 		row.prop(self,"relocation")
 
@@ -291,8 +291,8 @@ class McprepMobSpawner(bpy.types.Operator):
 		row = self.layout.row(align=True)
 		row.prop(self,"auto_prep")
 
-	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self)
+	# def invoke(self, context, event):
+	# 	return context.window_manager.invoke_props_dialog(self)
 
 	def proxySpawn(self):
 		if conf.v:
