@@ -74,6 +74,10 @@ class McprepPrepMaterials(bpy.types.Operator):
 		default = False,
 		options = {'HIDDEN'}
 		)
+	saturateImages = bpy.props.BoolProperty(
+		default = False,
+		options = {'HIDDEN'}
+		)
 	# prop: set all blocks as solid (no transparency), assume has trans, or compute check
 
 	def invoke(self, context, event):
@@ -123,7 +127,8 @@ class McprepPrepMaterials(bpy.types.Operator):
 				if res==0: count+=1
 			elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 				res = generate.matprep_cycles(
-						mat, passes, self.useReflections, self.usePrincipledShader)
+						mat, passes, self.useReflections, self.usePrincipledShader,
+						self.saturateImages)
 				if res==0: count+=1
 			else:
 				self.report({'ERROR'},"Only blender internal or cycles supported")

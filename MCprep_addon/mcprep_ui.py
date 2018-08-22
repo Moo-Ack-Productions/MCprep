@@ -699,7 +699,7 @@ class McprepSpawnPanel(bpy.types.Panel):
 		col = split.column(align=True)
 
 		# any other conditions for needing reloading?
-		if len(conf.rig_list)==0:
+		if not conf.rig_list or not context.scene.mcprep_mob_list:
 			col = layout.column()
 			col.label("No mobs loaded")
 			row2 = col.row()
@@ -765,7 +765,7 @@ class McprepSpawnPanel(bpy.types.Panel):
 		col = split.column(align=True)
 
 		# any other conditions for needing reloading?
-		if len(conf.rig_list)==0:
+		if not conf.rig_list or not context.scene.mcprep_meshswap_list:
 			col = layout.column()
 			col.label("No blocks loaded")
 			row2 = col.row()
@@ -783,6 +783,7 @@ class McprepSpawnPanel(bpy.types.Panel):
 
 		# something to directly open meshswap file??
 		row = layout.row()
+		row.scale_y = 1.5
 		name = conf.meshswap_list[context.scene.mcprep_meshswap_list_index][1]
 		p = row.operator("mcprep.meshswap_spawner","Place: "+name)
 		datapass = conf.meshswap_list[context.scene.mcprep_meshswap_list_index][0]
@@ -803,6 +804,8 @@ class McprepSpawnPanel(bpy.types.Panel):
 			b_col = b_row.column(align=False)
 			b_col.label("Meshswap file")
 			b_col.prop(context.scene,"meshswap_path", text="")
+			b_row = box.row()
+			b_col = b_row.column(align=True)
 			b_col.operator("mcprep.reload_meshswap")
 
 

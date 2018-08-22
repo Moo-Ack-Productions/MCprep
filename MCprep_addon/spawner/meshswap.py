@@ -242,9 +242,9 @@ class McprepMeshswapSpawner(bpy.types.Operator):
 
 
 class McprepReloadMeshswap(bpy.types.Operator):
-	"""Force reload the mob spawner rigs, use after manually adding rigs to folders"""
+	"""Force reload the MeshSwap objects and cache."""
 	bl_idname = "mcprep.reload_meshswap"
-	bl_label = "Reload the meshswap and cache"
+	bl_label = "Reload MeshSwap"
 
 	@tracking.report_error
 	def execute(self,context):
@@ -259,21 +259,6 @@ class McprepMeshswap_UIList(bpy.types.UIList):
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
 			col = layout.column()
 			col.prop(set, "name", text="", emboss=False)
-			#layout.label(text='', icon='TIME')
-
-			# if conf.active_mob_subind == index:
-			# 	ic = "RADIOBUT_ON"
-			# 	layout.label("Skin swap")
-			# else:
-			# 	ic = "RADIOBUT_OFF"
-
-			# col = layout.column()
-			# row = col.row()
-			# row.scale_x = 0.25
-			# row.operator('mcprep.spawner_set_active_mob', emboss=False, text='',
-			#               icon=ic).index = index
-			# row.operator('mcprep.mob_spawner_direct',emboss=False, text='',
-			# 			icon='FORWARD').mcmob_index = index
 
 		elif self.layout_type in {'GRID'}:
 			layout.alignment = 'CENTER'
@@ -785,7 +770,6 @@ class meshSwap(bpy.types.Operator):
 					#below technically a "hack", should use: bpy.data.scenes[0].update()
 					bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
 
-
 				loc = swap.matrix_world*mathutils.Vector(set) #local to global
 				if grouped:
 					# definition for randimization, defined at top!
@@ -798,15 +782,10 @@ class meshSwap(bpy.types.Operator):
 					new_ob = util.addGroupInstance(randGroup,loc)
 
 				else:
-					#sets location of current selection, imported object or group from above
-					# base.select = True		# select the base object # UPDATE: THIS IS THE swapProps.object
-					# bpy.ops.object.duplicate(linked=False, mode='TRANSLATION')
 					new_ob = util.obj_copy(base, context)
 					new_ob.location = mathutils.Vector(loc)
 					new_ob.select = True  # needed?
-					# bpy.context.selected_objects[-1].location = mathutils.Vector(loc)
-					# next line hackish....
-					dupedObj.append(new_ob) # bpy.context.selected_objects[-1]
+					dupedObj.append(new_ob)
 					# base.select = False
 
 				obj = new_ob # bpy.context.selected_objects[-1]

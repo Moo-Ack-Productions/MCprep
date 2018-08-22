@@ -150,7 +150,6 @@ def obj_copy(base, context=None, vertex_groups=True, modifiers=True):
 				setattr(dest, prop, getattr(mod_src, prop))
 	return new_ob
 
-
 def bv28():
 	"""Check if blender 2.8, for layouts, UI, and properties. """
 	return bpy.app.version >= (2, 80)
@@ -192,9 +191,8 @@ def duplicatedDatablock(name):
 
 
 def loadTexture(texture):
-	"""Load texture, reusing existing texture if present."""
+	"""Load texture once, reusing existing texture if present."""
 
-	# load the image only once
 	base = bpy.path.basename(texture)
 	if base in bpy.data.images:
 		if bpy.path.abspath(bpy.data.images[base].filepath) == bpy.path.abspath(texture):
@@ -207,7 +205,6 @@ def loadTexture(texture):
 	else:
 		data_img = bpy.data.images.load(texture)
 		if conf.v:print("Loading new texture image")
-
 	return data_img
 
 

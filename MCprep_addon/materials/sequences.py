@@ -337,8 +337,10 @@ class McprepPrepAnimatedTextures(bpy.types.Operator):
 		seq_path_base = None  # defaults to folder in resource pack
 		# if self.export_location == "texturepack"
 		if self.export_location == "local":
-			seq_path_base = os.path.join(os.path.dirname(bpy.data.filepath),
-											"Textures")
+			if not bpy.data.filepath:
+				raise Exception("Must save file before using local option save location")
+			temp_abs = bpy.path.abspath(bpy.data.filepath)
+			seq_path_base = os.path.join(os.path.dirname(temp_abs), "Textures")
 		elif self.export_location == "original":
 			seq_path_base =  os.path.dirname(bpy.path.abspath(image_path))
 
@@ -361,6 +363,9 @@ class McprepPrepAnimatedTextures(bpy.types.Operator):
 
 		for img_pass in img_pass_dict:
 			passfile = img_pass_dict[img_pass]
+			print("Running on file:")
+			print(passfile)
+			print(bpy.path.abspath(passfile))
 
 			# Create the sequence subdir (without race condition)
 			pass_name = os.path.splitext(os.path.basename(passfile))[0]
@@ -370,6 +375,14 @@ class McprepPrepAnimatedTextures(bpy.types.Operator):
 				seq_path = os.path.join(seq_path_base, pass_name)
 			if conf.v:
 				print("Using sequence directory: "+seq_path)
+
+			try:  # check parent folder exists/create if needed
+				os.mkdir(os.path.dirname(seq_path))  # as opposed to dirname(seq_path)
+			except OSError as exc:
+				if exc.errno == errno.EACCES:
+					raise Exception(perm_denied)
+				elif exc.errno != errno.EEXIST:
+					raise
 
 			try:  # check parent folder exists/create if needed
 				os.mkdir(seq_path)  # as opposed to dirname(seq_path)
