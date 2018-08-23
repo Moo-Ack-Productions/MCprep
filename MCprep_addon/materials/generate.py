@@ -242,6 +242,14 @@ def matprep_internal(mat, passes, use_reflections):
 		mat.emit = 1
 	else:
 		mat.emit = 0
+
+	if canon in conf.json_data['blocks']['desaturated']:
+		# cycle through and see if the layer exists to enable/disable blend
+		pass  # TODO: add saturation based on whether saturate prop in material
+		# if "SATURATE" in mat:
+		# 	for sl in mat.texture_slots:
+		# 		if sl and sl.texture and sl.texture.type == "BLEND":
+
 	return 0
 
 
@@ -441,6 +449,7 @@ def set_internal_texture(image, material, extra_passes=False, saturate=False):
 				# bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
 			f = img_sets.pop("normal")
 			new_img = util.loadTexture(f)
+			new_img.use_alpha = False  # would mess up material
 			new_tex.image = new_img
 			sl.texture = new_tex
 			sl.use_map_normal = True
@@ -458,6 +467,7 @@ def set_internal_texture(image, material, extra_passes=False, saturate=False):
 				sl = material.texture_slots.create(i)
 			f = img_sets.pop("normal")
 			new_img = util.loadTexture(f)
+			new_img.use_alpha = False  # would mess up material
 			new_tex.image = new_img
 			sl.texture = new_tex
 			sl.use_map_normal = False
@@ -467,6 +477,7 @@ def set_internal_texture(image, material, extra_passes=False, saturate=False):
 			sl.use = True
 		elif "saturate" in img_sets:
 			img_sets.pop("saturate")
+			print("Running saturate")
 			if canon not in conf.json_data['blocks']['desaturated']:
 				continue
 			if tex and tex.name+"_saturate" in bpy.data.textures:
@@ -475,20 +486,21 @@ def set_internal_texture(image, material, extra_passes=False, saturate=False):
 				new_tex = bpy.data.textures.new(name=tex.name+"_saturate", type="BLEND")
 			if not sl:
 				sl = material.texture_slots.create(i)
-			new_tex.use_color_ramp = True
-			for _ in range(len(new_tex.color_ramp.elements)-1):
-				new_tex.color_ramp.elements.remove(new_tex.color_ramp.elements[0])
-
-			desat_color = conf.json_data['blocks']['desaturated'][canon]
-			if len(desat_color) < len(new_tex.color_ramp.elements):
-				desat_color.append(1.0)
-			new_tex.color_ramp.elements[0].color = desat_color
 			sl.texture = new_tex
 			sl.use_map_normal = False
 			sl.use_map_color_diffuse = True
 			sl.use_map_specular = False
 			sl.blend_type = 'OVERLAY'
 			sl.use = True
+
+			new_tex.use_color_ramp = True
+			for _ in range(len(new_tex.color_ramp.elements)-1):
+				new_tex.color_ramp.elements.remove(new_tex.color_ramp.elements[0])
+			desat_color = conf.json_data['blocks']['desaturated'][canon]
+			if len(desat_color) < len(new_tex.color_ramp.elements[0].color):
+				desat_color.append(1.0)
+			print(len(new_tex.color_ramp.elements), desat_color)
+			new_tex.color_ramp.elements[0].color = desat_color
 
 	return True
 
@@ -832,12 +844,12 @@ def matgen_cycles_original(mat, passes, use_reflections, saturate=False):
 	nodeSaturateMix.label = "Add Color"
 
 	# set location and connect
-	nodeTexDiff.location = (-400,0)
+	nodeTexDiff.location = (-600,0)
 	nodeTexNorm.location = (-600,-275)
 	nodeTexSpec.location = (-600,275)
 	nodeNormal.location = (-400,-275)
 	nodeGloss.location = (0,-150)
-	nodeSaturateMix.location = (-200,0)
+	nodeSaturateMix.location = (-400,0)
 	nodeDiff.location = (-200,-150)
 	nodeTrans.location = (-200,0)
 	nodeMix1.location = (0,0)

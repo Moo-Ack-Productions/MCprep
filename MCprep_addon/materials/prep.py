@@ -44,9 +44,14 @@ class McprepPrepMaterials(bpy.types.Operator):
 	bl_label = "MCprep Materials"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	useReflections = bpy.props.BoolProperty(
-		name = "Use reflections",
-		description = "Allow appropriate materials to be rendered reflective",
+	animateTextures = bpy.props.BoolProperty(
+		name = "Animate textures",
+		description = "Swap still images for the animated sequenced found in the active or default texturepack.",
+		default = True)
+	autoFindMissingTextures = bpy.props.BoolProperty(
+		name = "Auto-find missing images",
+		description = "If the texture for an existing material is missing, try "+\
+				"to load from the default texturepack instead",
 		default = True
 		)
 	combineMaterials = bpy.props.BoolProperty(
@@ -54,27 +59,27 @@ class McprepPrepMaterials(bpy.types.Operator):
 		description = "Consolidate duplciate materials & textures",
 		default = False
 		)
+	improveUiSettings = bpy.props.BoolProperty(
+		name = "Improve UI",
+		description = "Automatically improve relevant UI settings",
+		default = True)
+	saturateImages = bpy.props.BoolProperty(
+		default = False,
+		options = {'HIDDEN'}
+		)
 	usePrincipledShader = bpy.props.BoolProperty(
 		name = "Use Principled Shader (if available)",
 		description = "If available and using cycles, build materials using the "+\
 				"principled shader",
 		default = True
 		)
-	autoFindMissingTextures = bpy.props.BoolProperty(
-		name = "Auto-find missing images",
-		description = "If the texture for an existing material is missing, try "+\
-				"to load from the default texturepack instead",
+	useReflections = bpy.props.BoolProperty(
+		name = "Use reflections",
+		description = "Allow appropriate materials to be rendered reflective",
 		default = True
 		)
-	improveUiSettings = bpy.props.BoolProperty(
-		name = "Improve UI",
-		description = "Automatically improve relevant UI settings",
-		default = True)
+
 	skipUsage = bpy.props.BoolProperty(
-		default = False,
-		options = {'HIDDEN'}
-		)
-	saturateImages = bpy.props.BoolProperty(
 		default = False,
 		options = {'HIDDEN'}
 		)
@@ -87,6 +92,7 @@ class McprepPrepMaterials(bpy.types.Operator):
 		row = self.layout.row()
 		col = row.column()
 		col.prop(self, "useReflections")
+		col.prop(self, "animateTextures")
 		col.prop(self, "combineMaterials")
 		col.prop(self, "autoFindMissingTextures")
 		if context.scene.render.engine=='CYCLES' or context.scene.render.engine=='BLENDER_EEVEE':
@@ -136,6 +142,8 @@ class McprepPrepMaterials(bpy.types.Operator):
 
 		if self.combineMaterials==True:
 			bpy.ops.mcprep.combine_materials(selection_only=True, skipUsage=True)
+		if self.animateTextures:
+			bpy.ops.mcprep.animated_textures(skipUsage=True)
 		if self.improveUiSettings:
 			bpy.ops.mcprep.improve_ui()
 		self.report({"INFO"},"Modified "+str(count)+" materials")
@@ -303,6 +311,7 @@ class McprepResetTexturepackPath(bpy.types.Operator):
 		addon_prefs = util.get_prefs()
 		context.scene.mcprep_custom_texturepack_path = addon_prefs.custom_texturepack_path
 		return {'FINISHED'}
+
 
 class McprepCombineMaterials(bpy.types.Operator):
 	bl_idname = "mcprep.combine_materials"
