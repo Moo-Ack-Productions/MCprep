@@ -122,46 +122,40 @@ def find_from_texturepack(blockname, resource_folder=None):
 	return res
 
 
-# def getListDataMats():
-# 	"""Get mapping of material names to associated material settings.
+def detect_form(materials):
+	"""Function which, given the input materials, guesses the exporter form.
 
-# 	List of materials for special settings
-# 	"""
-# 	# TODO: already depreciated, fully delete once reference no longer needed
+	Useful for pre-determining elibibility of a function and also for tracking
+	reporting to give sense of how common which exporter is used.
+	"""
+	jmc2obj = 0
+	mc = 0
+	mineways = 0
+	for mat in materials:
+		name = util.nameGeneralize(mat.name)
+		_, form = get_mc_canonical_name(name)
+		if form == "jmc2obj":
+			jmc2obj+=1
+		elif form == "mineways":
+			mineways+=1
+		else:
+			mc+=1
 
-# 	reflective = [ 'glass', 'glass_pane_side','ice','ice_packed','iron_bars',
-# 			'door_iron_top','door_iron_bottom','diamond_block','iron_block',
-# 			'gold_block','emerald_block','iron_trapdoor','glass_*',
-# 			'Iron_Door','Glass_Pane','Glass','Stained_Glass_Pane',
-# 			'Iron_Trapdoor','Block_of_Iron','Block_of_Diamond',
-# 			'Stained_Glass','Block_of_Gold','Block_of_Emerald',
-# 			'Packed_Ice','Ice']
-# 	water = ['water','water_flowing','Stationary_Water']
-# 	solid = ['sand','dirt','dirt_grass_side','dirt_grass_top',
-# 			'dispenser_front','furnace_top','redstone_block','gold_block',
-# 			'stone','iron_ore','coal_ore','wool_*','stained_clay_*',
-# 			'stone_brick','cobblestone','plank_*','log_*','farmland_wet',
-# 			'farmland_dry','cobblestone_mossy','nether_brick','gravel',
-# 			'*_ore','red_sand','dirt_podzol_top','stone_granite_smooth',
-# 			'stone_granite','stone_diorite','stone_diorite_smooth',
-# 			'stone_andesite','stone_andesite_smooth','brick','snow',
-# 			'hardened_clay','sandstone_side','sandstone_side_carved',
-# 			'sandstone_side_smooth','sandstone_top','red_sandstone_top',
-# 			'red_sandstone_normal','bedrock','dirt_mycelium_top',
-# 			'stone_brick_mossy','stone_brick_cracked','stone_brick_circle',
-# 			'stone_slab_side','stone_slab_top','netherrack','soulsand',
-# 			'*_block','endstone','Grass_Block','Dirt','Stone_Slab','Stone',
-# 			'Oak_Wood_Planks','Wooden_Slab','Sand','Carpet','Wool',
-# 			'Stained_Clay','Gravel','Sandstone','*_Fence','Wood',
-# 			'Acacia/Dark_Oak_Wood','Farmland','Brick','Snow','Bedrock',
-# 			'Netherrack','Soul_Sand','End_Stone']
-# 	emit = ['redstone_block','redstone_lamp_on','glowstone','lava',
-# 			'lava_flowing','fire','sea_lantern','Glowstone',
-# 			'Redstone_Lamp_(on)','Stationary_Lava','Fire','Sea_Lantern',
-# 			'Block_of_Redstone','torch_flame_noimport','Sea-Lantern']
+	only_mineways = False
 
-# 	return {'reflective':reflective, 'water':water, 'solid':solid,
-# 			'emit':emit}
+	# more logic, e.g. count
+	if mineways>0 and jmc2obj==0:
+		res = "mineways"
+	elif jmc2obj>0 and mineways==0:
+		res = "jmc2obj"
+	elif jmc2obj < mineways:
+		res = "mineways"
+	elif jmc2obj > mineways:
+		res = "jmc2obj"
+	else:
+		res = None
+
+	return res  # one of jmc2obj, mineways, or None
 
 
 def checklist(matName, alist):
@@ -204,8 +198,28 @@ def matprep_internal(mat, passes, use_reflections):
 
 	# disable all but first slot, ensure first slot enabled
 	mat.use_textures[0] = True
+	diff_layer = 0
+	spec_layer = None
+	norm_layer = None
+	disp_layer = None
+	saturate_layer = None
 	for index in range(1,len(texList)):
-		mat.use_textures[index] = False
+		if not mat.texture_slots[index] or not mat.texture_slots[index].texture:
+			mat.use_textures[index] = False
+		elif "MCPREP_diffuse" in mat.texture_slots[index].texture:
+			diff_layer = index
+			mat.texture_slots[index].texture = True
+		elif "MCPREP_specular" in mat.texture_slots[index].texture:
+			spec_layer = index
+			mat.texture_slots[index].texture = True
+		elif "MCPREP_normal" in mat.texture_slots[index].texture:
+			norm_layer = index
+			mat.texture_slots[index].texture = True
+		elif "SATURATE" in mat.texture_slots[index].texture:
+			saturate_layer = index
+			mat.texture_slots[index].texture = True
+		else:
+			mat.use_textures[index] = False
 
 	# TODO: selectively add additional passes beyond diffuse
 
@@ -216,27 +230,29 @@ def matprep_internal(mat, passes, use_reflections):
 
 	mat.use_transparent_shadows = True #all materials receive trans
 	mat.specular_intensity = 0
-	mat.texture_slots[0].texture.use_interpolation = False
-	mat.texture_slots[0].texture.filter_type = 'BOX'
-	mat.texture_slots[0].texture.filter_size = 0
-	mat.texture_slots[0].use_map_color_diffuse = True
-	mat.texture_slots[0].diffuse_color_factor = 1
-	mat.use_textures[1] = False
+	mat.texture_slots[diff_layer].texture.use_interpolation = False
+	mat.texture_slots[diff_layer].texture.filter_type = 'BOX'
+	mat.texture_slots[diff_layer].texture.filter_size = 0
+	mat.texture_slots[diff_layer].use_map_color_diffuse = True
+	mat.texture_slots[diff_layer].diffuse_color_factor = 1
 
 	if not checklist(canon,conf.json_data['blocks']['solid']): # alpha default on
 		bpy.data.textures[newName].use_alpha = True
-		mat.texture_slots[0].use_map_alpha = True
+		mat.texture_slots[diff_layer].use_map_alpha = True
 		mat.use_transparency = True
 		mat.alpha = 0
-		mat.texture_slots[0].alpha_factor = 1
+		mat.texture_slots[diff_layer].alpha_factor = 1
+		for index in [spec_layer, norm_layer, disp_layer]:
+			if index:
+				mat.texture_slots[index].use_map_alpha = False
 
 	if use_reflections and checklist(canon,conf.json_data['blocks']['reflective']):
-		mat.alpha=0.15
+		mat.alpha = 0
 		mat.raytrace_mirror.use = True
-		mat.raytrace_mirror.reflect_factor = 0.3
+		mat.raytrace_mirror.reflect_factor = 0.15
 	else:
 		mat.raytrace_mirror.use = False
-		mat.alpha=0
+		mat.alpha = 0
 
 	if checklist(canon,conf.json_data['blocks']['emit']):
 		mat.emit = 1
@@ -285,8 +301,6 @@ def set_texture_pack(material, folder, use_extra_passes):
 	if image==None:
 		return 0
 
-	# TODO: relate image to existing image datablock, or load it in
-	# default for now, just always create new data block
 	image_data = util.loadTexture(image)
 	engine = bpy.context.scene.render.engine
 	saturate = mc_name in conf.json_data['blocks']['desaturated']
@@ -305,7 +319,7 @@ def assert_textures_on_materials(image, materials):
 	engine = bpy.context.scene.render.engine
 	count = 0
 
-	if 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
+	if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
 		for mat in materials:
 			status = set_internal_texture(image, mat)
 			if status: count+=1
@@ -358,7 +372,7 @@ def set_cycles_texture(image, material, extra_passes=False, saturate=False):
 			node.hide = False
 		elif "MCPREP_normal" in node:
 			if "normal" in img_sets:
-				new_img = bpy.data.images.load(img_sets["normal"])
+				new_img = util.loadTexture(img_sets["normal"])
 				node.image = new_img
 				node.mute = False
 				node.hide = False
@@ -367,7 +381,7 @@ def set_cycles_texture(image, material, extra_passes=False, saturate=False):
 				node.hide = True
 		elif "MCPREP_specular" in node:
 			if "specular" in img_sets:
-				new_img = bpy.data.images.load(img_sets["specular"])
+				new_img = util.loadTexture(img_sets["specular"])
 				node.image = new_img
 				node.mute = False
 				node.hide = False
@@ -430,11 +444,12 @@ def set_internal_texture(image, material, extra_passes=False, saturate=False):
 		if material.texture_slots[0] == None:
 			material.texture_slots.create(0)
 		material.texture_slots[0].texture = tex
+		material.texture_slots[0].texture["MCPREP_diffuse"] = True
 		material.texture_slots[0].use = True
+		base = 0
 
 	# go through and turn off any previous passes not in img_sets
 	for i,sl in enumerate(material.texture_slots):
-
 		if i==base:
 			continue # skip primary texture set
 		if "normal" in img_sets and img_sets["normal"]: # pop item each time
@@ -445,34 +460,35 @@ def set_internal_texture(image, material, extra_passes=False, saturate=False):
 			print(sl)
 			if not sl:
 				sl = material.texture_slots.create(i)
-				# scene refresh required here, as create delays
-				# bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
 			f = img_sets.pop("normal")
 			new_img = util.loadTexture(f)
-			new_img.use_alpha = False  # would mess up material
 			new_tex.image = new_img
 			sl.texture = new_tex
+			sl.texture["MCPREP_normal"] = True
 			sl.use_map_normal = True
 			sl.normal_factor = 0.1
 			sl.use_map_color_diffuse = False
 			sl.use_map_specular = False
+			sl.use_map_alpha = False
 			sl.blend_type = 'MIX'
 			sl.use = True
 		elif "spec" in img_sets and img_sets["spec"]:
 			if tex and tex.name+"_s" in bpy.data.textures:
 				new_tex = bpy.data.textures[tex.name+"_s"]
 			else:
-				new_tex = bpy.data.textures.new(name=tex.name+"_n",type="IMAGE")
+				new_tex = bpy.data.textures.new(name=tex.name+"_s",type="IMAGE")
 			if not sl:
 				sl = material.texture_slots.create(i)
-			f = img_sets.pop("normal")
+			f = img_sets.pop("specular")
 			new_img = util.loadTexture(f)
 			new_img.use_alpha = False  # would mess up material
 			new_tex.image = new_img
 			sl.texture = new_tex
+			sl.texture["MCPREP_specular"] = True
 			sl.use_map_normal = False
 			sl.use_map_color_diffuse = False
 			sl.use_map_specular = True
+			sl.use_map_alpha = False
 			sl.blend_type = 'MIX'
 			sl.use = True
 		elif "saturate" in img_sets:
@@ -487,12 +503,13 @@ def set_internal_texture(image, material, extra_passes=False, saturate=False):
 			if not sl:
 				sl = material.texture_slots.create(i)
 			sl.texture = new_tex
+			sl.texture["SATURATE"] = True
 			sl.use_map_normal = False
 			sl.use_map_color_diffuse = True
 			sl.use_map_specular = False
+			sl.use_map_alpha = False
 			sl.blend_type = 'OVERLAY'
 			sl.use = True
-
 			new_tex.use_color_ramp = True
 			for _ in range(len(new_tex.color_ramp.elements)-1):
 				new_tex.color_ramp.elements.remove(new_tex.color_ramp.elements[0])
@@ -521,7 +538,7 @@ def get_node_for_pass(material, pass_name):
 			return_node = node
 		elif "MCPREP_specular" in node and pass_name == "specular":
 			return_node = node
-		elif "MCPREP_specular" in node and pass_name == "displace":
+		elif "MCPREP_displace" in node and pass_name == "displace":
 			return_node = node
 		else:
 			if not return_node:
@@ -670,6 +687,74 @@ def replace_missing_texture(image):
 # Generating node groups
 # -----------------------------------------------------------------------------
 
+def copy_texture_animation_pass_settings(mat):
+	"""Get any animation settings for passes."""
+	# Pre-copy any animated node settings before clearing nodes
+	animated_data = {}
+	if not mat.use_nodes:
+		return {}
+	for node in mat.node_tree.nodes:
+		if node.type != "TEX_IMAGE":
+			continue
+		if not node.image:
+			continue
+		if not node.image.source == 'SEQUENCE':
+			continue
+		if "MCPREP_diffuse" in node:
+			passname = "diffuse"
+		elif "MCPREP_normal" in node:
+			passname = "normal"
+		elif "MCPREP_specular" in node:
+			passname = "specular"
+		elif "MCPREP_displace" in node:
+			passname = "displace"
+		else:
+			if not animated_data["diffuse"]:
+				passname = "diffuse"
+		animated_data[passname] = {
+			"frame_duration": node.image.frame_duration,
+			"frame_start": node.image.frame_start,
+			"frame_offset": node.image.frame_offset
+		}
+	return animated_data
+
+
+def apply_texture_animation_pass_settings(mat, animated_data):
+	"""Apply animated texture settings for all given passes of dict."""
+
+	if not mat.use_nodes:
+		return {}
+
+	node_diff = None
+	node_normal = None
+	node_specular = None
+	node_displace = None
+	for node in mat.node_tree.nodes:
+		if "diffuse" in node:
+			node_diff = node
+		elif "normal" in node:
+			node_normal = node
+		elif "specular" in node:
+			node_specular = node
+		elif "dispalce" in node:
+			node_displace = node
+
+	for itm in animated_data:
+		if itm == "diffuse" and node_diff:
+			anim_node = node_diff
+		elif itm == "normal" and node_normal:
+			anim_node = node_normal
+		elif itm == "specular" and node_specular:
+			anim_node = node_specular
+		elif itm == "displace" and node_displace:
+			anim_node = node_displace
+		else:
+			continue
+		#### APPLYS SETTINGS FRMO animated_data[itm] to node!
+		anim_node.frame_duration = animated_data[itm]["frame_duration"]
+		anim_node.frame_start = animated_data[itm]["frame_start"]
+		anim_node.frame_offset = animated_data[itm]["frame_offset"]
+
 
 def matgen_cycles_principled(mat, passes, use_reflections, saturate=False):
 	"""Generate principled cycles material, defaults to using transparency."""
@@ -691,8 +776,8 @@ def matgen_cycles_principled(mat, passes, use_reflections, saturate=False):
 		# TODO: find replacement texture here, if enabled
 		return
 
-	#enable nodes
 	mat.use_nodes = True
+	animated_data = copy_texture_animation_pass_settings(mat)
 	nodes = mat.node_tree.nodes
 	links = mat.node_tree.links
 	nodes.clear()
@@ -793,6 +878,9 @@ def matgen_cycles_principled(mat, passes, use_reflections, saturate=False):
 			nodeSaturateMix.mute = False
 			nodeSaturateMix.hide = False
 
+	# reapply animation data if any to generated nodes
+	apply_texture_animation_pass_settings(mat, animated_data)
+
 	return 0 # return 0 once implemented
 
 
@@ -817,6 +905,7 @@ def matgen_cycles_original(mat, passes, use_reflections, saturate=False):
 
 	#enable nodes
 	mat.use_nodes = True
+	animated_data = copy_texture_animation_pass_settings(mat)
 	nodes = mat.node_tree.nodes
 	links = mat.node_tree.links
 	nodes.clear()
@@ -942,6 +1031,9 @@ def matgen_cycles_original(mat, passes, use_reflections, saturate=False):
 			nodeSaturateMix.mute = False
 			nodeSaturateMix.hide = False
 
+	# reapply animation data if any to generated nodes
+	apply_texture_animation_pass_settings(mat, animated_data)
+
 	return 0
 
 
@@ -957,6 +1049,7 @@ def matgen_cycles_emit(mat, passes):
 		return
 
 	mat.use_nodes = True
+	animated_data = copy_texture_animation_pass_settings(mat)
 	nodes = mat.node_tree.nodes
 	links = mat.node_tree.links
 	nodes.clear()
@@ -1010,5 +1103,8 @@ def matgen_cycles_emit(mat, passes):
 	nodeFalloff.inputs[1].default_value = 0.03
 
 	mat.cycles.sample_as_light = True
+
+	# reapply animation data if any to generated nodes
+	apply_texture_animation_pass_settings(mat, animated_data)
 
 	return 0

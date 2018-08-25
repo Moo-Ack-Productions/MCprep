@@ -30,31 +30,181 @@ from . import generate
 from .. import tracking
 from .. import util
 
+
 # -----------------------------------------------------------------------------
 # Supporting functions
 # -----------------------------------------------------------------------------
 
+def animate_single_material(mat, engine, export_location='original', clear_cache=False):
+	"""Animates texture for single material, including all passes.
+
+	Args:
+		mat: the existing material
+		engine: target render engine
+		export_location: enum of {original, texturepack, local}
+		clear_cache: whether to pre-remove existing sequence if existing
+	Returns:
+		Bool (if affectable), Bool (if actually updated or not)
+	"""
+	mat_gen = util.nameGeneralize(mat.name)
+	canon, form = generate.get_mc_canonical_name(mat_gen)
+
+	if canon not in conf.json_data["blocks"]["animated"]:
+		return False, False
+	else:
+		if conf.v:
+			print("Animate-able texture material found: " + mat.name)
+
+	# get the base image from the texturepack (cycles/BI general)
+	image_path_canon = generate.find_from_texturepack(canon)
+	if not image_path_canon:
+		if conf.v:
+			print("Could not fine texturepack for animate-able image")
+		return True, False
+
+	# apply the sequence if any found, will be empty dict if not
+	tile_path_dict = generate_material_sequence(mat, image_path_canon, form,
+										export_location, clear_cache)
+	if tile_path_dict == {} and conf.v:
+		print("No sequence/passes found to generate")
+	if conf.v:
+		print("Tilepathdict:")
+		print(tile_path_dict)
+
+	affected_materials = 0
+	for pass_name in tile_path_dict:
+		if not tile_path_dict[pass_name]:  # ie ''
+			if conf.v: print("Skipping passname: " + pass_name)
+			continue
+		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+			node = generate.get_node_for_pass(mat, pass_name)
+			if not node:
+				print("Did not get node for pass "+pass_name)
+				continue
+			set_sequence_to_texnode(node, tile_path_dict[pass_name])
+			affected_materials += 1
+		elif engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
+			texture = generate.get_texlayer_for_pass(mat, pass_name)
+			if not texture:
+				print("Did not get texture for pass "+pass_name)
+				continue
+			set_sequence_to_texnode(texture, tile_path_dict[pass_name])
+			affected_materials += 1
+	return True, affected_materials>0
+
+
+def generate_material_sequence(mat, image_path, form, export_location, clear_cache):
+	"""Generate sequence for single material given image passes found.
+
+	Returns Dictionary of the image paths to the first tile of each
+	material pass type detected (e.g. diffuse, specular, normal)
+	"""
+
+	# get the currently assigned image passes (normal, spec. etc)
+	#image_dict = generate.get_textures(mat)
+	image_dict = {}
+
+	# gets available passes from current texturepack for given name
+	img_pass_dict = generate.find_additional_passes(image_path)
+
+	seq_path_base = None  # defaults to folder in resource pack
+	# if self.export_location == "texturepack"
+	if export_location == "local":
+		if not bpy.data.filepath:
+			raise Exception("Must save file before using local option save location")
+		temp_abs = bpy.path.abspath(bpy.data.filepath)
+		seq_path_base = os.path.join(os.path.dirname(temp_abs), "Textures")
+	elif export_location == "original":
+		seq_path_base =  os.path.dirname(bpy.path.abspath(image_path))
+
+	if conf.v:
+		print("Pre-sequence details")
+		print(image_path)
+		print(image_dict)
+		print(img_pass_dict)
+		print(seq_path_base)
+		print("---")
+
+	if form == "jmc2obj":
+		print("DEBUG - jmc2obj aniamted texture detected")
+	elif form == "mineways":
+		print("DEBUG - mineways aniamted texture detected")
+	else:
+		print("DEBUG - other form of animated texture detected")
+
+	perm_denied = "Permission denied, could not make folder - try " + \
+		"running blender as admin"
+
+	for img_pass in img_pass_dict:
+		passfile = img_pass_dict[img_pass]
+		print("Running on file:")
+		# print(passfile)
+		print(bpy.path.abspath(passfile))
+
+		# Create the sequence subdir (without race condition)
+		pass_name = os.path.splitext(os.path.basename(passfile))[0]
+		if not seq_path_base:
+			seq_path = os.path.join(os.path.dirname(passfile), pass_name)
+		else:
+			seq_path = os.path.join(seq_path_base, pass_name)
+		if conf.v:
+			print("Using sequence directory: "+seq_path)
+
+		try:  # check parent folder exists/create if needed
+			os.mkdir(os.path.dirname(seq_path))  # as opposed to dirname(seq_path)
+		except OSError as exc:
+			if exc.errno == errno.EACCES:
+				raise Exception(perm_denied)
+			elif exc.errno != errno.EEXIST:
+				raise
+		try:  # check parent folder exists/create if needed
+			os.mkdir(seq_path)  # as opposed to dirname(seq_path)
+		except OSError as exc:
+			if exc.errno == errno.EACCES:
+				raise Exception(perm_denied)
+			elif exc.errno != errno.EEXIST:
+				raise
+
+		# overwrite the files found if not cached
+		if not os.path.isdir(seq_path):
+			raise Exception("Path does not exist: "+seq_path)
+		cached = [tile for tile in os.listdir(seq_path)
+				if os.path.isfile(os.path.join(seq_path, tile))
+				and tile.startswith(pass_name)]
+		if cached:
+			print("Cached detected")
+
+		if clear_cache and cached:
+			for tile in cached:
+				try:
+					os.remove(os.path.join(seq_path, tile))
+				except OSError as exc:
+					if exc.errno == errno.EACCES:
+						raise Exception(perm_denied)
+
+		# generate the sequences
+		params = [] # TODO: get from json file
+		if clear_cache or not cached:
+			first_tile = export_image_to_sequence(passfile, params, seq_path, form)
+		else:
+			first_tile = os.path.join(seq_path, sorted(cached)[0])
+
+		# save first tile to dict
+		image_dict[img_pass] = bpy.path.abspath(first_tile)
+	return image_dict
+
+
 def export_image_to_sequence(image_path, params, output_folder=None, form=None):
 	"""Convert image tiles into image sequence files.
 
-	image: image filepath source
+	image_path: image filepath source
 	params: Settings from the json file or otherwise on *how* to animate it
 		e.g. ["linear", 2, false] = linear animation, 2 seconds long, and _?
 	form: jmc2obj, Mineways, or None (default)
-	Returns full path of first image.
+	Returns:
+		Full path of first image on success.
 	Does not auto load new images (or keep temporary ones created around)
 	"""
-
-	# TODO: move this into a dedicated 'convert sequence' function that is
-	# not dependent on MC prep names and forms.
-	# path = "//"
-	# if not image.packed_file:
-	# 	if conf.v: print("Image is not packed: " + image.name)
-	# 	path = bpy.path.abspath(image.filepath)
-	# else:
-	# 	blend_filedir = bpy.path.abspath(bpy.data.filepath)
-	# 	path = os.path.join(os.path.dirname(blend_filedir),
-	# 						"Textures", image.name) # plus extension
 
 	# use the source image's filepath, or fallback to blend file's,
 	if not output_folder:
@@ -65,15 +215,13 @@ def export_image_to_sequence(image_path, params, output_folder=None, form=None):
 		if exc.errno != errno.EEXIST:
 			raise
 
-	basename, ext = os.path.splitext(os.path.basename(image_path))
-
 	# load in the image_path to a temporary datablock
 	image = bpy.data.images.load(image_path)
 
 	# ind = self.get_sequence_int_index(first_img)
 	# base_name = first_img[:-ind]
 	# start_img = int(first_img[-ind:])
-
+	basename, ext = os.path.splitext(os.path.basename(image_path))
 	tiles = image.size[1]/image.size[0]
 	if int(tiles) != tiles:
 		print("Not perfectly tiled image")
@@ -86,8 +234,6 @@ def export_image_to_sequence(image_path, params, output_folder=None, form=None):
 	# src_pixels = list(image.pixels)
 
 	first_img = None
-
-
 	for i in range(tiles):
 		if conf.v:
 			print("Exporting sequence tile " + str(i))
@@ -116,9 +262,7 @@ def export_image_to_sequence(image_path, params, output_folder=None, form=None):
 			bpy.data.images.remove(img_tile)
 		else:
 			img_tile = None
-
-			Exception("Not yet supported for mineways")
-
+			raise Exception("No Animate Textures Mineways support yet")
 
 		# lst = list(img_tile.pixels)
 		# start_ind = tile_pixel_size
@@ -131,8 +275,7 @@ def export_image_to_sequence(image_path, params, output_folder=None, form=None):
 
 
 def get_sequence_int_index(base_name):
-	"""Return the index of the image name."""
-	# get the number of digits at end of filename
+	"""Return the index of the image name, number of digits at filename end."""
 	ind = 0
 	nums = '0123456789'
 	for i in range(len(base_name)):
@@ -147,8 +290,6 @@ def set_sequence_to_texnode(node, image_path):
 
 	Note: this also works as-is where "node" is actually a texture block
 	"""
-
-	# TODO: Verify works for BI as-is
 
 	image_path = bpy.path.abspath(image_path)
 	base_dir = os.path.dirname(image_path)
@@ -174,30 +315,6 @@ def set_sequence_to_texnode(node, image_path):
 	node.image_user.use_auto_refresh = True
 
 
-# def load_textures(texture):
-# 	"""Load texture, reusing existing texture if present."""
-
-# 	# ISN"T THIS DUPLICATIVE CODE? remove
-#	# BUT, should this be incorporated to texture loading, to re-use blocks?
-
-# 	# load the image only once
-# 	base = bpy.path.basename(texture)
-# 	# HERE load the iamge and set
-# 	if base in bpy.data.images:
-# 		if bpy.path.abspath(bpy.data.images[base].filepath) == bpy.path.abspath(texture):
-# 			data_img = bpy.data.images[base]
-# 			data_img.reload()
-# 			if conf.v:print("Using already loaded texture")
-# 		else:
-# 			data_img = bpy.data.images.load(texture)
-# 			if conf.v:print("Loading new texture image")
-# 	else:
-# 		data_img = bpy.data.images.load(texture)
-# 		if conf.v:print("Loading new texture image")
-
-# 	return data_img
-
-
 # -----------------------------------------------------------------------------
 # Sequence texture classes
 # -----------------------------------------------------------------------------
@@ -205,7 +322,7 @@ def set_sequence_to_texnode(node, image_path):
 
 class McprepPrepAnimatedTextures(bpy.types.Operator):
 	"""Replace static textures with animated versions, where present."""
-	bl_idname = "mcprep.animated_textures"
+	bl_idname = "mcprep.animate_textures"
 	bl_label = "Animate textures"
 
 	clear_cache = bpy.props.BoolProperty(
@@ -219,7 +336,7 @@ class McprepPrepAnimatedTextures(bpy.types.Operator):
 			("original", "Next to current source image", "Save animation tiles next to source image"),
 			("texturepack", "Inside MCprep texturepack", "Save animation tiles to current MCprep texturepack (useful for future re-use)"),
 			("local", "Next to this blend file", "Save animation tiles next to current saved blend file")],
-		description = "Set where to export (or duplicate to) tile sequence images"
+		description = "Set where to export (or duplicate to) tile sequence images."
 		)
 	skipUsage = bpy.props.BoolProperty(
 		default = False,
@@ -245,7 +362,7 @@ class McprepPrepAnimatedTextures(bpy.types.Operator):
 
 		# skip tracking if internal change
 		if self.skipUsage==False:
-			tracking.trackUsage("prep_animated",bpy.context.scene.render.engine)
+			tracking.trackUsage("animate_tex", context.scene.render.engine)
 
 		if not bpy.data.is_saved and self.export_location == "local":
 			self.report({'ERROR'}, "File must be saved first if saving sequence locally")
@@ -260,53 +377,21 @@ class McprepPrepAnimatedTextures(bpy.types.Operator):
 		if not len(mats):
 			self.report({'ERROR'}, "No materials found on selected objects")
 			return {'CANCELLED'}
+		res = generate.detect_form(mats)
+		if res=="mineways":
+			self.report({'ERROR'}, "Not yet supported for Mineways - coming soon!")
+			return {'CANCELLED'}
 
 		affectable_materials = 0
 		affected_materials = 0
-		engine = context.scene.render.engine
 		for mat in mats:
-			mat_gen = util.nameGeneralize(mat.name)
-			canon, form = generate.get_mc_canonical_name(mat_gen)
-
-			if canon not in conf.json_data["blocks"]["animated"]:
-				continue
-			else:
+			affectable, affected = animate_single_material(
+				mat, context.scene.render.engine,
+				self.export_location, self.clear_cache)
+			if affectable:
 				affectable_materials += 1
-				if conf.v:
-					print("Animated texture material found: " + mat.name)
-
-			# get the base image from the texturepack (cycles/BI general)
-			image_path_canon = generate.find_from_texturepack(canon)
-			if not image_path_canon:
-				if conf.v:
-					print("Could not fine texturepack image")
-				continue
-
-			# apply the sequence if any found, will be empty dict if not
-			tile_path_dict = self.generate_sequence(mat, image_path_canon, form)
-			if tile_path_dict == {} and conf.v:
-				print("No sequence/passes found to generate")
-			if conf.v:
-				print("Tilepathdict:")
-				print(tile_path_dict)
-			for pass_name in tile_path_dict:
-				if not tile_path_dict[pass_name]:  # ie ''
-					if conf.v: print("Skipping passname: " + pass_name)
-					continue
-				if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
-					node = generate.get_node_for_pass(mat, pass_name)
-					if not node:
-						print("Did not get node for pass "+pass_name)
-						continue
-					set_sequence_to_texnode(node, tile_path_dict[pass_name])
-					affected_materials += 1
-				elif engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
-					texture = generate.get_texlayer_for_pass(mat, pass_name)
-					if not texture:
-						print("Did not get texture for pass "+pass_name)
-						continue
-					set_sequence_to_texnode(texture, tile_path_dict[pass_name])
-					affected_materials += 1
+			if affected:
+				affected_materials += 1
 
 		if affectable_materials == 0:
 			self.report({"ERROR"},
@@ -319,105 +404,6 @@ class McprepPrepAnimatedTextures(bpy.types.Operator):
 			self.report({'INFO'}, "Modified {} material(s)".format(
 				affected_materials))
 		return {'FINISHED'}
-
-	def generate_sequence(self, mat, image_path, form):
-		"""Generate sequence for single material given image passes found.
-
-		Returns Dictionary of the image paths to the first tile of each
-		material pass type detected (e.g. diffuse, specular, normal)
-		"""
-
-		# get the currently assigned image passes (normal, spec. etc)
-		#image_dict = generate.get_textures(mat)
-		image_dict = {}
-
-		# gets available passes from current texturepack for given name
-		img_pass_dict = generate.find_additional_passes(image_path)
-
-		seq_path_base = None  # defaults to folder in resource pack
-		# if self.export_location == "texturepack"
-		if self.export_location == "local":
-			if not bpy.data.filepath:
-				raise Exception("Must save file before using local option save location")
-			temp_abs = bpy.path.abspath(bpy.data.filepath)
-			seq_path_base = os.path.join(os.path.dirname(temp_abs), "Textures")
-		elif self.export_location == "original":
-			seq_path_base =  os.path.dirname(bpy.path.abspath(image_path))
-
-		if conf.v:
-			print("Pre-sequence details")
-			print(image_path)
-			print(image_dict)
-			print(img_pass_dict)
-			print("---")
-
-		if form == "jmc2obj":
-			print("DEBUG - jmc2obj aniamted texture detected")
-		elif form == "mineways":
-			print("DEBUG - mineways aniamted texture detected")
-		else:
-			print("DEBUG - other form of animated texture detected")
-
-		perm_denied = "Permission denied, could not make folder - try " + \
-			"running blender as admin"
-
-		for img_pass in img_pass_dict:
-			passfile = img_pass_dict[img_pass]
-			print("Running on file:")
-			print(passfile)
-			print(bpy.path.abspath(passfile))
-
-			# Create the sequence subdir (without race condition)
-			pass_name = os.path.splitext(os.path.basename(passfile))[0]
-			if not seq_path_base:
-				seq_path = os.path.join(os.path.dirname(passfile), pass_name)
-			else:
-				seq_path = os.path.join(seq_path_base, pass_name)
-			if conf.v:
-				print("Using sequence directory: "+seq_path)
-
-			try:  # check parent folder exists/create if needed
-				os.mkdir(os.path.dirname(seq_path))  # as opposed to dirname(seq_path)
-			except OSError as exc:
-				if exc.errno == errno.EACCES:
-					raise Exception(perm_denied)
-				elif exc.errno != errno.EEXIST:
-					raise
-
-			try:  # check parent folder exists/create if needed
-				os.mkdir(seq_path)  # as opposed to dirname(seq_path)
-			except OSError as exc:
-				if exc.errno == errno.EACCES:
-					raise Exception(perm_denied)
-				elif exc.errno != errno.EEXIST:
-					raise
-
-			# overwrite the files found if not cached
-			if not os.path.isdir(seq_path):
-				raise Exception("Path does not exist: "+seq_path)
-			cached = [tile for tile in os.listdir(seq_path)
-					if os.path.isfile(os.path.join(seq_path, tile))
-					and tile.startswith(pass_name)]
-			print("Cached detected:")
-			print(cached)
-
-			if self.clear_cache and cached:
-				for tile in cached:
-					try:
-						os.remove(os.path.join(seq_path, tile))
-					except OSError as exc:
-						if exc.errno == errno.EACCES:
-							raise Exception(perm_denied)
-
-			# generate the sequences
-			if self.clear_cache or not cached:
-				first_tile = export_image_to_sequence(passfile, seq_path, form)
-			else:
-				first_tile = os.path.join(seq_path, sorted(cached)[0])
-
-			# save first tile to dict
-			image_dict[img_pass] = bpy.path.abspath(first_tile)
-		return image_dict
 
 
 # -----------------------------------------------------------------------------

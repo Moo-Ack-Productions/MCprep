@@ -29,6 +29,7 @@ from bpy.app.handlers import persistent
 # addon imports
 from .. import conf
 from . import generate
+from . import sequences
 from .. import tracking
 from .. import util
 
@@ -45,9 +46,9 @@ class McprepPrepMaterials(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 
 	animateTextures = bpy.props.BoolProperty(
-		name = "Animate textures",
+		name = "Animate textures (may be slow first time)",
 		description = "Swap still images for the animated sequenced found in the active or default texturepack.",
-		default = True)
+		default = False)
 	autoFindMissingTextures = bpy.props.BoolProperty(
 		name = "Auto-find missing images",
 		description = "If the texture for an existing material is missing, try "+\
@@ -103,7 +104,7 @@ class McprepPrepMaterials(bpy.types.Operator):
 	def execute(self, context):
 		# skip tracking if internal change
 		if self.skipUsage==False:
-			tracking.trackUsage("materials", bpy.context.scene.render.engine)
+			tracking.trackUsage("materials", context.scene.render.engine)
 
 		# get list of selected objects
 		obj_list = context.selected_objects
@@ -131,19 +132,23 @@ class McprepPrepMaterials(bpy.types.Operator):
 				res = generate.matprep_internal(
 						mat, passes, self.useReflections)
 				if res==0: count+=1
+				if self.animateTextures:
+					sequences.animate_single_material(
+						mat, context.scene.render.engine)
 			elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 				res = generate.matprep_cycles(
 						mat, passes, self.useReflections, self.usePrincipledShader,
 						self.saturateImages)
 				if res==0: count+=1
+				if self.animateTextures:
+					sequences.animate_single_material(
+						mat, context.scene.render.engine)
 			else:
 				self.report({'ERROR'},"Only blender internal or cycles supported")
 				return {'CANCELLED'}
 
 		if self.combineMaterials==True:
 			bpy.ops.mcprep.combine_materials(selection_only=True, skipUsage=True)
-		if self.animateTextures:
-			bpy.ops.mcprep.animated_textures(skipUsage=True)
 		if self.improveUiSettings:
 			bpy.ops.mcprep.improve_ui()
 		self.report({"INFO"},"Modified "+str(count)+" materials")
@@ -254,27 +259,44 @@ class McprepSwapTexturePack(bpy.types.Operator, ImportHelper):
 		options={'HIDDEN', 'SKIP_SAVE'}
 		)
 	extra_passes = bpy.props.BoolProperty(
-		name = "Extra passes",
+		name = "Extra passes (if available)",
 		description = "If enabled, load other image passes like normal and spec"+\
 				" maps if available",
 		default = True,
 		)
+	animateTextures = bpy.props.BoolProperty(
+			name = "Animate textures (first time may be slow)",
+			description = "Convert tiled images into image sequence for material.",
+			default = True)
 	skipUsage = bpy.props.BoolProperty(
 		default = False,
 		options={'HIDDEN'}
 		)
 
+	def draw(self, context):
+		row = self.layout.row()
+		col = row.column()
+		subcol = col.column()
+		subcol.scale_y = 0.7
+		subcol.label("Select any subfolder of an")
+		subcol.label("unzipped texturepack, then")
+		subcol.label("press 'Swap Texture Pack'")
+		subcol.label("after confirming these")
+		subcol.label("settings below:")
+		col.prop(self, "extra_passes")
+		col.prop(self, "animateTextures")
+
 	@tracking.report_error
 	def execute(self,context):
 		# skip tracking if internal change
-		if self.skipUsage==False: tracking.trackUsage("texture_pack")
+		if self.skipUsage==False:
+			tracking.trackUsage("texture_pack", context.scene.render.engine)
 
 		# check folder exist, but keep relative if relevant
 		folder = self.filepath
 		if os.path.isfile(bpy.path.abspath(folder)):
 			folder = os.path.dirname(folder)
 		if conf.v: print("Folder: ", folder)
-		print("FOLLLDER",folder)
 
 		if not os.path.isdir(bpy.path.abspath(folder)):
 			self.report({'ERROR'}, "Selected folder does not exist")
@@ -291,11 +313,22 @@ class McprepSwapTexturePack(bpy.types.Operator, ImportHelper):
 		if len(obj_list)==0:
 			self.report({'ERROR'}, "No materials found on selected objects")
 			return {'CANCELLED'}
+		res = generate.detect_form(mat_list)
+		if res=="mineways":
+			self.report({'ERROR'}, "Not yet supported for Mineways - coming soon!")
+			return {'CANCELLED'}
+
+		# set the scene's folder for the texturepack being swapped
+		context.scene.mcprep_custom_texturepack_path = folder
 
 		if conf.v: print("Materials detected:",len(mat_list))
 		res = 0
 		for mat in mat_list:
 			res += generate.set_texture_pack(mat, folder, self.extra_passes)
+			if self.animateTextures:
+				sequences.animate_single_material(
+					mat, context.scene.render.engine, )
+
 		self.report({'INFO'},"{} materials affected".format(res))
 
 		return {'FINISHED'}
@@ -328,6 +361,7 @@ class McprepCombineMaterials(bpy.types.Operator):
 		default = False,
 		options = {'HIDDEN'}
 		)
+
 	@tracking.report_error
 	def execute(self, context):
 
@@ -755,6 +789,10 @@ class McprepReplaceMissingTextures(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 
 	# deleteAlpha = False
+	animateTextures = bpy.props.BoolProperty(
+		name = "Animate textures (may be slow first time)",
+		description = "Convert tiled images into image sequence for material.",
+		default = True)
 	skipUsage = bpy.props.BoolProperty(
 		default = False,
 		options = {'HIDDEN'}
@@ -764,7 +802,7 @@ class McprepReplaceMissingTextures(bpy.types.Operator):
 
 		# skip tracking if internal change
 		if self.skipUsage==False:
-			tracking.trackUsage("replace_missing")
+			tracking.trackUsage("replace_missing", context.scene.render.engine)
 
 		# get list of selected objects
 		obj_list = context.selected_objects
@@ -784,16 +822,20 @@ class McprepReplaceMissingTextures(bpy.types.Operator):
 			passes = generate.get_textures(mat)
 			for pass_name in passes:
 				res = generate.replace_missing_texture(passes[pass_name])
-				print("RESULT: "+str(res) + " for " + mat.name)
 				if res == 1:
 					updated = True
-			if updated == True:
+			if updated:
 				count += 1
 				if conf.v: print("Updated " + mat.name)
+				if self.animateTextures:
+					sequences.animate_single_material(
+						mat, context.scene.render.engine)
+					if conf.v: print("Animated texture")
 		if count == 0:
 			self.report({'INFO'},
 				"No missing image blocks detected in {} materials".format(
 				len(mat_list)))
+
 		self.report({'INFO'}, "Updated {} materials".format(count))
 
 		return {'FINISHED'}

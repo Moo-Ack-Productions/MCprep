@@ -193,18 +193,18 @@ def duplicatedDatablock(name):
 def loadTexture(texture):
 	"""Load texture once, reusing existing texture if present."""
 
-	base = bpy.path.basename(texture)
+	base = nameGeneralize(bpy.path.basename(texture))
 	if base in bpy.data.images:
 		if bpy.path.abspath(bpy.data.images[base].filepath) == bpy.path.abspath(texture):
 			data_img = bpy.data.images[base]
 			data_img.reload()
-			if conf.v:print("Using already loaded texture")
+			if conf.vv:print("Using already loaded texture")
 		else:
 			data_img = bpy.data.images.load(texture)
-			if conf.v:print("Loading new texture image")
+			if conf.vv:print("Loading new texture image")
 	else:
 		data_img = bpy.data.images.load(texture)
-		if conf.v:print("Loading new texture image")
+		if conf.vv:print("Loading new texture image")
 	return data_img
 
 

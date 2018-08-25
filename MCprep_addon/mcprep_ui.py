@@ -519,14 +519,15 @@ class McprepWorldImports(bpy.types.Panel):
 			box = col.box()
 			b_row = box.row()
 			b_col = b_row.column(align=False)
+			b_col.label("Texturepack folder")
 			row = b_col.row(align=True)
 			row.prop(context.scene, "mcprep_custom_texturepack_path", text="")
 			row.operator("mcprep.reset_texture_path", text="", icon="LOAD_FACTORY")
 
 			b_row = box.row()
 			b_col = b_row.column(align=True)
-			b_col.operator("mcprep.replace_missing_textures", text="Find missing")
-			b_col.operator("mcprep.animated_textures")
+			b_col.operator("mcprep.replace_missing_textures")
+			b_col.operator("mcprep.animate_textures")
 			# TODO: operator to make all local, all packed, or set to other location
 			# b_col.operator("mcprep.improve_ui", text="[WIP]Set tex location")
 			b_col.operator("mcprep.combine_materials",
