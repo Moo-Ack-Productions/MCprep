@@ -146,6 +146,7 @@ def detect_form(materials):
 	# more logic, e.g. count
 	if mineways>0 and jmc2obj==0:
 		res = "mineways"
+
 	elif jmc2obj>0 and mineways==0:
 		res = "jmc2obj"
 	elif jmc2obj < mineways:
@@ -208,16 +209,16 @@ def matprep_internal(mat, passes, use_reflections):
 			mat.use_textures[index] = False
 		elif "MCPREP_diffuse" in mat.texture_slots[index].texture:
 			diff_layer = index
-			mat.texture_slots[index].texture = True
+			mat.use_textures[index] = True
 		elif "MCPREP_specular" in mat.texture_slots[index].texture:
 			spec_layer = index
-			mat.texture_slots[index].texture = True
+			mat.use_textures[index] = True
 		elif "MCPREP_normal" in mat.texture_slots[index].texture:
 			norm_layer = index
-			mat.texture_slots[index].texture = True
+			mat.use_textures[index] = True
 		elif "SATURATE" in mat.texture_slots[index].texture:
 			saturate_layer = index
-			mat.texture_slots[index].texture = True
+			mat.use_textures[index] = True
 		else:
 			mat.use_textures[index] = False
 
@@ -543,7 +544,6 @@ def get_node_for_pass(material, pass_name):
 		else:
 			if not return_node:
 				return_node = node
-	print("RETURNING NODE: "+str(return_node))
 	return return_node
 
 
@@ -570,13 +570,16 @@ def get_texlayer_for_pass(material, pass_name):
 
 
 def get_textures(material):
-	"""Extract the image datablocks for a given material.
+	"""Extract the image datablocks for a given material (prefer cycles).
 
 	Returns {"diffuse":texture, "normal":None, ...}
 	"""
 	image_block = None
 	passes = {"diffuse":None, "specular":None, "normal":None,
 				"displace":None}
+
+	if not material:
+		return passes
 
 	# first try cycles materials, fall back to internal if not present
 	if material.use_nodes == True:
@@ -712,9 +715,9 @@ def copy_texture_animation_pass_settings(mat):
 			if not animated_data["diffuse"]:
 				passname = "diffuse"
 		animated_data[passname] = {
-			"frame_duration": node.image.frame_duration,
-			"frame_start": node.image.frame_start,
-			"frame_offset": node.image.frame_offset
+			"frame_duration": node.image_user.frame_duration,
+			"frame_start": node.image_user.frame_start,
+			"frame_offset": node.image_user.frame_offset
 		}
 	return animated_data
 
@@ -725,19 +728,10 @@ def apply_texture_animation_pass_settings(mat, animated_data):
 	if not mat.use_nodes:
 		return {}
 
-	node_diff = None
-	node_normal = None
-	node_specular = None
-	node_displace = None
-	for node in mat.node_tree.nodes:
-		if "diffuse" in node:
-			node_diff = node
-		elif "normal" in node:
-			node_normal = node
-		elif "specular" in node:
-			node_specular = node
-		elif "dispalce" in node:
-			node_displace = node
+	node_diff = get_node_for_pass(mat, "diffuse")
+	node_normal = get_node_for_pass(mat, "normal")
+	node_specular = get_node_for_pass(mat, "specular")
+	node_displace = get_node_for_pass(mat, "displace")
 
 	for itm in animated_data:
 		if itm == "diffuse" and node_diff:
@@ -750,10 +744,18 @@ def apply_texture_animation_pass_settings(mat, animated_data):
 			anim_node = node_displace
 		else:
 			continue
-		#### APPLYS SETTINGS FRMO animated_data[itm] to node!
-		anim_node.frame_duration = animated_data[itm]["frame_duration"]
-		anim_node.frame_start = animated_data[itm]["frame_start"]
-		anim_node.frame_offset = animated_data[itm]["frame_offset"]
+
+		anim_node.image_user.frame_duration = animated_data[itm]["frame_duration"]
+		anim_node.image_user.frame_start = animated_data[itm]["frame_start"]
+		anim_node.image_user.frame_offset = animated_data[itm]["frame_offset"]
+		anim_node.image_user.use_auto_refresh = True
+		anim_node.image_user.use_cyclic = True
+
+		# anim_node.image.frame_duration = animated_data[itm]["frame_duration"]
+		# anim_node.image.frame_start = animated_data[itm]["frame_start"]
+		# anim_node.image.frame_offset = animated_data[itm]["frame_offset"]
+		# anim_node.image.use_auto_refresh = True
+		# anim_node.image.use_cyclic = True
 
 
 def matgen_cycles_principled(mat, passes, use_reflections, saturate=False):
@@ -807,7 +809,7 @@ def matgen_cycles_principled(mat, passes, use_reflections, saturate=False):
 	nodeTexNorm.location = (-600,-275)
 	nodeSaturateMix.location = (-200,0)
 	nodeTexSpec.location = (-600,0)
-	nodeNormal.location = (-400,-275)
+	nodeNormal.location = (-400,-375)
 	principled.location = (0,0)
 	nodeTrans.location = (-400,100)
 	nodeMix1.location = (200,0)
@@ -849,12 +851,33 @@ def matgen_cycles_principled(mat, passes, use_reflections, saturate=False):
 	# apply additional settings
 	mat.cycles.sample_as_light = False
 	if use_reflections and checklist(canon,conf.json_data['blocks']['reflective']):
-		principled.inputs[5].default_value = 0.5
-		principled.inputs[7].default_value = 0.1
+		principled.inputs[5].default_value = 0.5  # spec
+		principled.inputs[7].default_value = 0.1  # roughness
+
+		# Add to alpha math channel here to increase reflections even in
+		# pure alpha-transparent spots
+		addToAlpha = nodes.new('ShaderNodeMath')
+		nodeSaturateMix.location = (-200,-200)
+		addToAlpha.use_clamp = True
+		addToAlpha.operation = 'ADD'
+		addToAlpha.inputs[1].default_value = 0.2
+		links.new(nodeTexDiff.outputs["Alpha"],addToAlpha.inputs[0])
+		links.new(addToAlpha.outputs["Value"],nodeMix1.inputs[0])
 	else:
-		principled.inputs[4].default_value = 0  # unset metallic (dielectric)
-		principled.inputs[5].default_value = 0  # set specular
-		principled.inputs[7].default_value = 0.1  # set roughness
+		principled.inputs[5].default_value = 0.05  # set specular
+		principled.inputs[7].default_value = 0.4  # set roughness
+
+	if checklist(canon,conf.json_data['blocks']['water']):
+		principled.inputs[5].default_value = 1.0  # spec
+	# 	principled.inputs[7].default_value = 0.1  # roughness
+
+	if use_reflections and checklist(canon,conf.json_data['blocks']['metallic']):
+		principled.inputs[4].default_value = 1  # set metallic
+		if principled.inputs[7].default_value < 0.2:  # roughness
+			principled.inputs[7].default_value = 0.2
+	else:
+		principled.inputs[4].default_value = 0  # set dielectric
+
 
 	if checklist(canon,conf.json_data['blocks']['solid']):
 		# nodeMix1.inputs[0].default_value = 1 # no transparency
@@ -936,7 +959,7 @@ def matgen_cycles_original(mat, passes, use_reflections, saturate=False):
 	nodeTexDiff.location = (-600,0)
 	nodeTexNorm.location = (-600,-275)
 	nodeTexSpec.location = (-600,275)
-	nodeNormal.location = (-400,-275)
+	nodeNormal.location = (-400,-375)
 	nodeGloss.location = (0,-150)
 	nodeSaturateMix.location = (-400,0)
 	nodeDiff.location = (-200,-150)

@@ -28,6 +28,7 @@ from mathutils import Vector
 # addon imports
 from .. import conf
 from .. import util
+from . import mobs
 from .. import tracking
 
 
@@ -52,7 +53,7 @@ class McprepReloadSpawners(bpy.types.Operator):
 
 class McprepSpawnPathReset(bpy.types.Operator):
 	"""Reset the spawn path to the default specified in the addon preferences panel"""
-	bl_idname = "mcprep.spawnpathreset"
+	bl_idname = "mcprep.spawn_path_reset"
 	bl_label = "Reset spawn path"
 	bl_options = {'REGISTER', 'UNDO'}
 
@@ -61,7 +62,7 @@ class McprepSpawnPathReset(bpy.types.Operator):
 
 		addon_prefs = util.get_prefs()
 		context.scene.mcprep_mob_path = addon_prefs.mob_path
-		updateRigList(context)
+		mobs.updateRigList(context)
 		return {'FINISHED'}
 
 

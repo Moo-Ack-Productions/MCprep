@@ -33,11 +33,24 @@ from . import conf
 
 
 def nameGeneralize(name):
-	# Get base name from datablock
+	"""Get base name from datablock, accounts for duplicates and animated tex."""
 	if duplicatedDatablock(name) == True:
-		return name[:-4]
-	else:
-		return name
+		name = name[:-4] # removes .001 or .png
+
+	# if name ends in _####, drop those numbers (for animated sequences)
+		"""Return the index of the image name, number of digits at filename end."""
+	ind = 0
+	nums = '0123456789'
+	for i in range(len(name)):
+		if not name[-i-1] in nums:
+			break
+		ind += 1
+	if ind > 0:
+		if name[-ind] in ["-", "_", " "]:
+			name = name[:-ind-1]
+		else:
+			name = name[:-ind]
+	return name
 
 
 def materialsFromObj(objList):
@@ -86,7 +99,7 @@ def bAppendLink(directory, name, toLink, active_layer=True):
 		pass #  "version" didn't exist before 72!
 	#if (version[0] >= 2 and version[1] >= 72):
 
-	print("DEBUG 2.8 loader",version, post272, post280)
+	if conf.v: print("DEBUG 2.8 loader",version, post272, post280)
 	# for compatibility, add ending character
 	if directory[-1] != "/" and directory[-1] != os.path.sep:
 		directory += os.path.sep
@@ -112,6 +125,7 @@ def bAppendLink(directory, name, toLink, active_layer=True):
 		# OLD method of importing
 		if conf.vv:print("Using old method of append/link, 2.72 <=")
 		bpy.ops.wm.link_append(directory=directory, filename=name, link=toLink)
+
 
 def obj_copy(base, context=None, vertex_groups=True, modifiers=True):
 	"""Copy an object's data, vertex groups, and modifiers without operators.
@@ -149,6 +163,7 @@ def obj_copy(base, context=None, vertex_groups=True, modifiers=True):
 			for prop in properties:
 				setattr(dest, prop, getattr(mod_src, prop))
 	return new_ob
+
 
 def bv28():
 	"""Check if blender 2.8, for layouts, UI, and properties. """

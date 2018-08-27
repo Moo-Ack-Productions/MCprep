@@ -430,6 +430,18 @@ class McprepReloadSkins(bpy.types.Operator):
 		return {'FINISHED'}
 
 
+class McprepResetSkinPath(bpy.types.Operator):
+	bl_idname = "mcprep.skin_path_reset"
+	bl_label = "Reset skin path"
+	bl_description = "Reset the skins folder"
+
+	@tracking.report_error
+	def execute(self, context):
+		addon_prefs = util.get_prefs()
+		context.scene.mcprep_skin_path = addon_prefs.skin_path
+		return {'FINISHED'}
+
+
 class McprepSpawn_with_skin(bpy.types.Operator):
 	bl_idname = "mcprep.spawn_with_skin"
 	bl_label = "Spawn with skin"

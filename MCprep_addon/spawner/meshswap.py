@@ -104,14 +104,14 @@ def updateMeshswapList(context):
 # -----------------------------------------------------------------------------
 
 
-class McprepSpawnPathReset(bpy.types.Operator):
+class McprepMeshswapPathReset(bpy.types.Operator):
 	"""Reset the spawn path to the default specified in the addon preferences panel"""
-	bl_idname = "mcprep.meshswap_pathreset"
+	bl_idname = "mcprep.meshswap_path_reset"
 	bl_label = "Reset meshswap path"
 	bl_options = {'REGISTER', 'UNDO'}
 
 	@tracking.report_error
-	def execute(self,context):
+	def execute(self, context):
 
 		addon_prefs = util.get_prefs()
 		context.scene.meshswap_path = addon_prefs.meshswap_path

@@ -196,7 +196,7 @@ class Singleton_tracking(object):
 		if background is False:
 			return self.raw_request(method, path, payload, callback)
 		else:
-			if self._verbose: print("Starting background thread for track call")
+			# if self._verbose: print("Starting background thread for track call")
 			bg_thread = threading.Thread(target=self.raw_request, args=(method, path, payload, callback))
 			bg_thread.daemon = True
 			#self._bg_threads.append(bg_thread)
@@ -228,10 +228,10 @@ class Singleton_tracking(object):
 
 		raw = connection.getresponse().read()
 		resp = json.loads(raw.decode())
-		if self._verbose: print("Response: "+str(resp))
+		if self._verbose: print(self._addon +" response: "+str(resp))
 
 		if callback != None:
-			if self._verbose: print("Running callback")
+			if self._verbose: print(self._addon+": Running callback")
 			callback(resp)
 
 		return resp
@@ -245,7 +245,7 @@ class Singleton_tracking(object):
 		if os.path.isfile(self._tracker_json) is True:
 			with open(self._tracker_json) as data_file:
 				self.json = json.load(data_file)
-				if self._verbose: print("Read in json settings from tracker file")
+				if self._verbose: print(self._addon+": Read in json settings from tracker file")
 		else:
 			# set data structure
 			self.json = {
@@ -259,7 +259,8 @@ class Singleton_tracking(object):
 			if os.path.isfile(self._tracker_idbackup):
 				with open(self._tracker_idbackup) as data_file:
 					idbackup = json.load(data_file)
-					if self._verbose: print("Reinstall, getting IDNAME")
+					if self._verbose:
+						print(self._addon+": Reinstall, getting IDNAME")
 					if "IDNAME" in idbackup:
 						self.json["install_id"] = idbackup["IDNAME"]
 						self.json["status"] = "re-install"
@@ -280,8 +281,7 @@ class Singleton_tracking(object):
 		outf.write(data_out)
 		outf.close()
 		if self._verbose:
-			print("Wrote out json settings to file, with the contents:")
-			print(self.json)
+			print(self._addon+": Wrote out json settings to file")
 
 	def save_tracker_idbackup(self):
 		"""Save copy of the ID file to parent folder location, for detecting
@@ -298,7 +298,7 @@ class Singleton_tracking(object):
 			outf.write(data_out)
 			outf.close()
 			if self._verbose:
-				print("Wrote out backup settings to file, with the contents:")
+				print(self._addon+": Wrote out backup settings to file, with the contents:")
 				print(idbackup)
 
 	def remove_indentifiable_information(self, report):
@@ -488,7 +488,7 @@ def trackInstalled(background=None):
 	if Tracker.json["status"] == None and \
 			Tracker.json["install_id"] != None: return
 
-	if Tracker.verbose: print("Tracking install")
+	if Tracker.verbose: print(Tracker.addon+" install registered")
 
 	# if no override set, use default
 	if background == None:
@@ -555,7 +555,7 @@ def trackUsage(function, param=None, background=None):
 	if Tracker.tracking_enabled is False: return # skip if not opted in
 	if conf.internal_change is True: return # skip if internal run
 
-	if Tracker.verbose: print("Tracking usage: "+function +", param: "+str(param))
+	if Tracker.verbose: print(Tracker.addon+" usage: "+function +", param: "+str(param))
 
 	# if no override set, use default
 	if background == None:

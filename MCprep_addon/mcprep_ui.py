@@ -26,7 +26,6 @@ from . import conf
 from . import util
 from .spawner import mobs
 from .spawner import meshswap
-from . import materials
 from . import world_tools
 from . import addon_updater_ops
 from . import tracking
@@ -145,19 +144,21 @@ class McprepQuickMenu(bpy.types.Menu):
 			layout.menu(McprepMeshswapPlaceMenu.bl_idname)
 
 
-# for custom menu registration, icon for spawner MCprep menu of shift-A
 def draw_mobspawner(self, context):
+	"""For custom menu registration, icon for spawner MCprep menu of shift-A."""
+
+	# TODO: Not currently used, utilize or delete.
 	layout = self.layout
 	pcoll = conf.preview_collections["main"]
 	if pcoll != "":
 		my_icon = pcoll["spawner_icon"]
-		layout.menu(mobSpawnerMenu.bl_idname,icon_value=my_icon.icon_id)
+		layout.menu(McprepMobSpawnerMenu.bl_idname, icon_value=my_icon.icon_id)
 	else:
-		layout.menu(mobSpawnerMenu.bl_idname)
+		layout.menu(McprepMobSpawnerMenu.bl_idname)
 
 
-# for updating the mineways path on OSX
 def mineways_update(self, context):
+	"""For updating the mineways path on OSX."""
 	if ".app/" in self.open_mineways_path:
 		# will run twice inherently
 		temp = self.open_mineways_path.split(".app/")[0]
@@ -165,7 +166,6 @@ def mineways_update(self, context):
 	return
 
 
-# preferences UI
 class McprepPreference(bpy.types.AddonPreferences):
 	bl_idname = __package__
 	scriptdir = bpy.path.abspath(os.path.dirname(__file__))
@@ -435,10 +435,8 @@ class McprepPreference(bpy.types.AddonPreferences):
 		layout.label("Don't forget to save user preferences!")
 
 
-# ---------
-# World importing related & material settings
 class McprepWorldImports(bpy.types.Panel):
-	"""MCprep addon panel"""
+	"""World importing related settings and tools"""
 	bl_label = "World Imports"
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'TOOLS'
@@ -653,7 +651,9 @@ class McprepSkinsPanel(bpy.types.Panel):
 			box = col.box()
 			b_row = box.column(align=True)
 			b_row.label("Skin path")
-			b_row.prop(context.scene,"mcprep_skin_path", text="")
+			b_subrow = b_row.row(align=True)
+			b_subrow.prop(context.scene,"mcprep_skin_path", text="")
+			b_subrow.operator("mcprep.skin_path_reset", icon="LOAD_FACTORY", text="")
 			b_row.operator("mcprep.add_skin")
 			b_row.operator("mcprep.remove_skin")
 			b_row.operator("mcprep.reload_skins")
@@ -683,7 +683,7 @@ class McprepSpawnPanel(bpy.types.Panel):
 
 	def draw(self, context):
 		row = self.layout.row(align=True)
-		row.prop(context.scene.mcprep_props,"spawn_mode", text="")
+		row.prop(context.scene.mcprep_props,"spawn_mode", expand=True)
 		row.operator("mcprep.open_help", text="", icon="QUESTION").url = \
 			"http://theduckcow.com/dev/blender/mcprep/mcprep-spawner/"
 		addon_updater_ops.check_for_update_background()
@@ -735,7 +735,8 @@ class McprepSpawnPanel(bpy.types.Panel):
 			col.label("No mobs loaded")
 			row2 = col.row()
 			row2.scale_y = 2
-			row2.operator("mcprep.spawnpathreset","Press to reload", icon="ERROR")
+			row2.operator("mcprep.spawn_path_reset", "Press to reload",
+				icon="ERROR")
 
 		split = layout.split()
 		col = split.column(align=True)
@@ -749,14 +750,15 @@ class McprepSpawnPanel(bpy.types.Panel):
 			b_row = box.row()
 			b_col = b_row.column(align=False)
 			b_col.label("Mob spawner folder")
-			b_col.prop(context.scene,"mcprep_mob_path",text="")
+			subrow = b_col.row(align=True)
+			subrow.prop(context.scene,"mcprep_mob_path",text="")
+			subrow.operator("mcprep.spawn_path_reset", icon="LOAD_FACTORY", text="")
 			b_row = box.row()
 			b_col = b_row.column(align=True)
 			p = b_col.operator("mcprep.openfolder", text="Open mob folder")
 			p.folder = context.scene.mcprep_mob_path
 			b_col.operator("mcprep.mob_uninstall")
 			b_col.operator("mcprep.reload_mobs", text="Reload mobs")
-			b_col.operator("mcprep.spawnpathreset")
 
 	def meshswap(self, context):
 		scn_props = context.scene.mcprep_props
@@ -771,7 +773,7 @@ class McprepSpawnPanel(bpy.types.Panel):
 			col.label("No blocks loaded")
 			row2 = col.row()
 			row2.scale_y = 2
-			row2.operator("mcprep.reload_spawners","Reload assets", icon="ERROR")
+			row2.operator("mcprep.reload_spawners", "Reload assets", icon="ERROR")
 			return
 
 		row = layout.row()
@@ -804,7 +806,9 @@ class McprepSpawnPanel(bpy.types.Panel):
 			b_row = box.row()
 			b_col = b_row.column(align=False)
 			b_col.label("Meshswap file")
-			b_col.prop(context.scene,"meshswap_path", text="")
+			subrow = b_col.row(align=True)
+			subrow.prop(context.scene, "meshswap_path", text="")
+			subrow.operator("mcprep.meshswap_path_reset", icon="LOAD_FACTORY", text="")
 			b_row = box.row()
 			b_col = b_row.column(align=True)
 			b_col.operator("mcprep.reload_meshswap")
@@ -880,7 +884,7 @@ class McprepProps(bpy.types.PropertyGroup):
 		name="Spawn Mode",
 		description="Set mode for rig/object spawner",
 		items = [('mob', 'Mob', 'Show mob spawner'),
-				('meshswap', 'Meshswap', 'Show meshswap spawner')]
+				('meshswap', 'MeshSwap', 'Show MeshSwap spawner')]
 	)
 
 	# World settings
