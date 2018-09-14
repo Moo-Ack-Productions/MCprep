@@ -49,11 +49,10 @@ class MCP_open_jmc2obj(bpy.types.Operator):
 		options={'HIDDEN'}
 		)
 
+	track_function = "open_program"
+	track_param = "jmc2obj"
 	@tracking.report_error
 	def execute(self,context):
-		if self.skipUsage==False:
-			tracking.trackUsage("open_program","jmc2obj")
-
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
 		res = util.open_program(addon_prefs.open_jmc2obj_path)
 
@@ -78,7 +77,7 @@ class MCP_install_jmc2obj(bpy.types.Operator):
 
 	def invoke(self, context, event):
 		wm = context.window_manager
-		return wm.invoke_popup(self, width=400, height=200)
+		return wm.invoke_popup(self, width=400*util.ui_scale(), height=200)
 
 	def draw(self, context):
 		self.layout.label("Valid program path not found!")
@@ -116,11 +115,10 @@ class MCP_open_mineways(bpy.types.Operator):
 		options={'HIDDEN'}
 		)
 
+	track_function = "open_program"
+	track_param = "mineways"
 	@tracking.report_error
 	def execute(self,context):
-		if self.skipUsage==False:
-			tracking.trackUsage("open_program","mineways")
-
 		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
 		res = util.open_program(addon_prefs.open_mineways_path)
 
@@ -145,7 +143,7 @@ class MCP_install_mineways(bpy.types.Operator):
 
 	def invoke(self, context, event):
 		wm = context.window_manager
-		return wm.invoke_popup(self, width=400, height=200)
+		return wm.invoke_popup(self, width=400*util.ui_scale(), height=200)
 
 	def draw(self, context):
 		self.layout.label("Valid program path not found!")
@@ -181,10 +179,14 @@ class MCP_prep_world(bpy.types.Operator):
 	bl_idname = "mcprep.world"
 	bl_label = "Prep World"
 	bl_description = "Prep world render settings to something generally useful"
+	bl_options = {'REGISTER', 'UNDO'}
 
+	track_function = "prep_world"
+	track_param = None
 	@tracking.report_error
 	def execute(self, context):
 		engine = bpy.context.scene.render.engine
+		self.track_param = engine
 		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 			self.prep_world_cycles(context)
 		elif engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
@@ -217,10 +219,7 @@ class MCP_prep_world(bpy.types.Operator):
 		# higher = faster, though potentially noisier
 		# this is better balance than default
 		context.scene.cycles.light_sampling_threshold = 0.1
-
 		context.scene.cycles.max_bounces = 8
-
-
 
 	def prep_world_internal(self, context):
 		# check for any suns with the sky setting on;
@@ -255,10 +254,10 @@ class MCP_prep_world(bpy.types.Operator):
 
 
 class MCP_add_world_time(bpy.types.Operator):
-	"""Add a sun or moon setup into scene"""
+	"""Add sun, moon (WIP), and world time settings to scene."""
 	bl_idname = "mcprep.add_world_time"
 	bl_label = "Add sun/time"
-	bl_description = "Add sun, moon, and world time settings to scene"
+	bl_options = {'REGISTER', 'UNDO'}
 
 	remove_existing_suns = bpy.props.BoolProperty(
 		name = "Remove suns",
@@ -266,6 +265,8 @@ class MCP_add_world_time(bpy.types.Operator):
 		default = True
 		)
 
+	track_function = "world_time"
+	track_param = None
 	@tracking.report_error
 	def execute(self, context):
 
@@ -305,6 +306,7 @@ class MCP_add_world_time(bpy.types.Operator):
 		context.scene.update()
 		# update horizon info
 		engine = bpy.context.scene.render.engine
+
 		if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
 			context.scene.world.horizon_color = (0.00938029, 0.0125943, 0.0140572)
 			obj.data.sky.use_sky = True  # use sun orientation settings if BI
@@ -318,15 +320,15 @@ class MCP_add_world_time(bpy.types.Operator):
 				if lamp == obj:
 					continue
 				lamp.data.sky.use_sky = False
-
+		self.track_param = engine
 		return obj
 
 
 class MCP_time_set(bpy.types.Operator):
-	"""Set the time to a major unit"""
+	"""Set the time affecting light, sun and moon position, similar to in-game commands"""
 	bl_idname = "mcprep.time_set"
 	bl_label = "Set time of day"
-	bl_description = "Set the time affecting light, sun and moon position, similar to in-game commands"
+	bl_options = {'REGISTER', 'UNDO'}
 
 	# subject center to place lighting around
 	time_enum = bpy.props.EnumProperty(
@@ -348,7 +350,7 @@ class MCP_time_set(bpy.types.Operator):
 	)
 
 	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self)
+		return context.window_manager.invoke_props_dialog(self, width=400*util.ui_scale())
 
 	def draw(self, context):
 		self.layout.prop(self, "time_enum")

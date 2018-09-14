@@ -99,7 +99,7 @@
 			"Acacia/Dark_Oak_Wood","Farmland","Brick","Snow","Bedrock",
 			"Netherrack","Soul_Sand","End_Stone", "clay", "endstone", "sponge",
 			"stonebrick", "sandstone_bottom","prismarine_bricks",
-			"prismarine_dark","prismarine_rough"],
+			"prismarine_dark","prismarine_rough", "glowstone"],
 	"metallic":["door_iron_lower", "door_iron_upper","iron_bars","iron_block",
 			"iron_trapdoor", "diamond_block","emerald_block", "gold_block"],
 	"block_mapping_mc":{

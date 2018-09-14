@@ -163,11 +163,10 @@ class McprepMeshswapSpawner(bpy.types.Operator):
 	# 	)
 	# instantiate if group?
 
+	track_function = "meshswapSpawner"
+	track_param = None
 	@tracking.report_error
 	def execute(self, context):
-
-		tracking.trackUsage("meshswapSpawner", self.meshswap_block)
-
 		pre_groups = list(bpy.data.groups)
 
 		meshSwapPath = bpy.path.abspath(context.scene.meshswap_path)
@@ -186,7 +185,7 @@ class McprepMeshswapSpawner(bpy.types.Operator):
 				importedObj = bpy.context.selected_objects[0]
 			except:
 				print("selected obejct not found") #in case nothing selected.. which happens even during selection?
-				return {'FINISHED'}
+				return {'CANCELLED'}
 			importedObj["MCprep_noSwap"] = "True"
 			importedObj.location = self.location
 			if self.prep_materials==True:
@@ -238,6 +237,7 @@ class McprepMeshswapSpawner(bpy.types.Operator):
 			if self.make_real:
 				bpy.ops.object.duplicates_make_real()
 
+		self.exporter = self.meshswap_block
 		return {'FINISHED'}
 
 
@@ -272,8 +272,8 @@ class meshSwap(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 
 	#used for only occasionally refreshing the 3D scene while mesh swapping
-	counterObject = 0	# used in count
-	countMax = 5		# count compared to this, frequency of refresh (number of objs)
+	counterObject = 0  # used in count
+	countMax = 5  # count compared to this, frequency of refresh (number of objs)
 
 	# properties for draw
 	meshswap_join = bpy.props.BoolProperty(
@@ -320,9 +320,8 @@ class meshSwap(bpy.types.Operator):
 		addon_prefs = util.get_prefs()
 		return addon_prefs.MCprep_exporter_type != "(choose)"
 
-	# force use UI
 	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self, width=400)
+		return context.window_manager.invoke_props_dialog(self, width=400*util.ui_scale())
 
 	def draw(self, context):
 		layout = self.layout
@@ -358,9 +357,8 @@ class meshSwap(bpy.types.Operator):
 			col.label("If you selected a large number of blocks to meshswap,", icon="BLANK1")
 			col.label("consider using a smaller area closer to the camera", icon="BLANK1")
 
-
-	# called for each object in the loop as soon as possible
 	def checkExternal(self, context, name):
+		"""Called for each object in the loop as soon as possible."""
 		if conf.v:print("Checking external library")
 		addon_prefs = util.get_prefs()
 
@@ -511,11 +509,9 @@ class meshSwap(bpy.types.Operator):
 		obj.location[2] -= .5
 		bpy.context.scene.objects.active = active
 
+	track_function = "meshswap"
 	@tracking.report_error
 	def execute(self, context):
-
-		tracking.trackUsage("meshswap",None)
-
 		runcount = 0 # counter.. if zero by end, raise error that no selected objects matched
 		## debug, restart check
 		if conf.v:print('###################################')
@@ -877,8 +873,6 @@ class meshSwap(bpy.types.Operator):
 				if not hasattr(d, "select"):
 					continue
 				selList.append(d)
-			# for ob in context.selected_objects:
-			# 	ob.select = False
 
 		# final reselection and deletion
 		if runcount > 0:
@@ -899,13 +893,13 @@ class meshSwap(bpy.types.Operator):
 
 		if runcount==0:
 			self.report({'ERROR'}, "Nothing swapped, likely no materials of selected objects match the meshswap file objects/groups")
+			return {'CANCELLED'}
 		elif runcount==1:
 			self.report({'INFO'}, "Swapped 1 object")
+			return {'FINISHED'}
 		else:
 			self.report({'INFO'}, "Swapped {x} objects".format(x=runcount))
-
-		return {'FINISHED'}
-
+			return {'FINISHED'}
 
 
 class fixMinewaysScale(bpy.types.Operator):

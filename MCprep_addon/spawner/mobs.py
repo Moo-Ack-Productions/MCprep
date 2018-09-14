@@ -321,11 +321,10 @@ class McprepMobSpawner(bpy.types.Operator):
 		# should be the consolidated code for
 		# both linking and appending below, .. they branched right now.
 
+	track_function = "mobSpawner"
+	track_param = None
 	@tracking.report_error
 	def execute(self, context):
-
-		# only sends tracking if opted in
-		tracking.trackUsage("mobSpawner",self.mcmob_type)
 		try:
 			[path, name, _] = self.mcmob_type.split(':/:')
 			path = os.path.join(context.scene.mcprep_mob_path,path)
@@ -366,6 +365,8 @@ class McprepMobSpawner(bpy.types.Operator):
 				conf.internal_change = False
 			else:
 				bpy.ops.mcprep.prep_materials(skipUsage=True)
+
+		self.track_param = self.mcmob_type
 		return {'FINISHED'}
 
 	def load_linked(self, context, path, name):
@@ -718,7 +719,7 @@ class McprepUninstallMob(bpy.types.Operator):
 
 	def invoke(self, context, event):
 		self.preDraw(context)
-		return context.window_manager.invoke_props_dialog(self)
+		return context.window_manager.invoke_props_dialog(self, width=400*util.ui_scale())
 
 	def preDraw(self, context):
 		mob = conf.rig_list_sub[context.scene.mcprep_mob_list_index]

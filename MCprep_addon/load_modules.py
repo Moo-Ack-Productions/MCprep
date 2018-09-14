@@ -65,11 +65,11 @@ else:
 
 	from . import (
 		conf,
+		tracking,
 		mcprep_ui,
 		util_operators,
 		world_tools,
-		addon_updater_ops,
-		tracking
+		addon_updater_ops
 	)
 	from .materials import(
 		prep,

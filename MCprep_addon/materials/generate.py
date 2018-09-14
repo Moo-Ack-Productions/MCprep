@@ -144,9 +144,10 @@ def detect_form(materials):
 	only_mineways = False
 
 	# more logic, e.g. count
-	if mineways>0 and jmc2obj==0:
+	if mineways==0 and jmc2obj==0:
+		res = None  # unknown
+	elif mineways>0 and jmc2obj==0:
 		res = "mineways"
-
 	elif jmc2obj>0 and mineways==0:
 		res = "jmc2obj"
 	elif jmc2obj < mineways:
@@ -154,7 +155,7 @@ def detect_form(materials):
 	elif jmc2obj > mineways:
 		res = "jmc2obj"
 	else:
-		res = None
+		res = None  # unknown
 
 	return res  # one of jmc2obj, mineways, or None
 
@@ -204,9 +205,12 @@ def matprep_internal(mat, passes, use_reflections):
 	norm_layer = None
 	disp_layer = None
 	saturate_layer = None
+	first_unused = None
 	for index in range(1,len(texList)):
 		if not mat.texture_slots[index] or not mat.texture_slots[index].texture:
 			mat.use_textures[index] = False
+			if not first_unused:
+				first_unused = index
 		elif "MCPREP_diffuse" in mat.texture_slots[index].texture:
 			diff_layer = index
 			mat.use_textures[index] = True
@@ -262,15 +266,45 @@ def matprep_internal(mat, passes, use_reflections):
 
 	if canon in conf.json_data['blocks']['desaturated']:
 		# cycle through and see if the layer exists to enable/disable blend
-		pass  # TODO: add saturation based on whether saturate prop in material
-		# if "SATURATE" in mat:
-		# 	for sl in mat.texture_slots:
-		# 		if sl and sl.texture and sl.texture.type == "BLEND":
+		# pass  # TODO: add saturation based on whether saturate prop in material
+		if "texture_swapped" in mat:
+			if saturate_layer:
+				pass  # should be good
+			else:
+				# set_internal_texture(True)
+
+				print("Running saturate")
+				# TODO: code is duplicative to below, consolidate later
+				if mat.name+"_saturate" in bpy.data.textures:
+					new_tex = bpy.data.textures[mat.name+"_saturate"]
+				else:
+					new_tex = bpy.data.textures.new(name=mat.name+"_saturate", type="BLEND")
+				if not saturate_layer:
+					if not first_unused:
+						first_unused = len(mat.texture_slots)-1 # force reuse last at worst
+					sl = mat.texture_slots.create(first_unused)
+				else:
+					sl = mat.texture_slots[saturate_layer]
+				sl.texture = new_tex
+				sl.texture["SATURATE"] = True
+				sl.use_map_normal = False
+				sl.use_map_color_diffuse = True
+				sl.use_map_specular = False
+				sl.use_map_alpha = False
+				sl.blend_type = 'OVERLAY'
+				sl.use = True
+				new_tex.use_color_ramp = True
+				for _ in range(len(new_tex.color_ramp.elements)-1):
+					new_tex.color_ramp.elements.remove(new_tex.color_ramp.elements[0])
+				desat_color = conf.json_data['blocks']['desaturated'][canon]
+				if len(desat_color) < len(new_tex.color_ramp.elements[0].color):
+					desat_color.append(1.0)
+				new_tex.color_ramp.elements[0].color = desat_color
 
 	return 0
 
 
-def matprep_cycles(mat, passes, use_reflections, use_principled, saturate=False):
+def matprep_cycles(mat, passes, use_reflections, use_principled):
 	"""Determine how to prep or generate the cycles materials.
 
 	Args:
@@ -286,9 +320,9 @@ def matprep_cycles(mat, passes, use_reflections, use_principled, saturate=False)
 	if checklist(canon,conf.json_data['blocks']['emit']):
 		res = matgen_cycles_emit(mat, passes)
 	elif use_principled and hasattr(bpy.types, 'ShaderNodeBsdfPrincipled'):
-		res = matgen_cycles_principled(mat, passes, use_reflections, saturate)
+		res = matgen_cycles_principled(mat, passes, use_reflections)
 	else:
-		res = matgen_cycles_original(mat, passes, use_reflections, saturate)
+		res = matgen_cycles_original(mat, passes, use_reflections)
 	return res
 
 
@@ -305,11 +339,12 @@ def set_texture_pack(material, folder, use_extra_passes):
 	image_data = util.loadTexture(image)
 	engine = bpy.context.scene.render.engine
 	saturate = mc_name in conf.json_data['blocks']['desaturated']
+	material["texture_swapped"] = True  # used to apply saturation
 
 	if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
-		status = set_cycles_texture(image_data, material, True, saturate)
+		status = set_cycles_texture(image_data, material, True)
 	elif engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
-		status = set_internal_texture(image_data, material, True, saturate)
+		status = set_internal_texture(image_data, material, use_extra_passes)
 	return 1
 
 
@@ -331,39 +366,28 @@ def assert_textures_on_materials(image, materials):
 	return count
 
 
-# input is image datablock
-# Used by skin swap and change texture pack
-# TODO: Check if node type is input to normal pass or spec or other
-# TODO: when going through image texture nodes, see if has attr applied for being
-# specific pass; should ALWAYS be applied; and if none are applied, intelligently
-# apply attribtues (e.g. if not square.. then likely not an MC material)
-# IGNORE THAT< see plan below in comments for intenral.. do more "blind"
-# search for each image found and if counterpart exists in new fodler;
-# if it doesn't, leave it alone!
-# (WAAIIIT.. remember this is SET, ie we WILL apply an image, it's for
-# skin swapping by default.. but shoudl be usable by swap texturepack too)
-def set_cycles_texture(image, material, extra_passes=False, saturate=False):
-	if material.node_tree == None: return False
-	# extra_passes:
+def set_cycles_texture(image, material, extra_passes=False):
+	"""
+	Used by skin swap and assiging missing textures or tex swapping.
+	Args:
+		image: image datablock
+	"""
+
+	if material.node_tree == None:
+		return False
 	# check if there is more data to see pass types
 	img_sets = {}
 	if extra_passes:
 		img_sets = find_additional_passes(image.filepath)
-	# if conf.vv:
-	# 	print("Extra passes for cycles set: "+str(img_sets))
-
 	changed=False
 
 	for node in material.node_tree.nodes:
-		if saturate and node.type == "MIX_RGB" and "SATURATE" in node:
+		if "texture_swapped" in material and node.type == "MIX_RGB" and "SATURATE" in node:
 			node.mute = False
 			node.hide = False
 			if conf.v: print("Unmuting mix_rgb to saturate texture")
 
 		if node.type != "TEX_IMAGE": continue
-		# TODO: see if there are other texture nodes for normal/etc,
-		# check via prop saved to node object
-		# if extra_passes: {extra checking}
 
 		# check to see nodes and their respective pre-named field,
 		# saved as an attribute on the node
@@ -391,7 +415,7 @@ def set_cycles_texture(image, material, extra_passes=False, saturate=False):
 				node.hide = True
 		else:
 			# assume all unlabeled texture nodes should be the diffuse
-			node["MCPREP_diffuse"] = True # annotate node
+			node["MCPREP_diffuse"] = True  # annotate node for future reference
 			node.image = image
 			node.mute = False
 			node.hide = False
@@ -401,7 +425,7 @@ def set_cycles_texture(image, material, extra_passes=False, saturate=False):
 	return changed
 
 
-def set_internal_texture(image, material, extra_passes=False, saturate=False):
+def set_internal_texture(image, material, extra_passes=False):
 	"""Set texture for internal engine. Input is image datablock."""
 	# TODO: when going through layers, see if enabled already for normal /
 	# spec or not and enabled/disable accordingly (e.g. if was resource
@@ -413,7 +437,7 @@ def set_internal_texture(image, material, extra_passes=False, saturate=False):
 	img_sets = {}
 	if extra_passes:
 		img_sets = find_additional_passes(image.filepath)
-	if saturate:
+	if "texture_swapped" in material:
 		img_sets["saturate"] = True
 
 	base = None
@@ -517,7 +541,6 @@ def set_internal_texture(image, material, extra_passes=False, saturate=False):
 			desat_color = conf.json_data['blocks']['desaturated'][canon]
 			if len(desat_color) < len(new_tex.color_ramp.elements[0].color):
 				desat_color.append(1.0)
-			print(len(new_tex.color_ramp.elements), desat_color)
 			new_tex.color_ramp.elements[0].color = desat_color
 
 	return True
@@ -751,14 +774,8 @@ def apply_texture_animation_pass_settings(mat, animated_data):
 		anim_node.image_user.use_auto_refresh = True
 		anim_node.image_user.use_cyclic = True
 
-		# anim_node.image.frame_duration = animated_data[itm]["frame_duration"]
-		# anim_node.image.frame_start = animated_data[itm]["frame_start"]
-		# anim_node.image.frame_offset = animated_data[itm]["frame_offset"]
-		# anim_node.image.use_auto_refresh = True
-		# anim_node.image.use_cyclic = True
 
-
-def matgen_cycles_principled(mat, passes, use_reflections, saturate=False):
+def matgen_cycles_principled(mat, passes, use_reflections):
 	"""Generate principled cycles material, defaults to using transparency."""
 
 	matGen = util.nameGeneralize(mat.name)
@@ -775,7 +792,7 @@ def matgen_cycles_principled(mat, passes, use_reflections, saturate=False):
 		return
 	elif image_diff.size[0] == 0 or image_diff.size[1] == 0:
 		print("Source image missing for material: " + mat.name)
-		# TODO: find replacement texture here, if enabled
+		# Would have already checked for replacement textures by now, so skip
 		return
 
 	mat.use_nodes = True
@@ -812,8 +829,8 @@ def matgen_cycles_principled(mat, passes, use_reflections, saturate=False):
 	nodeNormal.location = (-400,-375)
 	principled.location = (0,0)
 	nodeTrans.location = (-400,100)
-	nodeMix1.location = (200,0)
-	nodeOut.location = (400,0)
+	nodeMix1.location = (300,0)
+	nodeOut.location = (500,0)
 
 	# default links
 	links.new(nodeTexDiff.outputs["Color"],nodeSaturateMix.inputs[1])
@@ -848,6 +865,8 @@ def matgen_cycles_principled(mat, passes, use_reflections, saturate=False):
 	nodeTexDiff.interpolation = 'Closest'
 	nodeTexSpec.interpolation = 'Closest'
 
+	# principled.distribution = 'GGX'  # faster, multiscatter not needed (verify)
+
 	# apply additional settings
 	mat.cycles.sample_as_light = False
 	if use_reflections and checklist(canon,conf.json_data['blocks']['reflective']):
@@ -857,19 +876,19 @@ def matgen_cycles_principled(mat, passes, use_reflections, saturate=False):
 		# Add to alpha math channel here to increase reflections even in
 		# pure alpha-transparent spots
 		addToAlpha = nodes.new('ShaderNodeMath')
-		nodeSaturateMix.location = (-200,-200)
+		nodeSaturateMix.location = (-400,-200)
 		addToAlpha.use_clamp = True
 		addToAlpha.operation = 'ADD'
 		addToAlpha.inputs[1].default_value = 0.2
 		links.new(nodeTexDiff.outputs["Alpha"],addToAlpha.inputs[0])
 		links.new(addToAlpha.outputs["Value"],nodeMix1.inputs[0])
 	else:
-		principled.inputs[5].default_value = 0.05  # set specular
-		principled.inputs[7].default_value = 0.4  # set roughness
+		principled.inputs[5].default_value = 0.5  # set specular
+		principled.inputs[7].default_value = 0.9  # set roughness
 
 	if checklist(canon,conf.json_data['blocks']['water']):
-		principled.inputs[5].default_value = 1.0  # spec
-	# 	principled.inputs[7].default_value = 0.1  # roughness
+		# principled.inputs[5].default_value = 1.0  # spec
+		principled.inputs[7].default_value = 0.1  # roughness
 
 	if use_reflections and checklist(canon,conf.json_data['blocks']['metallic']):
 		principled.inputs[4].default_value = 1  # set metallic
@@ -897,7 +916,7 @@ def matgen_cycles_principled(mat, passes, use_reflections, saturate=False):
 		if len(desat_color) < len(nodeSaturateMix.inputs[2].default_value):
 			desat_color.append(1.0)
 		nodeSaturateMix.inputs[2].default_value = desat_color
-		if saturate:
+		if "texture_swapped" in mat:
 			nodeSaturateMix.mute = False
 			nodeSaturateMix.hide = False
 
@@ -907,7 +926,7 @@ def matgen_cycles_principled(mat, passes, use_reflections, saturate=False):
 	return 0 # return 0 once implemented
 
 
-def matgen_cycles_original(mat, passes, use_reflections, saturate=False):
+def matgen_cycles_original(mat, passes, use_reflections):
 	"""Generate basic cycles material, defaults to using transparency node."""
 
 	matGen = util.nameGeneralize(mat.name)
@@ -1050,7 +1069,7 @@ def matgen_cycles_original(mat, passes, use_reflections, saturate=False):
 		if len(desat_color) < len(nodeSaturateMix.inputs[2].default_value):
 			desat_color.append(1.0)
 		nodeSaturateMix.inputs[2].default_value = desat_color
-		if saturate:
+		if "texture_swapped" in mat:
 			nodeSaturateMix.mute = False
 			nodeSaturateMix.hide = False
 

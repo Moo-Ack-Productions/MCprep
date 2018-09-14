@@ -344,7 +344,7 @@ class McprepPrepAnimatedTextures(bpy.types.Operator):
 		)
 
 	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self)
+		return context.window_manager.invoke_props_dialog(self, width=400*util.ui_scale())
 
 	def draw(self, context):
 		row = self.layout.row()
@@ -357,13 +357,11 @@ class McprepPrepAnimatedTextures(bpy.types.Operator):
 		col.prop(self, "export_location")
 		col.prop(self, "clear_cache")
 
+	track_function = "animate_tex"
+	track_param = None
+	track_exporter = None
 	@tracking.report_error
 	def execute(self, context):
-
-		# skip tracking if internal change
-		if self.skipUsage==False:
-			tracking.trackUsage("animate_tex", context.scene.render.engine)
-
 		if not bpy.data.is_saved and self.export_location == "local":
 			self.report({'ERROR'}, "File must be saved first if saving sequence locally")
 			return {'CANCELLED'}
@@ -400,10 +398,12 @@ class McprepPrepAnimatedTextures(bpy.types.Operator):
 		elif affected_materials == 0:
 			self.report({"ERROR"},
 				"Animated materials found, but none applied.")
+			return {'CANCELLED'}
 		else:
 			self.report({'INFO'}, "Modified {} material(s)".format(
 				affected_materials))
-		return {'FINISHED'}
+			self.track_param = context.scene.render.engine
+			return {'FINISHED'}
 
 
 # -----------------------------------------------------------------------------

@@ -216,9 +216,10 @@ class McprepSkinSwapper(bpy.types.Operator, ImportHelper):
 	fileselectparams = "use_filter_blender"
 	files = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
 
+	track_function = "skin"
+	track_param = "file import"
 	@tracking.report_error
 	def execute(self,context):
-		tracking.trackUsage("skin","file import")
 		res = loadSkinFile(self, context, self.filepath)
 		if res!=0:
 			return {'CANCELLED'}
@@ -244,9 +245,10 @@ class McprepApplySkin(bpy.types.Operator):
 		default = True,
 		options = {'HIDDEN'})
 
+	track_function = "skin"
+	track_param = "ui list"
 	@tracking.report_error
 	def execute(self,context):
-		tracking.trackUsage("skin","ui list")
 		res = loadSkinFile(self, context, self.filepath, self.new_material)
 		if res!=0:
 			return {'CANCELLED'}
@@ -272,7 +274,7 @@ class McprepApplyUsernameSkin(bpy.types.Operator):
 		default=True)
 
 	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self)
+		return context.window_manager.invoke_props_dialog(self, width=400*util.ui_scale())
 
 	def draw(self, context):
 		self.layout.label("Enter exact Minecraft username below")
@@ -281,23 +283,25 @@ class McprepApplyUsernameSkin(bpy.types.Operator):
 		self.layout.label(
 			"and then press OK; blender may pause briefly to download")
 
+	track_function = "skin"
+	track_param = "username"
 	@tracking.report_error
 	def execute(self,context):
 		if self.username == "":
 			self.report({"ERROR","Invalid username"})
 			return {'CANCELLED'}
-		tracking.trackUsage("skin","username")
 
 		skins = [ str(skin[0]).lower() for skin in conf.skin_list ]
 		paths = [ skin[1] for skin in conf.skin_list ]
-		if self.username.lower() not in skins or self.skip_redownload==False:
+		if self.username.lower() not in skins or not self.skip_redownload:
 			if conf.v: print("Donwloading skin")
-			self.download_sser(context)
+			res = self.download_user(context)
+			return res
 		else:
 			if conf.v: print("Reusing downloaded skin")
 			ind = skins.index(self.username.lower())
 			res = loadSkinFile(self, context, paths[ind][1])
-		return {'FINISHED'}
+			return {'FINISHED'}
 
 	def download_user(self, context):
 		#http://minotar.net/skin/theduckcow
@@ -322,9 +326,10 @@ class McprepApplyUsernameSkin(bpy.types.Operator):
 
 		res = loadSkinFile(self, context, saveloc)
 		bpy.ops.mcprep.reload_skins()
+		return {'FINISHED'}
 
 
-class McprepSkinFixEyes(bpy.types.Operator):
+class McprepSkinFixEyes():  # bpy.types.Operator
 	"""AFix the eyes of a rig to fit a rig"""
 	bl_idname = "mcprep.fix_skin_eyes"
 	bl_label = "Fix eyes"
@@ -335,13 +340,10 @@ class McprepSkinFixEyes(bpy.types.Operator):
 
 	@tracking.report_error
 	def execute(self,context):
-
 		# take the active texture input (based on selection)
 		print("fix eyes")
 		self.report({'ERROR'}, "Work in progress operator")
 		return {'CANCELLED'}
-
-		return {'FINISHED'}
 
 
 class McprepAddSkin(bpy.types.Operator, ImportHelper):
@@ -384,7 +386,7 @@ class McprepRemoveSkin(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 
 	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self)
+		return context.window_manager.invoke_props_dialog(self, width=400*util.ui_scale())
 
 	def draw(self, context):
 		skin_path = conf.skin_list[context.scene.mcprep_skins_list_index]
@@ -463,6 +465,8 @@ class McprepSpawn_with_skin(bpy.types.Operator):
 		default = True
 		)
 
+	track_function = "spawn_with_skin"
+	track_param = None
 	@tracking.report_error
 	def execute(self, context):
 		if len (conf.skin_list)>0:
@@ -473,6 +477,7 @@ class McprepSpawn_with_skin(bpy.types.Operator):
 			return {'CANCELLED'}
 
 		active_mob = conf.rig_list_sub[context.scene.mcprep_mob_list_index][0]
+		self.track_param = active_mob
 
 		# try not to use internal ops because of analytics
 		bpy.ops.mcprep.mob_spawner(

@@ -64,10 +64,6 @@ class McprepPrepMaterials(bpy.types.Operator):
 		name = "Improve UI",
 		description = "Automatically improve relevant UI settings",
 		default = True)
-	saturateImages = bpy.props.BoolProperty(
-		default = False,
-		options = {'HIDDEN'}
-		)
 	usePrincipledShader = bpy.props.BoolProperty(
 		name = "Use Principled Shader (if available)",
 		description = "If available and using cycles, build materials using the "+\
@@ -87,7 +83,7 @@ class McprepPrepMaterials(bpy.types.Operator):
 	# prop: set all blocks as solid (no transparency), assume has trans, or compute check
 
 	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self)
+		return context.window_manager.invoke_props_dialog(self, width=400*util.ui_scale())
 
 	def draw(self, context):
 		row = self.layout.row()
@@ -96,15 +92,16 @@ class McprepPrepMaterials(bpy.types.Operator):
 		col.prop(self, "animateTextures")
 		col.prop(self, "combineMaterials")
 		col.prop(self, "autoFindMissingTextures")
-		if context.scene.render.engine=='CYCLES' or context.scene.render.engine=='BLENDER_EEVEE':
+		engine = context.scene.render.engine
+		if engine=='CYCLES' or engine=='BLENDER_EEVEE':
 			col.prop(self, "usePrincipledShader")
 		col.prop(self, "improveUiSettings")
 
+	track_function = "materials"
+	track_param = None
+	track_exporter = None
 	@tracking.report_error
 	def execute(self, context):
-		# skip tracking if internal change
-		if self.skipUsage==False:
-			tracking.trackUsage("materials", context.scene.render.engine)
 
 		# get list of selected objects
 		obj_list = context.selected_objects
@@ -127,7 +124,9 @@ class McprepPrepMaterials(bpy.types.Operator):
 			passes = generate.get_textures(mat)
 			if self.autoFindMissingTextures:
 				for pass_name in passes:
-					generate.replace_missing_texture(passes[pass_name])
+					res = generate.replace_missing_texture(passes[pass_name])
+					if res>0:
+						mat["texture_swapped"] = True  # used to apply saturation
 			if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
 				res = generate.matprep_internal(
 						mat, passes, self.useReflections)
@@ -137,8 +136,7 @@ class McprepPrepMaterials(bpy.types.Operator):
 						mat, context.scene.render.engine)
 			elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 				res = generate.matprep_cycles(
-						mat, passes, self.useReflections, self.usePrincipledShader,
-						self.saturateImages)
+						mat, passes, self.useReflections, self.usePrincipledShader)
 				if res==0: count+=1
 				if self.animateTextures:
 					sequences.animate_single_material(
@@ -152,6 +150,8 @@ class McprepPrepMaterials(bpy.types.Operator):
 		if self.improveUiSettings:
 			bpy.ops.mcprep.improve_ui()
 		self.report({"INFO"},"Modified "+str(count)+" materials")
+		self.track_param = context.scene.render.engine
+
 		return {'FINISHED'}
 
 
@@ -181,7 +181,7 @@ class McprepMaterialHelp(bpy.types.Operator):
 
 	def invoke(self, context, event):
 		# check here whether to trigger popup, based on supression
-		return context.window_manager.invoke_props_dialog(self)
+		return context.window_manager.invoke_props_dialog(self, width=400*util.ui_scale())
 
 	def draw(self, context):
 		layout = self.layout
@@ -286,11 +286,11 @@ class McprepSwapTexturePack(bpy.types.Operator, ImportHelper):
 		col.prop(self, "extra_passes")
 		col.prop(self, "animateTextures")
 
+	track_function = "texture_pack"
+	track_param = None
+	track_exporter = None
 	@tracking.report_error
 	def execute(self,context):
-		# skip tracking if internal change
-		if self.skipUsage==False:
-			tracking.trackUsage("texture_pack", context.scene.render.engine)
 
 		# check folder exist, but keep relative if relevant
 		folder = self.filepath
@@ -317,6 +317,7 @@ class McprepSwapTexturePack(bpy.types.Operator, ImportHelper):
 		if res=="mineways":
 			self.report({'ERROR'}, "Not yet supported for Mineways - coming soon!")
 			return {'CANCELLED'}
+		self.track_exporter = res
 
 		# set the scene's folder for the texturepack being swapped
 		context.scene.mcprep_custom_texturepack_path = folder
@@ -330,6 +331,8 @@ class McprepSwapTexturePack(bpy.types.Operator, ImportHelper):
 					mat, context.scene.render.engine, )
 
 		self.report({'INFO'},"{} materials affected".format(res))
+		self.track_param = context.scene.render.engine
+		self.track_exporter = generate.detect_form(mat_list)
 
 		return {'FINISHED'}
 
@@ -362,12 +365,9 @@ class McprepCombineMaterials(bpy.types.Operator):
 		options = {'HIDDEN'}
 		)
 
+	track_function = "combine_materials"
 	@tracking.report_error
 	def execute(self, context):
-
-		# skip tracking if internal change
-		if self.skipUsage==False: tracking.trackUsage("combine_materials")
-
 		removeold = True
 
 		if self.selection_only==True and len(context.selected_objects)==0:
@@ -487,12 +487,9 @@ class McprepCombineImages(bpy.types.Operator):
 		options = {'HIDDEN'}
 		)
 
+	track_function = "combine_images"
 	@tracking.report_error
 	def execute(self, context):
-
-		# skip tracking if internal change
-		if self.skipUsage==False: tracking.trackUsage("combine_images")
-
 		removeold = True
 
 		if self.selection_only==True and len(context.selected_objects)==0:
@@ -635,9 +632,6 @@ class McprepScaleUV():  # bpy.types.Operator
 		return {'RUNNING_MODAL'}
 
 	def invoke(self, context, event):
-		# skip tracking if internal change
-		if self.skipUsage==False: tracking.trackUsage("scale_UV_faces")
-
 		self.ob = context.object
 		if self.ob==None:
 			self.report({'WARNING'}, "No active object found")
@@ -747,6 +741,7 @@ class McprepIsolate_alpha_uvs(): #bpy.types.Operator
 		default = False,
 		)
 
+	track_function = "isolate_uv"
 	@tracking.report_error
 	def execute(self, context):
 
@@ -798,11 +793,11 @@ class McprepReplaceMissingTextures(bpy.types.Operator):
 		options = {'HIDDEN'}
 		)
 
+	track_function = "replace_missing"
+	track_param = None
+	track_exporter = None
+	@tracking.report_error
 	def execute(self, context):
-
-		# skip tracking if internal change
-		if self.skipUsage==False:
-			tracking.trackUsage("replace_missing", context.scene.render.engine)
 
 		# get list of selected objects
 		obj_list = context.selected_objects
@@ -837,6 +832,8 @@ class McprepReplaceMissingTextures(bpy.types.Operator):
 				len(mat_list)))
 
 		self.report({'INFO'}, "Updated {} materials".format(count))
+		self.track_param = context.scene.render.engine
+		self.track_exporter = generate.detect_form(mat_list)
 
 		return {'FINISHED'}
 

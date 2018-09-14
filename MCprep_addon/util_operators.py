@@ -53,46 +53,31 @@ class McprepImproveUi(bpy.types.Operator):
 
 
 class McprepShowPreferences(bpy.types.Operator):
-	"""Open user preferences and display the MCprep settings. Note, you may
-	need to press the triangle icon to expand"""
+	"""Open user preferences and display the MCprep settings."""
 	bl_idname = "mcprep.open_preferences"
 	bl_label = "Show MCprep preferences"
 
 	tab = bpy.props.EnumProperty(
 		items = [('settings', 'Open settings', 'Open MCprep preferences settings'),
-				('tutorials', 'Open tutorials', 'View tutorials'),
+				('tutorials', 'Open tutorials', 'View MCprep tutorials'),
 				('tracker_updater', 'Open tracker/updater settings',
 					'Open user tracking & addon updating settings')],
 		name = "Exporter")
 
 	@tracking.report_error
-	def execute(self,context):
+	def execute(self, context):
 		bpy.ops.screen.userpref_show('INVOKE_AREA')
 		context.user_preferences.active_section = "ADDONS"
 		bpy.data.window_managers["WinMan"].addon_search = "MCprep"
-		try:
-			#  if info["show_expanded"] != True:
-			#
-			#, where info comes from for mod, info in addons:
-			# and addons is:
-			# import addon_utils
-			# addons = [(mod, addon_utils.module_bl_info(mod)) for mod in addon_utils.modules(refresh=False)]
-			#
-			# ie, get MCprep from mod in addon_utils.modules(refresh=False)
-			# and then just 	grab
-			# [addon_utils.module_bl_info(mod)]
 
-			# less ideal way but works
-			# for mod in
-			# addon = addon_utils.module_bl_info(mode)
-			addon = addon_utils.module_bl_info(__package__)
-			if addon["show_expanded"] != True:
-				bpy.ops.wm.addon_expand(module=__package__)
-		except:
-			if conf.v: print("Couldn't toggle MCprep preferences being expended")
+		addons_ids = [mod for mod in addon_utils.modules(refresh=False)
+						if mod.__name__ == __package__]
+		addon_blinfo = addon_utils.module_bl_info(addons_ids[0])
+		if not addon_blinfo["show_expanded"]:
+			bpy.ops.wm.addon_expand(module=__package__)
 
-		preferences_tab = self.tab
-		# # just toggles not sets it, not helpful. need to SET it to expanded
+		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
+		addon_prefs.preferences_tab = self.tab
 		return {'FINISHED'}
 
 
@@ -157,6 +142,9 @@ class McprepPrepMaterialLegacy(bpy.types.Operator):
 		default = False
 		)
 
+	track_function = "materials_legacy"
+
+	@tracking.report_error
 	def execute(self, context):
 		print("Using legacy operator call for MCprep materials")
 		bpy.ops.mcprep.prep_materials(

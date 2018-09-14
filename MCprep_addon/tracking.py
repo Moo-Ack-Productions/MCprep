@@ -62,27 +62,53 @@ ERROR_STRING_LENGTH = 1024
 class Singleton_tracking(object):
 
 	def __init__(self):
-		self._verbose = False
-		self._tracking_enabled = False
+		self._addon = __package__.lower()
 		self._appurl = ""
-		self._failsafe = False
-		self._dev = False
-		self._port = 443
 		self._background = False
 		self._bg_thread = []
-		self._version = ""
-		self._addon = __package__.lower()
-		self._tracker_json = os.path.join(os.path.dirname(__file__),
-							self._addon+"_tracker.json")
-		self._tracker_idbackup = os.path.join(os.path.dirname(__file__),
-							os.pardir,self._addon+"_trackerid.json")
+		self._blender_version = ""
+		self._dev = False
+		self._failsafe = False
 		self._handling_error = False
+		self._language = ""
+		self._platform = ""
+		self._port = 443
+		self._tracker_idbackup = None
+		self._tracker_json = None
+		self._tracking_enabled = False
+		self._verbose = False
+		self._version = ""
+
 		self.json = {}
 
 
 	# -------------------------------------------------------------------------
 	# Getters and setters
 	# -------------------------------------------------------------------------
+
+	@property
+	def blender_version(self):
+		return self._blender_version
+	@blender_version.setter
+	def blender_version(self, value):
+		if value is None:
+			self._blender_version = "unknown"
+		elif type(value) != type((1,2,3)):
+			raise Exception("blender_version must be a tuple")
+		else:
+			self._blender_version = str(value)
+
+	@property
+	def language(self):
+		return self._language
+	@language.setter
+	def language(self, value):
+		if value is None:
+			self._language = "None"
+		elif type(value) != type("string"):
+			raise Exception("language must be a string")
+		else:
+			self._blender_version = self.string_trunc(value)
 
 	@property
 	def tracking_enabled(self):
@@ -155,6 +181,19 @@ class Singleton_tracking(object):
 	def addon(self, value):
 		self._addon = value
 
+	@property
+	def platform(self):
+		return self._platform
+	@platform.setter
+	def platform(self, value):
+		if value is None:
+			self._platform = "None"
+		elif type(value) != type("string"):
+			raise Exception("platform must be a string")
+		else:
+			self._platform = self.string_trunc(value)
+
+
 	# number/settings for frequency use before ask for enable tracking
 
 	# -------------------------------------------------------------------------
@@ -173,13 +212,33 @@ class Singleton_tracking(object):
 		self.json["enable_tracking"] = self._tracking_enabled
 		self.save_tracker_json()
 
-	def initialize(self, appurl, version):
+	def get_platform_details(self):
+		"""Return OS related information."""
+		try:
+			res = platform.system()+":"+platform.release()
+			if len(res) > SHORT_FIELD_MAX:
+				res = res[:SHORT_FIELD_MAX-1] + "|"
+		except Exception as err:
+			print("Error getting platform info: " + str(err))
+			return "unknown:unknown"
+		return str(res)
+
+	def initialize(self, appurl, version, language=None, blender_version=None):
 		"""Load the enable_tracking-preference (in/out), create tracker data."""
 		if not VALID_IMPORT:
 			return
 
 		self._appurl = appurl
 		self._version = version
+		self.platform = self.get_platform_details()
+		self.blender_version = blender_version
+		self.language = language
+
+		self._tracker_idbackup = os.path.join(os.path.dirname(__file__),
+							os.pardir,self._addon+"_trackerid.json")
+		self._tracker_json = os.path.join(os.path.dirname(__file__),
+							self._addon+"_tracker.json")
+
 		# create the local file
 		# push into BG push update info if true
 		# create local cache file locations
@@ -311,6 +370,13 @@ class Singleton_tracking(object):
 				'File "<addon_path>'+os.sep,
 				report)
 
+	def string_trunc(self, value):
+		"""Function which caps max string length."""
+		value = str(value)
+		if len(value)>SHORT_FIELD_MAX:
+			value = value[:SHORT_FIELD_MAX]
+		return value
+
 
 # -----------------------------------------------------------------------------
 # Create the Singleton instance
@@ -360,7 +426,9 @@ class popup_feedback(bpy.types.Operator):
 	options = {'REGISTER', 'UNDO'}
 
 	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self, width=400)
+		prefs = bpy.context.user_preferences
+		width = 400 * prefs.view.ui_scale * prefs.system.pixel_size
+		return context.window_manager.invoke_props_dialog(self, width=width)
 
 	def draw(self, context):
 
@@ -397,17 +465,15 @@ class popup_report_error(bpy.types.Operator):
 		)
 
 	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self, width=500)
+		prefs = bpy.context.user_preferences
+		width = 500 * prefs.view.ui_scale * prefs.system.pixel_size
+		return context.window_manager.invoke_props_dialog(self, width=width)
 
 	def draw_header(self, context):
 		self.layout.label(text="", icon="ERROR") # doesn't work/add to draw
 
 	def draw(self, context):
 		layout = self.layout
-		try:
-			bversion = str(bpy.app.version)
-		except:
-			bversion = "unknown"
 
 		col = layout.column()
 		col.label("Error detected, press OK below to send to developer", icon="ERROR")
@@ -432,9 +498,9 @@ class popup_report_error(bpy.types.Operator):
 		boxcol.label("."*500)
 		# boxcol.label("System & addon information:")
 		sysinfo="Blender version: {}\nMCprep version: {}\nOS: {}\n MCprep install identifier: {}".format(
-				bversion,
+				Tracker.blender_version,
 				Tracker.version,
-				get_platform_details(),
+				self.platform,
 				Tracker.json["install_id"],
 		)
 		for ln in sysinfo.split("\n"):
@@ -501,12 +567,6 @@ def trackInstalled(background=None):
 		else:
 			location = "/1/track/install.json"
 
-		# for compatibility to prior blender (2.75?)
-		try:
-			bversion = str(bpy.app.version)
-		except:
-			bversion = "unknown"
-
 		# capture re-installs/other status events
 		if Tracker.json["status"]==None:
 			status = "New install"
@@ -518,11 +578,12 @@ def trackInstalled(background=None):
 		Tracker.json["install_date"] = str(datetime.now())
 		payload = json.dumps({
 				"timestamp": {".sv": "timestamp"},
-				"usertime":Tracker.json["install_date"],
+				"usertime":Tracker.string_trunc(Tracker.json["install_date"]),
 				"version":Tracker.version,
-				"blender":bversion,
-				"status":status,
-				"platform":get_platform_details()
+				"blender":Tracker.blender_version,
+				"status":Tracker.string_trunc(status)
+				"platform":Tracker.platform,
+				"language":Tracker.language
 			})
 
 		resp = Tracker.request('POST', location, payload, background, callback)
@@ -547,15 +608,17 @@ def trackInstalled(background=None):
 		runInstall(background)
 
 
-def trackUsage(function, param=None, background=None):
+def trackUsage(function, param=None, exporter=None, background=None):
 	"""Send usage operator usage + basic metadata to database."""
 	if not VALID_IMPORT:
 		return
-
-	if Tracker.tracking_enabled is False: return # skip if not opted in
-	if conf.internal_change is True: return # skip if internal run
-
-	if Tracker.verbose: print(Tracker.addon+" usage: "+function +", param: "+str(param))
+	if Tracker.tracking_enabled is False:
+		return # skip if not opted in
+	if conf.internal_change is True:
+		return # skip if internal run
+	if Tracker.verbose:
+		print("{} usage: {}, param: {}, exporter: {}".format(
+			Tracker.addon, function, str(param), str(exporter)))
 
 	# if no override set, use default
 	if background == None:
@@ -568,19 +631,15 @@ def trackUsage(function, param=None, background=None):
 		else:
 			location = "/1/track/usage.json"
 
-		# for compatibility to prior blender (2.75?)
-		try:
-			bversion = str(bpy.app.version)
-		except:
-			bversion = "unknown"
-
 		payload = json.dumps({
 				"timestamp":{".sv": "timestamp"},
 				"version":Tracker.version,
-				"blender":bversion,
-				"platform":get_platform_details(),
-				"function":function,
-				"param":str(param),
+				"blender":Tracker.blender_version,
+				"platform":Tracker.platform,
+				"function":Tracker.string_trunc(function),
+				"param":Tracker.string_trunc(param),
+				"exporter":Tracker.string_trunc(exporter),
+				"language":Tracker.language,
 				"ID":Tracker.json["install_id"]
 			})
 		resp = Tracker.request('POST', location, payload, background)
@@ -623,11 +682,6 @@ def logError(report, background=None):
 			print("No error passed through")
 			return
 
-		try:
-			bversion = str(bpy.app.version)
-		except:
-			bversion = "unknown"
-
 		# Comply with server-side validation, don't exceed lengths
 		if len(user_comment) > USER_COMMENT_LENGTH:
 			user_comment = user_comment[:USER_COMMENT_LENGTH-1] + "|"
@@ -640,8 +694,8 @@ def logError(report, background=None):
 		payload = json.dumps({
 				"timestamp":{".sv": "timestamp"},
 				"version":Tracker.version,
-				"blender":bversion,
-				"platform":get_platform_details(),
+				"blender":Tracker.blender_version,
+				"platform":Tracker.platform,
 				"error":error,
 				"user_comment":user_comment,
 				"ID":Tracker.json["install_id"]
@@ -658,14 +712,18 @@ def logError(report, background=None):
 
 
 def report_error(function):
-	"""Decorator for the execute(self, context) function of operators"""
+	"""Decorator for the execute(self, context) function of operators.
+
+	Both captures any errors for user reporting, and runs the usage tracking
+	if/as configured for the operator class. If function returns {'CANCELLED'}
+	has no track_function class attribute, or skipUsage==True, then
+	usage tracking is skipped.
+	"""
 
 	def wrapper(self, context):
-
 		try:
 			res = function(self, context)
 			Tracker._handling_error = False
-			return res
 		except:
 			err = traceback.format_exc()
 			print(err) # always print raw traceback
@@ -675,22 +733,37 @@ def report_error(function):
 			# operators, only show the inner-most errors
 			if Tracker._handling_error is False:
 				Tracker._handling_error = True
-				bpy.ops.mcprep.report_error('INVOKE_DEFAULT',error_report=err)
+				bpy.ops.mcprep.report_error('INVOKE_DEFAULT', error_report=err)
 
-			return {"CANCELLED"}
+			return {'CANCELLED'}
+
+		if res=={'CANCELLED'}:
+			return res  # cancelled, so skip running usage
+		elif hasattr(self, "skipUsage") and self.skipUsage is True:
+			if Tracker.verbose:
+				print("Skipping usage")
+			return res  # skip running usage
+
+		# If successful completion, run analytics function if relevant
+		if hasattr(self, "track_function") and self.track_function:
+			param = None
+			exporter = None
+			if hasattr(self, "track_param"):
+				param = self.track_param
+			if hasattr(self, "track_exporter"):
+				exporter = self.track_exporter
+			try:
+				trackUsage(self.track_function, param=param, exporter=exporter)
+			except:
+				err = traceback.format_exc()
+				print("Error while reporting usage for "+str(self.track_function))
+				print(err)
+		elif Tracker.verbose:
+			print("No tracking to run")
+
+		return res
+
 	return wrapper
-
-
-def get_platform_details():
-	"""OS related information."""
-	try:
-		res = platform.system()+":"+platform.release()
-		if len(res) > SHORT_FIELD_MAX:
-			res = res[:SHORT_FIELD_MAX-1] + "|"
-	except Exception as err:
-		print("Error getting platform info: " + str(err))
-		return "unknown:unknown"
-	return str(res)
 
 
 # -----------------------------------------------------------------------------
@@ -699,10 +772,29 @@ def get_platform_details():
 
 
 def register(bl_info):
-	Tracker.initialize(
-		appurl = "https://mcprep-1aa04.firebaseio.com/",
-		version = str(bl_info["version"])
-		)
+	"""Setup the tracker and register install."""
+
+	bversion = None
+	# for compatibility to prior blender (2.75?)
+	try:
+		bvserion = bpy.app.version
+	except:
+		pass
+
+	language = None
+	system = bpy.context.user_preferences.system
+	if system.use_international_fonts:
+		language = system.language
+
+	try:
+		Tracker.initialize(
+			appurl = "https://mcprep-1aa04.firebaseio.com/",
+			version = str(bl_info["version"]),
+			language = language,
+			blender_version = bversion)
+	except Exception as err:
+		err = traceback.format_exc()
+		print(err)
 
 	# used to define which server source, not just if's below
 	if VALID_IMPORT:
@@ -721,7 +813,7 @@ def register(bl_info):
 		Tracker.failsafe = True
 		Tracker.tracking_enabled = True # User accepted on download
 
-	# try running install
+	# register install
 	trackInstalled()
 
 

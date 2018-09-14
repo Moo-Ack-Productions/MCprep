@@ -372,6 +372,10 @@ def load_mcprep_json():
 			print('\t',e)
 			conf.json_data = default
 
+def ui_scale():
+	"""Returns scale of UI, for width drawing."""
+	prefs = bpy.context.user_preferences
+	return prefs.view.ui_scale * prefs.system.pixel_size
 
 def get_prefs():
 	"""Function to easily get prefs even in subclasses and folders."""
