@@ -93,7 +93,7 @@ class MCP_install_jmc2obj(bpy.types.Operator):
 		row = self.layout.row(align=True)
 		row.operator("mcprep.open_preferences","Open MCprep preferences")
 		row.operator("wm.url_open","Open tutorial").url =\
-				"http://theduckcow.com/dev/blender/mcprep/"
+				"http://theduckcow.com/dev/blender/mcprep/setup-world-exporters/"
 		return
 
 	def execute(self, context):
@@ -159,7 +159,7 @@ class MCP_install_mineways(bpy.types.Operator):
 		row = self.layout.row(align=True)
 		row.operator("mcprep.open_preferences","Open MCprep preferences")
 		row.operator("wm.url_open","Open tutorial").url =\
-				"http://theduckcow.com/dev/blender/mcprep/"
+				"http://theduckcow.com/dev/blender/mcprep/setup-world-exporters/"
 		return
 
 	def execute(self, context):
@@ -216,10 +216,15 @@ class MCP_prep_world(bpy.types.Operator):
 		context.scene.cycles.caustics_reflective = False
 		context.scene.cycles.caustics_refractive = False
 
-		# higher = faster, though potentially noisier
-		# this is better balance than default
+		# higher = faster, though potentially noisier; this is a good balance
 		context.scene.cycles.light_sampling_threshold = 0.1
 		context.scene.cycles.max_bounces = 8
+
+		# Renders faster at a (minor?) cost of the image output
+		# TODO: given the output change, consider make a bool toggle for this
+		bpy.context.scene.render.use_simplify = True
+		bpy.context.scene.cycles.ao_bounces = 2
+		bpy.context.scene.cycles.ao_bounces_render = 2
 
 	def prep_world_internal(self, context):
 		# check for any suns with the sky setting on;

@@ -199,6 +199,13 @@ def icons_init():
 	preview_collections["blocks"] = ""
 
 
+def log(statement):
+	"""General purpose simple logging function."""
+	global v
+	if v:
+		print(statement)
+
+
 # -----------------------------------------------------------------------------
 # GLOBAL REGISTRATOR INIT
 # -----------------------------------------------------------------------------

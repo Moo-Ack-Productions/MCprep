@@ -157,7 +157,6 @@ def updateCategory(context):
 		if filter and sub[-1].lower() != category.lower():
 			continue
 		item = context.scene.mcprep_mob_list.add()
-		if conf.v:print("Spawning:",sub, "#", itm)
 		description = "Spawn a {x} rig".format(x=sub[1])
 		item.label = description
 		item.description = description
@@ -214,7 +213,7 @@ class McprepMobSpawnerDirect(bpy.types.Operator):
 	clearPose = bpy.props.BoolProperty(
 		name = "Clear Pose",
 		description = "Clear the pose to rest position",
-		default = True
+		default = False
 		)
 
 	@tracking.report_error

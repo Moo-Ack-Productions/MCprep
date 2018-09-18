@@ -160,9 +160,17 @@ def detect_form(materials):
 	return res  # one of jmc2obj, mineways, or None
 
 
-def checklist(matName, alist):
+def checklist(matName, listName):
 	"""Helper function for expanding single wildcard within generalized
 	material names."""
+
+
+	if not conf.json_data:
+		conf.log("No json_data for checklist to call from!")
+	if not "blocks" in conf.json_data or not listName in conf.json_data["blocks"]:
+		conf.log("conf.json_data is missing blocks or listName "+str(listName))
+		return False
+	alist = conf.json_data["blocks"][listName]
 	if matName in alist:
 		return True
 	else:
@@ -241,7 +249,7 @@ def matprep_internal(mat, passes, use_reflections):
 	mat.texture_slots[diff_layer].use_map_color_diffuse = True
 	mat.texture_slots[diff_layer].diffuse_color_factor = 1
 
-	if not checklist(canon,conf.json_data['blocks']['solid']): # alpha default on
+	if not checklist(canon, "solid"): # alpha default on
 		bpy.data.textures[newName].use_alpha = True
 		mat.texture_slots[diff_layer].use_map_alpha = True
 		mat.use_transparency = True
@@ -251,7 +259,7 @@ def matprep_internal(mat, passes, use_reflections):
 			if index:
 				mat.texture_slots[index].use_map_alpha = False
 
-	if use_reflections and checklist(canon,conf.json_data['blocks']['reflective']):
+	if use_reflections and checklist(canon, "reflective"):
 		mat.alpha = 0
 		mat.raytrace_mirror.use = True
 		mat.raytrace_mirror.reflect_factor = 0.15
@@ -259,7 +267,7 @@ def matprep_internal(mat, passes, use_reflections):
 		mat.raytrace_mirror.use = False
 		mat.alpha = 0
 
-	if checklist(canon,conf.json_data['blocks']['emit']):
+	if checklist(canon, "emit"):
 		mat.emit = 1
 	else:
 		mat.emit = 0
@@ -317,7 +325,7 @@ def matprep_cycles(mat, passes, use_reflections, use_principled):
 
 	matGen = util.nameGeneralize(mat.name)
 	canon, form = get_mc_canonical_name(matGen)
-	if checklist(canon,conf.json_data['blocks']['emit']):
+	if checklist(canon, "emit"):
 		res = matgen_cycles_emit(mat, passes)
 	elif use_principled and hasattr(bpy.types, 'ShaderNodeBsdfPrincipled'):
 		res = matgen_cycles_principled(mat, passes, use_reflections)
@@ -331,7 +339,6 @@ def set_texture_pack(material, folder, use_extra_passes):
 	# run through and check for each if counterpart material exists
 	# run the swap (and auto load e.g. normals and specs if avail.)
 	mc_name, form = get_mc_canonical_name(material.name)
-	if conf.v:print("got name:",mc_name)
 	image = find_from_texturepack(mc_name, folder)
 	if image==None:
 		return 0
@@ -807,6 +814,7 @@ def matgen_cycles_principled(mat, passes, use_reflections):
 	nodeTexDiff = nodes.new('ShaderNodeTexImage')
 	nodeTexNorm = nodes.new('ShaderNodeTexImage')
 	nodeTexSpec = nodes.new('ShaderNodeTexImage')
+	nodeSpecInv = nodes.new('ShaderNodeInvert')
 	nodeSaturateMix = nodes.new('ShaderNodeMixRGB')
 	nodeNormal = nodes.new('ShaderNodeNormalMap')
 	nodeOut = nodes.new('ShaderNodeOutputMaterial')
@@ -820,12 +828,14 @@ def matgen_cycles_principled(mat, passes, use_reflections):
 	nodeTexSpec.label = "Specular Tex"
 	nodeSaturateMix.name = "Add Color"
 	nodeSaturateMix.label = "Add Color"
+	nodeSpecInv.label = "Spec Inverse"
 
 	# set location and connect
 	nodeTexDiff.location = (-400,0)
 	nodeTexNorm.location = (-600,-275)
 	nodeSaturateMix.location = (-200,0)
 	nodeTexSpec.location = (-600,0)
+	nodeSpecInv.location = (-400,-275)
 	nodeNormal.location = (-400,-375)
 	principled.location = (0,0)
 	nodeTrans.location = (-400,100)
@@ -835,7 +845,9 @@ def matgen_cycles_principled(mat, passes, use_reflections):
 	# default links
 	links.new(nodeTexDiff.outputs["Color"],nodeSaturateMix.inputs[1])
 	links.new(nodeSaturateMix.outputs["Color"],principled.inputs[0])
-	links.new(nodeTexSpec.outputs["Color"],principled.inputs[5])
+	# links.new(nodeTexSpec.outputs["Color"],principled.inputs[5]) # Works better w/ packs
+	links.new(nodeTexSpec.outputs["Color"],nodeSpecInv.inputs[1]) # "proper" way
+	links.new(nodeSpecInv.outputs["Color"],principled.inputs[7]) # "proper" way
 	links.new(nodeTexNorm.outputs["Color"],nodeNormal.inputs[1])
 	links.new(nodeNormal.outputs["Normal"],principled.inputs[17])
 
@@ -864,19 +876,21 @@ def matgen_cycles_principled(mat, passes, use_reflections):
 
 	nodeTexDiff.interpolation = 'Closest'
 	nodeTexSpec.interpolation = 'Closest'
-
-	# principled.distribution = 'GGX'  # faster, multiscatter not needed (verify)
+	nodeTexSpec.color_space = 'NONE'  # for better interpretation of specmaps
+	nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
 
 	# apply additional settings
 	mat.cycles.sample_as_light = False
-	if use_reflections and checklist(canon,conf.json_data['blocks']['reflective']):
+	addToAlpha = None
+	if use_reflections and checklist(canon, "reflective"):
 		principled.inputs[5].default_value = 0.5  # spec
-		principled.inputs[7].default_value = 0.1  # roughness
+		principled.inputs[7].default_value = 0.0  # roughness, used to be 0.05
 
 		# Add to alpha math channel here to increase reflections even in
-		# pure alpha-transparent spots
+		# pure alpha-transparent spots, e.g. for glass
 		addToAlpha = nodes.new('ShaderNodeMath')
-		nodeSaturateMix.location = (-400,-200)
+		addToAlpha.location = (0, 200)
+		# nodeSaturateMix.location = (-200,-200)
 		addToAlpha.use_clamp = True
 		addToAlpha.operation = 'ADD'
 		addToAlpha.inputs[1].default_value = 0.2
@@ -884,13 +898,22 @@ def matgen_cycles_principled(mat, passes, use_reflections):
 		links.new(addToAlpha.outputs["Value"],nodeMix1.inputs[0])
 	else:
 		principled.inputs[5].default_value = 0.5  # set specular
-		principled.inputs[7].default_value = 0.9  # set roughness
+		principled.inputs[7].default_value = 0.7  # set roughness
 
-	if checklist(canon,conf.json_data['blocks']['water']):
+	waterHSV = None
+	if checklist(canon, "water"):
 		# principled.inputs[5].default_value = 1.0  # spec
-		principled.inputs[7].default_value = 0.1  # roughness
+		principled.inputs[7].default_value = 0.0  # roughness
 
-	if use_reflections and checklist(canon,conf.json_data['blocks']['metallic']):
+		# addToAlpha.inputs[1].default_value = -0.1 # increase transparency
+
+		# add HSV node for more user control
+		waterHSV = nodes.new('ShaderNodeHueSaturation')
+		waterHSV.location = (-200, -150)
+		links.new(nodeSaturateMix.outputs["Color"], waterHSV.inputs[4])
+		links.new(waterHSV.outputs["Color"], principled.inputs[0])
+
+	if use_reflections and checklist(canon, "metallic"):
 		principled.inputs[4].default_value = 1  # set metallic
 		if principled.inputs[7].default_value < 0.2:  # roughness
 			principled.inputs[7].default_value = 0.2
@@ -898,18 +921,23 @@ def matgen_cycles_principled(mat, passes, use_reflections):
 		principled.inputs[4].default_value = 0  # set dielectric
 
 
-	if checklist(canon,conf.json_data['blocks']['solid']):
+	if checklist(canon, "solid"):
 		# nodeMix1.inputs[0].default_value = 1 # no transparency
 		nodes.remove(nodeTrans)
 		nodes.remove(nodeMix1)
+		if addToAlpha:
+			nodes.remove(addToAlpha)
 		# nodeDiff.location[1] += 150
 		links.new(principled.outputs["BSDF"],nodeOut.inputs[0])
+
+		# faster, and appropriate for non-transparent (and refelctive?) materials
+		principled.distribution = 'GGX'
 
 	nodeSaturateMix.inputs[0].default_value = 1.0
 	nodeSaturateMix.blend_type = 'OVERLAY'
 	nodeSaturateMix.mute = True
 	nodeSaturateMix.hide = True
-	if canon in conf.json_data['blocks']['desaturated']:
+	if checklist(canon, "desaturated"):
 		# Could potentially process image and determine if grayscale (mostly),
 		# but would be slow. For now, explicitly pass in if saturated or not
 		desat_color = conf.json_data['blocks']['desaturated'][canon]
@@ -1018,8 +1046,9 @@ def matgen_cycles_original(mat, passes, use_reflections):
 	# nodeTexDisp.image = image_disp
 
 	nodeTexDiff.interpolation = 'Closest'
-	nodeTexSpec.interpolation = 'Closest'
-	# don't treat normal as closest?
+	nodeTexSpec.interpolation = 'Closest' # should this be closest or not?
+	nodeTexSpec.color_space = 'NONE'  # for better interpretation of specmaps
+	nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
 
 	#set other default values, e.g. the mixes
 	nodeMix2.inputs[0].default_value = 0 # factor mix with glossy
@@ -1028,20 +1057,20 @@ def matgen_cycles_original(mat, passes, use_reflections):
 
 	# the above are all default nodes. Now see if in specific lists
 	mat.cycles.sample_as_light = False
-	if use_reflections and checklist(canon,conf.json_data['blocks']['reflective']):
+	if use_reflections and checklist(canon, "reflective"):
 		nodeMix2.inputs[0].default_value = 0.3  # mix factor
-		nodeGloss.inputs[1].default_value = 0.005 # roughness
+		nodeGloss.inputs[1].default_value = 0.0 # roughness, used to be 0.05
 	else:
 		nodeMix2.mute = True
 		nodeMix2.hide = True
 		nodeGloss.mute = True
 		nodeGloss.hide = True
 
-	if checklist(canon,conf.json_data['blocks']['water']):
+	if checklist(canon, "water"):
 		# setup the animation??
 		nodeMix2.inputs[0].default_value = 0.2
-		nodeGloss.inputs[1].default_value = 0.01 # copy of reflective for now
-	if checklist(canon,conf.json_data['blocks']['solid']):
+		nodeGloss.inputs[1].default_value = 0.0
+	if checklist(canon, "solid"):
 		# nodeMix1.inputs[0].default_value = 1 # no transparency
 		nodes.remove(nodeTrans)
 		nodes.remove(nodeMix1)

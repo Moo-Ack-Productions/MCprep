@@ -13,13 +13,21 @@ It should remain a zip folder. In blender, go to preferences, then the addons ta
 *Again, please download from the link above or the releases page, __not__ by clicking `download zip` button above.*
 
 *The preferences panel should look like this after installing the zip file*
-![Install MCprep](/visuals/install.png?raw=true)
+![Installed MCprep](/visuals/install.png?raw=true)
 
-**If you like the addon, [please consider donating](http://bit.ly/donate2TheDuckCow) for the continued quality development! [Share this addon](https://twitter.com/intent/tweet?text=Make+easier+Minecraft+renders+using+the+MCprep+addon+bit.ly/MCprep+by+@TheDuckCow) so others can benefit from it!**
+**If you like the addon, [please consider donating](http://bit.ly/donate2TheDuckCow) for the continued quality development! [Share this addon](https://twitter.com/intent/tweet?text=Make+easier+Minecraft+renders+using+the+MCprep+addon+bit.ly/MCprep+by+@TheDuckCow) so others can benefit from it! Or help by [taking this quick survey](http://bit.ly/MCprepSurvey)!**
 
 Demo Usage
 ======
 
+
+*[Texture swap and Texture Animate Demo](https://www.youtube.com/watch?v=lxF_j0HIsE0)*
+
+[![Beta video demo](https://img.youtube.com/vi/lxF_j0HIsE0/0.jpg)](https://www.youtube.com/watch?v=lxF_j0HIsE0)
+
+*[Mob spawner tutorial](https://www.youtube.com/watch?v=asB4UcBuWBw)*
+
+*[Skin swapping overview](http://theduckcow.com/dev/blender/mcprep/skin-swapping/)*
 
 *[Mob spawner demo](https://www.youtube.com/watch?v=C3YoZx-seFE)*
 
@@ -30,7 +38,7 @@ Demo Usage
  [![Alt text](/visuals/meshswap.demo.gif "Meshswap Preview")](https://www.youtube.com/watch?v=Nax7iuCTovk)
 
 Other video demos:
-- [Cycles Materials Upate](https://www.youtube.com/watch?v=MRuPRnfdzfI)
+- [Cycles Materials Update](https://www.youtube.com/watch?v=MRuPRnfdzfI)
 - [Grass field meshswapping](https://www.facebook.com/photo.php?v=737273036339269&l=2318416360725689976)
 
 
@@ -50,6 +58,8 @@ Feature list
 | World Imports   |      Description      |
 |----------|:-------------:|
 | Prep Materials | Improves materials from world imports, and allows one-click switching from cycles & blender internal materials. *Note, this does not* create *materials, only modifies existing ones.* |
+| Swap Texture Pack | *Initial support only for jmc2obj world exports.* Using a valid Minecraft resource pack, you can now completely replace the textures of the imported world with another pack - you can even changed individual blocks at a time. |
+| Animate textures | *Initial support only for jmc2obj world exports.* With a valid (or the MCprep default) resource pack selected, you can replace still images with their animated versions. Works great to put motion back into lava, water, portals and other blocks for any kind of resource pack. |
 | Combine materials/images | Consolidates duplicate materials and images down to the smallest number of unique datablocks. *Note: combine images is only available on blender 2.78+* |
 | Improve UI | A shortcut to quickly improve viewport settings for Minecraft sets. Sets textured solid mode & turns off mipmaps |
 | Mesh Swap | Allows you to replace simple models from 3D exported worlds with more intricate 3D models |
@@ -88,7 +98,7 @@ Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow),
 | Fancy Feet Generic Player (ideal for skinswapping) |  [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) ([Rig link](http://bit.ly/MinecraftRig)) |
 | Fancy Feet Steve |  [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) ([Rig link](http://bit.ly/MinecraftRig)) |
 | Fancy Feet Alex | Modified by [Jeremy Putnam](http://www.blendswap.com/user/lorddon) (MCprep exclusive) |
-| Vilalger | [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) ([Rig link](http://www.blendswap.com/blends/view/73063)) |
+| Villager | [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) ([Rig link](http://www.blendswap.com/blends/view/73063)) |
 | VMcomix Steve (rounded) | [VMcomix](https://www.youtube.com/user/VMComix) ([Rig link](http://vmcomix.blogspot.com/)) |
 | Story Mode Rig | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) (No direct link yet) |
 
@@ -142,18 +152,42 @@ How to use this addon
 ======
 
 
-### Setup materials:
-- **Purpose:** To automatically setup better, crisp materials for rendering Minecraft, low resolution textures. It works for both Blender internal as well as cycles. It will even selectively turn 'shiny' materials into reflecting materials accordingly as well as 'bright' materials into emitting materials. Currently, the list of these materials is hard-coded in.
+### Prep materials:
+- **Purpose:** To automatically setup better, crisp materials for rendering Minecraft, low resolution textures. It works for both Blender internal as well as cycles, and more recently the cycles Principled shader. It will even selectively turn 'shiny' materials into reflecting materials, as well as 'bright' materials into emitting materials. Currently, the list of these materials is hard-coded into a json file, with names matching the material names for both jmc2obj and Mineways. You can modify this file for your own needs, but largely should be fine with the default, and will be updated (overwritten) as new updates are added.
 - **Step 1:** Export your world to an OBJ or other general 3D formats. I use jmc2obj, but Mineways or other such formats should be fine as well.
 - **Step 2:** Import the world into blender (e.g. via file > import > obj, or whatever according format)
 - **Step 3:** Select all, or select the objects that have the material you want to fix. Materials can be all separate objects or the same object, it does not matter.
 - **Step 4:** Under the MCprep panel, press "Prep Materials".
+- **Step 5:** Change settings (optional, defaults are good!) and press ok - and wait a moment while the addon does the rest! Settings
+
+*Settings popup for prep materials.*
+![Prep material settings](/visuals/prepMaterialsSettings.png?raw=true)
+
+Setting options:
+  - **Use principled shader:** Cycles only and 2.79 and up, use the more physically accurate Principled shader node. If disabled, it will default back to previous material setups. The principled shader is, however, preferred.
+  - **Use reflections:** Add extra settings to make material more reflective. For Blender Internal, enable reflections. For cycles materials, increase reflection alpha so that even fully transparent sections of image (e.g. in glass) will show some reflections.
+  - **Animate textures:** See the section below, this performs the same operation after prepping materials, with the default behavior of "save to next to current source image", which is likely in the texture pack itself
+  - **Find missing images:** Look to replace any missing images with their counterparts in the active resource pack, which by default is vanilla Minecraft textures as ship with MCprep
+  - **Use extra maps:** If extra passes like normal and specular maps are available with the selected resource pack, load them into the material (note: the default MCprep texture pack will not have these passes)
+  - **Improve UI:** Does not impact existing materials, but just sets the viewport to a nice minimum default to see the result of prepping materials - but always checked rendered mode to see how they truly look in the end
+  - **Combine materials:** This will go through the entire blend file and attempt to merge together same-named materials (e.g. grass and grass.001 and grass.002 will all be consolidated down into one shared material, though something like grass-edit would be left alone)
+
+
+
+### Swap texture pack
+- **Purpose:** Replace the images in a blend file with those from another Minecraft resource pack. Operates on selected objects and their respective materials, so you can mix and match different resource packs on a per-material basis this way.
+- **Step 1:** Select all materials you wish to swap texture packs for
+- **Step 2:** Prep materials on these objects if you haven't already (prepping a second time will do no harm); not doing this could have mixed results.
+- **Step 3:** Press on the swap texture pack button in the 3D view > MCprep tab > World Imports panel
+- **Step 4:** In this popup, the folder will default to the MCprep resource pack (ie default Vanilla Minecraft); navigate to an *extracted* zip folder of a valid resource pack. You can select any sub-folder, but to be safe, select the folder at the same level that has the "pack.png" and "assets" sub-folder.
+- **Step 5:** Decide if you want to enable/disable pulling in extra passes (e.g. normal and specular, if they exist) and whether to animate textures upon swapping. Both of these tickboxes, on by default, are in the left-hand sidebar.
+
 
 
 ### Meshswap:
 - **Purpose:** To automatically swap in extra assets such as 3D grass, light emitting torches and lamps, and so forth. Note that all the objects to be swapped in are in the blend file part of this download. Also note that swapping is done based on the name of the material. If you are unsure why your object is not swapping in, check the material name matches the counterpart object/material in the meshSwap.blend file. Note it can search for both append-able objects as well as groups, containing particles and so forth. Modifiers on the mesh in the original file will be brought over, so notice for example how the tall grass when replaced will be "pre-simulated" as it has displacement modifiers setup already with animation.
 - **Step 0:** By default this is already done for you; set the MeshSwap blend path to the "mcprep_meshSwap.blend" or custom blend file, and make sure the world export has blocks of size 1m (100cm).
-- **Step 1:** Select the objects that you wish to be meshSwapped. Swappable objects are determined *automatically* based on the contents of the blend file selected above. If an object is not found or swappable, it will just be skipped - no harm done by "overselecting" (so select all objects to make sure everything that can be swapped gets swapped!)
+- **Step 1:** Select the objects that you wish to be meshSwapped. Swappable objects are determined *automatically* based on the contents of the blend file selected above. If an object is not found or swappable, it will just be skipped - no harm done by "over selecting" (so select all objects to make sure everything that can be swapped gets swapped!)
 - **Step 2:** Press Mesh Swap (there will be a small delay, meshswapping large areas such as fields of grass may take awhile).
 
 *Setup your jmc2obj and Mineways worlds in this fashion for best results.*
@@ -178,13 +212,50 @@ To add your own objects to meshswap (or groupswap):
 
 
 
+### Animate textures:
+- **Purpose:** Replace still images with animated sequences, for livelier materials! This operator runs over all materials of all selected objects. For each *image pass* found within each material, it will attempt to replace the still image with the tiled counterpart in the active texture pack. Minecraft resource packs store animated textures in the form of long, vertical images. Blender internal and cycles work best when reading image sequences as separated files, so this function actually "exports" the image sequence from a single tiled image into a subfolder with one image per frame, and then assigns this to the image block in blender. Any tiled image is eligible to be animated this way, even if not normally an animated sequence in vanilla Minecraft.
+
+- **Step 0:** Prep materials first, if you haven't already; not required, but helpful.
+- **Step 1:** Select the materials you want to animate. Try this on water, lava, and portals! Note, there is no harm in "over-selecting"; if you press animate textures on materials that cannot be animated (i.e. no tiled images to pull in), it will just skip over it.
+- **Step 2:** From the popup, decide how and where you want the save the generated image sequence.
+  - "Next to current source image": This will export the sequence to a subfolder in the same directory as the current, existing image
+  - "Inside MCprep texture pack": This will export the sequence to a subfolder in active texture pack selected
+  - "Next to this blend file": This will export the sequence to a Textures folder placed next to the current saved blend file.
+  - Be careful when moving your blend file to other locations or other computers! Even if you use "pack images", image sequences **do not get packed** in the blender file. You must manually copy this folder to wherever you plan to render/open the file. For this purpose, such as render farms or multi-computer rendering, be sure to always set save location as "Next to this blend file" (preferred) or "Next to current source image".
+- **Step 3:** If you have been running into issues, consider ticking the "clear cache" box (this will remove any previous or partially exported image sequences)
+- **Step 3:** Press okay, and wait! Some notes:
+  - If you have a high-resolution texture pack selected, this could take some time. Blender will be unresponsive while this processes.
+  - This should only be slow the first time you animate textures, thereafter (with the same save-location selection) it will skip re-exporting and directly load the existing image sequence for each matching material.
+  - You can view progress in the console (on Windows, go to top bar >Windows > Toggle console)
+
+*Animate textures can be found under the World Imports - Advanced panel.*
+![Animate textures button](/visuals/animateTextures.png?raw=true)
+
+
+
+### Prep World:
+- **Purpose:** This button found in the World Tools panel will assign nicer default world settings for rendering and animation, for both Blender Internal and Cycles.
+- Adds a basic day-sky texture. Works for both cycles and blender internal, and creates a better starting point than the default gray world background. No option yet for setting other times of day.
+- Optimizes/improves render settings (cycles):
+  - Turns off reflective and refractive caustics (will increase speed over default)
+  - Increases light sampling threshold to a better balance (will increase speed over default)
+  - Sets max bounces to 8 (blender default is 12, and generally this number can typically be lowered further)
+  - Turns on Simplify and sets Simplify AO to level 2 for viewport and render (this will save on average 20-30% on render times with minimal impact; for much faster rendering, you can even set this lower to a level of 1, but be mindful of how shadows and reflections around objects with texture transparencies behave).
+- Improves render settings (blender internal):
+  - Turns on AO with multiple of 0.1 (may cause renders to be slower, but generally nicer looking)
+  - Turns on environment global illumination (color inherited from sky settings). This may slow down renders, but they will be generally nicer and prevents any “pitch black” scenes.
+  - Turns on ray tracing and shadows (may cause renders to be slower, but generally nicer looking)
+  - If there is a sun in the scene, it will turn on “use sky blend” which will make the rotation of the sun lamp affect the sky color / sun glow position.
+
+
+
 ### Skin Swapping:
 - **Purpose:** To provide quick and easy skin changing on rigs and characters already in your blender scene.
 - **Step 1:** Select your rig (or rigs) that you want to change the skin for. It works best if you select all of the objects of your rig (e.g. head, torso, legs etc) but it will work even if you only selected the armature (in that case, results are only visible in rendered view)
 - **Step 2:** Select a skin from the skin file list under the tool menu: 3D view > MCprep tab > Skin Swapper Panel > UI List of skins, left click to select/highlight a skin
-  - *Don't see the skin you want?* Use the + button to add to the list, or use (download) skin from username below the UIList
+  - *Don't see the skin you want?* Click "skin from file" to select one from your machine, or "skin from username" to download and apply a Minecraft user's skin, or go into advanced to Add Skin for future use without immediately applying it.
 - **Step 3:** Press the button that says "Apply [skin name]"
-- **Step 4:** You're done! If the user interface appears to not update, be sure to **check rendered view**. Also note the default behavior is to make a *new* material in the event you have other copies or uses of the existing material. You can turn this off in the redo last menu.
+- **Step 4:** You're done! If the user interface appears to not update, be sure to **check rendered view** (shift+z). Also note the default behavior is to make a *new* material in the event you have other copies or uses of the existing material. You can turn this off in the redo last menu.
 
 
 
@@ -193,7 +264,6 @@ To add your own objects to meshswap (or groupswap):
 - **Step 0:** By default this is already done for you; make sure the mob spawner path is a directory with valid blend files setup for linking (addon preferences > MCprep). When installed, this path will already be setup and valid pointing to the included rigs with this release, as defined in the credits section above. This rigs are place in the addon's local directory provided by blender and will not be placed anywhere else on the user's machine.
 - **Step 1:** Either press the "mob spawner" button in the MCprep panel, or go to the shift-a menu: armature > mob spawner > [mob name] to instantly append or link in a rig.
 - **Step 2:** Check the redo last menu for additional settings, such as relocation of the rig, library linking, and even changing which rig to spawn. These are the following options:
-  - mcmob_type: Change the mob spawned, e.g. from a creeper to a wolf
   - Relocation: Change where the spawned rig appears.
     - Cursor (default): Place the rig at the cursor's location
     - Origin: Move the rig to the origin
@@ -201,8 +271,9 @@ To add your own objects to meshswap (or groupswap):
   - Library Link mob: If disabled, the group is appended (the groups is not kept so it can be appended multiple times), if enabled, the rig will be linked in and armatures auto-proxied.
     - Be careful! If the blend file moves, the libraries will likely get broken unless a custom rigs folder is used with a local-relative path.
   - Clear pose: clear to pose to rest. If false, the initial pose will be that found in the rig's source blend file. Note: some rigs have animations already setup, clear pose in the future will also automatically clear an action and remove the pre-animated figures.
+  - Prep materials: this will automatically run the prep materials function, noting this will regenerate cycles materials if cycles is the active render engine.
 
-*Mob Spawner Options*
+*Mob Spawner Redo-last/F6 Options*
 ![Meshswap options](/visuals/spawnOptions.png?raw=true)
 
 To add your own rigs to the Mob Spawner:
@@ -252,12 +323,12 @@ Known Bugs
 
 Future Plans
 ======
-Future development plans are now recorded and updated as milestones and enhancement issues on GitHub.
+Future development plans are now recorded and updated as milestones and enhancement issues on GitHub. Check [those out here](https://github.com/TheDuckCow/MCprep/milestones)
 
 
 Additional Help
 ======
 
-If you have troubles getting this addon to work, please contact me at support[at]TheDuckCow.com or [on twitter](https://twitter.com/TheDuckCow), and I will do my best to respond promptly to your questions. This addon is still heavily under construction, so check back for updates (you can reference the version number and take last modified). Your feedback helps stabilize the addon and make it work better for everyone else!
+If you have troubles getting this addon to work, please contact me at support[at]TheDuckCow.com or [on twitter](https://twitter.com/TheDuckCow), and I will do my best to respond promptly to your questions. This addon is always being updated, but there may be some time between releases, so check back for updates (you can reference the version number and take last modified). Your feedback helps stabilize the addon and make it work better for everyone else!
 
 Moo-Ack!

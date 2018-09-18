@@ -801,9 +801,9 @@ class Singleton_updater(object):
 			dirlist = os.listdir(unpath)
 			if len(dirlist)>0:
 				if self._subfolder_path == "" or self._subfolder_path == None:
-					unpath = os.path.join(unpath,dirlist[0])
+					unpath = os.path.join(unpath, dirlist[0])
 				else:
-					unpath = os.path.join(unpath,dirlist[0],self._subfolder_path)
+					unpath = os.path.join(unpath, self._subfolder_path)
 
 			# smarter check for additional sub folders for a single folder
 			# containing __init__.py

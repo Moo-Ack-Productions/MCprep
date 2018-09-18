@@ -253,7 +253,7 @@ def open_program(executable):
 	try:  # first attempt to use blender's built-in method
 		res = bpy.ops.wm.path_open(filepath=executable)
 		if res == {"FINISHED"}:
-			return True
+			return 0
 	except:
 		pass
 

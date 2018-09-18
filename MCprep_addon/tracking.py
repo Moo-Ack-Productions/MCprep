@@ -78,7 +78,6 @@ class Singleton_tracking(object):
 		self._tracking_enabled = False
 		self._verbose = False
 		self._version = ""
-
 		self.json = {}
 
 
@@ -108,7 +107,7 @@ class Singleton_tracking(object):
 		elif type(value) != type("string"):
 			raise Exception("language must be a string")
 		else:
-			self._blender_version = self.string_trunc(value)
+			self._language = self.string_trunc(value)
 
 	@property
 	def tracking_enabled(self):
@@ -231,7 +230,8 @@ class Singleton_tracking(object):
 		self._appurl = appurl
 		self._version = version
 		self.platform = self.get_platform_details()
-		self.blender_version = blender_version
+		# self.blender_version = blender_version
+		self._blender_version = str(blender_version)
 		self.language = language
 
 		self._tracker_idbackup = os.path.join(os.path.dirname(__file__),
@@ -500,7 +500,7 @@ class popup_report_error(bpy.types.Operator):
 		sysinfo="Blender version: {}\nMCprep version: {}\nOS: {}\n MCprep install identifier: {}".format(
 				Tracker.blender_version,
 				Tracker.version,
-				self.platform,
+				Tracker.platform,
 				Tracker.json["install_id"],
 		)
 		for ln in sysinfo.split("\n"):
@@ -581,7 +581,7 @@ def trackInstalled(background=None):
 				"usertime":Tracker.string_trunc(Tracker.json["install_date"]),
 				"version":Tracker.version,
 				"blender":Tracker.blender_version,
-				"status":Tracker.string_trunc(status)
+				"status":Tracker.string_trunc(status),
 				"platform":Tracker.platform,
 				"language":Tracker.language
 			})
@@ -729,6 +729,16 @@ def report_error(function):
 			print(err) # always print raw traceback
 			err = Tracker.remove_indentifiable_information(err)
 
+			# cut off the first three lines of error, which is this wrapper
+			nth_newline = 0
+			for ind in range(len(err)):
+				if err[ind] in ["\n", "\r"]:
+					nth_newline += 1
+				if nth_newline == 3:
+					if len(err) > ind+1:
+						err = err[ind+1:]
+					break
+
 			# Prevent recusrive popups for errors if operators call other
 			# operators, only show the inner-most errors
 			if Tracker._handling_error is False:
@@ -758,9 +768,6 @@ def report_error(function):
 				err = traceback.format_exc()
 				print("Error while reporting usage for "+str(self.track_function))
 				print(err)
-		elif Tracker.verbose:
-			print("No tracking to run")
-
 		return res
 
 	return wrapper
@@ -777,9 +784,11 @@ def register(bl_info):
 	bversion = None
 	# for compatibility to prior blender (2.75?)
 	try:
-		bvserion = bpy.app.version
-	except:
-		pass
+		bversion = bpy.app.version
+		print("Blender version detected: " + str(bversion))
+	except Exception as err:
+		err = traceback.format_exc()
+		print(err)
 
 	language = None
 	system = bpy.context.user_preferences.system

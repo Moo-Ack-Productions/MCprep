@@ -454,7 +454,7 @@ class addon_updater_updated_successful(bpy.types.Operator):
 				col.label("Addon successfully installed", icon="FILE_TICK")
 				col.label("Consider restarting blender to fully reload.", icon="BLANK1")
 
-	def execut(self, context):
+	def execute(self, context):
 		return {'FINISHED'}
 
 
@@ -1168,7 +1168,7 @@ def register(bl_info):
 	updater.repo = "mcprep"
 	updater.website = "http://theduckcow.com/dev/blender/mcprep-download/"
 	updater.subfolder_path = "MCprep_addon/"
-	updater.current_version = bl_info["version"] 
+	updater.current_version = bl_info["version"]
 	updater.backup_current = True # True by default
 	updater.backup_ignore_patterns = ["__pycache__"]
 	updater.overwrite_patterns = ["*.png","README.md","LICENSE.txt","*.blend"]
@@ -1177,9 +1177,9 @@ def register(bl_info):
 	updater.include_branch_list = None  # is the equivalent to setting ['master']
 	updater.manual_only = False # used to be True
 	updater.fake_install = False # Set to true to test callback/reloading
-	updater.version_min_update = (3,0,0) 
+	updater.version_min_update = (3,0,0)
 	# updater.version_max_update = (9,9,9)
-	updater.version_max_update = None  # if not wanting to define a max	
+	updater.version_max_update = None  # if not wanting to define a max
 	updater.skip_tag = skip_tag_function # min and max used in this function
 	updater.use_releases = True
 	updater.select_link = select_link_function # will select asset
@@ -1194,7 +1194,7 @@ def unregister():
 
 	global ran_autocheck_install_popup
 	ran_autocheck_install_popup = False
-	
+
 	global ran_update_sucess_popup
 	ran_update_sucess_popup = False
 

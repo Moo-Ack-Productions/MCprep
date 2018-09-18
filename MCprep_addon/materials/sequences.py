@@ -44,37 +44,48 @@ def animate_single_material(mat, engine, export_location='original', clear_cache
 		export_location: enum of {original, texturepack, local}
 		clear_cache: whether to pre-remove existing sequence if existing
 	Returns:
-		Bool (if affectable), Bool (if actually updated or not)
+		Bool (if canonically affectable), Bool (if actually updated or not)
 	"""
 	mat_gen = util.nameGeneralize(mat.name)
 	canon, form = generate.get_mc_canonical_name(mat_gen)
 
 	if canon not in conf.json_data["blocks"]["animated"]:
+		#return False, False
+		affectable = False
+	else:
+		affectable = True
+
+	# get the primary loaded diffuse of the material
+	diffuse_block = generate.get_textures(mat)["diffuse"]
+	currently_tiled = is_image_tiled(diffuse_block)
+	if not currently_tiled and not affectable:
+		# conf.log("Not standard image sequence and not tiled")
 		return False, False
 	else:
-		if conf.v:
-			print("Animate-able texture material found: " + mat.name)
+		affectable = True  # retroactively assign to true, as tiled iamge found
+	# else:
+	# 	if conf.v:
+	# 		print("Animate-able texture material found: " + mat.name)
 
 	# get the base image from the texturepack (cycles/BI general)
 	image_path_canon = generate.find_from_texturepack(canon)
 	if not image_path_canon:
-		if conf.v:
-			print("Could not fine texturepack for animate-able image")
-		return True, False
+		conf.log("Could not fine texturepack for animate-able image")
+		return affectable, False
 
 	# apply the sequence if any found, will be empty dict if not
 	tile_path_dict = generate_material_sequence(mat, image_path_canon, form,
 										export_location, clear_cache)
-	if tile_path_dict == {} and conf.v:
-		print("No sequence/passes found to generate")
-	if conf.v:
-		print("Tilepathdict:")
-		print(tile_path_dict)
+	if tile_path_dict == {}:
+		conf.log("No sequence/passes found to generate")
+		return affectable, False
+	conf.log("Tilepathdict:")
+	conf.log(tile_path_dict)
 
 	affected_materials = 0
 	for pass_name in tile_path_dict:
 		if not tile_path_dict[pass_name]:  # ie ''
-			if conf.v: print("Skipping passname: " + pass_name)
+			conf.log("Skipping passname: " + pass_name)
 			continue
 		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 			node = generate.get_node_for_pass(mat, pass_name)
@@ -90,7 +101,18 @@ def animate_single_material(mat, engine, export_location='original', clear_cache
 				continue
 			set_sequence_to_texnode(texture, tile_path_dict[pass_name])
 			affected_materials += 1
-	return True, affected_materials>0
+	return affectable, affected_materials>0
+
+
+def is_image_tiled(image_block):
+	"""Checks whether an image block tiled."""
+	if not image_block or image_block.size[0]==0:
+		return False
+	tiles = image_block.size[1]/image_block.size[0]
+	if int(tiles) != tiles or not tiles > 1:
+		return False
+	else:
+		return True
 
 
 def generate_material_sequence(mat, image_path, form, export_location, clear_cache):
@@ -137,9 +159,8 @@ def generate_material_sequence(mat, image_path, form, export_location, clear_cac
 
 	for img_pass in img_pass_dict:
 		passfile = img_pass_dict[img_pass]
-		print("Running on file:")
-		# print(passfile)
-		print(bpy.path.abspath(passfile))
+		conf.log("Running on file:")
+		conf.log(bpy.path.abspath(passfile))
 
 		# Create the sequence subdir (without race condition)
 		pass_name = os.path.splitext(os.path.basename(passfile))[0]
@@ -147,23 +168,22 @@ def generate_material_sequence(mat, image_path, form, export_location, clear_cac
 			seq_path = os.path.join(os.path.dirname(passfile), pass_name)
 		else:
 			seq_path = os.path.join(seq_path_base, pass_name)
-		if conf.v:
-			print("Using sequence directory: "+seq_path)
+		conf.log("Using sequence directory: "+seq_path)
 
 		try:  # check parent folder exists/create if needed
-			os.mkdir(os.path.dirname(seq_path))  # as opposed to dirname(seq_path)
+			os.mkdir(os.path.dirname(seq_path))
 		except OSError as exc:
 			if exc.errno == errno.EACCES:
 				raise Exception(perm_denied)
 			elif exc.errno != errno.EEXIST:
 				raise
-		try:  # check parent folder exists/create if needed
-			os.mkdir(seq_path)  # as opposed to dirname(seq_path)
+		try:  # check folder exists/create if needed
+			os.mkdir(seq_path)
 		except OSError as exc:
 			if exc.errno == errno.EACCES:
 				raise Exception(perm_denied)
 			elif exc.errno != errno.EEXIST:
-				raise
+				raise Exception("Path does not exist: "+seq_path)
 
 		# overwrite the files found if not cached
 		if not os.path.isdir(seq_path):
@@ -172,7 +192,7 @@ def generate_material_sequence(mat, image_path, form, export_location, clear_cac
 				if os.path.isfile(os.path.join(seq_path, tile))
 				and tile.startswith(pass_name)]
 		if cached:
-			print("Cached detected")
+			conf.log("Cached detected")
 
 		if clear_cache and cached:
 			for tile in cached:
@@ -190,7 +210,8 @@ def generate_material_sequence(mat, image_path, form, export_location, clear_cac
 			first_tile = os.path.join(seq_path, sorted(cached)[0])
 
 		# save first tile to dict
-		image_dict[img_pass] = bpy.path.abspath(first_tile)
+		if first_tile:
+			image_dict[img_pass] = first_tile
 	return image_dict
 
 
@@ -206,6 +227,17 @@ def export_image_to_sequence(image_path, params, output_folder=None, form=None):
 	Does not auto load new images (or keep temporary ones created around)
 	"""
 
+	# load in the image_path to a temporary datablock, check here if tiled
+	image = bpy.data.images.load(image_path)
+	tiles = image.size[1]/image.size[0]
+	if int(tiles) != tiles:
+		conf.log("Not perfectly tiled image - "+image_path)
+		bpy.data.images.remove(image)
+		return None  # any non-titled materials will exit here
+	else:
+		tiles = int(tiles)
+	basename, ext = os.path.splitext(os.path.basename(image_path))
+
 	# use the source image's filepath, or fallback to blend file's,
 	if not output_folder:
 		output_folder = os.path.dirname(image_path)
@@ -215,24 +247,11 @@ def export_image_to_sequence(image_path, params, output_folder=None, form=None):
 		if exc.errno != errno.EEXIST:
 			raise
 
-	# load in the image_path to a temporary datablock
-	image = bpy.data.images.load(image_path)
-
 	# ind = self.get_sequence_int_index(first_img)
 	# base_name = first_img[:-ind]
 	# start_img = int(first_img[-ind:])
-	basename, ext = os.path.splitext(os.path.basename(image_path))
-	tiles = image.size[1]/image.size[0]
-	if int(tiles) != tiles:
-		print("Not perfectly tiled image")
-		return None
-	else:
-		tiles = int(tiles)
 
 	pxlen = len(image.pixels)
-	# channels = int(pxlen/image.size[0]/image.size[1])
-	# src_pixels = list(image.pixels)
-
 	first_img = None
 	for i in range(tiles):
 		if conf.v:
@@ -267,8 +286,7 @@ def export_image_to_sequence(image_path, params, output_folder=None, form=None):
 		# lst = list(img_tile.pixels)
 		# start_ind = tile_pixel_size
 		# img_tile.pixels = image.pixels[]
-	if conf.v:
-		print("Finished exporting frame sequence: " + basename)
+	conf.log("Finished exporting frame sequence: " + basename)
 	bpy.data.images.remove(image)
 
 	return bpy.path.abspath(first_img)

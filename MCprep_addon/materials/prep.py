@@ -47,12 +47,12 @@ class McprepPrepMaterials(bpy.types.Operator):
 
 	animateTextures = bpy.props.BoolProperty(
 		name = "Animate textures (may be slow first time)",
-		description = "Swap still images for the animated sequenced found in the active or default texturepack.",
+		description = "Swap still images for the animated sequenced found in the active or default texture pack.",
 		default = False)
 	autoFindMissingTextures = bpy.props.BoolProperty(
-		name = "Auto-find missing images",
+		name = "Find missing images",
 		description = "If the texture for an existing material is missing, try "+\
-				"to load from the default texturepack instead",
+				"to load from the default texture pack instead",
 		default = True
 		)
 	combineMaterials = bpy.props.BoolProperty(
@@ -75,6 +75,20 @@ class McprepPrepMaterials(bpy.types.Operator):
 		description = "Allow appropriate materials to be rendered reflective",
 		default = True
 		)
+	useExtraMaps = bpy.props.BoolProperty(
+		name = "Use extra maps",
+		description = "Generate materials using normal/spec maps if they are "+\
+					"available, requires special texture packs",
+		default = True
+		)
+	normalIntensity = bpy.props.FloatProperty(
+		name = "Normal map intensity",
+		description = "Set normal map intensity, if normal maps are found in "+\
+				"the active texture pack and using normal/spec passes",
+		default = 1.0,
+		max=1,
+		min=0
+		)
 
 	skipUsage = bpy.props.BoolProperty(
 		default = False,
@@ -83,19 +97,30 @@ class McprepPrepMaterials(bpy.types.Operator):
 	# prop: set all blocks as solid (no transparency), assume has trans, or compute check
 
 	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self, width=400*util.ui_scale())
+		return context.window_manager.invoke_props_dialog(self, width=300*util.ui_scale())
 
 	def draw(self, context):
 		row = self.layout.row()
 		col = row.column()
-		col.prop(self, "useReflections")
-		col.prop(self, "animateTextures")
-		col.prop(self, "combineMaterials")
-		col.prop(self, "autoFindMissingTextures")
 		engine = context.scene.render.engine
 		if engine=='CYCLES' or engine=='BLENDER_EEVEE':
 			col.prop(self, "usePrincipledShader")
+		col.prop(self, "useReflections")
+		col.prop(self, "animateTextures")
+		col.prop(self, "autoFindMissingTextures")
+
+		row = self.layout.row()
+		col = row.column()
+		col.prop(self, "useExtraMaps")
+		# col = row.column()
+		# col.prop(self, "normalIntensity", slider=True)
+
+		split = self.layout.split()
+		row = self.layout.row()
+		col = row.column()
 		col.prop(self, "improveUiSettings")
+		col = row.column()
+		col.prop(self, "combineMaterials")
 
 	track_function = "materials"
 	track_param = None
@@ -119,9 +144,13 @@ class McprepPrepMaterials(bpy.types.Operator):
 		engine = context.scene.render.engine
 		count = 0
 
+		# TODO: run differently if a linked material
 		for mat in mat_list:
-			# TODO: run differently if a linked material
 			passes = generate.get_textures(mat)
+			if not self.useExtraMaps:
+				for pass_name in passes:
+					if pass_name != "diffuse":
+						passes[pass_name] = None
 			if self.autoFindMissingTextures:
 				for pass_name in passes:
 					res = generate.replace_missing_texture(passes[pass_name])
@@ -151,6 +180,7 @@ class McprepPrepMaterials(bpy.types.Operator):
 			bpy.ops.mcprep.improve_ui()
 		self.report({"INFO"},"Modified "+str(count)+" materials")
 		self.track_param = context.scene.render.engine
+		self.track_exporter = generate.detect_form(mat_list)
 
 		return {'FINISHED'}
 
@@ -279,7 +309,7 @@ class McprepSwapTexturePack(bpy.types.Operator, ImportHelper):
 		subcol = col.column()
 		subcol.scale_y = 0.7
 		subcol.label("Select any subfolder of an")
-		subcol.label("unzipped texturepack, then")
+		subcol.label("unzipped texture pack, then")
 		subcol.label("press 'Swap Texture Pack'")
 		subcol.label("after confirming these")
 		subcol.label("settings below:")
@@ -313,11 +343,11 @@ class McprepSwapTexturePack(bpy.types.Operator, ImportHelper):
 		if len(obj_list)==0:
 			self.report({'ERROR'}, "No materials found on selected objects")
 			return {'CANCELLED'}
-		res = generate.detect_form(mat_list)
+		exporter = generate.detect_form(mat_list)
 		if res=="mineways":
 			self.report({'ERROR'}, "Not yet supported for Mineways - coming soon!")
 			return {'CANCELLED'}
-		self.track_exporter = res
+		self.track_exporter = exporter
 
 		# set the scene's folder for the texturepack being swapped
 		context.scene.mcprep_custom_texturepack_path = folder
@@ -332,15 +362,13 @@ class McprepSwapTexturePack(bpy.types.Operator, ImportHelper):
 
 		self.report({'INFO'},"{} materials affected".format(res))
 		self.track_param = context.scene.render.engine
-		self.track_exporter = generate.detect_form(mat_list)
-
 		return {'FINISHED'}
 
 
 class McprepResetTexturepackPath(bpy.types.Operator):
 	bl_idname = "mcprep.reset_texture_path"
-	bl_label = "Reset texturepack path"
-	bl_description = "Resets the texturepack folder to the MCprep default saved in preferences"
+	bl_label = "Reset texture pack path"
+	bl_description = "Resets the texture pack folder to the MCprep default saved in preferences"
 
 	@tracking.report_error
 	def execute(self, context):
@@ -834,7 +862,6 @@ class McprepReplaceMissingTextures(bpy.types.Operator):
 		self.report({'INFO'}, "Updated {} materials".format(count))
 		self.track_param = context.scene.render.engine
 		self.track_exporter = generate.detect_form(mat_list)
-
 		return {'FINISHED'}
 
 
