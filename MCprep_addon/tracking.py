@@ -50,9 +50,9 @@ IDNAME = "mcprep"
 
 # max data/string lengths to match server-side validation,
 # if exceeded, request will return denied (no data written)
-SHORT_FIELD_MAX = 64
-USER_COMMENT_LENGTH = 512
-ERROR_STRING_LENGTH = 1024
+SHORT_FIELD_MAX = 64-1
+USER_COMMENT_LENGTH = 512-1
+ERROR_STRING_LENGTH = 1024-1
 
 # -----------------------------------------------------------------------------
 # primary class implementation
@@ -372,10 +372,10 @@ class Singleton_tracking(object):
 
 	def string_trunc(self, value):
 		"""Function which caps max string length."""
-		value = str(value)
-		if len(value)>SHORT_FIELD_MAX:
-			value = value[:SHORT_FIELD_MAX]
-		return value
+		ret = str(value)
+		if len(ret)>SHORT_FIELD_MAX:
+			ret = ret[:SHORT_FIELD_MAX]
+		return ret
 
 
 # -----------------------------------------------------------------------------

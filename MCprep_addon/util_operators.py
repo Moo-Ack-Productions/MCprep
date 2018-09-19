@@ -53,7 +53,7 @@ class McprepImproveUi(bpy.types.Operator):
 
 
 class McprepShowPreferences(bpy.types.Operator):
-	"""Open user preferences and display the MCprep settings."""
+	"""Open user preferences and display MCprep settings"""
 	bl_idname = "mcprep.open_preferences"
 	bl_label = "Show MCprep preferences"
 
@@ -110,7 +110,7 @@ class McprepOpenHelp(bpy.types.Operator):
 	text that it is a supporting/help button."""
 	bl_idname = "mcprep.open_help"
 	bl_label = "Open folder"
-	bl_description = "Need help? Click to open."
+	bl_description = "Need help? Click to open reference page"
 
 	url = bpy.props.StringProperty(
 		name="Url",

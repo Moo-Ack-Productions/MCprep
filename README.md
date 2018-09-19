@@ -262,13 +262,13 @@ To add your own objects to meshswap (or groupswap):
 ### Mob Spawner:
 - **Purpose:** To provide quick, one-click importing/linking of quality Minecraft mob and player rigs in blender.
 - **Step 0:** By default this is already done for you; make sure the mob spawner path is a directory with valid blend files setup for linking (addon preferences > MCprep). When installed, this path will already be setup and valid pointing to the included rigs with this release, as defined in the credits section above. This rigs are place in the addon's local directory provided by blender and will not be placed anywhere else on the user's machine.
-- **Step 1:** Either press the "mob spawner" button in the MCprep panel, or go to the shift-a menu: armature > mob spawner > [mob name] to instantly append or link in a rig.
-- **Step 2:** Check the redo last menu for additional settings, such as relocation of the rig, library linking, and even changing which rig to spawn. These are the following options:
+- **Step 1:** Either go to MCprep tab > spawner > click on Mob, or go to the shift-a menu: MCprep > mob spawner > [mob name] to instantly append or link in a rig.
+- **Step 2:** Check the redo last menu for additional settings, such as relocation of the rig, library linking, whether to prep materials on added rig. These are the following options:
   - Relocation: Change where the spawned rig appears.
     - Cursor (default): Place the rig at the cursor's location
     - Origin: Move the rig to the origin
     - Offset root: Move the rig to the origin, but offset the root bone to the cursor's location (note: doesn't work with all rigs correctly right now, will be improved in the future)
-  - Library Link mob: If disabled, the group is appended (the groups is not kept so it can be appended multiple times), if enabled, the rig will be linked in and armatures auto-proxied.
+  - Library Link mob: If disabled, the group is appended (the groups is not kept so it can be appended multiple times). If enabled, the rig will be linked in and armatures auto-proxied.
     - Be careful! If the blend file moves, the libraries will likely get broken unless a custom rigs folder is used with a local-relative path.
   - Clear pose: clear to pose to rest. If false, the initial pose will be that found in the rig's source blend file. Note: some rigs have animations already setup, clear pose in the future will also automatically clear an action and remove the pre-animated figures.
   - Prep materials: this will automatically run the prep materials function, noting this will regenerate cycles materials if cycles is the active render engine.
@@ -281,8 +281,8 @@ To add your own rigs to the Mob Spawner:
 - **Step 2:** Make sure all elements of the rig, ie all armatures, body parts, and extra objects, are added to a single group inside your rig file. The name of this group is what will appear under the shift-a menu, and typically matches the name of the file if there is just one rig per blend file.
 - **Step 3:** Optional but useful, rename the root bone of the rig to one of [MAIN, root, base], used for relocation. Additionally, make the armature for animation named [name].arma where [name] exactly matches the name of the group. This is used for auto-proxying of the armature and relocation methods.
 - **Step 4:** Optional, if you have a custom script for the rig, save it as an external file whose name matches the blend file exactly, but with .py instead of .blend, place this in the same folder as the blend file.
-- **Step 5:** Either from Blender Preferences > Addon > MCprep preferences panel > "Select/Install Mobs" or from the MCprep tab mob spawner menu "install [name]"" buttons, click to select the blend file and install it!
-- **Alternative:** To specify a different, custom folder in a location of your choosing for mob spawning, simply change the "Rig Folder" path in the MCprep spawning tab (saved to blend file), or save a new default in the addon's preferences (becomes the default for all new blend scenes)
+- **Step 5:** Either from Blender Preferences > Addon > MCprep preferences panel > "Install file for mob spawning" or from the MCprep 3D view tab, go to spawner > mob > menu "Install new mob". From there, use the file browser to select the blend file and install it!
+- **Alternative:** To specify a different, custom folder in a location of your choosing for mob spawning, simply change the "Mob spawner folder" path in the MCprep mob spawner advanced section (this setting is saved to blend file), or save a new default in the addon's preferences (becomes the default for all new blend scenes).
 - Note: all groups inside installed blend files will appear for mob spawning. A large number of rigs will currently slow down the shift-A menu displaying the spawnable rigs (will be improved in the future). Note that after installing a blend file, you do *not* need to save user preferences to use it in future blender sessions.
 
 
@@ -308,7 +308,7 @@ To add your own rigs to the Mob Spawner:
 Known Bugs
 ======
 - SOMETIMES UNDO (control/command z) MAY CRASH AFTER MESHSWAPPING, recommended to save before using to be safe but generally is fine.
-- Currently meshwap assumes that the block size is 1x1x1, note that by default Mineways has a block size 0.1x0.1x0.1, please set it to 1m or 100cm on export or use the upscale function.
+- Currently meshwap assumes that the block size is 1x1x1, note that by default Mineways has a block size 0.1x0.1x0.1. Please set this Mineways setting to 1m or 100cm on export.
 - Motion blur glitches on wind-swaying elements, e.g. grass: This is a bug with blender, where solidify plus the displacement modifiers and split edges modifiers can create bad motion blur effects. The easy fix is to remove split edges and let the grass be shaded smoothly instead.
 - **Both Mineways and jmc2obj oddities:**
   - Redstone items like repeaters, dust, and so forth generally don't swap properly, and is a much more difficult problem to solve.

@@ -91,7 +91,8 @@ class MCP_install_jmc2obj(bpy.types.Operator):
 		col.label("Then, go to MCprep's user preferences and set the jmc2obj")
 		col.label(" path to jmc2obj_ver#.jar, for example")
 		row = self.layout.row(align=True)
-		row.operator("mcprep.open_preferences","Open MCprep preferences")
+		row.operator("mcprep.open_preferences",
+			"Open MCprep preferences", icon="PREFERENCES").tab = "settings"
 		row.operator("wm.url_open","Open tutorial").url =\
 				"http://theduckcow.com/dev/blender/mcprep/setup-world-exporters/"
 		return
@@ -157,7 +158,8 @@ class MCP_install_mineways(bpy.types.Operator):
 		col.label("Then, go to MCprep's user preferences and set the")
 		col.label(" Mineways path to Mineways.exe or Mineways.app, for example")
 		row = self.layout.row(align=True)
-		row.operator("mcprep.open_preferences","Open MCprep preferences")
+		row.operator("mcprep.open_preferences",
+			"Open MCprep preferences", icon="PREFERENCES").tab = "settings"
 		row.operator("wm.url_open","Open tutorial").url =\
 				"http://theduckcow.com/dev/blender/mcprep/setup-world-exporters/"
 		return
@@ -259,9 +261,9 @@ class MCP_prep_world(bpy.types.Operator):
 
 
 class MCP_add_world_time(bpy.types.Operator):
-	"""Add sun, moon (WIP), and world time settings to scene."""
+	"""Add a sun lamp as part of a group into the scene"""
 	bl_idname = "mcprep.add_world_time"
-	bl_label = "Add sun/time"
+	bl_label = "Add sun lamp"
 	bl_options = {'REGISTER', 'UNDO'}
 
 	remove_existing_suns = bpy.props.BoolProperty(

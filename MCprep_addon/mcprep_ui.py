@@ -285,8 +285,9 @@ class McprepPreference(bpy.types.AddonPreferences):
 		row.prop(self, "preferences_tab", expand=True)
 
 		if self.preferences_tab == "settings":
-			row = layout.row()
 
+			row = layout.row()
+			row.scale_y=0.7
 			row.label("World Importing & Meshswapping")
 			box = layout.box()
 			split = box.split(percentage=0.3)
@@ -321,6 +322,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 			col.prop(self, "meshswap_path", text="")
 
 			row = layout.row()
+			row.scale_y=0.7
 			row.label("Texture / Resource packs")
 			box = layout.box()
 			split = box.split(percentage=0.3)
@@ -331,13 +333,14 @@ class McprepPreference(bpy.types.AddonPreferences):
 			split = box.split(percentage=0.3)
 			col = split.column()
 			col.label("Install to folder")
-			col = split.column()
-			col.operator("mcprep.skin_swapper", text="Install resource pack")
+			# col = split.column()
+			# col.operator("mcprep.skin_swapper", text="Install resource pack")
 			col = split.column()
 			p = col.operator("mcprep.openfolder", text="Open texture pack folder")
 			p.folder = self.custom_texturepack_path
 
 			row = layout.row()
+			row.scale_y=0.7
 			row.label("Mob spawning")
 			box = layout.box()
 			split = box.split(percentage=0.3)
@@ -355,6 +358,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 			p.folder = self.mob_path
 
 			row = layout.row()
+			row.scale_y=0.7
 			row.label("Skin swapping")
 			box = layout.box()
 			split = box.split(percentage=0.3)
@@ -385,7 +389,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 					text="MCprep page for instructions and updates",
 					icon="WORLD").url = "http://theduckcow.com/dev/blender/mcprep/"
 			row = layout.row()
-			col = row.column()
+			row.scale_y = 1.5
 			row.operator("wm.url_open",
 					text="Import Minecraft worlds").url = \
 					"http://theduckcow.com/dev/blender/mcprep/mcprep-minecraft-world-imports/"
@@ -508,12 +512,17 @@ class McprepWorldImports(bpy.types.Panel):
 			col.operator("mcprep.improve_ui",
 					text="Improve UI", icon='SETTINGS')
 
+		row = col.row(align=True)
 		if not scn_props.show_settings_material:
-			col.prop(scn_props,"show_settings_material",
+			row.prop(scn_props,"show_settings_material",
 					text="Advanced", icon="TRIA_RIGHT")
+			row.operator("mcprep.open_preferences",
+					text="", icon="PREFERENCES").tab = "settings"
 		else:
-			col.prop(scn_props,"show_settings_material",
+			row.prop(scn_props,"show_settings_material",
 					text="Advanced", icon="TRIA_DOWN")
+			row.operator("mcprep.open_preferences",
+					text="", icon="PREFERENCES").tab = "settings"
 			box = col.box()
 			b_row = box.row()
 			b_col = b_row.column(align=False)
@@ -535,8 +544,6 @@ class McprepWorldImports(bpy.types.Panel):
 
 			b_col.label(text="Meshswap source:")
 			b_col.prop(addon_prefs,"meshswap_path",text="")
-			b_col.operator("mcprep.open_preferences",
-					icon="PREFERENCES",text='Open preferences').tab = "settings"
 
 		layout = self.layout # clear out the box formatting
 		split = layout.split()
@@ -644,12 +651,17 @@ class McprepSkinsPanel(bpy.types.Panel):
 
 		split = layout.split()
 		col = split.column(align=True)
+		row = col.row(align=True)
 		if not scn_props.show_settings_skin:
-			col.prop(scn_props,"show_settings_skin",
+			row.prop(scn_props,"show_settings_skin",
 					text="Advanced", icon="TRIA_RIGHT")
+			row.operator("mcprep.open_preferences",
+					text="", icon="PREFERENCES").tab = "settings"
 		else:
-			col.prop(scn_props,"show_settings_skin",
+			row.prop(scn_props,"show_settings_skin",
 					text="Advanced", icon="TRIA_DOWN")
+			row.operator("mcprep.open_preferences",
+					text="", icon="PREFERENCES").tab = "settings"
 			box = col.box()
 			b_row = box.column(align=True)
 			b_row.label("Skin path")
@@ -739,12 +751,17 @@ class McprepSpawnPanel(bpy.types.Panel):
 
 		split = layout.split()
 		col = split.column(align=True)
+		row = col.row(align=True)
 		if not scn_props.show_settings_spawner:
-			col.prop(scn_props,"show_settings_spawner",
+			row.prop(scn_props,"show_settings_spawner",
 					text="Advanced", icon="TRIA_RIGHT")
+			row.operator("mcprep.open_preferences",
+					text="", icon="PREFERENCES").tab = "settings"
 		else:
-			col.prop(scn_props,"show_settings_spawner",
+			row.prop(scn_props,"show_settings_spawner",
 					text="Advanced", icon="TRIA_DOWN")
+			row.operator("mcprep.open_preferences",
+					text="", icon="PREFERENCES").tab = "settings"
 			box = col.box()
 			b_row = box.row()
 			b_col = b_row.column(align=False)

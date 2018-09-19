@@ -804,9 +804,7 @@ class McprepIsolate_alpha_uvs(): #bpy.types.Operator
 
 
 class McprepReplaceMissingTextures(bpy.types.Operator):
-	"""For all image blocks in the file where the filepath is missing or image
-	could not be loaded, see if the image can be replaced by one in the active
-	resource pack."""
+	"""Replace any missing textures with matching images in the active texture pack"""
 	bl_idname = "mcprep.replace_missing_textures"
 	bl_label = "Find missing textures"
 	bl_options = {'REGISTER', 'UNDO'}

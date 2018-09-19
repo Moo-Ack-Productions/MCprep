@@ -365,7 +365,7 @@ class McprepMobSpawner(bpy.types.Operator):
 			else:
 				bpy.ops.mcprep.prep_materials(skipUsage=True)
 
-		self.track_param = self.mcmob_type
+		self.track_param = self.mcmob_type.split(":/:")[1]
 		return {'FINISHED'}
 
 	def load_linked(self, context, path, name):

@@ -203,7 +203,7 @@ class ListColl(bpy.types.PropertyGroup):
 
 
 class McprepSkinSwapper(bpy.types.Operator, ImportHelper):
-	""""Swap the skin of a rig (character, mob, etc) with another file"""
+	"""Swap the skin of a rig (character, mob, etc) with another file"""
 	bl_idname = "mcprep.skin_swapper"
 	bl_label = "Swap skin"
 	bl_options = {'REGISTER', 'UNDO'}
@@ -382,7 +382,7 @@ class McprepAddSkin(bpy.types.Operator, ImportHelper):
 class McprepRemoveSkin(bpy.types.Operator):
 	bl_idname = "mcprep.remove_skin"
 	bl_label = "Remove skin"
-	bl_description = "Remove a skin from the active folder"
+	bl_description = "Remove a skin from the active folder (will delete file)"
 	bl_options = {'REGISTER', 'UNDO'}
 
 	def invoke(self, context, event):
