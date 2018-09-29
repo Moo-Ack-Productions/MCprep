@@ -179,7 +179,7 @@ Setting options:
 - **Step 1:** Select all materials you wish to swap texture packs for
 - **Step 2:** Prep materials on these objects if you haven't already (prepping a second time will do no harm); not doing this could have mixed results.
 - **Step 3:** Press on the swap texture pack button in the 3D view > MCprep tab > World Imports panel
-- **Step 4:** In this popup, the folder will default to the MCprep resource pack (ie default Vanilla Minecraft); navigate to an *extracted* zip folder of a valid resource pack. You can select any sub-folder, but to be safe, select the folder at the same level that has the "pack.png" and "assets" sub-folder.
+- **Step 4:** In this popup, the folder will default to the MCprep resource pack (ie default Vanilla Minecraft); navigate to an *extracted* zip folder of a valid resource pack. You can select any sub-folder, but to be safe, select the folder level such that the  the "pack.png" and "assets" sub-folder are visible as rows.
 - **Step 5:** Decide if you want to enable/disable pulling in extra passes (e.g. normal and specular, if they exist) and whether to animate textures upon swapping. Both of these tickboxes, on by default, are in the left-hand sidebar.
 
 
@@ -255,22 +255,22 @@ To add your own objects to meshswap (or groupswap):
 - **Step 2:** Select a skin from the skin file list under the tool menu: 3D view > MCprep tab > Skin Swapper Panel > UI List of skins, left click to select/highlight a skin
   - *Don't see the skin you want?* Click "skin from file" to select one from your machine, or "skin from username" to download and apply a Minecraft user's skin, or go into advanced to Add Skin for future use without immediately applying it.
 - **Step 3:** Press the button that says "Apply [skin name]"
-- **Step 4:** You're done! If the user interface appears to not update, be sure to **check rendered view** (shift+z). Also note the default behavior is to make a *new* material in the event you have other copies or uses of the existing material. You can turn this off in the redo last menu.
+- **Step 4:** You're done! If the user interface appears to not update, be sure to **check rendered view** (shift+z). Also note the default behavior is to make a *new* material. This way, if you had other characters with the same skin that you don't want changed, those are left alone. You can turn this off in the redo last menu or via F6.
 
 
 
 ### Mob Spawner:
 - **Purpose:** To provide quick, one-click importing/linking of quality Minecraft mob and player rigs in blender.
-- **Step 0:** By default this is already done for you; make sure the mob spawner path is a directory with valid blend files setup for linking (addon preferences > MCprep). When installed, this path will already be setup and valid pointing to the included rigs with this release, as defined in the credits section above. This rigs are place in the addon's local directory provided by blender and will not be placed anywhere else on the user's machine.
+- **Step 0:** By default this is already done for you; make sure the mob spawner path is a directory with valid blend files setup for linking (addon preferences > MCprep). After installing MCprep for the first time, this path will already be setup and valid pointing to the included rigs with this release, as defined in the credits section above. This rigs are place in the addon's local directory provided by blender and will not be placed anywhere else on the user's machine. Deleting the addon also deletes these rigs (careful if you're library linking!)
 - **Step 1:** Either go to MCprep tab > spawner > click on Mob, or go to the shift-a menu: MCprep > mob spawner > [mob name] to instantly append or link in a rig.
-- **Step 2:** Check the redo last menu for additional settings, such as relocation of the rig, library linking, whether to prep materials on added rig. These are the following options:
+- **Step 2:** Check the redo last menu (or press F6) for additional settings:
   - Relocation: Change where the spawned rig appears.
     - Cursor (default): Place the rig at the cursor's location
     - Origin: Move the rig to the origin
     - Offset root: Move the rig to the origin, but offset the root bone to the cursor's location (note: doesn't work with all rigs correctly right now, will be improved in the future)
   - Library Link mob: If disabled, the group is appended (the groups is not kept so it can be appended multiple times). If enabled, the rig will be linked in and armatures auto-proxied.
     - Be careful! If the blend file moves, the libraries will likely get broken unless a custom rigs folder is used with a local-relative path.
-  - Clear pose: clear to pose to rest. If false, the initial pose will be that found in the rig's source blend file. Note: some rigs have animations already setup, clear pose in the future will also automatically clear an action and remove the pre-animated figures.
+  - Clear pose: clear to pose to rest. If false, the initial pose will be that found in the rig's source blend file. **Note:** some rigs have animations already setup, setting clear pose will also automatically clear any default animations.
   - Prep materials: this will automatically run the prep materials function, noting this will regenerate cycles materials if cycles is the active render engine.
 
 *Mob Spawner Redo-last/F6 Options*
@@ -278,15 +278,15 @@ To add your own objects to meshswap (or groupswap):
 
 To add your own rigs to the Mob Spawner:
 - **Step 1:** Make your rig, or download one you want to use!
-- **Step 2:** Make sure all elements of the rig, ie all armatures, body parts, and extra objects, are added to a single group inside your rig file. The name of this group is what will appear under the shift-a menu, and typically matches the name of the file if there is just one rig per blend file.
-- **Step 3:** Optional but useful, rename the root bone of the rig to one of [MAIN, root, base], used for relocation. Additionally, make the armature for animation named [name].arma where [name] exactly matches the name of the group. This is used for auto-proxying of the armature and relocation methods.
+- **Step 2:** Make sure all elements of the rig, ie all armatures, body parts, and extra objects, are added to a single group (select and press control+g) inside your rig file. The name of this group is what will appear under the shift-a menu, and typically matches the name of the file if there is just one rig per blend file.
+- **Step 3:** Optional but useful, rename the root/main bone of the rig to one of [MAIN, root, base], used for relocation. Additionally, make the armature for animation named [name].arma where [name] exactly matches the name of the group. This is used for auto-proxying of the armature and relocation methods.
 - **Step 4:** Optional, if you have a custom script for the rig, save it as an external file whose name matches the blend file exactly, but with .py instead of .blend, place this in the same folder as the blend file.
-- **Step 5:** Either from Blender Preferences > Addon > MCprep preferences panel > "Install file for mob spawning" or from the MCprep 3D view tab, go to spawner > mob > menu "Install new mob". From there, use the file browser to select the blend file and install it!
+- **Step 5:** Either from Blender Preferences > Addon > MCprep preferences panel > "Install file for mob spawning" or from the MCprep 3D view tab, go to spawner > mob > menu "Install new mob". From there, use the file browser to select the blend file and install it! This copies the file to the current mob folder, by default inside the MCprep addon.
 - **Alternative:** To specify a different, custom folder in a location of your choosing for mob spawning, simply change the "Mob spawner folder" path in the MCprep mob spawner advanced section (this setting is saved to blend file), or save a new default in the addon's preferences (becomes the default for all new blend scenes).
-- Note: all groups inside installed blend files will appear for mob spawning. A large number of rigs will currently slow down the shift-A menu displaying the spawnable rigs (will be improved in the future). Note that after installing a blend file, you do *not* need to save user preferences to use it in future blender sessions.
+- Note: all groups inside installed blend files will appear for mob spawning. After installing a blend file, you do *not* need to save user preferences to use it in future blender sessions.
 
 
-*Sometimes you may need to reload a rig cache, click this button if the correct rigs aren't appearing*
+*Sometimes you may need to reload a rig cache, click this button if the correct rigs aren't appearing - or if you've just added new rigs to the folder outside of blender*
 ![Reload rig cache](/visuals/reloadRigCache.png?raw=true)
 
 
@@ -294,7 +294,7 @@ To add your own rigs to the Mob Spawner:
 - **Purpose:** To provide quick, one-click importing of meshswap 3D blocks and groups.
 - **Step 0:** By default this is already done for you; make sure the meshswap file path is a directory with valid blend files setup for appending (addon preferences > MCprep). When installed, this path will already be setup and valid pointing to the included blocks with this release.
 - **Step 1:** Navigate to the spawner panel and select meshswap
-- **Step 2:** Highlight the desired block
+- **Step 2:** Highlight the desired block(s), no harm in over-selecting; will only meshswap blocks that have matching counterparts in the meshswap blend file
 - **Step 3:** Press meshswap, and see the block placed in the scene
 - **Step 4:** Modify redo last settings as needed (also accessible by pressing F6 after spawning). Options include:
   - Meshswap block: You can change here which block you wanted to add

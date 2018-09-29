@@ -373,9 +373,17 @@ def load_mcprep_json():
 			conf.json_data = default
 
 def ui_scale():
-	"""Returns scale of UI, for width drawing."""
+	"""Returns scale of UI, for width drawing. Compatible down to blender 2.72"""
 	prefs = bpy.context.user_preferences
-	return prefs.view.ui_scale * prefs.system.pixel_size
+	if not hasattr(prefs, "view"):
+		return 1
+	if hasattr(prefs.view, "ui_scale") and hasattr(prefs.view, "pixel_size"):
+		return prefs.view.ui_scale * prefs.system.pixel_size
+	elif hasattr(prefs.system, "dpi"):
+		return prefs.system.dpi/72
+	else:
+		return 1
+
 
 def get_prefs():
 	"""Function to easily get prefs even in subclasses and folders."""

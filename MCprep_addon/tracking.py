@@ -28,6 +28,7 @@ import bpy
 # remaining, wrap in safe-importing
 try:
 	from . import conf
+	from . import util
 	import re
 	import traceback
 	import json
@@ -35,6 +36,7 @@ try:
 	import platform
 	import threading
 	import textwrap
+	import time
 	from datetime import datetime
 except Exception as err:
 	print("[MCPREP Error] Failed tracker module load, invalid import module:")
@@ -262,6 +264,7 @@ class Singleton_tracking(object):
 			bg_thread.start()
 			return "Thread launched"
 
+
 	def raw_request(self, method, path, payload, callback=None):
 		"""Raw connection request, background or foreground."""
 		if not VALID_IMPORT:
@@ -426,8 +429,7 @@ class popup_feedback(bpy.types.Operator):
 	options = {'REGISTER', 'UNDO'}
 
 	def invoke(self, context, event):
-		prefs = bpy.context.user_preferences
-		width = 400 * prefs.view.ui_scale * prefs.system.pixel_size
+		width = 400 * util.ui_scale()
 		return context.window_manager.invoke_props_dialog(self, width=width)
 
 	def draw(self, context):
@@ -465,8 +467,7 @@ class popup_report_error(bpy.types.Operator):
 		)
 
 	def invoke(self, context, event):
-		prefs = bpy.context.user_preferences
-		width = 500 * prefs.view.ui_scale * prefs.system.pixel_size
+		width = 500 * util.ui_scale()
 		return context.window_manager.invoke_props_dialog(self, width=width)
 
 	def draw_header(self, context):
@@ -583,7 +584,8 @@ def trackInstalled(background=None):
 				"blender":Tracker.blender_version,
 				"status":Tracker.string_trunc(status),
 				"platform":Tracker.platform,
-				"language":Tracker.language
+				"language":Tracker.language,
+				"ID":str(Tracker.json["install_id"])
 			})
 
 		resp = Tracker.request('POST', location, payload, background, callback)
@@ -595,9 +597,10 @@ def trackInstalled(background=None):
 		elif "name" not in arg:
 			return
 
-		Tracker.json["install_id"] = arg["name"]
-		Tracker.save_tracker_json()
-		Tracker.save_tracker_idbackup()
+		if not Tracker.json["install_id"]:
+			Tracker.json["install_id"] = arg["name"]
+			Tracker.save_tracker_json()
+			Tracker.save_tracker_idbackup()
 
 	if Tracker.failsafe is True:
 		try:
@@ -780,6 +783,7 @@ def report_error(function):
 
 def register(bl_info):
 	"""Setup the tracker and register install."""
+	global VALID_IMPORT
 
 	bversion = None
 	# for compatibility to prior blender (2.75?)
@@ -804,6 +808,7 @@ def register(bl_info):
 	except Exception as err:
 		err = traceback.format_exc()
 		print(err)
+		VALID_IMPORT = False
 
 	# used to define which server source, not just if's below
 	if VALID_IMPORT:

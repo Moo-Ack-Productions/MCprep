@@ -350,7 +350,6 @@ class McprepAddSkin(bpy.types.Operator, ImportHelper):
 	bl_idname = "mcprep.add_skin"
 	bl_label = "Add skin"
 	bl_description = "Add a new skin to the active folder"
-	bl_options = {'REGISTER', 'UNDO'}
 
 	# filename_ext = ".zip" # needs to be only tinder
 	filter_glob = bpy.props.StringProperty(
@@ -383,7 +382,6 @@ class McprepRemoveSkin(bpy.types.Operator):
 	bl_idname = "mcprep.remove_skin"
 	bl_label = "Remove skin"
 	bl_description = "Remove a skin from the active folder (will delete file)"
-	bl_options = {'REGISTER', 'UNDO'}
 
 	def invoke(self, context, event):
 		return context.window_manager.invoke_props_dialog(self, width=400*util.ui_scale())
@@ -399,11 +397,11 @@ class McprepRemoveSkin(bpy.types.Operator):
 	@tracking.report_error
 	def execute(self,context):
 
-		if self.index >= len(conf.skin_list):
+		if context.scene.mcprep_skins_list_index >= len(conf.skin_list):
 			self.report({"ERROR"},"Indexing error")
 			return {'CANCELLED'}
 
-		file = conf.skin_list[self.index][-1]
+		file = conf.skin_list[context.scene.mcprep_skins_list_index][-1]
 
 		if os.path.isfile(file) == False:
 			self.report({"ERROR"},"Skin not found to delete")

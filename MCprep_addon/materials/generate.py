@@ -100,17 +100,20 @@ def find_from_texturepack(blockname, resource_folder=None):
 		for ext in extensions:
 			if os.path.isfile(os.path.join(resource_folder,newpath+ext)):
 				res = os.path.join(resource_folder,newpath+ext)
-				# if conf.v: print("\tFound resource file via subpath: "+res)
 				return res
-		blockname = os.path.basename(blockname)
+		newpath = os.path.basename(blockname) # case where goes into other subpaths
+		for ext in extensions:
+			if os.path.isfile(os.path.join(resource_folder,newpath+ext)):
+				res = os.path.join(resource_folder,newpath+ext)
+				return res
 
 	# fallback (more common case), wide-search for
 	for path in search_paths:
-		if not os.path.isdir(path): continue
+		if not os.path.isdir(path):
+			continue
 		for ext in extensions:
 			if os.path.isfile(os.path.join(path, blockname+ext)):
 				res = os.path.join(path, blockname+ext)
-				# if conf.v: print("\tFound resource file: "+res)
 				return res
 	# Mineways fallback
 	for suffix in ["-Alpha", "-RGB", "-RGBA"]:
@@ -119,6 +122,7 @@ def find_from_texturepack(blockname, resource_folder=None):
 								"mineways"+suffix+".png")
 			if os.path.isfile(res):
 				return res
+
 	return res
 
 

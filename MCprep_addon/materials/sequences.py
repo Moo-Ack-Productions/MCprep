@@ -24,6 +24,7 @@ assigment of textures which are animated.
 import bpy
 import errno
 import os
+import re
 
 from .. import conf
 from . import generate
@@ -50,7 +51,6 @@ def animate_single_material(mat, engine, export_location='original', clear_cache
 	canon, form = generate.get_mc_canonical_name(mat_gen)
 
 	if canon not in conf.json_data["blocks"]["animated"]:
-		#return False, False
 		affectable = False
 	else:
 		affectable = True
@@ -59,28 +59,24 @@ def animate_single_material(mat, engine, export_location='original', clear_cache
 	diffuse_block = generate.get_textures(mat)["diffuse"]
 	currently_tiled = is_image_tiled(diffuse_block)
 	if not currently_tiled and not affectable:
-		# conf.log("Not standard image sequence and not tiled")
 		return False, False
 	else:
-		affectable = True  # retroactively assign to true, as tiled iamge found
-	# else:
-	# 	if conf.v:
-	# 		print("Animate-able texture material found: " + mat.name)
+		affectable = True  # retroactively assign to true, as tiled image found
 
 	# get the base image from the texturepack (cycles/BI general)
 	image_path_canon = generate.find_from_texturepack(canon)
 	if not image_path_canon:
-		conf.log("Could not fine texturepack for animate-able image")
 		return affectable, False
 
 	# apply the sequence if any found, will be empty dict if not
-	tile_path_dict = generate_material_sequence(mat, image_path_canon, form,
-										export_location, clear_cache)
+	source_path = diffuse_block.filepath
+	if not source_path:
+		source_path = image_path_canon
+		conf.log("Fallback to using image cannon path instead of source path")
+	tile_path_dict = generate_material_sequence(source_path, image_path_canon,
+		form, export_location, clear_cache)
 	if tile_path_dict == {}:
-		conf.log("No sequence/passes found to generate")
 		return affectable, False
-	conf.log("Tilepathdict:")
-	conf.log(tile_path_dict)
 
 	affected_materials = 0
 	for pass_name in tile_path_dict:
@@ -90,14 +86,12 @@ def animate_single_material(mat, engine, export_location='original', clear_cache
 		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 			node = generate.get_node_for_pass(mat, pass_name)
 			if not node:
-				print("Did not get node for pass "+pass_name)
 				continue
 			set_sequence_to_texnode(node, tile_path_dict[pass_name])
 			affected_materials += 1
 		elif engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
 			texture = generate.get_texlayer_for_pass(mat, pass_name)
 			if not texture:
-				print("Did not get texture for pass "+pass_name)
 				continue
 			set_sequence_to_texnode(texture, tile_path_dict[pass_name])
 			affected_materials += 1
@@ -115,28 +109,47 @@ def is_image_tiled(image_block):
 		return True
 
 
-def generate_material_sequence(mat, image_path, form, export_location, clear_cache):
-	"""Generate sequence for single material given image passes found.
+def generate_material_sequence(source_path, image_path, form, export_location, clear_cache):
+	"""Performs frame by frame export of sequences to location based on input.
 
 	Returns Dictionary of the image paths to the first tile of each
 	material pass type detected (e.g. diffuse, specular, normal)
+
+	Args:
+		source_path: Source of the previous image's folder (diffuse image)
+		image_path: The path of the tiled image from a resource pack
+		form: jmc2obj, mineways, or none
+		export_location: enum of type of location output
+		clear_cache: whether to delete and re-export frames, even if existing found
 	"""
 
 	# get the currently assigned image passes (normal, spec. etc)
-	#image_dict = generate.get_textures(mat)
 	image_dict = {}
 
 	# gets available passes from current texturepack for given name
 	img_pass_dict = generate.find_additional_passes(image_path)
 
 	seq_path_base = None  # defaults to folder in resource pack
-	# if self.export_location == "texturepack"
 	if export_location == "local":
 		if not bpy.data.filepath:
 			raise Exception("Must save file before using local option save location")
 		temp_abs = bpy.path.abspath(bpy.data.filepath)
 		seq_path_base = os.path.join(os.path.dirname(temp_abs), "Textures")
 	elif export_location == "original":
+		# export frames next to current files
+		# use regex to see if source path already is an animated subfolder,
+		# preventing a recursive subfolder regeneration of tiles
+		seq_path_base =  os.path.dirname(bpy.path.abspath(source_path))
+		root = os.path.basename(seq_path_base)
+
+		# match string-ending pattern: .../lava_flow/lava_flow_0001.png
+		exp = r"(?i)"+root+r"[\/\\]{1}"+root+r"[_][0-9]{1,5}[.](png|jpg|jpeg)$"
+		if re.search(exp, source_path):
+			# now it will point to originating subfolder and check caching there
+			seq_path_base = os.path.dirname(seq_path_base)
+
+	elif export_location == "texturepack":
+		# export to save frames in currently selected texturepack (could be addon)
 		seq_path_base =  os.path.dirname(bpy.path.abspath(image_path))
 
 	if conf.v:
@@ -148,11 +161,11 @@ def generate_material_sequence(mat, image_path, form, export_location, clear_cac
 		print("---")
 
 	if form == "jmc2obj":
-		print("DEBUG - jmc2obj aniamted texture detected")
+		conf.log("DEBUG - jmc2obj aniamted texture detected")
 	elif form == "mineways":
-		print("DEBUG - mineways aniamted texture detected")
+		conf.log("DEBUG - mineways aniamted texture detected")
 	else:
-		print("DEBUG - other form of animated texture detected")
+		conf.log("DEBUG - other form of animated texture detected")
 
 	perm_denied = "Permission denied, could not make folder - try " + \
 		"running blender as admin"
@@ -232,7 +245,11 @@ def export_image_to_sequence(image_path, params, output_folder=None, form=None):
 	tiles = image.size[1]/image.size[0]
 	if int(tiles) != tiles:
 		conf.log("Not perfectly tiled image - "+image_path)
-		bpy.data.images.remove(image)
+		image.user_clear()
+		if image.users==0:
+			bpy.data.images.remove(image)
+		else:
+			conf.log("Couldn't remove image, shouldn't keep: "+image.name)
 		return None  # any non-titled materials will exit here
 	else:
 		tiles = int(tiles)
@@ -254,8 +271,7 @@ def export_image_to_sequence(image_path, params, output_folder=None, form=None):
 	pxlen = len(image.pixels)
 	first_img = None
 	for i in range(tiles):
-		if conf.v:
-			print("Exporting sequence tile " + str(i))
+		conf.log("Exporting sequence tile " + str(i))
 		tile_name = basename + "_" + str(i+1).zfill(4)
 		out_path = os.path.join(output_folder, tile_name + ext )
 		if not first_img:
@@ -278,16 +294,21 @@ def export_image_to_sequence(image_path, params, output_folder=None, form=None):
 			# verify it now exists
 			if not os.path.isfile(out_path):
 				raise Exception("Did not successfully save tile frame from sequence")
-			bpy.data.images.remove(img_tile)
+			img_tile.user_clear()
+			if img_tile.users==0:
+				bpy.data.images.remove(img_tile)
+			else:
+				conf.log("Couldn't remove tile, shouldn't keep: "+img_tile.name)
 		else:
 			img_tile = None
 			raise Exception("No Animate Textures Mineways support yet")
 
-		# lst = list(img_tile.pixels)
-		# start_ind = tile_pixel_size
-		# img_tile.pixels = image.pixels[]
 	conf.log("Finished exporting frame sequence: " + basename)
-	bpy.data.images.remove(image)
+	image.user_clear()
+	if image.users==0:
+		bpy.data.images.remove(image)
+	else:
+		conf.log("Couldn't remove image block, shouldn't keep: "+image.name)
 
 	return bpy.path.abspath(first_img)
 
@@ -312,7 +333,7 @@ def set_sequence_to_texnode(node, image_path):
 	image_path = bpy.path.abspath(image_path)
 	base_dir = os.path.dirname(image_path)
 	first_img = os.path.splitext(os.path.basename(image_path))[0]
-	print("IMAGE path to apply: "+image_path + ", node/tex: "+node.name)
+	conf.log("IMAGE path to apply: "+image_path + ", node/tex: "+node.name)
 
 	ind = get_sequence_int_index(first_img)
 	base_name = first_img[:-ind]
@@ -322,8 +343,7 @@ def set_sequence_to_texnode(node, image_path):
 	img_count = len(img_sets)
 
 	image_data = bpy.data.images.load(image_path)
-	if conf.v:
-		print("Loaded in " + str(image_data))
+	conf.log("Loaded in " + str(image_data))
 	image_data.source = 'SEQUENCE'
 	node.image = image_data
 	node.image_user.frame_duration = img_count

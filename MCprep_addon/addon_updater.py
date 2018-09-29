@@ -606,7 +606,12 @@ class Singleton_updater(object):
 	def get_raw(self, url):
 		# print("Raw request:", url)
 		request = urllib.request.Request(url)
-		context = ssl._create_unverified_context()
+		try:
+			context = ssl._create_unverified_context()
+		except:
+			# some blender packaged python versions don't have this, largely
+			# useful for local network setups otherwise minimal impact
+			context = None
 
 		# setup private request headers if appropriate
 		if self._engine.token != None:
@@ -617,7 +622,10 @@ class Singleton_updater(object):
 
 		# run the request
 		try:
-			result = urllib.request.urlopen(request,context=context)
+			if context:
+				result = urllib.request.urlopen(request, context=context)
+			else:
+				result = urllib.request.urlopen(request)
 		except urllib.error.HTTPError as e:
 			self._error = "HTTP error"
 			self._error_msg = str(e.code)
@@ -1273,7 +1281,10 @@ class Singleton_updater(object):
 		if self._updater_path == None:
 			raise ValueError("updater_path is not defined")
 		elif os.path.isdir(self._updater_path) == False:
-			os.makedirs(self._updater_path)
+			try:
+				os.makedirs(self._updater_path)
+			except:
+				pass
 
 		jpath = os.path.join(self._updater_path,"updater_status.json")
 		if os.path.isfile(jpath):

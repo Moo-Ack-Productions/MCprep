@@ -634,24 +634,25 @@ class McprepInstallMob(bpy.types.Operator, ImportHelper):
 		ret = []
 		path = bpy.path.abspath(context.scene.mcprep_mob_path)
 		onlyfiles = [ f for f in os.listdir(path) if os.path.isdir(os.path.join(path,f)) ]
-		ret.append(  ("all","All mobs","All mobs"))
+		ret.append(  ("all","No Category", "Uncategorized mob"))
 		for a in onlyfiles:
 			if a==".DS_Store":continue
 			ret.append(  (a, a.title(), "{x} mob".format(x=a.title()))  )
-		ret.append( ("no_category", "No Category", "Uncategorized mob") ) # last entry
+		# ret.append( ("no_category", "No Category", "Uncategorized mob") ) # last entry
 		return ret
 
 
 	mob_category = bpy.props.EnumProperty(
 		items = getCategories,
 		name = "Mob Category")
-	#[('custom', 'Custom', 'Custom mob'),('passive', 'Passive', 'Passive mob')]
 
 	def installBlend(self, context, filepath):
 
 		#check blend input file exists
 		drpath = context.scene.mcprep_mob_path #addon_prefs.mcprep_mob_path
 		newrig = bpy.path.abspath(filepath)
+		category = self.mob_category
+
 		if not os.path.isfile(newrig):
 			if conf.v:print("Error: Rig blend file not found!")
 			self.report({'ERROR'}, "Rig blend file not found!")
@@ -675,20 +676,23 @@ class McprepInstallMob(bpy.types.Operator, ImportHelper):
 		filename = (newrig).split('/')[-1]
 		# path:rig folder / category / blend file
 		try:
-			#shutil.copyfile(newrig, os.path.join(os.path.join(drpath,self.mob_category) , filename))
-			# alt method, perhaps works for more people? at least one person couldn't prev. version, I assume
-			# the above line was the failing point.
-			if self.mob_category != "no_category":
-				shutil.copy2(newrig, os.path.join(os.path.join(drpath,self.mob_category) , filename))
+			if self.mob_category != "no_category" and self.mob_category != "all":
+				shutil.copy2(newrig,
+					os.path.join(drpath, self.mob_category, filename))
 				if os.path.isfile(newrig[:-5]+"py"):
 					# if there is a script, install that too
-					shutil.copy2(newrig[:-5]+"py", os.path.join(os.path.join(drpath,self.mob_category) , filename[:-5]+"py"))
+					shutil.copy2(newrig[:-5]+"py",
+						os.path.join(drpath, self.mob_category, filename[:-5]+"py"))
 			else:
-				shutil.copy2(newrig, os.path.join(drpath , filename)) # no category, root of directory
+				# no category, root of directory
+				shutil.copy2(newrig, os.path.join(drpath , filename))
 				if os.path.isfile(newrig[:-5]+"py"):
-					shutil.copy2(newrig[:-5]+"py", os.path.join(drpath , filename[:-5]+"py")) # no category, root of directory
+					# if there is a script, install that too
+					shutil.copy2(newrig[:-5]+"py",
+					os.path.join(drpath, filename[:-5]+"py"))
 
-		except:
+		except IOError as err:
+			print(err)
 			# can fail if permission denied, i.e. an IOError error
 			self.report({'ERROR'}, "Failed to copy, manually install my copying rig to folder: {x}".\
 					format(x=os.path.join(drpath,self.mob_category)))
@@ -769,13 +773,13 @@ class McprepUninstallMob(bpy.types.Operator):
 					col3.label(grp)
 			row = self.layout.row()
 			row.label("Press okay to delete these mobs and file:")
-			row = self.layout.row()
-			row.label(path)
 		else:
 			col = row.column()
 			col.scale_y = 0.7
 			col.label("Press okay to delete mob and file:")
-			col.label(path)
+		row = self.layout.row()
+		row.label(path)
+
 
 	@tracking.report_error
 	def execute(self,context):

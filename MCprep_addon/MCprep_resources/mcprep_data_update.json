@@ -778,7 +778,7 @@
 		"kebab_painting":"",
 		"lapis_lazuli_block":"lapis_block",
 		"lapis_lazuli_ore":"lapis_ore",
-		"largechest":"entity/chest/double",
+		"largechest":"entity/chest/normal_double",
 		"largechest_trapped":"entity/chest/normal_double",
 		"lava":"lava_still",
 		"lava_flowing":"lava_flow",

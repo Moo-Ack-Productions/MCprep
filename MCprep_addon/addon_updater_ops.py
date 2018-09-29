@@ -20,6 +20,8 @@ import bpy
 from bpy.app.handlers import persistent
 import os
 
+from . import tracking
+
 # updater import, import safely
 # Prevents popups for users with invalid python installs e.g. missing libraries
 try:
@@ -122,6 +124,9 @@ class addon_updater_install_popup(bpy.types.Operator):
 		# potentially in future, could have UI for 'check to select old version'
 		# to revert back to.
 
+	track_function = "install_update_popup"
+	track_param = None
+	@tracking.report_error
 	def execute(self,context):
 
 		# in case of error importing updater
@@ -131,6 +136,10 @@ class addon_updater_install_popup(bpy.types.Operator):
 		if updater.manual_only==True:
 			bpy.ops.wm.url_open(url=updater.website)
 		elif updater.update_ready == True:
+
+			self.track_param = str(updater.update_version)
+			if len(self.track_param)>13:
+				self.track_param = self.track_param[:13]
 
 			# action based on enum selection
 			if self.ignore_enum=='defer':
@@ -213,6 +222,9 @@ class addon_updater_update_now(bpy.types.Operator):
 		options={'HIDDEN'}
 	)
 
+	track_function = "install_update"
+	track_param = None
+	@tracking.report_error
 	def execute(self,context):
 
 		# in case of error importing updater
@@ -223,6 +235,9 @@ class addon_updater_update_now(bpy.types.Operator):
 			bpy.ops.wm.url_open(url=updater.website)
 		if updater.update_ready == True:
 			# if it fails, offer to open the website instead
+			self.track_param = str(updater.update_version)
+			if len(self.track_param)>13:
+				self.track_param = self.track_param[:13]
 			try:
 				res = updater.run_update(
 								force=False,
@@ -246,8 +261,10 @@ class addon_updater_update_now(bpy.types.Operator):
 
 		elif updater.update_ready == False:
 			self.report({'INFO'}, "Nothing to update")
+			return {'CANCELLED'}
 		else:
 			self.report({'ERROR'}, "Encountered problem while trying to update")
+			return {'CANCELLED'}
 
 		return {'FINISHED'}
 
@@ -300,18 +317,24 @@ class addon_updater_update_target(bpy.types.Operator):
 		if updater.invalidupdater == True:
 			layout.label("Updater error")
 			return
-		split = layout.split(percentage=0.66)
+		split = layout.split(percentage=0.2)
 		subcol = split.column()
-		subcol.label("Select install version")
+		subcol.label("Install:")
 		subcol = split.column()
 		subcol.prop(self, "target", text="")
 
-
+	track_function = "install_update_target"
+	track_param = None
+	@tracking.report_error
 	def execute(self,context):
 
 		# in case of error importing updater
 		if updater.invalidupdater == True:
 			return {'CANCELLED'}
+
+		self.track_param = str(self.target)
+		if len(self.track_param)>13:
+				self.track_param = self.track_param[:13]
 
 		res = updater.run_update(
 						force=False,
@@ -320,9 +343,12 @@ class addon_updater_update_target(bpy.types.Operator):
 						clean=self.clean_install)
 
 		# should return 0, if not something happened
-		if updater.verbose:
-			if res==0: print("Updater returned successful")
-			else: print("Updater returned "+str(res)+", error occurred")
+		if res==0:
+			if updater.verbose:
+				print("Updater returned successful")
+		else:
+			if updater.verbose:
+				print("Updater returned "+str(res)+", error occurred")
 			return {'CANCELLED'}
 
 		return {'FINISHED'}
@@ -1171,8 +1197,9 @@ def register(bl_info):
 	updater.current_version = bl_info["version"]
 	updater.backup_current = True # True by default
 	updater.backup_ignore_patterns = ["__pycache__"]
-	updater.overwrite_patterns = ["*.png","README.md","LICENSE.txt","*.blend"]
-	updater.remove_pre_update_patterns = ["*.py", "*.pyc"]
+	updater.overwrite_patterns = ["*.png","README.md","*.txt","*.blend"]
+	updater.remove_pre_update_patterns = ["*.py", "*.pyc",
+		"mcprep_addon_tracker.json", "mcprep_data.json"]
 	updater.include_branches = False
 	updater.include_branch_list = None  # is the equivalent to setting ['master']
 	updater.manual_only = False # used to be True
@@ -1184,7 +1211,7 @@ def register(bl_info):
 	updater.use_releases = True
 	updater.select_link = select_link_function # will select asset
 
-	showReloadPopup()
+	# showReloadPopup()
 
 
 def unregister():

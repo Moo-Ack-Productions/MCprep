@@ -370,7 +370,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 			col = split.column()
 			col.label("Install skins")
 			col = split.column()
-			col.operator("mcprep.skin_swapper", text="Install skin file for swapping")
+			col.operator("mcprep.add_skin", text="Install skin file for swapping")
 			col = split.column()
 			p = col.operator("mcprep.openfolder", text="Open skin folder")
 			p.folder = self.skin_path
@@ -565,7 +565,7 @@ class McprepWorldToolsPanel(bpy.types.Panel):
 		rw = layout.row()
 		col = rw.column()
 		row = col.row(align=True)
-		row.label("World time")
+		row.label("World settings and lighting") # world time
 		row.operator("mcprep.open_help", text="", icon="QUESTION", emboss=False).url = \
 			"http://theduckcow.com/dev/blender/mcprep/world-tools/"
 

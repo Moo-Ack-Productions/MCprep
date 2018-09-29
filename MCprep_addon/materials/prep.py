@@ -344,7 +344,7 @@ class McprepSwapTexturePack(bpy.types.Operator, ImportHelper):
 			self.report({'ERROR'}, "No materials found on selected objects")
 			return {'CANCELLED'}
 		exporter = generate.detect_form(mat_list)
-		if res=="mineways":
+		if exporter=="mineways":
 			self.report({'ERROR'}, "Not yet supported for Mineways - coming soon!")
 			return {'CANCELLED'}
 		self.track_exporter = exporter
@@ -358,7 +358,7 @@ class McprepSwapTexturePack(bpy.types.Operator, ImportHelper):
 			res += generate.set_texture_pack(mat, folder, self.extra_passes)
 			if self.animateTextures:
 				sequences.animate_single_material(
-					mat, context.scene.render.engine, )
+					mat, context.scene.render.engine)
 
 		self.report({'INFO'},"{} materials affected".format(res))
 		self.track_param = context.scene.render.engine
