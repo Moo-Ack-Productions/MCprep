@@ -1,28 +1,20 @@
-# ##### BEGIN MIT LICENSE BLOCK #####
+# ##### BEGIN GPL LICENSE BLOCK #####
 #
-# Copyright (c) 2016 Patrick W. Crawford
-# 
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-# 
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-# 
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
+#  This program is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU General Public License
+#  as published by the Free Software Foundation; either version 2
+#  of the License, or (at your option) any later version.
 #
-# ##### END MIT LICENSE BLOCK #####
-
-
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software Foundation,
+#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# ##### END GPL LICENSE BLOCK #####
 
 # -----------------------------------------------------------------------------
 # Additional disclaimer & terms
@@ -33,29 +25,20 @@ By installing and using this addon, you agree to the following privacy policy:
 http://theduckcow.com/privacy-policy/
 which should have been present on the original download page.
 
-
-This code is open source under the MIT license.
-Its purpose is to increase the workflow of creating Minecraft
-related renders and animations, by automating certain tasks.
-
-Developed and tested for blender 2.72* up to the indicated blender version below
-* testing is out of date
-
 Source code available on github as well as more information:
 https://github.com/TheDuckCow/MCprep
 
+Authors: Patrick W. Crawford, Google LLC
+License: GPLv3
+Disclaimer: This is not an official Google product
+
 """
-
-# -----------------------------------------------------------------------------
-# 
-# -----------------------------------------------------------------------------
-
 
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",
-	"version": (3, 0, 2),
-	"blender": (2, 78, 0),
+	"version": (3, 1, 0),
+	"blender": (2, 72, 0),
 	"location": "3D window toolshelf > MCprep tab",
 	"description": "Minecraft workflow addon for rendering and animation",
 	"warning": "",
@@ -64,75 +47,25 @@ bl_info = {
 	"tracker_url":"https://github.com/TheDuckCow/MCprep/issues"
 }
 
+import importlib
 
-if "bpy" in locals():
-
-	import importlib
-	try:
-		conf.init()
-	except:
-		print("Issue in re-running conf.init()")
-	importlib.reload(mcprep_ui)
-	importlib.reload(materials)
-	importlib.reload(meshswap)
-	importlib.reload(spawner)
-	importlib.reload(world_tools)
-	importlib.reload(tracking)
-	
-
-	conf.init()  #initialize global variables
-	if conf.v:print("Reload, verbose is enabled")
-
+if "load_modules" in locals():
+	importlib.reload(load_modules)
 else:
-	import bpy
-	from . import conf
-	conf.init()  #initialize global variables
+	from . import load_modules
 
-	# import the rest
-	from . import (
-		mcprep_ui,
-		materials,
-		meshswap,
-		spawner,
-		world_tools,
-		addon_updater_ops,
-		tracking
-	)
-
-	if conf.v:print("MCprep: Verbose is enabled")
-	if conf.vv:print("MCprep: Very Verbose is enabled")
+import bpy
 
 
 def register():
-	
 	bpy.utils.register_module(__name__)
-	mcprep_ui.register()
-	materials.register()
-	meshswap.register()
-	spawner.register()
-	world_tools.register()
-	tracking.register(bl_info)
+	load_modules.register(bl_info)
 
-	# addon updater code and configurations
-	addon_updater_ops.register(bl_info)
-	
 
 def unregister():
-
 	bpy.utils.unregister_module(__name__)
-	conf.unregister()
-	mcprep_ui.unregister()
-	materials.unregister()
-	meshswap.unregister()
-	spawner.unregister()
-	world_tools.unregister()
-	tracking.unregister()
-
-	# addon updater code and configurations
-	addon_updater_ops.unregister()
-	
+	load_modules.unregister(bl_info)
 
 
 if __name__ == "__main__":
 	register()
-

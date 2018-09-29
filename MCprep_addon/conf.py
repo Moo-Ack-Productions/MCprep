@@ -1,34 +1,25 @@
-# ##### BEGIN MIT LICENSE BLOCK #####
+# ##### BEGIN GPL LICENSE BLOCK #####
 #
-# Copyright (c) 2016 Patrick W. Crawford
-# 
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-# 
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-# 
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
+#  This program is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU General Public License
+#  as published by the Free Software Foundation; either version 2
+#  of the License, or (at your option) any later version.
 #
-# ##### END MIT LICENSE BLOCK #####
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software Foundation,
+#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# ##### END GPL LICENSE BLOCK #####
 
-
-# -----------------------------------------------------------------------------
-# ADDON GLOBAL VARIABLES AND INITIAL SETTINGS
-# -----------------------------------------------------------------------------
+import os
+import json
 
 import bpy
-import os
 
 # check if custom preview icons available
 try:
@@ -37,6 +28,10 @@ except:
 	print("MCprep: No custom icons in this blender instance")
 	pass
 
+# -----------------------------------------------------------------------------
+# ADDON GLOBAL VARIABLES AND INITIAL SETTINGS
+# -----------------------------------------------------------------------------
+
 def init():
 
 	# -----------------------------------------------
@@ -44,7 +39,7 @@ def init():
 	# Used to print out extra information, set false with distribution
 	# -----------------------------------------------
 	global dev
-	dev = False
+	dev = True
 
 	global v
 	v = True # $VERBOSE, UI setting
@@ -73,35 +68,32 @@ def init():
 	# JSON attributes
 	# -----------------------------------------------
 
-
 	# shouldn't load here, just globalize any json data?
 
 	global data
-	import os
 	# import json
 
 	global json_data # mcprep_data.json
 	json_data = None # later will load addon information etc
 
-	global json_user # mcprep_user.json
-	json_user = None # later will load user saved information
-
-
 	# if existing json_data_update exists, overwrite it
-	setup_path = os.path.join(os.path.dirname(__file__),"mcprep_data.json")
-	if os.path.isfile( os.path.join(os.path.dirname(__file__),\
-			"mcprep_data_update.json") ) == True:
-		
-		# remove old json
-		if os.path.isfile(setup_path) == True:
-			os.remove(setup_path)
-		# change to new name
-		os.rename(os.path.join(os.path.dirname(__file__),\
-			"mcprep_data_update.json"), setup_path)
+	global json_path
+	json_path = os.path.join(
+		os.path.dirname(__file__),
+		"MCprep_resources",
+		"mcprep_data.json")
+	json_path_update = os.path.join(
+		os.path.dirname(__file__),
+		"MCprep_resources",
+		"mcprep_data_update.json")
 
+	# if new update file found from install, replace old one with new
+	if os.path.isfile(json_path_update):
+		if os.path.isfile(json_path) == True:
+			os.remove(json_path)
+		os.rename(json_path_update, json_path)
 
-	# if os.path.isdir(MCprep_resources) is false: create it (and then we know assets = 0)
-
+	# lazy load json, ie only load it when needed (util function defined)
 
 	# -----------------------------------------------
 	# For preview icons
@@ -115,7 +107,7 @@ def init():
 	thumb_ids = {}
 
 	# actual setup/icon loading in the according files
-	
+
 
 	# -----------------------------------------------
 	# For installing assets
@@ -140,7 +132,7 @@ def init():
 	global update_ready
 	update_ready = False
 
-	# in a background thread, connect to see if ready. 
+	# in a background thread, connect to see if ready.
 	# have an internal count thing that requests to enable checking
 	# or force users to decide after 5 uses, ie blocking the panels
 
@@ -155,12 +147,12 @@ def init():
 	# -----------------------------------------------
 	global skin_list
 	skin_list = [] # each is: [ basename, path ]
-	
+
 	global rig_list
 	global rig_list_sub
 	global rig_categories
-	
-	rig_list = [] # each is: [ relative path+':/:'+name+':/:'+catgry,  
+
+	rig_list = [] # each is: [ relative path+':/:'+name+':/:'+catgry,
 				  #            name.title(),
 				  #            description ]
 	rig_list_sub = [] # shorthand for categories
@@ -200,11 +192,18 @@ def icons_init():
 		if v:print("Old verison of blender, no custom icons available")
 		if v:print("\t"+str(e))
 		preview_collections["main"] = ""
-	
+
 	# initialize the rest
 	preview_collections["skins"] = ""
 	preview_collections["mobs"] = ""
 	preview_collections["blocks"] = ""
+
+
+def log(statement):
+	"""General purpose simple logging function."""
+	global v
+	if v:
+		print(statement)
 
 
 # -----------------------------------------------------------------------------
@@ -213,7 +212,7 @@ def icons_init():
 
 
 def register():
-	pass
+	init()
 
 
 def unregister():
@@ -223,4 +222,6 @@ def unregister():
 	# 		#print("clearing?",pcoll)
 	# 		bpy.utils.previews.remove(pcoll)
 	# 	preview_collections.clear()
-	
+	global json_data
+	json_data = None  # actively clearing out json data for next open
+
