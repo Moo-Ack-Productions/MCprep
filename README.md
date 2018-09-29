@@ -161,6 +161,7 @@ How to use this addon
 - **Step 5:** Change settings (optional, defaults are good!) and press ok - and wait a moment while the addon does the rest! Settings
 
 *Settings popup for prep materials.*
+
 ![Prep material settings](/visuals/prepMaterialsSettings.png?raw=true)
 
 Setting options:
@@ -287,6 +288,7 @@ To add your own rigs to the Mob Spawner:
 
 
 *Sometimes you may need to reload a rig cache, click this button if the correct rigs aren't appearing - or if you've just added new rigs to the folder outside of blender*
+
 ![Reload rig cache](/visuals/reloadRigCache.png?raw=true)
 
 
