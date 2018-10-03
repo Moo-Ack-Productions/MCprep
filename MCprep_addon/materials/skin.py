@@ -362,14 +362,19 @@ class McprepAddSkin(bpy.types.Operator, ImportHelper):
 	@tracking.report_error
 	def execute(self,context):
 
-		new_skin = bpy.path.abspath(self.filepath)
-		if os.path.isfile(new_skin) == False:
+		source_location = bpy.path.abspath(self.filepath)
+		base = os.path.basename(source_location)
+		new_location = os.path.join(context.scene.mcprep_skin_path, base)
+		if os.path.isfile(source_location) == False:
 			self.report({"ERROR"},"Not a image file path")
 			return {'CANCELLED'}
+		elif source_location == new_location:
+			self.report({"ERROR"},"File already installed")
+			return {'CANCELLED'}
+		elif os.path.isdir(os.path.dirname(new_location)) == False:
 
 		# copy the skin file
-		base = bpy.path.basename(new_skin)
-		shutil.copy2(new_skin, os.path.join(context.scene.mcprep_skin_path,base))
+		shutil.copy2(source_location, new_location)
 
 		# in future, select multiple
 		bpy.ops.mcprep.reload_skins()
