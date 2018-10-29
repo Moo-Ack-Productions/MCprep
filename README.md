@@ -3,9 +3,9 @@ TO INSTALL MCprep
 
 ### Click the link below and download the .zip file (re-zip if auto-unzipped into a folder necessary), install into blender.
 
-[![Install MCprep](/visuals/mcprep_download.png)](http://theduckcow.com/dev/blender/mcprep-download/)
+[![Install MCprep](/visuals/mcprep_download.png)](https://theduckcow.com/dev/blender/mcprep-download/)
 
-*By downloading and installing, you agree to the following [privacy policy](http://theduckcow.com/privacy-policy).* **[Watch this video](https://www.youtube.com/watch?v=i6Ne07-eIyI) on how to install if running into troubles.**
+*By downloading and installing, you agree to the following [privacy policy](https://theduckcow.com/privacy-policy).* **[Watch this video](https://www.youtube.com/watch?v=i6Ne07-eIyI) on how to install if running into troubles.**
 
 
 It should remain a zip folder. In blender, go to preferences, then the addons tab, and at the bottom of the window install from file. Select the .zip file. **NOTE:** _Blender may not automatically enable the addon. If the MCprep addon is not already shown in the window after installing, search for it at left and then ensure the check box is enabled._ **Save user preferences** to keep it enabled next time blender opens.
@@ -27,7 +27,7 @@ Demo Usage
 
 *[Mob spawner tutorial](https://www.youtube.com/watch?v=asB4UcBuWBw)*
 
-*[Skin swapping overview](http://theduckcow.com/dev/blender/mcprep/skin-swapping/)*
+*[Skin swapping overview](https://theduckcow.com/dev/blender/mcprep/skin-swapping/)*
 
 *[Mob spawner demo](https://www.youtube.com/watch?v=C3YoZx-seFE)*
 

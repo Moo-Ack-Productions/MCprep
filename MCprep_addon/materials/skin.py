@@ -94,7 +94,7 @@ def handler_skins_load(scene):
 
 
 def loadSkinFile(self, context, filepath, new_material=False):
-	if os.path.isfile(filepath)==False:
+	if not os.path.isfile(filepath):
 		self.report({'ERROR'}, "Image file not found")
 		# special message for library linking?
 
@@ -288,7 +288,7 @@ class McprepApplyUsernameSkin(bpy.types.Operator):
 	@tracking.report_error
 	def execute(self,context):
 		if self.username == "":
-			self.report({"ERROR","Invalid username"})
+			self.report({"ERROR"},"Invalid username")
 			return {'CANCELLED'}
 
 		skins = [ str(skin[0]).lower() for skin in conf.skin_list ]
@@ -372,6 +372,8 @@ class McprepAddSkin(bpy.types.Operator, ImportHelper):
 			self.report({"ERROR"},"File already installed")
 			return {'CANCELLED'}
 		elif os.path.isdir(os.path.dirname(new_location)) == False:
+			self.report({"ERROR"},"Target folder for installing does not exist")
+			return {'CANCELLED'}
 
 		# copy the skin file
 		shutil.copy2(source_location, new_location)

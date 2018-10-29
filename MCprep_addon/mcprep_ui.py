@@ -491,18 +491,22 @@ class McprepWorldImports(bpy.types.Panel):
 		p = col.operator("mcprep.swap_texture_pack")
 		p.filepath = context.scene.mcprep_custom_texturepack_path
 		col.operator("mcprep.meshswap", text="Mesh Swap")
+		if addon_prefs.MCprep_exporter_type == "(choose)":
+			col.label(text="Select exporter!",icon='ERROR')
+		if context.mode == 'EDIT_MESH':
+			col.operator("mcprep.scale_uv")
+			col.operator("mcprep.select_alpha_faces")
+
 
 		#the UV's pixels into actual 3D geometry (but same material, or modified to fit)
 		#col.operator("object.solidify_pixels", text="Solidify Pixels", icon='MOD_SOLIDIFY')
 		split = layout.split()
 		col = split.column(align=True)
-		if addon_prefs.MCprep_exporter_type == "(choose)":
-			col.label(text="Select exporter!",icon='ERROR')
 
 		# Advanced material settings
 		texviewable = ['SOLID','TEXTURED','MATEIRAL','RENDERED']
-		if context.space_data.show_textured_solid == True and \
-				context.user_preferences.system.use_mipmaps == False and \
+		if context.space_data.show_textured_solid is True and \
+				context.user_preferences.system.use_mipmaps is False and \
 				context.space_data.viewport_shade in texviewable:
 			row = col.row(align=True)
 			row.enabled = False
@@ -837,8 +841,8 @@ class McprepSpawnPanel(bpy.types.Panel):
 #	Below for registration stuff
 # -----------------------------------------------------------------------------
 
-# for custom menu registration, icon for top-level MCprep menu of shift-A
 def draw_mcprepadd(self, context):
+	"""Append to Shift+A, icon for top-level MCprep section."""
 	layout = self.layout
 	pcoll = conf.preview_collections["main"]
 	if pcoll != "":
@@ -846,6 +850,15 @@ def draw_mcprepadd(self, context):
 		layout.menu(McprepQuickMenu.bl_idname,icon_value=my_icon.icon_id)
 	else:
 		layout.menu(McprepQuickMenu.bl_idname)
+
+
+def mcprep_uv_tools(self, context):
+	"""Appended to UV tools in UV image editor tab."""
+	layout = self.layout
+	layout.label("MCprep tools")
+	col = layout.column(align=True)
+	col.operator("mcprep.scale_uv")
+	col.operator("mcprep.select_alpha_faces")
 
 
 # -----------------------------------------------
@@ -956,11 +969,13 @@ def register():
 
 	conf.v = addon_prefs.verbose
 	bpy.types.INFO_MT_add.append(draw_mcprepadd)
+	bpy.types.IMAGE_PT_tools_transform_uvs.append(mcprep_uv_tools)
 
 
 def unregister():
 
 	bpy.types.INFO_MT_add.remove(draw_mcprepadd)
+	bpy.types.IMAGE_PT_tools_transform_uvs.remove(mcprep_uv_tools)
 
 	del bpy.types.Scene.mcprep_props
 	del bpy.types.Scene.mcprep_mob_path

@@ -62,7 +62,7 @@ def get_mc_canonical_name(name):
 
 
 def find_from_texturepack(blockname, resource_folder=None):
-	"""Given a blockname (and resource fodler), find image filepath.
+	"""Given a blockname (and resource folder), find image filepath.
 
 	Finds textures following any pack which should have this structure, and
 	the input folder or default resource folder could target at any of the
@@ -168,7 +168,6 @@ def checklist(matName, listName):
 	"""Helper function for expanding single wildcard within generalized
 	material names."""
 
-
 	if not conf.json_data:
 		conf.log("No json_data for checklist to call from!")
 	if not "blocks" in conf.json_data or not listName in conf.json_data["blocks"]:
@@ -247,6 +246,7 @@ def matprep_internal(mat, passes, use_reflections):
 
 	mat.use_transparent_shadows = True #all materials receive trans
 	mat.specular_intensity = 0
+	# TODO: below line is causing errors in some linux reports
 	mat.texture_slots[diff_layer].texture.use_interpolation = False
 	mat.texture_slots[diff_layer].texture.filter_type = 'BOX'
 	mat.texture_slots[diff_layer].texture.filter_size = 0

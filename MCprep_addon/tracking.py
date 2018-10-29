@@ -701,6 +701,7 @@ def logError(report, background=None):
 				"platform":Tracker.platform,
 				"error":error,
 				"user_comment":user_comment,
+				"status":"None",  # used later for flagging if fixed or not
 				"ID":Tracker.json["install_id"]
 			})
 		resp = Tracker.request('POST', location, payload, background)
@@ -725,6 +726,7 @@ def report_error(function):
 
 	def wrapper(self, context):
 		try:
+			Tracker._handling_error = False
 			res = function(self, context)
 			Tracker._handling_error = False
 		except:
