@@ -34,41 +34,47 @@ from .. import tracking
 # Mesh swap functions
 # -----------------------------------------------------------------------------
 
-# only used for UI drawing of enum menus, full list
 def getMeshswapList(context):
+	"""Only used for UI drawing of enum menus, full list."""
 
 	# test the link path first!
 	# rigpath = bpy.path.abspath(context.scene.mcprep_mob_path)
 	# blendFiles = []
 	# riglist = []
 
-	if len(conf.rig_list)==0: # may redraw too many times, perhaps have flag
+	if not conf.rig_list:  # may redraw too many times, perhaps have flag
 		return updateMeshswapList(context)
-
-	else:
-		return conf.meshswap_list
+	return conf.meshswap_list
 
 
 # for UI list path callback
 def update_meshswap_path(self, context):
-	if conf.vv:print("Updating meshswap path")
+	if conf.vv:
+		print("Updating meshswap path")
+	if not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
+		print("Meshswap blend file does not exist")
 	updateMeshswapList(context)
 
-# Update the meshswap list
+
 def updateMeshswapList(context):
+	"""Update the meshswap list."""
 	# test the link path first!
 	meshswap_file = bpy.path.abspath(context.scene.meshswap_path)
-	if os.path.isfile(meshswap_file)==False:
+	if not os.path.isfile(meshswap_file):
 		print("Invalid meshswap blend file path")
+		context.scene.mcprep_meshswap_list.clear()
+		conf.meshswap_list = []
+		return []
+
 	temp_meshswap_list = []
 	meshswap_list = []
-	# conf.meshswap_list = []
 
 	with bpy.data.libraries.load(meshswap_file) as (data_from, data_to):
 		for name in data_from.groups:
 
 			# special cases, skip some groups/repeats
-			if util.nameGeneralize(name).lower() in temp_meshswap_list: continue
+			if util.nameGeneralize(name).lower() in temp_meshswap_list:
+				continue
 			if util.nameGeneralize(name).lower() == "Rigidbodyworld".lower():
 				continue
 
@@ -85,7 +91,8 @@ def updateMeshswapList(context):
 		# 	temp_meshswap_list.append(util.nameGeneralize(name).lower())
 
 	# sort the list alphebtically by name
-	temp, sorted_blocks = zip(*sorted(zip([block[1].lower() for block in meshswap_list], meshswap_list)))
+	_, sorted_blocks = zip(*sorted(zip([block[1].lower()
+		for block in meshswap_list], meshswap_list)))
 	conf.meshswap_list = sorted_blocks
 
 	# now re-populate the UI list
@@ -247,7 +254,9 @@ class McprepReloadMeshswap(bpy.types.Operator):
 	bl_label = "Reload MeshSwap"
 
 	@tracking.report_error
-	def execute(self,context):
+	def execute(self, context):
+		if not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
+			self.report({'WARNING'}, "Meshswap blend file does not exist")
 		updateMeshswapList(context)
 		return {'FINISHED'}
 
@@ -514,7 +523,6 @@ class meshSwap(bpy.types.Operator):
 	def execute(self, context):
 		runcount = 0 # counter.. if zero by end, raise error that no selected objects matched
 		## debug, restart check
-		if conf.v:print('###################################')
 		addon_prefs = util.get_prefs()
 		direc = context.scene.meshswap_path
 

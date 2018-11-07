@@ -96,6 +96,7 @@ def handler_skins_load(scene):
 def loadSkinFile(self, context, filepath, new_material=False):
 	if not os.path.isfile(filepath):
 		self.report({'ERROR'}, "Image file not found")
+		return 1
 		# special message for library linking?
 
 	# always create a new image block, even if the name already existed
@@ -294,13 +295,16 @@ class McprepApplyUsernameSkin(bpy.types.Operator):
 		skins = [ str(skin[0]).lower() for skin in conf.skin_list ]
 		paths = [ skin[1] for skin in conf.skin_list ]
 		if self.username.lower() not in skins or not self.skip_redownload:
-			if conf.v: print("Donwloading skin")
+			if conf.v:
+				print("Downloading skin")
 			res = self.download_user(context)
 			return res
 		else:
 			if conf.v: print("Reusing downloaded skin")
 			ind = skins.index(self.username.lower())
 			res = loadSkinFile(self, context, paths[ind][1])
+			if res != 0:
+				return {'CANCELLED'}
 			return {'FINISHED'}
 
 	def download_user(self, context):
@@ -325,6 +329,8 @@ class McprepApplyUsernameSkin(bpy.types.Operator):
 			return {'CANCELLED'}
 
 		res = loadSkinFile(self, context, saveloc)
+		if res != 0:
+			return {'CANCELLED'}
 		bpy.ops.mcprep.reload_skins()
 		return {'FINISHED'}
 
@@ -366,13 +372,13 @@ class McprepAddSkin(bpy.types.Operator, ImportHelper):
 		base = os.path.basename(source_location)
 		new_location = os.path.join(context.scene.mcprep_skin_path, base)
 		if os.path.isfile(source_location) == False:
-			self.report({"ERROR"},"Not a image file path")
+			self.report({"ERROR"}, "Not a image file path")
 			return {'CANCELLED'}
 		elif source_location == new_location:
-			self.report({"ERROR"},"File already installed")
+			self.report({"WARNING"}, "File already installed")
 			return {'CANCELLED'}
 		elif os.path.isdir(os.path.dirname(new_location)) == False:
-			self.report({"ERROR"},"Target folder for installing does not exist")
+			self.report({"ERROR"}, "Target folder for installing does not exist")
 			return {'CANCELLED'}
 
 		# copy the skin file

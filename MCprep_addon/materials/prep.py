@@ -681,9 +681,8 @@ class McprepScaleUV(bpy.types.Operator):
 			x=y=n=0  # x,y,number of verts in loop for average purpose
 			for i in f.loop_indices:
 				# a loop could be an edge or face
-				l = ob.data.loops[i] # The loop entry this polygon point refers to
+				l = ob.data.loops[i] # This polygon/edge
 				v = ob.data.vertices[l.vertex_index]  # The vertex data that loop entry refers to
-				#print("\tLoop index", l.index, "points to vertex index", l.vertex_index,"at position", v.co)
 				# isolate to specific UV already used
 				if not uv.data[l.index].select:
 					continue

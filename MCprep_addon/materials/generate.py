@@ -237,7 +237,9 @@ def matprep_internal(mat, passes, use_reflections):
 		else:
 			mat.use_textures[index] = False
 
-	# TODO: selectively add additional passes beyond diffuse
+	if mat.texture_slots[diff_layer].texture.type != "IMAGE":
+		conf.log("No diffuse-detected texture, skipping material: "+mat.name)
+		return 1
 
 	# strip out the .00#
 	matGen = util.nameGeneralize(mat.name)

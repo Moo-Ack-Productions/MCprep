@@ -320,6 +320,9 @@ class McprepPreference(bpy.types.AddonPreferences):
 			col.label("Meshwap assets")
 			col = split.column()
 			col.prop(self, "meshswap_path", text="")
+			if not os.path.isfile(bpy.path.abspath(self.meshswap_path)):
+				row = box.row()
+				row.label("MeshSwap file not found", icon="ERROR")
 
 			row = layout.row()
 			row.scale_y=0.7
@@ -547,7 +550,11 @@ class McprepWorldImports(bpy.types.Panel):
 				b_col.operator("mcprep.combine_images",text="Combine Images")
 
 			b_col.label(text="Meshswap source:")
-			b_col.prop(addon_prefs,"meshswap_path",text="")
+			subrow = b_col.row(align=True)
+			subrow.prop(context.scene, "meshswap_path", text="")
+			subrow.operator("mcprep.meshswap_path_reset", icon="LOAD_FACTORY", text="")
+			if not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
+				b_col.label("MeshSwap file not found", icon="ERROR")
 
 		layout = self.layout # clear out the box formatting
 		split = layout.split()
@@ -810,6 +817,12 @@ class McprepSpawnPanel(bpy.types.Panel):
 			p.meshswap_block = datapass
 			p.location = context.scene.cursor_location
 			# col.label(datapass.split("/")[0])
+		elif not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
+			col.label("Meshswap file not found")
+			row2 = col.row()
+			row2.scale_y = 2
+			row2.operator("mcprep.meshswap_path_reset", icon="LOAD_FACTORY",
+				text="Reset meshswap path")
 		else:
 			col.label("No blocks loaded")
 			row2 = col.row()
@@ -831,6 +844,8 @@ class McprepSpawnPanel(bpy.types.Panel):
 			subrow = b_col.row(align=True)
 			subrow.prop(context.scene, "meshswap_path", text="")
 			subrow.operator("mcprep.meshswap_path_reset", icon="LOAD_FACTORY", text="")
+			if not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
+				b_col.label("MeshSwap file not found", icon="ERROR")
 			b_row = box.row()
 			b_col = b_row.column(align=True)
 			b_col.operator("mcprep.reload_meshswap")
