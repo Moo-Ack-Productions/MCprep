@@ -62,7 +62,7 @@ def updateMeshswapList(context):
 	meshswap_file = bpy.path.abspath(context.scene.meshswap_path)
 	if not os.path.isfile(meshswap_file):
 		print("Invalid meshswap blend file path")
-		context.scene.mcprep_meshswap_list.clear()
+		context.scene.mcprep_props.meshswap_list.clear()
 		conf.meshswap_list = []
 		return []
 
@@ -96,9 +96,9 @@ def updateMeshswapList(context):
 	conf.meshswap_list = sorted_blocks
 
 	# now re-populate the UI list
-	context.scene.mcprep_meshswap_list.clear()
+	context.scene.mcprep_props.meshswap_list.clear()
 	for itm in conf.meshswap_list:
-		item = context.scene.mcprep_meshswap_list.add()
+		item = context.scene.mcprep_props.meshswap_list.add()
 		item.label = itm[2]
 		item.description = itm[2]
 		item.name = itm[1].title()
@@ -169,6 +169,10 @@ class McprepMeshswapSpawner(bpy.types.Operator):
 	# 	default = False
 	# 	)
 	# instantiate if group?
+
+	@classmethod
+	def poll(self, context):
+		return context.mode == 'OBJECT'
 
 	track_function = "meshswapSpawner"
 	track_param = None
@@ -940,24 +944,14 @@ class fixMinewaysScale(bpy.types.Operator):
 
 
 # -----------------------------------------------------------------------------
-#	Above for class functions/operators
-#	Below for UI/register
+#	Register functions
 # -----------------------------------------------------------------------------
 
 
-# for asset listing
-class ListColl(bpy.types.PropertyGroup):
-	label = bpy.props.StringProperty()
-	description = bpy.props.StringProperty()
-
-
 def register():
-	bpy.types.Scene.mcprep_meshswap_list = \
-			bpy.props.CollectionProperty(type=ListColl)
-	bpy.types.Scene.mcprep_meshswap_list_index = bpy.props.IntProperty(default=0)
+	pass
 
 
 def unregister():
-	del bpy.types.Scene.mcprep_meshswap_list
-	del bpy.types.Scene.mcprep_meshswap_list_index
+	pass
 

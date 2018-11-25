@@ -186,7 +186,7 @@ class McprepPrepMaterials(bpy.types.Operator):
 
 
 class McprepMaterialHelp(bpy.types.Operator):
-	"""Follow up popup to assist the user who may not have gotten expected change."""
+	"""Follow up popup to assist the user who may not have gotten expected change"""
 	bl_idname = "mcprep.prep_materials_help"
 	bl_label = "MCprep Materials Help"
 	bl_options = {'REGISTER', 'UNDO'}
@@ -350,7 +350,7 @@ class McprepSwapTexturePack(bpy.types.Operator, ImportHelper):
 		self.track_exporter = exporter
 
 		# set the scene's folder for the texturepack being swapped
-		context.scene.mcprep_custom_texturepack_path = folder
+		context.scene.mcprep_texturepack_path = folder
 
 		if conf.v: print("Materials detected:",len(mat_list))
 		res = 0
@@ -373,7 +373,7 @@ class McprepResetTexturepackPath(bpy.types.Operator):
 	@tracking.report_error
 	def execute(self, context):
 		addon_prefs = util.get_prefs()
-		context.scene.mcprep_custom_texturepack_path = addon_prefs.custom_texturepack_path
+		context.scene.mcprep_texturepack_path = addon_prefs.custom_texturepack_path
 		return {'FINISHED'}
 
 
@@ -407,14 +407,16 @@ class McprepCombineMaterials(bpy.types.Operator):
 		name_cat = {}
 
 		def getMaterials(self, context):
-			if self.selection_only == False:
+			if self.selection_only is False:
 				return bpy.data.materials
 			else:
 				mats = []
 				for ob in bpy.data.objects:
 					for sl in ob.material_slots:
-						if sl == None or sl.material == None:continue
-						if sl.material in mats:continue
+						if sl is None or sl.material is None:
+							continue
+						if sl.material in mats:
+							continue
 						mats.append(sl.material)
 				return mats
 
@@ -553,8 +555,8 @@ class McprepCombineImages(bpy.types.Operator):
 		if bpy.app.version < (2,78):
 			for ob in bpy.data.objects:
 				for sl in ob.material_slots:
-					if sl == None or sl.material == None:continue
-					if sl.material not in data: continue # selection only
+					if sl is None or sl.material is None or sl.material not in data:
+						continue # selection only
 					sl.material = data[name_cat[ util.nameGeneralize(sl.material.name) ][0]]
 			# doesn't remove old textures, but gets it to zero users
 
@@ -567,16 +569,15 @@ class McprepCombineImages(bpy.types.Operator):
 
 		# perform the consolidation with one basename set at a time
 		for base in name_cat:
-			if len(base)<2: continue
-
+			if len(base)<2:
+				continue
 			name_cat[base].sort() # in-place sorting
 			baseImg = bpy.data.images[ name_cat[base][0] ]
 
 			for imgname in name_cat[base][1:]:
-
 				# skip if fake user set
-				if bpy.data.images[imgname].use_fake_user == True: continue
-
+				if bpy.data.images[imgname].use_fake_user is True:
+					continue
 				# otherwise, remap
 				util.remap_users(data[imgname],baseImg)
 				old = bpy.data.images[imgname]
@@ -749,9 +750,6 @@ class McprepSelectAlphaFaces(bpy.types.Operator):
 		if ob.data.uv_layers.active is None:
 			self.report({"ERROR"}, "No active UV map found")
 
-		# img =
-		# if ob.data.uv_textures.active == None: continue
-
 		# if doing multiple objects, iterate over loop of this function
 		bpy.ops.mesh.select_mode(type='FACE')
 
@@ -831,7 +829,6 @@ class McprepSelectAlphaFaces(bpy.types.Operator):
 			ymin = round(min(ylist)*image.size[1])-0.5
 			ymax = round(max(ylist)*image.size[1])-0.5
 			print("\tSet size:",xmin,xmax,ymin,ymax)
-
 
 			# assuming faces are roughly rectangular, sum pixels a face covers
 			asum = 0

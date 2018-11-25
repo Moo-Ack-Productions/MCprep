@@ -50,6 +50,7 @@ if "bpy" in locals():
 	importlib.reload(meshswap)
 	importlib.reload(mobs)
 	importlib.reload(world_tools)
+	importlib.reload(item)
 	importlib.reload(mcprep_ui)
 
 
@@ -79,7 +80,8 @@ else:
 	from .spawner import(
 		spawn_util,
 		mobs,
-		meshswap
+		meshswap,
+		item
 		)
 
 
@@ -103,6 +105,7 @@ def register(bl_info):
 	spawn_util.register()
 	meshswap.register()
 	mobs.register()
+	item.register()
 	world_tools.register()
 	mcprep_ui.register()
 
@@ -117,6 +120,7 @@ def unregister(bl_info):
 
 	mcprep_ui.unregister()
 	world_tools.unregister()
+	item.unregister()
 	mobs.unregister()
 	meshswap.unregister()
 	spawn_util.unregister()

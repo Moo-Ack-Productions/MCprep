@@ -65,7 +65,7 @@ def updateRigList(context):
 	riglist = []
 	conf.rig_list = []
 	subriglist = []
-	context.scene.mcprep_mob_list.clear()
+	context.scene.mcprep_props.mob_list.clear()
 
 	# iterate through all folders
 	if len(os.listdir(rigpath)) < 1:
@@ -99,9 +99,9 @@ def updateRigList(context):
 							## still append the group name, more of an fyi
 						#else:
 						#	riglist.append( (rigPath+':/:'+name+':/:'+catgry,name,"Spawn a {x} rig".format(x=name)) )
-						description = "Spawn a {x} rig".format(x=name)
+						description = "Spawn one {x} rig".format(x=name)
 						riglist.append( (local+':/:'+name+':/:'+catgry,name.title(),description) )
-						item = context.scene.mcprep_mob_list.add()
+						item = context.scene.mcprep_props.mob_list.add()
 						item.label = description
 						item.description = description
 						item.name = name.title()
@@ -142,13 +142,13 @@ def updateCategory(context):
 
 	if len(conf.rig_list)==0:
 		if conf.v:print("No rigs found, failed to update category")
-		context.scene.mcprep_mob_list.clear()
+		context.scene.mcprep_props.mob_list.clear()
 		return
 
 	category = context.scene.mcprep_props.spawn_rig_category
 	filter = (category != "all")
 
-	context.scene.mcprep_mob_list.clear()
+	context.scene.mcprep_props.mob_list.clear()
 	conf.rig_list_sub = []
 	conf.active_mob_subind = -1 # temp assignment, for radio buttons
 
@@ -156,7 +156,7 @@ def updateCategory(context):
 		sub = itm[0].split(":/:")
 		if filter and sub[-1].lower() != category.lower():
 			continue
-		item = context.scene.mcprep_mob_list.add()
+		item = context.scene.mcprep_props.mob_list.add()
 		description = "Spawn a {x} rig".format(x=sub[1])
 		item.label = description
 		item.description = description
@@ -165,8 +165,8 @@ def updateCategory(context):
 		if itm[0] == conf.active_mob:
 			conf.active_mob_subind = len(conf.rig_list_sub)-1
 
-	if context.scene.mcprep_mob_list_index > len(conf.rig_list_sub):
-		context.scene.mcprep_mob_list_index = len(conf.rig_list_sub)-1
+	if context.scene.mcprep_props.mob_list_index > len(conf.rig_list_sub):
+		context.scene.mcprep_props.mob_list_index = len(conf.rig_list_sub)-1
 
 
 # -----------------------------------------------------------------------------
@@ -725,7 +725,7 @@ class McprepUninstallMob(bpy.types.Operator):
 		return context.window_manager.invoke_props_dialog(self, width=400*util.ui_scale())
 
 	def preDraw(self, context):
-		mob = conf.rig_list_sub[context.scene.mcprep_mob_list_index]
+		mob = conf.rig_list_sub[context.scene.mcprep_props.mob_list_index]
 		self.path = ""
 
 		try:
@@ -747,7 +747,7 @@ class McprepUninstallMob(bpy.types.Operator):
 
 		row = self.layout.row()
 		row.scale_y=0.5
-		mob = conf.rig_list_sub[context.scene.mcprep_mob_list_index]
+		mob = conf.rig_list_sub[context.scene.mcprep_props.mob_list_index]
 		path = mob[0].split(":/:")[0]
 		path = os.path.join(context.scene.mcprep_mob_path,path)
 		if len(self.listing)>1:
@@ -784,7 +784,7 @@ class McprepUninstallMob(bpy.types.Operator):
 	@tracking.report_error
 	def execute(self,context):
 
-		mob = conf.rig_list_sub[context.scene.mcprep_mob_list_index]
+		mob = conf.rig_list_sub[context.scene.mcprep_props.mob_list_index]
 		try:
 			path = mob[0].split(":/:")[0]
 			path = os.path.join(context.scene.mcprep_mob_path,path)

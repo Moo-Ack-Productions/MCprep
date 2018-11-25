@@ -180,29 +180,49 @@ def icons_init():
 	global preview_collections
 	global v
 
+	collection_sets = ["main", "skins", "mobs", "blocks", "items"]
+
 	try:
-		custom_icons = bpy.utils.previews.new()
+		# custom_icons = bpy.utils.previews.new()
+		# preview_collections["main"] = custom_icons
+		for iconset in collection_sets:
+			preview_collections[iconset] = bpy.utils.previews.new()
+
 		script_path = bpy.path.abspath(os.path.dirname(__file__))
 		icons_dir = os.path.join(script_path,'icons')
-		custom_icons.load("crafting_icon", os.path.join(icons_dir, "crafting_icon.png"), 'IMAGE')
-		custom_icons.load("grass_icon", os.path.join(icons_dir, "grass_icon.png"), 'IMAGE')
-		custom_icons.load("spawner_icon", os.path.join(icons_dir, "spawner_icon.png"), 'IMAGE')
-		preview_collections["main"] = custom_icons
+		preview_collections["main"].load(
+			"crafting_icon",
+			os.path.join(icons_dir, "crafting_icon.png"),
+			'IMAGE')
+		preview_collections["main"].load(
+			"grass_icon",
+			os.path.join(icons_dir, "grass_icon.png"),
+			'IMAGE')
+		preview_collections["main"].load(
+			"spawner_icon",
+			os.path.join(icons_dir, "spawner_icon.png"),
+			'IMAGE')
+		preview_collections["main"].load(
+			"sword_icon",
+			os.path.join(icons_dir, "sword_icon.png"),
+			'IMAGE')
 	except Exception as e:
-		if v:print("Old verison of blender, no custom icons available")
-		if v:print("\t"+str(e))
-		preview_collections["main"] = ""
-
-	# initialize the rest
-	preview_collections["skins"] = ""
-	preview_collections["mobs"] = ""
-	preview_collections["blocks"] = ""
+		log("Old verison of blender, no custom icons available")
+		log("\t"+str(e))
+		global use_icons
+		use_icons = False
+		for iconset in collection_sets:
+			preview_collections[iconset] = ""
 
 
-def log(statement):
+def log(statement, vv_only=False):
 	"""General purpose simple logging function."""
 	global v
-	if v:
+	global vv
+	if vv_only:
+		if vv:
+			print(statement)
+	elif v:
 		print(statement)
 
 
@@ -217,11 +237,10 @@ def register():
 
 def unregister():
 	global preview_collections
-	# if preview_collections["main"] != "":
-	# 	for pcoll in preview_collections.values():
-	# 		#print("clearing?",pcoll)
-	# 		bpy.utils.previews.remove(pcoll)
-	# 	preview_collections.clear()
+	if use_icons:
+		for pcoll in preview_collections.values():
+			bpy.utils.previews.remove(pcoll)
+	preview_collections.clear()
+
 	global json_data
 	json_data = None  # actively clearing out json data for next open
-

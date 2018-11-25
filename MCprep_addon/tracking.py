@@ -591,7 +591,7 @@ def trackInstalled(background=None):
 		resp = Tracker.request('POST', location, payload, background, callback)
 
 	def callback(arg):
-		# assumes input is the server response (dictionary format)
+		"""After call, assumes input is dict server response."""
 		if type(arg) != type({'name':'ID'}):
 			return
 		elif "name" not in arg:
@@ -624,7 +624,7 @@ def trackUsage(function, param=None, exporter=None, background=None):
 			Tracker.addon, function, str(param), str(exporter)))
 
 	# if no override set, use default
-	if background == None:
+	if not background:
 		background = Tracker.background
 
 	def runUsage(background):

@@ -119,7 +119,7 @@ def loadSkinFile(self, context, filepath, new_material=False):
 	else:
 		pass
 
-	setUVimage(context.selected_objects,image)
+	setUVimage(context.selected_objects, image)
 
 	# TODO: adjust the UVs if appropriate, and fix eyes
 	if image.size[0] != 0 and image.size[1]/image.size[0] != 1:
@@ -174,11 +174,14 @@ def getMatsFromSelected(selected,new_material=False):
 	return mat_ret
 
 
-def setUVimage(objs,image):
-	for ob in objs:
-		if ob.type != "MESH": continue
-		if ob.data.uv_textures.active is None: continue
-		for uv_face in ob.data.uv_textures.active.data:
+def setUVimage(objs, image):
+	"""Set image for each face for viewport displaying."""
+	for obj in objs:
+		if obj.type != "MESH":
+			continue
+		if obj.data.uv_textures.active is None:
+			continue
+		for uv_face in obj.data.uv_textures.active.data:
 			uv_face.image = image
 
 
@@ -209,13 +212,16 @@ class McprepSkinSwapper(bpy.types.Operator, ImportHelper):
 	bl_label = "Swap skin"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	# filename_ext = ".zip"
 	filter_glob = bpy.props.StringProperty(
-			default="*",
-			options={'HIDDEN'},
-			)
+		default="",
+		options={'HIDDEN'})
 	fileselectparams = "use_filter_blender"
-	files = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
+	files = bpy.props.CollectionProperty(
+		type=bpy.types.PropertyGroup,
+		options={'HIDDEN', 'SKIP_SAVE'})
+	filter_image = bpy.props.BoolProperty(
+		default=True,
+		options={'HIDDEN', 'SKIP_SAVE'})
 
 	track_function = "skin"
 	track_param = "file import"
@@ -487,7 +493,7 @@ class McprepSpawn_with_skin(bpy.types.Operator):
 			self.report({'ERROR'}, "No skins found")
 			return {'CANCELLED'}
 
-		active_mob = conf.rig_list_sub[context.scene.mcprep_mob_list_index][0]
+		active_mob = conf.rig_list_sub[context.scene.mcprep_props.mob_list_index][0]
 		self.track_param = active_mob
 
 		# try not to use internal ops because of analytics
