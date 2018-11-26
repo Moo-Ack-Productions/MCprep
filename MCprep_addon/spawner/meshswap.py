@@ -97,7 +97,7 @@ def updateMeshswapList(context):
 
 	# now re-populate the UI list
 	context.scene.mcprep_props.meshswap_list.clear()
-	for itm in conf.meshswap_list:
+	for itm in sorted_blocks:
 		item = context.scene.mcprep_props.meshswap_list.add()
 		item.label = itm[2]
 		item.description = itm[2]

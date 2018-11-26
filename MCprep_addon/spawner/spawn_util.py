@@ -115,6 +115,10 @@ class McprepItemUiList(bpy.types.UIList):
 			layout.label("", icon='QUESTION')
 
 
+class ListMobAssetsAll(bpy.types.PropertyGroup):
+	"""For listing hidden group of all mobs, regardless of category"""
+
+
 class ListMobAssets(bpy.types.PropertyGroup):
 	"""For UI drawing of mob assets and holding data"""
 	label = bpy.props.StringProperty()  # depreciate

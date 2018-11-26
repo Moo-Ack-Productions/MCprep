@@ -483,8 +483,13 @@ class McprepMobSpawner(bpy.types.Operator):
 					bpy.ops.group.objects_remove()
 
 			grp_added.name = "reload-blend-to-remove-this-empty-group"
-			bpy.ops.group.objects_remove_all() # just in case
-			grp_added.user_clear() # next time blend file reloads, this group will be gone
+			for ob in grp_added.objects:
+			    grp_added.objects.unlink(ob)
+			grp_added.user_clear()
+			try:
+				bpy.data.groups.remove(grp_added)
+			except:
+				pass
 
 			if self.clearPose or self.relocation=="Offset":
 				#bpy.ops.object.select_all(action='DESELECT') # too soon?

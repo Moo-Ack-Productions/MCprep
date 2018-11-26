@@ -1058,6 +1058,7 @@ class McprepProps(bpy.types.PropertyGroup):
 	# spawn lists
 	mob_list = bpy.props.CollectionProperty(type=spawn_util.ListMobAssets)
 	mob_list_index = bpy.props.IntProperty(default=0)
+	mob_list_all = bpy.props.CollectionProperty(type=spawn_util.ListMobAssetsAll)
 	meshswap_list = bpy.props.CollectionProperty(type=spawn_util.ListMeshswapAssets)
 	meshswap_list_index = bpy.props.IntProperty(default=0)
 	item_list = bpy.props.CollectionProperty(type=spawn_util.ListItemAssets)
