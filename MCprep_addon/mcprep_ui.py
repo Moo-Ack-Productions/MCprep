@@ -48,37 +48,20 @@ class McprepMobSpawnerMenu(bpy.types.Menu):
 
 	def draw(self, context):
 		layout = self.layout
+		scn_props = context.scene.mcprep_props
 
 		# if mobs not loaded yet
-		if len(conf.rig_list)==0:
+		if not scn_props.mob_list_all:
 			row = layout.row()
 			row.operator("mcprep.reload_mobs", text="Load mobs", icon='HAND')
 			row.scale_y = 2
 			row.alignment = 'CENTER'
 			return
 
-		for n in range(len(conf.rig_list)):
-			mob = conf.rig_list[n]
-			#if mob[0].split(':/:')[-1]!=conf.rig_categories[c]:continue
-			# eventually with icon too
+		for mob in scn_props.mob_list_all:
 			layout.operator("mcprep.mob_spawner",
-						text=mob[1]
-						).mcmob_type = mob[0]
-
-		# load mobs, eventually try with categories horizontally
-		# (via template_list with a collection property?)
-		# for c in range(len(conf.rig_categories)):
-		# 	col = layout.row()
-		# 	col.label(conf.rig_categories[c])
-		# 	col.separator()
-		# 	for n in range(len(conf.rig_list)):
-		# 		mob = conf.rig_list[n]
-		# 		if mob[0].split(':/:')[-1]!=conf.rig_categories[c]:continue
-
-		# 		# eventually with icon too
-		# 		col.operator("mcprep.mob_spawner",
-		# 					text=mob[1]
-		# 					).mcmob_type = mob[0]
+						text=mob.name
+						).mcmob_type = mob.mcmob_type
 
 
 class McprepMeshswapPlaceMenu(bpy.types.Menu):
@@ -89,19 +72,19 @@ class McprepMeshswapPlaceMenu(bpy.types.Menu):
 	def draw(self, context):
 		layout = self.layout
 		meshswap_blocks = meshswap.getMeshswapList(context)
-		for n in range(len(meshswap_blocks)):
+		for blockset in meshswap_blocks:
 			# do some kind of check for if no blocks found
 			icn = "BLANK1"
-			if meshswap_blocks[n][0].split("/")[0]=="Group":
+			if blockset[0].startswith("Group"):
 				icn = "GROUP"
 
-			p = layout.operator(
+			opr = layout.operator(
 				"mcprep.meshswap_spawner",
-				text=meshswap_blocks[n][1],
+				text=blockset[1],
 				icon=icn
 			)
-			p.meshswap_block = meshswap_blocks[n][0]
-			p.location = context.scene.cursor_location
+			opr.block = blockset[0]
+			opr.location = context.scene.cursor_location
 
 
 class McprepItemSpawnerMenu(bpy.types.Menu):
@@ -131,7 +114,7 @@ class McprepQuickMenu(bpy.types.Menu):
 
 	def draw(self, context):
 		layout = self.layout
-		layout = self.layout
+		props = context.scene.mcprep_props
 
 		if conf.preview_collections["main"] != "":
 			spawner_icon = conf.preview_collections["main"]["spawner_icon"]
@@ -142,7 +125,7 @@ class McprepQuickMenu(bpy.types.Menu):
 			grass_icon=None
 			sword_icon=None
 
-		if len(conf.rig_list)==0 or len(conf.meshswap_list)==0:
+		if not props.mob_list or not props.meshswap_list or not props.item_list:
 			row = layout.row()
 			row.operator("mcprep.reload_spawners", text="Load spawners", icon='HAND')
 			row.scale_y = 2
@@ -692,18 +675,18 @@ class McprepSkinsPanel(bpy.types.Panel):
 			b_row.operator("mcprep.reload_skins")
 			if context.mode == "OBJECT":
 				row = b_row.row(align=True)
-				if len (conf.rig_list_sub)==0:
+				if not scn_props.mob_list:
 					row.enabled = False
-					row.operator("mcprep.spawn_with_skin","Reload mobs below")
+					row.operator("mcprep.spawn_with_skin", "Reload mobs below")
 				elif len (conf.skin_list)==0:
 					row.enabled = False
 					row.operator("mcprep.spawn_with_skin","Reload skins above")
 				else:
-					name = conf.rig_list_sub[mob_ind][1]
-					datapass = conf.rig_list_sub[mob_ind][0]
+					name = scn_props.mob_list[mob_ind].name
+					datapass = scn_props.mob_list[mob_ind].mcmob_type
 					tx = "Spawn {x} with {y}".format(
 								x=name, y=skinname)
-					row.operator("mcprep.spawn_with_skin",tx)
+					row.operator("mcprep.spawn_with_skin", tx)
 
 
 class McprepSpawnPanel(bpy.types.Panel):
@@ -734,12 +717,6 @@ class McprepSpawnPanel(bpy.types.Panel):
 		split = layout.split()
 		col = split.column(align=True)
 
-		# any other conditions for needing reloading?
-		# if not conf.rig_list or not scn_props.mob_list:
-		# 	rigs_found = False
-		# else:
-		# 	rigs_found = True
-
 		row = col.row()
 		row.prop(scn_props, "spawn_rig_category", text="")
 		if scn_props.mob_list:
@@ -748,6 +725,17 @@ class McprepSpawnPanel(bpy.types.Panel):
 					scn_props, "mob_list",
 					scn_props, "mob_list_index",
 					rows=4)
+		elif scn_props.mob_list_all:
+			box = col.box()
+			b_row = box.row()
+			b_row.label("")
+			b_col = box.column()
+			b_col.scale_y = 0.7
+			b_col.label("No mobs in category,")
+			b_col.label("install a rig below or")
+			b_col.label("copy file to folder.")
+			b_row = box.row()
+			b_row.label("")
 		else:
 			box = col.box()
 			b_row = box.row()
@@ -758,19 +746,19 @@ class McprepSpawnPanel(bpy.types.Panel):
 
 		# get which rig is selected
 		if scn_props.mob_list:
-			name = conf.rig_list_sub[scn_props.mob_list_index][1]
-			datapass = conf.rig_list_sub[scn_props.mob_list_index][0]
+			name = scn_props.mob_list[scn_props.mob_list_index].name
+			mcmob_type = scn_props.mob_list[scn_props.mob_list_index].mcmob_type
 		else:
 			name = ""
-			datapass = ""
+			mcmob_type = ""
 		# col.label(scn_props.mob_list[scn_props.mob_list_index].name)  # datapass.split(":/:")[0])
 		col = layout.column(align=True)
 		row = col.row(align=True)
 		row.scale_y = 1.5
 		row.enabled = len(scn_props.mob_list)>0
-		p = row.operator("mcprep.mob_spawner","Spawn "+name)
-		# p.mcmob_type = datapass.split(":/:")[0] # datapass
-		# p.mcmob_type = datapass path
+		p = row.operator("mcprep.mob_spawner", "Spawn "+name)
+		if mcmob_type:
+			p.mcmob_type = mcmob_type
 		p = col.operator("mcprep.mob_install_menu")
 		p.mob_category = scn_props.spawn_rig_category
 
@@ -808,13 +796,7 @@ class McprepSpawnPanel(bpy.types.Panel):
 		split = layout.split()
 		col = split.column(align=True)
 
-		# any other conditions for needing reloading?
-		if not conf.rig_list or not scn_props.meshswap_list:
-			meshswaps_found = False
-		else:
-			meshswaps_found = True
-
-		if meshswaps_found:
+		if scn_props.meshswap_list:
 			col.template_list("McprepMeshswapUiList", "",
 					scn_props, "meshswap_list",
 					scn_props, "meshswap_list_index",
@@ -839,12 +821,12 @@ class McprepSpawnPanel(bpy.types.Panel):
 		col = layout.column(align=True)
 		row = col.row()
 		row.scale_y = 1.5
-		row.enabled = meshswaps_found
-		if meshswaps_found:
-			name = conf.meshswap_list[scn_props.meshswap_list_index][1]
-			p = row.operator("mcprep.meshswap_spawner","Place: "+name)
-			datapass = conf.meshswap_list[scn_props.meshswap_list_index][0]
-			p.meshswap_block = datapass
+		row.enabled = len(scn_props.meshswap_list)>0
+		if scn_props.meshswap_list:
+			name = scn_props.meshswap_list[scn_props.meshswap_list_index].name
+			block = scn_props.meshswap_list[scn_props.meshswap_list_index].block
+			p = row.operator("mcprep.meshswap_spawner", "Place: "+name)
+			p.block = block
 			p.location = context.scene.cursor_location
 		else:
 			row.operator("mcprep.meshswap_spawner", "Place block")

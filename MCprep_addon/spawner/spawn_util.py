@@ -63,7 +63,7 @@ class McprepSpawnPathReset(bpy.types.Operator):
 
 		addon_prefs = util.get_prefs()
 		context.scene.mcprep_mob_path = addon_prefs.mob_path
-		mobs.updateRigList(context)
+		mobs.update_rig_list(context)
 		return {'FINISHED'}
 
 
@@ -76,8 +76,9 @@ class McprepMobUiList(bpy.types.UIList):
 	"""For mob asset listing UIList drawing"""
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
-			col = layout.column()
-			col.prop(set, "name", text="", emboss=False)
+			# col = layout.column()
+			# col.prop(set, "name", text="", emboss=False)
+			layout.label(set.name)
 
 		elif self.layout_type in {'GRID'}:
 			layout.alignment = 'CENTER'
@@ -89,7 +90,8 @@ class McprepMeshswapUiList(bpy.types.UIList):
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
 			col = layout.column()
-			col.prop(set, "name", text="", emboss=False)
+			layout.label(set.name)
+			# col.prop(set, "name", text="", emboss=False)
 
 		elif self.layout_type in {'GRID'}:
 			layout.alignment = 'CENTER'
@@ -117,27 +119,26 @@ class McprepItemUiList(bpy.types.UIList):
 
 class ListMobAssetsAll(bpy.types.PropertyGroup):
 	"""For listing hidden group of all mobs, regardless of category"""
+	description = bpy.props.StringProperty()
+	category = bpy.props.StringProperty()
+	mcmob_type = bpy.props.StringProperty()
 
 
 class ListMobAssets(bpy.types.PropertyGroup):
 	"""For UI drawing of mob assets and holding data"""
-	label = bpy.props.StringProperty()  # depreciate
 	description = bpy.props.StringProperty()
 
 	# TODO: add in fields here to avoid having data in conf
 	# local = bpy.props.StringProperty()  # is this the path?
 	category = bpy.props.StringProperty()  # category it belongs to
-	path = bpy.props.StringProperty()  # blend file path
-	group = bpy.props.StringProperty()  # group/collection name to append
-	# name = bpy.props.StringProperty() # label is Title'd
+	# relative_path = bpy.props.StringProperty()  # blend file path
+	mcmob_type = bpy.props.StringProperty()
 
 
 class ListMeshswapAssets(bpy.types.PropertyGroup):
 	"""For UI drawing of meshswap assets and holding data"""
-	label = bpy.props.StringProperty()
+	block = bpy.props.StringProperty()  # virtual enum, Group/name
 	description = bpy.props.StringProperty()
-
-	# TODO: use this over that in the meshswap file
 
 
 class ListItemAssets(bpy.types.PropertyGroup):

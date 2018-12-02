@@ -128,6 +128,87 @@ def loadSkinFile(self, context, filepath, new_material=False):
 	return 0
 
 
+def convert_skin_layout(image_file):
+	"""Convert skin to 1.8+ layout if old format detected
+
+	Could be improved using numpy, but avoiding the dependency.
+	"""
+
+	if not os.path.isfile(image_file):
+		conf.log("Error! Image file does not exist: "+image_file)
+		return
+
+	img = bpy.data.images.load(image_file)
+	if img.size[0] == img.size[1]:
+		return
+	elif img.size[0] != img.size[1]*2:
+		# some image that isn't the normal 64x32 of old skin formats
+		conf.log("Unknown skin image format, not converting layout")
+		return
+	elif img.size[0]/64 != int(img.size[0]/64):
+		conf.log("Non-regular scaling of skin image, can't process")
+		return
+
+	conf.log("Old image format detected, converting to post 1.8 layout")
+
+	scale = int(img.size[0]/64)
+	has_alpha = img.channels == 4
+	new_image = bpy.data.images.new(
+		name=os.path.basename(image_file),
+		width=img.size[0],
+		height=img.size[1]*2,
+		alpha=has_alpha)
+
+	# copy pixels of old format into top half of new format, and save to file
+	# and copy the right arm and leg pixels to the lower half
+	upper_half = list(img.pixels)
+	lower_half_quarter = [0]*int(len(new_image.pixels)/4)
+	lower_half = []
+	failout = False
+
+	# Copy over the arm and leg to lower half, accounting for image scale
+	# Take it in strips of 16 units at a time per row
+	block_width = int(img.size[0]*img.channels/4) # quarter of image width
+	for i in range(int(len(lower_half_quarter)/block_width)):
+		# pixel row rounds down, row 0 = bottom row
+		row = int(i*block_width/(64*scale*img.channels))
+		# virtual column, not pixel column
+		col = (i*block_width)%(64*scale*img.channels)
+		# 0-3 index, L->R order: blank, leg, arm, blank
+		block = int(col/64)
+		if block == 0 or block == 3:
+			lower_half += [0]*block_width
+		elif block == 1:
+			# Here we are copying the leg from block 1/4 (src) into block 2/4
+			start = row*block_width*4
+			end = row*block_width*4 + block_width
+			lower_half += upper_half[int(start):int(end)]
+		elif block == 2:
+			# Here we are copying the arm from block 2.5 (src) into block 3/4
+			start = row*block_width*4 + block_width*2.5
+			end = row*block_width*4 + block_width + block_width*2.5
+			lower_half += upper_half[int(start):int(end)]
+		else:
+			conf.log("Bad math! Should never go above 4 blocks")
+			failout = True
+			break
+
+	# Do final combinations of quarters and halves
+	if not failout:
+		lower_half += lower_half_quarter
+		new_pixels = lower_half + upper_half
+		new_image.pixels = new_pixels
+		new_image.filepath_raw = image_file
+		new_image.save()
+		conf.log("Saved out post 1.8 converted skin file")
+
+	# cleanup files
+	img.user_clear()
+	new_image.user_clear()
+	bpy.data.images.remove(img)
+	bpy.data.images.remove(new_image)
+
+
 def getMatsFromSelected(selected,new_material=False):
 	"""Get materials, and if new material provided, ensure material slot
 	is added"""
@@ -249,8 +330,8 @@ class McprepApplySkin(bpy.types.Operator):
 	new_material = bpy.props.BoolProperty(
 		name = "New Material",
 		description = "Create a new material instead of overwriting existing one",
-		default = True,
-		options = {'HIDDEN'})
+		default = True
+		)
 
 	track_function = "skin"
 	track_param = "ui list"
@@ -273,15 +354,27 @@ class McprepApplyUsernameSkin(bpy.types.Operator):
 	username = bpy.props.StringProperty(
 		name="Username",
 		description="Exact name of user to get texture from",
-		default="")
-
+		default=""
+	)
 	skip_redownload = bpy.props.BoolProperty(
 		name="Skip download if skin already local",
 		description="Avoid re-downloading skin and apply local file instead",
-		default=True)
+		default=True
+	)
+	new_material = bpy.props.BoolProperty(
+		name = "New Material",
+		description = "Create a new material instead of overwriting existing one",
+		default = True
+	)
+	convert_layout = bpy.props.BoolProperty(
+		name = "Convert pre 1.8 skins",
+		description = "If an older skin layout (pre Minecraft 1.8) is detected, convert to new format (with clothing layers)",
+		default = True
+	)
 
 	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self, width=400*util.ui_scale())
+		return context.window_manager.invoke_props_dialog(self,
+			width=400*util.ui_scale())
 
 	def draw(self, context):
 		self.layout.label("Enter exact Minecraft username below")
@@ -306,15 +399,19 @@ class McprepApplyUsernameSkin(bpy.types.Operator):
 			res = self.download_user(context)
 			return res
 		else:
-			if conf.v: print("Reusing downloaded skin")
+			conf.log("Reusing downloaded skin")
 			ind = skins.index(self.username.lower())
-			res = loadSkinFile(self, context, paths[ind][1])
+			res = loadSkinFile(self, context, paths[ind][1], self.new_material)
 			if res != 0:
 				return {'CANCELLED'}
 			return {'FINISHED'}
 
 	def download_user(self, context):
-		#http://minotar.net/skin/theduckcow
+		"""Download user skin from online.
+
+		Example link: http://minotar.net/skin/theduckcow
+		"""
+
 		src_link = "http://minotar.net/skin/"
 		saveloc = os.path.join(bpy.path.abspath(context.scene.mcprep_skin_path),
 								self.username.lower()+".png")
@@ -334,7 +431,11 @@ class McprepApplyUsernameSkin(bpy.types.Operator):
 			self.report({"ERROR"},"Error occured while downloading skin: "+str(e))
 			return {'CANCELLED'}
 
-		res = loadSkinFile(self, context, saveloc)
+		# convert to 1.8 skin as needed (double height)
+		if self.convert_layout:
+			convert_skin_layout(saveloc)
+
+		res = loadSkinFile(self, context, saveloc, self.new_material)
 		if res != 0:
 			return {'CANCELLED'}
 		bpy.ops.mcprep.reload_skins()
@@ -342,7 +443,7 @@ class McprepApplyUsernameSkin(bpy.types.Operator):
 
 
 class McprepSkinFixEyes():  # bpy.types.Operator
-	"""AFix the eyes of a rig to fit a rig"""
+	"""Fix the eyes of a rig to fit a rig"""
 	bl_idname = "mcprep.fix_skin_eyes"
 	bl_label = "Fix eyes"
 	bl_description = "Fix the eyes of a rig to fit a rig"
@@ -351,7 +452,7 @@ class McprepSkinFixEyes():  # bpy.types.Operator
 	# initial_eye_type: unknown (default), 2x2 square, 1x2 wide.
 
 	@tracking.report_error
-	def execute(self,context):
+	def execute(self, context):
 		# take the active texture input (based on selection)
 		print("fix eyes")
 		self.report({'ERROR'}, "Work in progress operator")
@@ -370,6 +471,12 @@ class McprepAddSkin(bpy.types.Operator, ImportHelper):
 			)
 	fileselectparams = "use_filter_blender"
 	files = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
+
+	convert_layout = bpy.props.BoolProperty(
+		name = "Convert pre 1.8 skins",
+		description = "If an older skin layout (pre Minecraft 1.8) is detected, convert to new format (with clothing layers)",
+		default = True
+	)
 
 	@tracking.report_error
 	def execute(self,context):
@@ -390,6 +497,10 @@ class McprepAddSkin(bpy.types.Operator, ImportHelper):
 		# copy the skin file
 		shutil.copy2(source_location, new_location)
 
+		# convert to 1.8 skin as needed (double height)
+		if self.convert_layout:
+			convert_skin_layout(new_location)
+
 		# in future, select multiple
 		bpy.ops.mcprep.reload_skins()
 		self.report({"INFO"},"Added 1 skin") # more in the future
@@ -403,15 +514,16 @@ class McprepRemoveSkin(bpy.types.Operator):
 	bl_description = "Remove a skin from the active folder (will delete file)"
 
 	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self, width=400*util.ui_scale())
+		return context.window_manager.invoke_props_dialog(
+			self, width=400*util.ui_scale())
 
 	def draw(self, context):
 		skin_path = conf.skin_list[context.scene.mcprep_skins_list_index]
 		col = self.layout.column()
 		col.scale_y = 0.7
-		col.label("Warning, will delete file:")
-		col.label("File: "+os.path.basename(skin_path[0]))
-		col.label("Folder: "+os.path.dirname(skin_path[-1]))
+		col.label("Warning, will delete file {} from".format(
+			os.path.basename(skin_path[0])))
+		col.label(os.path.dirname(skin_path[-1]))
 
 	@tracking.report_error
 	def execute(self,context):
@@ -469,7 +581,8 @@ class McprepSpawn_with_skin(bpy.types.Operator):
 	relocation = bpy.props.EnumProperty(
 		items = [('None', 'Cursor', 'No relocation'),
 				('Clear', 'Origin', 'Move the rig to the origin'),
-				('Offset', 'Offset root','Offset the root bone to curse while moving the rest pose to the origin')],
+				('Offset', 'Offset root',
+					'Offset the root bone to curse while moving the rest pose to the origin')],
 		name = "Relocation")
 	toLink = bpy.props.BoolProperty(
 		name = "Library Link",
@@ -486,6 +599,7 @@ class McprepSpawn_with_skin(bpy.types.Operator):
 	track_param = None
 	@tracking.report_error
 	def execute(self, context):
+		scn_props = context.scene.mcprep_props
 		if len (conf.skin_list)>0:
 			skinname = bpy.path.basename(
 					conf.skin_list[context.scene.mcprep_skins_list_index][0] )
@@ -493,12 +607,12 @@ class McprepSpawn_with_skin(bpy.types.Operator):
 			self.report({'ERROR'}, "No skins found")
 			return {'CANCELLED'}
 
-		active_mob = conf.rig_list_sub[context.scene.mcprep_props.mob_list_index][0]
-		self.track_param = active_mob
+		mob = scn_props.mob_list[scn_props.mob_list_index]
+		self.track_param = mob.name
 
 		# try not to use internal ops because of analytics
 		bpy.ops.mcprep.mob_spawner(
-				mcmob_type=active_mob,
+				mcmob_type=mob.mcmob_type,
 				relocation = self.relocation,
 				toLink = self.toLink,
 				clearPose = self.clearPose)
@@ -516,12 +630,12 @@ class McprepSpawn_with_skin(bpy.types.Operator):
 
 
 def register():
-	bpy.types.Scene.mcprep_skins_list = \
-			bpy.props.CollectionProperty(type=ListColl)
+	bpy.types.Scene.mcprep_skins_list = bpy.props.CollectionProperty(
+		type=ListColl)
 	bpy.types.Scene.mcprep_skins_list_index = bpy.props.IntProperty(default=0)
 
 	# to auto-load the skins
-	if conf.vv:print("Adding reload skin handler to scene")
+	conf.log("Adding reload skin handler to scene", vv_only=True)
 	try:
 		bpy.app.handlers.scene_update_pre.append(handler_skins_enablehack)
 	except:

@@ -17,7 +17,6 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import os
-import json
 
 import bpy
 
@@ -89,7 +88,7 @@ def init():
 
 	# if new update file found from install, replace old one with new
 	if os.path.isfile(json_path_update):
-		if os.path.isfile(json_path) == True:
+		if os.path.isfile(json_path) is True:
 			os.remove(json_path)
 		os.rename(json_path_update, json_path)
 
@@ -103,38 +102,7 @@ def init():
 	use_icons = True
 	global preview_collections
 	preview_collections = {}
-	global thumb_ids
-	thumb_ids = {}
 
-	# actual setup/icon loading in the according files
-
-
-	# -----------------------------------------------
-	# For installing assets
-	# -----------------------------------------------
-
-	global count_install_assets
-	count_install_assets = 0
-	global missing_assets
-	missing_assets = []
-	global missing_details
-	missing_details = ""
-	global asset_filepath
-	asset_filepath = ""
-	global assets_installed
-	assets_installed = False
-
-
-	# -----------------------------------------------
-	# For installing assets
-	# -----------------------------------------------
-
-	global update_ready
-	update_ready = False
-
-	# in a background thread, connect to see if ready.
-	# have an internal count thing that requests to enable checking
-	# or force users to decide after 5 uses, ie blocking the panels
 
 	# -----------------------------------------------
 	# For initializing the custom icons
@@ -148,25 +116,8 @@ def init():
 	global skin_list
 	skin_list = [] # each is: [ basename, path ]
 
-	global rig_list
-	global rig_list_sub
 	global rig_categories
-
-	rig_list = [] # each is: [ relative path+':/:'+name+':/:'+catgry,
-				  #            name.title(),
-				  #            description ]
-	rig_list_sub = [] # shorthand for categories
 	rig_categories = [] # simple list of directory names
-
-	global active_mob
-	global active_mob_subind
-
-	# for radio button active mob
-	active_mob = "" # format "relative path+':/:'+name+':/:'+catgry"
-	active_mob_subind = -1
-
-	global meshswap_list
-	meshswap_list = []
 
 
 # -----------------------------------------------------------------------------
