@@ -89,7 +89,6 @@ class McprepMeshswapUiList(bpy.types.UIList):
 	"""For meshswap asset listing UIList drawing"""
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
-			col = layout.column()
 			layout.label(set.name)
 			# col.prop(set, "name", text="", emboss=False)
 

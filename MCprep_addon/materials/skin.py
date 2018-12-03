@@ -136,18 +136,18 @@ def convert_skin_layout(image_file):
 
 	if not os.path.isfile(image_file):
 		conf.log("Error! Image file does not exist: "+image_file)
-		return
+		return False
 
 	img = bpy.data.images.load(image_file)
 	if img.size[0] == img.size[1]:
-		return
+		return False
 	elif img.size[0] != img.size[1]*2:
 		# some image that isn't the normal 64x32 of old skin formats
 		conf.log("Unknown skin image format, not converting layout")
-		return
+		return False
 	elif img.size[0]/64 != int(img.size[0]/64):
 		conf.log("Non-regular scaling of skin image, can't process")
-		return
+		return False
 
 	conf.log("Old image format detected, converting to post 1.8 layout")
 
@@ -207,6 +207,11 @@ def convert_skin_layout(image_file):
 	new_image.user_clear()
 	bpy.data.images.remove(img)
 	bpy.data.images.remove(new_image)
+
+	if not failout:
+		return True
+	else:
+		return False
 
 
 def getMatsFromSelected(selected,new_material=False):
@@ -432,8 +437,13 @@ class McprepApplyUsernameSkin(bpy.types.Operator):
 			return {'CANCELLED'}
 
 		# convert to 1.8 skin as needed (double height)
+		converted = False
 		if self.convert_layout:
-			convert_skin_layout(saveloc)
+			converted = convert_skin_layout(saveloc)
+		if converted:
+			self.track_param = "username + 1.8 convert"
+		else:
+			self.track_param = "username"
 
 		res = loadSkinFile(self, context, saveloc, self.new_material)
 		if res != 0:
@@ -478,6 +488,8 @@ class McprepAddSkin(bpy.types.Operator, ImportHelper):
 		default = True
 	)
 
+	track_function = "add_skin"
+	track_param = None
 	@tracking.report_error
 	def execute(self,context):
 
@@ -498,8 +510,13 @@ class McprepAddSkin(bpy.types.Operator, ImportHelper):
 		shutil.copy2(source_location, new_location)
 
 		# convert to 1.8 skin as needed (double height)
+		converted = False
 		if self.convert_layout:
-			convert_skin_layout(new_location)
+			converted = convert_skin_layout(new_location)
+		if converted is True:
+			self.track_param = "1.8 convert"
+		else:
+			self.track_param = None
 
 		# in future, select multiple
 		bpy.ops.mcprep.reload_skins()
@@ -579,8 +596,8 @@ class McprepSpawn_with_skin(bpy.types.Operator):
 	bl_description = "Spawn rig and apply selected skin"
 
 	relocation = bpy.props.EnumProperty(
-		items = [('None', 'Cursor', 'No relocation'),
-				('Clear', 'Origin', 'Move the rig to the origin'),
+		items = [('Cursor', 'Cursor', 'No relocation'),
+				('Origin', 'Origin', 'Move the rig to the origin'),
 				('Offset', 'Offset root',
 					'Offset the root bone to curse while moving the rest pose to the origin')],
 		name = "Relocation")
