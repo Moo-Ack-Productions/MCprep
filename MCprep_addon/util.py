@@ -16,14 +16,13 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import bpy
 import json
 import os
 import random
 import subprocess
+from subprocess import Popen, PIPE
 
-
-from subprocess import Popen, PIPE, call
+import bpy
 
 from . import conf
 
@@ -53,35 +52,24 @@ def nameGeneralize(name):
 	return name
 
 
-def materialsFromObj(objList):
-	"""Gets all materials on input list of objects. Loop over every object,
-	adding each material if not already added"""
-	matList = []
-	for obj in objList:
+def materialsFromObj(obj_list):
+	"""Gets all materials on input list of objects.
+
+	Loop over every object, adding each material if not already added
+	"""
+
+	mat_list = []
+	for obj in obj_list:
 		if obj.dupli_group:
-			for a in obj.dupli_group.objects:
-				objList.append(a)
-		if obj.type != 'MESH': continue
-		objectsMaterials = obj.material_slots
-		for materialID in objectsMaterials:
-			if materialID.material not in matList:
-				matList.append(materialID.material)
-	return matList
-
-
-def texturesFromMaterials(matList):
-	"""Gets all textures on input list of materials
-	currently not used, some issue in getting NoneTypes"""
-	# (line if textureID.texture in..)
-	if len(matList)==0: return []
-	texList = []
-	for mat in matList:
-		materialTextures = mat.texture_slots
-		if len(materialTextures)==0: return []
-		for textureID in materialTextures:
-			if textureID.texture not in texList:
-				texList.append(textureID.texture)
-	return texList
+			for dup_obj in obj.dupli_group.objects:
+				obj_list.append(dup_obj)
+		if obj.type != 'MESH':
+			continue
+		object_materials = obj.material_slots
+		for material_block in object_materials:
+			if material_block.material not in mat_list:
+				mat_list.append(material_block.material)
+	return mat_list
 
 
 def bAppendLink(directory, name, toLink, active_layer=True):
@@ -89,7 +77,7 @@ def bAppendLink(directory, name, toLink, active_layer=True):
 	this function generalized appending/linking
 	blender post 2.71 changed to new append/link methods"""
 
-	if conf.vv:print("Appending ", directory, " : ", name)
+	conf.log("Appending " + directory + " : " + name, vv_only=True)
 	post272 = False
 	try:
 		version = bpy.app.version
@@ -99,23 +87,23 @@ def bAppendLink(directory, name, toLink, active_layer=True):
 		pass #  "version" didn't exist before 72!
 	#if (version[0] >= 2 and version[1] >= 72):
 
-	if conf.v: print("DEBUG 2.8 loader",version, post272, post280)
 	# for compatibility, add ending character
 	if directory[-1] != "/" and directory[-1] != os.path.sep:
 		directory += os.path.sep
 
 	if post272:
-		if conf.vv:print("Using post-2.72 method of append/link")
+		conf.log("Using post-2.72 method of append/link", vv_only=True)
 		# new method of importing
 
 		if toLink:
 			bpy.ops.wm.link(directory=directory, filename=name)
-		elif post280==True:
+		elif post280 is True:
 			bpy.ops.wm.append(
 					directory=directory,
 					filename=name
 					)
 		else:
+			conf.log("{} {} {}".format(directory, name, active_layer))
 			bpy.ops.wm.append(
 					directory=directory,
 					filename=name,
@@ -123,7 +111,7 @@ def bAppendLink(directory, name, toLink, active_layer=True):
 					) #, activelayer=True
 	else:
 		# OLD method of importing
-		if conf.vv:print("Using old method of append/link, 2.72 <=")
+		conf.log("Using old method of append/link, 2.72 <=", vv_only=True)
 		bpy.ops.wm.link_append(directory=directory, filename=name, link=toLink)
 
 
@@ -186,11 +174,10 @@ def randomizeMeshSawp(swap,variations):
 	randi=''
 	if swap == 'torch':
 		randomized = random.randint(0,variations-1)
-		#print("## "+str(randomized))
-		if randomized != 0: randi = ".{x}".format(x=randomized)
+		if randomized != 0:
+			randi = ".{x}".format(x=randomized)
 	elif swap == 'Torch':
 		randomized = random.randint(0,variations-1)
-		#print("## "+str(randomized))
 		if randomized != 0: randi = ".{x}".format(x=randomized)
 	return swap+randi
 
@@ -213,13 +200,13 @@ def loadTexture(texture):
 		if bpy.path.abspath(bpy.data.images[base].filepath) == bpy.path.abspath(texture):
 			data_img = bpy.data.images[base]
 			data_img.reload()
-			if conf.vv:print("Using already loaded texture")
+			conf.log("Using already loaded texture", vv_only=True)
 		else:
 			data_img = bpy.data.images.load(texture)
-			if conf.vv:print("Loading new texture image")
+			conf.log("Loading new texture image", vv_only=True)
 	else:
 		data_img = bpy.data.images.load(texture)
-		if conf.vv:print("Loading new texture image")
+		conf.log("Loading new texture image", vv_only=True)
 	return data_img
 
 
@@ -266,8 +253,6 @@ def open_program(executable):
 	if err != b"":
 		return "Error occured while trying to open Sync: "+str(err)
 
-	# print("stdout?")
-	# print(stdout)
 	return 0
 
 
@@ -288,23 +273,23 @@ def open_folder_crossplatform(folder):
 	try:
 		# windows... untested
 		subprocess.Popen('explorer "{x}"'.format(x=folder))
-		#return True
+		return True
 	except:
 		try:
 			# mac... works on Yosemite minimally
 			subprocess.call(["open", folder])
-			#return True
+			return True
 		except:
 			# linux
 			try:
 				subprocess.call(["xdg-open", folder])
-				#return True
+				return True
 			except:
 				return False
 
 
 def exec_path_expand(self, context):
-	# Fix/update the mineways path for any oddities
+	"""Fix/update the mineways path for any oddities"""
 
 	# code may trigger twice
 	path = self.open_mineways_path
@@ -325,12 +310,12 @@ def exec_path_expand(self, context):
 		# >> end command SHOULD be open Mineways.app.
 
 
-def addGroupInstance(groupName, loc, select=True):
+def addGroupInstance(group_name, loc, select=True):
 	"""Add object instance not working, so workaround function."""
 	scene = bpy.context.scene
-	ob = bpy.data.objects.new(groupName, None)
+	ob = bpy.data.objects.new(group_name, None)
 	ob.dupli_type = 'GROUP'
-	ob.dupli_group = bpy.data.groups.get(groupName) #.. why not more directly?
+	ob.dupli_group = bpy.data.groups.get(group_name)
 	scene.objects.link(ob)
 	ob.location = loc
 	ob.select = select
@@ -346,7 +331,6 @@ def load_mcprep_json():
 			"water":[],
 			"solid":[],
 			"emit":[],
-			"solid":[],
 			"desaturated":[],
 			"animated":[],
 			"block_mapping_mc":{},
@@ -355,21 +339,17 @@ def load_mcprep_json():
 		}
 	}
 	if not os.path.isfile(path):
-		if conf.v:
-			print("Error, json file does not exist: ")
-			print(path)
-			# could pull from online
+		conf.log("Error, json file does not exist: " + path)
 		conf.json_data = default
 		return False
 	with open(path) as data_file:
 		try:
 			conf.json_data = json.load(data_file)
-			if conf.v:
-				print("Successfully read the JSON file")
+			conf.log("Successfully read the JSON file")
 			return True
-		except Exception as e:
+		except Exception as err:
 			print("Failed to load json file:")
-			print('\t',e)
+			print('\t', err)
 			conf.json_data = default
 
 def ui_scale():
@@ -377,7 +357,7 @@ def ui_scale():
 	prefs = bpy.context.user_preferences
 	if not hasattr(prefs, "view"):
 		return 1
-	if hasattr(prefs.view, "ui_scale") and hasattr(prefs.view, "pixel_size"):
+	elif hasattr(prefs.view, "ui_scale") and hasattr(prefs.view, "pixel_size"):
 		return prefs.view.ui_scale * prefs.system.pixel_size
 	elif hasattr(prefs.system, "dpi"):
 		return prefs.system.dpi/72
@@ -389,19 +369,22 @@ def get_prefs():
 	"""Function to easily get prefs even in subclasses and folders."""
 	return bpy.context.user_preferences.addons[__package__].preferences
 
-# ---------
-# or instead of this, a class which keeps record of inputs and interprets
-# the state output as per blender norm, e.g. transformmodal(3d=False) keeps stream
-# of the transform operations and options, ignoring the rest, including interpreting
-# of toggles of axis etc. stream output in standard way, e.g. [val, mods]
-# Examples of transform stream:
-# -/2x becomes [-0.5, 'x']
-# -/2x/ becomes [-2, 'x']
-# but! it shouldn't just append the string... that could become memory leak...
-# it should save the STATE of the stream at any given moment internally
-# should it should be an instance of a class variable, with functions on that class
-# shared
-class event_stream(): #class event_stream(Object)
+
+class event_stream():
+	"""Class for reuse in streaming modals
+
+	or instead of this, a class which keeps record of inputs and interprets
+	the state output as per blender norm, e.g. transformmodal(3d=False) keeps stream
+	of the transform operations and options, ignoring the rest, including interpreting
+	of toggles of axis etc. stream output in standard way, e.g. [val, mods]
+	Examples of transform stream:
+	-/2x becomes [-0.5, 'x']
+	-/2x/ becomes [-2, 'x']
+	but! it shouldn't just append the string... that could become memory leak...
+	it should save the STATE of the stream at any given moment internally
+	should it should be an instance of a class variable, with functions on that class
+	shared
+	"""
 
 	# global event vars
 	nums = ['NUMPAD_0','zero',
@@ -423,8 +406,8 @@ class event_stream(): #class event_stream(Object)
 	# modifiers
 	mods = ['shift?','alt?','ctrl?','OSKEY',"etc....."]
 
-	# initializations
 	def __init__(self):
+		"""Object initialization"""
 		self.x=False
 		self.y=False
 		self.z=False
@@ -432,8 +415,8 @@ class event_stream(): #class event_stream(Object)
 		self.value=None # if None, then no value initially set
 		self.valuestr=None # not sure if needed, but keep value as string for padding
 
-	# streaming functions
 	def stream_transform(self, val,two_dim=False):
+		"""Streaming functions"""
 		# interpret val, and update state
 		if val in self.neg_vals:
 			# if not yet initialized for use, set to True, else toggle
@@ -441,7 +424,7 @@ class event_stream(): #class event_stream(Object)
 		# elif val in ...
 
 	def getKeyval(self, event):
-
+		"""Key evaluations for modal"""
 		if event.type in self.nums:
 			return ["INTEGER", self.nums_eval[self.nums.index(event.type)]]
 		elif event.type in self.neg:

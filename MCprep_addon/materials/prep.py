@@ -186,7 +186,7 @@ class McprepPrepMaterials(bpy.types.Operator):
 
 
 class McprepMaterialHelp(bpy.types.Operator):
-	"""Follow up popup to assist the user who may not have gotten expected change."""
+	"""Follow up popup to assist the user who may not have gotten expected change"""
 	bl_idname = "mcprep.prep_materials_help"
 	bl_label = "MCprep Materials Help"
 	bl_options = {'REGISTER', 'UNDO'}
@@ -350,7 +350,7 @@ class McprepSwapTexturePack(bpy.types.Operator, ImportHelper):
 		self.track_exporter = exporter
 
 		# set the scene's folder for the texturepack being swapped
-		context.scene.mcprep_custom_texturepack_path = folder
+		context.scene.mcprep_texturepack_path = folder
 
 		if conf.v: print("Materials detected:",len(mat_list))
 		res = 0
@@ -373,7 +373,7 @@ class McprepResetTexturepackPath(bpy.types.Operator):
 	@tracking.report_error
 	def execute(self, context):
 		addon_prefs = util.get_prefs()
-		context.scene.mcprep_custom_texturepack_path = addon_prefs.custom_texturepack_path
+		context.scene.mcprep_texturepack_path = addon_prefs.custom_texturepack_path
 		return {'FINISHED'}
 
 
@@ -407,14 +407,16 @@ class McprepCombineMaterials(bpy.types.Operator):
 		name_cat = {}
 
 		def getMaterials(self, context):
-			if self.selection_only == False:
+			if self.selection_only is False:
 				return bpy.data.materials
 			else:
 				mats = []
 				for ob in bpy.data.objects:
 					for sl in ob.material_slots:
-						if sl == None or sl.material == None:continue
-						if sl.material in mats:continue
+						if sl is None or sl.material is None:
+							continue
+						if sl.material in mats:
+							continue
 						mats.append(sl.material)
 				return mats
 
@@ -553,8 +555,8 @@ class McprepCombineImages(bpy.types.Operator):
 		if bpy.app.version < (2,78):
 			for ob in bpy.data.objects:
 				for sl in ob.material_slots:
-					if sl == None or sl.material == None:continue
-					if sl.material not in data: continue # selection only
+					if sl is None or sl.material is None or sl.material not in data:
+						continue # selection only
 					sl.material = data[name_cat[ util.nameGeneralize(sl.material.name) ][0]]
 			# doesn't remove old textures, but gets it to zero users
 
@@ -567,16 +569,15 @@ class McprepCombineImages(bpy.types.Operator):
 
 		# perform the consolidation with one basename set at a time
 		for base in name_cat:
-			if len(base)<2: continue
-
+			if len(base)<2:
+				continue
 			name_cat[base].sort() # in-place sorting
 			baseImg = bpy.data.images[ name_cat[base][0] ]
 
 			for imgname in name_cat[base][1:]:
-
 				# skip if fake user set
-				if bpy.data.images[imgname].use_fake_user == True: continue
-
+				if bpy.data.images[imgname].use_fake_user is True:
+					continue
 				# otherwise, remap
 				util.remap_users(data[imgname],baseImg)
 				old = bpy.data.images[imgname]
@@ -602,92 +603,25 @@ class McprepCombineImages(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class McprepScaleUV():  # bpy.types.Operator
+class McprepScaleUV(bpy.types.Operator):
 	bl_idname = "mcprep.scale_uv"
-	bl_label = "Scale Faces"
-	bl_description = "Scale all selected UV faces"
+	bl_label = "Scale UV Faces"
+	bl_description = "Scale all selected UV faces. See F6 or redo-last panel to adjust factor"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	scale = bpy.props.FloatProperty(default=1.0,name="Scale")
-	first_mouse_x = bpy.props.IntProperty() # hidden
-	first_mouse_y = bpy.props.IntProperty() # hidden
-	initial_UV = []
+	scale = bpy.props.FloatProperty(default=0.75, name="Scale")
 	skipUsage = bpy.props.BoolProperty(
 		default = False,
 		options = {'HIDDEN'}
 		)
-	ob = None
 
-	# 1) Need to save orig_center (x,y) point of all selected faces
-	# 2) factor ALWAYS = sqrtdist(initial center - current xy)/sqrtdist(initial_medium - orig_xy)
-	# 3) and the sign (positive or negative) is from dot product (scalar) agaisnt orig
-	#    vector direction of orig_xy - orig_center
-	# 4) Draw a dotted line from curser loc to said origin, plus  in/out arrows aligned to vector
-	# 5) Add scale values update parameter in view below on window
-	# 6) Add ability to enter text value for scale e.g. type in 0.5 during modal
+	@classmethod
+	def poll(cls, context):
+		return context.mode == 'EDIT_MESH' or (
+			context.mode == 'OBJECT' and context.object)
 
-	# It already works for individual faces...
-	# but not when their borders are already touching (which is the use case here)
-
-	# @classmethod
-	# def poll(cls, context):
-	# 	return context.mode == 'EDIT' or (context.mode == 'OBJECT' and context.object)
-
-	def modal(self, context, event):
-		print("EEEVVEENNT: ", event.type,event,type(event))
-		if event.type == 'MOUSEMOVE':
-			delta = event.mouse_x - self.first_mouse_x
-			#context.object.location.x = self.first_value + delta * 0.01
-			# bpy.ops.object.mode_set(mode="OBJECT")
-			factor = 1+delta*0.01
-			# ret = self.scale_UV_faces(context, ob, factor)
-			ret = self.scale_UV_faces(context, self.ob, factor)
-			# bpy.ops.object.mode_set(mode="EDIT")
-
-		elif event.type in {'LEFTMOUSE', 'RET'}:
-			# set scale factor here?
-			delta = event.mouse_x - self.first_mouse_x
-			self.scale = 1+self.first_mouse_x + delta*0.01
-			bpy.ops.object.mode_set(mode="EDIT")
-			return {'FINISHED'}
-
-		elif event.type in {'RIGHTMOUSE', 'ESC'}:
-			# bpy.ops.object.mode_set(mode="OBJECT")
-			ret = self.scale_UV_faces(context, self.ob, 1) # unset back to original data
-			bpy.ops.object.mode_set(mode="EDIT")
-			return {'CANCELLED'}
-
-		return {'RUNNING_MODAL'}
-
-	def invoke(self, context, event):
-		self.ob = context.object
-		if self.ob==None:
-			self.report({'WARNING'}, "No active object found")
-			return {'CANCELLED'}
-		elif self.ob.type != 'MESH':
-			self.report({'WARNING'}, "Active object must be a mesh")
-			return {'CANCELLED'}
-		elif len(self.ob.data.polygons)==0:
-			self.report({'WARNING'}, "Active object has no faces to delete")
-			return {'CANCELLED'}
-
-		if not self.ob.data.uv_layers.active:#uv==None:
-			self.report({'WARNING'}, "No active UV map found")
-			return {'CANCELLED'}
-
-		bpy.ops.object.mode_set(mode="OBJECT")
-		self.first_mouse_x = event.mouse_x
-		#zip the data... so that format is [(x,y),(x,y)]
-		self.initial_UV = [(d.uv[0], d.uv[1])
-							for d in self.ob.data.uv_layers.active.data]
-		# print(self.initial_UV)
-		self.initial_UV = list(self.ob.data.uv_layers.active.data)
-		# bpy.ops.object.mode_set(mode="EDIT")
-		bpy.ops.object.mode_set(mode="OBJECT")
-		context.window_manager.modal_handler_add(self)
-		return {'RUNNING_MODAL'}
-
-
+	track_function = "scale_uv"
+	@tracking.report_error
 	def execute(self, context):
 
 		# INITIAL WIP
@@ -704,103 +638,219 @@ class McprepScaleUV():  # bpy.types.Operator
 		# and now, the coord to pair with uv coord:
 		matchingVertsCoord = [vertsXYZ[i] for i in matchingVertIndex]
 		"""
+		if not context.object:
+			self.report({'ERROR'}, "No active object found")
+			return {'CANCELLED'}
+		elif context.object.type != 'MESH':
+			self.report({'ERROR'}, "Active object must be a mesh")
+			return {'CANCELLED'}
+		elif not context.object.data.polygons:
+			self.report({'ERROR'}, "Active object has no faces")
+			return {'CANCELLED'}
+
+		if not context.object.data.uv_layers.active:#uv==None:
+			self.report({'ERROR'}, "No active UV map found")
+			return {'CANCELLED'}
 
 		bpy.ops.object.mode_set(mode="OBJECT")
-		ret = self.scale_UV_faces(context, bpy.context.object,self.scale)
+		ret = self.scale_uv_faces(context.object, self.scale)
 		bpy.ops.object.mode_set(mode="EDIT")
-		if ret != None:
-			self.report({ret[0]},ret[1])
-			if conf.v: print(ret[0]+", "+ret[1])
+
+		if ret is not None:
+			self.report({'ERROR'}, ret)
+			conf.log("Error, "+ret)
 			return {'CANCELLED'}
 
 		return {'FINISHED'}
 
-	def scale_UV_faces(self, context, ob, factor):
+	def scale_uv_faces(self, ob, factor):
+		"""Scale all UV face centers of an object by a given factor."""
 
-		# transform the scale factor properly to implementation below
 		factor *= -1
 		factor += 1
-		mod = False
+		modified = False
 
 		uv = ob.data.uv_layers.active
+		# initial_UV = [(d.uv[0], d.uv[1])
+		# 				for d in ob.data.uv_layers.active.data]
 
 		for f in ob.data.polygons:
-			# if not selected, won't show up in UV editor
-			if f.select!=True:continue
-			# initialize for avergae center on polygon (probably a better way exists)
-			x=y=n=0 # x,y,number of verts in loop for average purpose
+			if not f.select:
+				continue  # if not selected, won't show up in UV editor
+
+			# initialize for avergae center on polygon
+			x=y=n=0  # x,y,number of verts in loop for average purpose
 			for i in f.loop_indices:
-				l = ob.data.loops[i] # The loop entry this polygon point refers to
+				# a loop could be an edge or face
+				l = ob.data.loops[i] # This polygon/edge
 				v = ob.data.vertices[l.vertex_index]  # The vertex data that loop entry refers to
-				#print("\tLoop index", l.index, "points to vertex index", l.vertex_index,"at position", v.co)
 				# isolate to specific UV already used
-				#print("\t\tUV map coord: ", uv.data[l.index].uv)
-				if uv.data[l.index].select == False:continue
+				if not uv.data[l.index].select:
+					continue
 				x+=uv.data[l.index].uv[0]
 				y+=uv.data[l.index].uv[1]
 				n+=1
 			for i in f.loop_indices:
-				if uv.data[l.index].select == False:continue
+				if not uv.data[l.index].select:
+					continue
 				l = ob.data.loops[i]
-				# hmm.. seems initial_UV index order does NOT remain consistent
-				uv.data[l.index].uv[0] = self.initial_UV[l.index][0]*(1-factor)+x/n*(factor)
-				uv.data[l.index].uv[1] = self.initial_UV[l.index][1]*(1-factor)+y/n*(factor)
-				mod=True
-		if mod==False:
-			return ("ERROR","No UV faces selected")
+				uv.data[l.index].uv[0] = uv.data[l.index].uv[0]*(1-factor)+x/n*(factor)
+				uv.data[l.index].uv[1] = uv.data[l.index].uv[1]*(1-factor)+y/n*(factor)
+				modified = True
+		if not modified:
+			return "No UV faces selected"
 
 		return None
 
 
-class McprepIsolate_alpha_uvs(): #bpy.types.Operator
-	bl_idname = "mcprep.isolate_alpha_uvs"
-	bl_label = "Alpha faces"
-	bl_description = "Select or delete alpha faces of a mesh"
+class McprepSelectAlphaFaces(bpy.types.Operator):
+	bl_idname = "mcprep.select_alpha_faces"
+	bl_label = "Select alpha faces"
+	bl_description = "Select or delete transparent UV faces of a mesh"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	# deleteAlpha = False
+	delete = bpy.props.BoolProperty(
+		name="Delete faces",
+		description="Delete detected transparent mesh faces",
+		default = False
+		)
+	threshold = bpy.props.FloatProperty(
+		name="Threshold",
+		description="How transparent pixels need to be to select",
+		default = 0.2,
+		min=0.0,
+		max=1.0
+		)
 	skipUsage = bpy.props.BoolProperty(
 		default = False,
 		options = {'HIDDEN'}
 		)
-	delete = bpy.props.BoolProperty(
-		name="Delete faces",
-		description="Select and auto-delete transparent faces, based on active image per face",
-		default = False,
-		)
 
-	track_function = "isolate_uv"
+	@classmethod
+	def poll(cls, context):
+		return context.mode == 'EDIT_MESH'
+
+	track_function = "alpha_faces"
 	@tracking.report_error
 	def execute(self, context):
 
-		# bpy.ops.object.mode_set(mode="OBJECT")
-		# bpy.ops.object.mode_set(mode="EDIT")
+		ob = context.object
+		if ob is None:
+			self.report({"ERROR"}, "No active object found")
+			return {"CANCELLED"}
+		elif ob.type != 'MESH':
+			self.report({"ERROR"}, "Active object must be a mesh")
+			return {"CANCELLED"}
+		elif not ob.data.polygons:
+			self.report({"ERROR"}, "Active object has no faces")
+			return {"CANCELLED"}
+		elif not ob.material_slots:
+			self.report({"ERROR"}, "Active object has no materials to check image for.")
+			return {"CANCELLED"}
+		if ob.data.uv_layers.active is None:
+			self.report({"ERROR"}, "No active UV map found")
+
 		# if doing multiple objects, iterate over loop of this function
-		ret = self.select_alpha(context, context.object, 1)
-		if ret==True:
-			if self.delete: print("DELETE faces")
+		bpy.ops.mesh.select_mode(type='FACE')
+
+		# UV data only available in object mode, have to switch there and back
+		bpy.ops.object.mode_set(mode="OBJECT")
+		ret = self.select_alpha(ob, self.threshold)
+		bpy.ops.object.mode_set(mode="EDIT")
+		if ret:
+			self.report({"ERROR"}, ret)
+			return {"CANCELLED"}
+
+		if not ret and self.delete:
+			conf.log("Delet faces")
+			bpy.ops.mesh.delete(type='FACE')
 
 		return {"FINISHED"}
 
-	def select_alpha(self, context, ob, thresh):
+	def select_alpha(self, ob, threshold):
+		"""Core function to select alpha faces based on active material/image."""
+		if not ob.material_slots:
+			conf.log("No materials, skipping.")
+			return "No materials"
 
-		if ob==None:
-			return ("ERROR","No active object found")
-		elif ob.type != 'MESH':
-			return ("ERROR","Active object must be a mesh")
-		elif len(ob.data.polygons)==0:
-			return ("ERROR","Active object has no faces")
+		# pre-cache the materials and their respective images for comparing
+		textures = []
+		for index in range(len(ob.material_slots)):
+			mat = ob.material_slots[index].material
+			if not mat:
+				textures.append(None)
+				continue
+			image = generate.get_textures(mat)["diffuse"]
+			if not image:
+				textures.append(None)
+				continue
+			elif image.channels != 4:
+				textures.append(None) # no alpha channel anyways
+				conf.log("No alpha channel for: "+image.name)
+				continue
+			textures.append(image)
+		data = [None for tex in textures]
 
 		uv = ob.data.uv_layers.active
-		if uv==None:
-			return ("ERROR","No active UV map found")
+		for f in ob.data.polygons:
+			if len(f.loop_indices) < 3:
+				continue # don't select edges or vertices
+			fnd = f.material_index
+			image = textures[fnd]
+			if not image:
+				conf.log("Could not get image from face's material")
+				return "Could not get image from face's material"
 
-		# img =
-		# if ob.data.uv_textures.active == None: continue
-		for uv_face in ob.data.uv_textures.active.data:
-			uv_face.image = image
+			# lazy load alpha part of image to memory, hold for whole operator
+			if not data[fnd]:
+				data[fnd] = list(image.pixels)[3::4]
 
-		return ("WARNING","Not implemented yet")
+			# relate the polygon to the UV layer to the image coordinates
+			shape = []
+			for i in f.loop_indices:
+				loop = ob.data.loops[i]  # get the loop for this index
+				# if not uv.data[loop.index].select:
+				# 	continue
+				x = uv.data[loop.index].uv[0]%1
+				y = uv.data[loop.index].uv[1]%1
+				shape.append((x,y))
+
+			print("The shape coords:")
+			print(shape)
+			# could just do "the closest" pixel... but better is weighted area
+
+			if not shape:
+				continue
+
+			xlist, ylist = tuple([list(tup) for tup in zip(*shape)])
+			# not sure if I actually want to +0.5 to the values to get middle..
+			xmin = round(min(xlist)*image.size[0])-0.5
+			xmax = round(max(xlist)*image.size[0])-0.5
+			ymin = round(min(ylist)*image.size[1])-0.5
+			ymax = round(max(ylist)*image.size[1])-0.5
+			print("\tSet size:",xmin,xmax,ymin,ymax)
+
+			# assuming faces are roughly rectangular, sum pixels a face covers
+			asum = 0
+			acount = 0
+			for row in range(image.size[1]):
+				if row < ymin or row > ymax:
+					continue
+				for col in range(image.size[0]):
+					if col >= xmin and col <= xmax:
+						asum += data[fnd][image.size[1]*row + col]
+						acount += 1
+
+			if acount == 0:
+				acount = 1
+			ratio = float(asum)/float(acount)
+			if ratio < float(threshold):
+				print("\t{} - Below threshold, select".format(ratio))
+				f.select = True
+			else:
+				print("\t{} - above thresh, NO select".format(ratio))
+				f.select = False
+		return
 
 
 class McprepReplaceMissingTextures(bpy.types.Operator):

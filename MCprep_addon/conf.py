@@ -17,7 +17,6 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import os
-import json
 
 import bpy
 
@@ -39,7 +38,7 @@ def init():
 	# Used to print out extra information, set false with distribution
 	# -----------------------------------------------
 	global dev
-	dev = True
+	dev = False
 
 	global v
 	v = True # $VERBOSE, UI setting
@@ -89,7 +88,7 @@ def init():
 
 	# if new update file found from install, replace old one with new
 	if os.path.isfile(json_path_update):
-		if os.path.isfile(json_path) == True:
+		if os.path.isfile(json_path) is True:
 			os.remove(json_path)
 		os.rename(json_path_update, json_path)
 
@@ -103,38 +102,7 @@ def init():
 	use_icons = True
 	global preview_collections
 	preview_collections = {}
-	global thumb_ids
-	thumb_ids = {}
 
-	# actual setup/icon loading in the according files
-
-
-	# -----------------------------------------------
-	# For installing assets
-	# -----------------------------------------------
-
-	global count_install_assets
-	count_install_assets = 0
-	global missing_assets
-	missing_assets = []
-	global missing_details
-	missing_details = ""
-	global asset_filepath
-	asset_filepath = ""
-	global assets_installed
-	assets_installed = False
-
-
-	# -----------------------------------------------
-	# For installing assets
-	# -----------------------------------------------
-
-	global update_ready
-	update_ready = False
-
-	# in a background thread, connect to see if ready.
-	# have an internal count thing that requests to enable checking
-	# or force users to decide after 5 uses, ie blocking the panels
 
 	# -----------------------------------------------
 	# For initializing the custom icons
@@ -148,25 +116,8 @@ def init():
 	global skin_list
 	skin_list = [] # each is: [ basename, path ]
 
-	global rig_list
-	global rig_list_sub
 	global rig_categories
-
-	rig_list = [] # each is: [ relative path+':/:'+name+':/:'+catgry,
-				  #            name.title(),
-				  #            description ]
-	rig_list_sub = [] # shorthand for categories
 	rig_categories = [] # simple list of directory names
-
-	global active_mob
-	global active_mob_subind
-
-	# for radio button active mob
-	active_mob = "" # format "relative path+':/:'+name+':/:'+catgry"
-	active_mob_subind = -1
-
-	global meshswap_list
-	meshswap_list = []
 
 
 # -----------------------------------------------------------------------------
@@ -180,29 +131,49 @@ def icons_init():
 	global preview_collections
 	global v
 
+	collection_sets = ["main", "skins", "mobs", "blocks", "items"]
+
 	try:
-		custom_icons = bpy.utils.previews.new()
+		# custom_icons = bpy.utils.previews.new()
+		# preview_collections["main"] = custom_icons
+		for iconset in collection_sets:
+			preview_collections[iconset] = bpy.utils.previews.new()
+
 		script_path = bpy.path.abspath(os.path.dirname(__file__))
 		icons_dir = os.path.join(script_path,'icons')
-		custom_icons.load("crafting_icon", os.path.join(icons_dir, "crafting_icon.png"), 'IMAGE')
-		custom_icons.load("grass_icon", os.path.join(icons_dir, "grass_icon.png"), 'IMAGE')
-		custom_icons.load("spawner_icon", os.path.join(icons_dir, "spawner_icon.png"), 'IMAGE')
-		preview_collections["main"] = custom_icons
+		preview_collections["main"].load(
+			"crafting_icon",
+			os.path.join(icons_dir, "crafting_icon.png"),
+			'IMAGE')
+		preview_collections["main"].load(
+			"grass_icon",
+			os.path.join(icons_dir, "grass_icon.png"),
+			'IMAGE')
+		preview_collections["main"].load(
+			"spawner_icon",
+			os.path.join(icons_dir, "spawner_icon.png"),
+			'IMAGE')
+		preview_collections["main"].load(
+			"sword_icon",
+			os.path.join(icons_dir, "sword_icon.png"),
+			'IMAGE')
 	except Exception as e:
-		if v:print("Old verison of blender, no custom icons available")
-		if v:print("\t"+str(e))
-		preview_collections["main"] = ""
-
-	# initialize the rest
-	preview_collections["skins"] = ""
-	preview_collections["mobs"] = ""
-	preview_collections["blocks"] = ""
+		log("Old verison of blender, no custom icons available")
+		log("\t"+str(e))
+		global use_icons
+		use_icons = False
+		for iconset in collection_sets:
+			preview_collections[iconset] = ""
 
 
-def log(statement):
+def log(statement, vv_only=False):
 	"""General purpose simple logging function."""
 	global v
-	if v:
+	global vv
+	if vv_only:
+		if vv:
+			print(statement)
+	elif v:
 		print(statement)
 
 
@@ -217,11 +188,10 @@ def register():
 
 def unregister():
 	global preview_collections
-	# if preview_collections["main"] != "":
-	# 	for pcoll in preview_collections.values():
-	# 		#print("clearing?",pcoll)
-	# 		bpy.utils.previews.remove(pcoll)
-	# 	preview_collections.clear()
+	if use_icons:
+		for pcoll in preview_collections.values():
+			bpy.utils.previews.remove(pcoll)
+	preview_collections.clear()
+
 	global json_data
 	json_data = None  # actively clearing out json data for next open
-

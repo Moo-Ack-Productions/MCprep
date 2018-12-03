@@ -47,6 +47,7 @@ class McprepReloadSpawners(bpy.types.Operator):
 
 		bpy.ops.mcprep.reload_meshswap()
 		bpy.ops.mcprep.reload_mobs()
+		bpy.ops.mcprep.reload_items()
 
 		return {'FINISHED'}
 
@@ -62,7 +63,7 @@ class McprepSpawnPathReset(bpy.types.Operator):
 
 		addon_prefs = util.get_prefs()
 		context.scene.mcprep_mob_path = addon_prefs.mob_path
-		mobs.updateRigList(context)
+		mobs.update_rig_list(context)
 		return {'FINISHED'}
 
 
@@ -72,23 +73,12 @@ class McprepSpawnPathReset(bpy.types.Operator):
 
 
 class McprepMobUiList(bpy.types.UIList):
-	"""For mob asset listing UIList drawing."""
+	"""For mob asset listing UIList drawing"""
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
-
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
-			col = layout.column()
-			col.prop(set, "name", text="", emboss=False)
-			#layout.label(text='', icon='TIME')
-			# if conf.active_mob_subind == index:
-			# 	ic = "RADIOBUT_ON"
-			# 	layout.label("Skin swap")
-			# else:
-			# 	ic = "RADIOBUT_OFF"
 			# col = layout.column()
-			# row = col.row()
-			# row.scale_x = 0.2
-			# row.operator('mcprep.mob_spawner_direct',emboss=False, text='',
-			# 			icon='FORWARD').mcmob_index = index
+			# col.prop(set, "name", text="", emboss=False)
+			layout.label(set.name)
 
 		elif self.layout_type in {'GRID'}:
 			layout.alignment = 'CENTER'
@@ -96,22 +86,66 @@ class McprepMobUiList(bpy.types.UIList):
 
 
 class McprepMeshswapUiList(bpy.types.UIList):
-	"""For meshswap asset listing UIList drawing."""
+	"""For meshswap asset listing UIList drawing"""
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
-
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
-			col = layout.column()
-			col.prop(set, "name", text="", emboss=False)
+			layout.label(set.name)
+			# col.prop(set, "name", text="", emboss=False)
 
 		elif self.layout_type in {'GRID'}:
 			layout.alignment = 'CENTER'
 			layout.label("", icon='QUESTION')
 
 
-# for asset listing
-class ListColl(bpy.types.PropertyGroup):
-	label = bpy.props.StringProperty()
+class McprepItemUiList(bpy.types.UIList):
+	"""For meshswap asset listing UIList drawing"""
+	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
+		if self.layout_type in {'DEFAULT', 'COMPACT'}:
+			col = layout.column()
+			icon = "item-{}".format(set.index)
+			if not conf.use_icons:
+				col.label(set.name)
+			elif conf.use_icons and icon in conf.preview_collections["items"]:
+				col.label(set.name,
+					icon_value=conf.preview_collections["items"][icon].icon_id)
+			else:
+				col.label(set.name, icon="BLANK1")
+
+		elif self.layout_type in {'GRID'}:
+			layout.alignment = 'CENTER'
+			layout.label("", icon='QUESTION')
+
+
+class ListMobAssetsAll(bpy.types.PropertyGroup):
+	"""For listing hidden group of all mobs, regardless of category"""
 	description = bpy.props.StringProperty()
+	category = bpy.props.StringProperty()
+	mcmob_type = bpy.props.StringProperty()
+
+
+class ListMobAssets(bpy.types.PropertyGroup):
+	"""For UI drawing of mob assets and holding data"""
+	description = bpy.props.StringProperty()
+
+	# TODO: add in fields here to avoid having data in conf
+	# local = bpy.props.StringProperty()  # is this the path?
+	category = bpy.props.StringProperty()  # category it belongs to
+	# relative_path = bpy.props.StringProperty()  # blend file path
+	mcmob_type = bpy.props.StringProperty()
+
+
+class ListMeshswapAssets(bpy.types.PropertyGroup):
+	"""For UI drawing of meshswap assets and holding data"""
+	block = bpy.props.StringProperty()  # virtual enum, Group/name
+	description = bpy.props.StringProperty()
+
+
+class ListItemAssets(bpy.types.PropertyGroup):
+	"""For UI drawing of item assets and holding data"""
+	# inherited: name
+	description = bpy.props.StringProperty()
+	path = bpy.props.StringProperty(subtype='FILE_PATH')
+	index = bpy.props.IntProperty(min=0, default=0)  # for icon drawing
 
 
 # -----------------------------------------------------------------------------
@@ -120,11 +154,8 @@ class ListColl(bpy.types.PropertyGroup):
 
 
 def register():
-	bpy.types.Scene.mcprep_mob_list = \
-			bpy.props.CollectionProperty(type=ListColl)
-	bpy.types.Scene.mcprep_mob_list_index = bpy.props.IntProperty(default=0)
+	pass
 
 
 def unregister():
-	del bpy.types.Scene.mcprep_mob_list
-	del bpy.types.Scene.mcprep_mob_list_index
+	pass

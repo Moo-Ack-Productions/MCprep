@@ -1205,7 +1205,7 @@ def register(bl_info):
 	updater.manual_only = False # used to be True
 	updater.fake_install = False # Set to true to test callback/reloading
 	updater.version_min_update = (3,0,0)
-	# updater.version_max_update = (9,9,9)
+	updater.version_max_update = (4,0,0)  # 4.x is for blender 2.8x
 	updater.version_max_update = None  # if not wanting to define a max
 	updater.skip_tag = skip_tag_function # min and max used in this function
 	updater.use_releases = True

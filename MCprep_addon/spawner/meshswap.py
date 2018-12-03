@@ -18,11 +18,12 @@
 
 
 # library imports
-import bpy
-import os
 import math
-import mathutils
+import os
 import random
+
+import bpy
+import mathutils
 
 # addon imports
 from .. import conf
@@ -34,69 +35,62 @@ from .. import tracking
 # Mesh swap functions
 # -----------------------------------------------------------------------------
 
-# only used for UI drawing of enum menus, full list
+
 def getMeshswapList(context):
+	"""Only used for UI drawing of enum menus, full list."""
 
-	# test the link path first!
-	# rigpath = bpy.path.abspath(context.scene.mcprep_mob_path)
-	# blendFiles = []
-	# riglist = []
-
-	if len(conf.rig_list)==0: # may redraw too many times, perhaps have flag
-		return updateMeshswapList(context)
-
-	else:
-		return conf.meshswap_list
+	# may redraw too many times, perhaps have flag
+	if not context.scene.mcprep_props.meshswap_list:
+		updateMeshswapList(context)
+	return [(itm.block, itm.name.title(), "Place {}".format(itm.name))
+			for itm in context.scene.mcprep_props.meshswap_list]
 
 
-# for UI list path callback
 def update_meshswap_path(self, context):
-	if conf.vv:print("Updating meshswap path")
+	"""for UI list path callback"""
+	conf.log("Updating meshswap path", vv_only=True)
+	if not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
+		print("Meshswap blend file does not exist")
 	updateMeshswapList(context)
 
-# Update the meshswap list
+
 def updateMeshswapList(context):
-	# test the link path first!
+	"""Update the meshswap list"""
 	meshswap_file = bpy.path.abspath(context.scene.meshswap_path)
-	if os.path.isfile(meshswap_file)==False:
+	if not os.path.isfile(meshswap_file):
 		print("Invalid meshswap blend file path")
-	temp_meshswap_list = []
+		context.scene.mcprep_props.meshswap_list.clear()
+		return
+
+	temp_meshswap_list = []  # just to skip duplicates
 	meshswap_list = []
-	# conf.meshswap_list = []
 
 	with bpy.data.libraries.load(meshswap_file) as (data_from, data_to):
 		for name in data_from.groups:
 
 			# special cases, skip some groups/repeats
-			if util.nameGeneralize(name).lower() in temp_meshswap_list: continue
+			if util.nameGeneralize(name).lower() in temp_meshswap_list:
+				continue
 			if util.nameGeneralize(name).lower() == "Rigidbodyworld".lower():
 				continue
 
 			description = "Place {x} block".format(x=name)
-			meshswap_list.append( ("Group/"+name,name.title(),description) )
+			meshswap_list.append(("Group/"+name, name.title(), description))
 			temp_meshswap_list.append(util.nameGeneralize(name).lower())
 		# here do same for blocks, assuming no name clashes.
 		# way to 'ignore' blocks from source? ID prop?
 
-		# for name in data_from.objects:
-		# 	if util.nameGeneralize(name).lower() in temp_meshswap_list: continue
-		# 	description = "Place {x} block".format(x=name)
-		# 	meshswap_list.append( ("Object/"+name,name.title(),description) )
-		# 	temp_meshswap_list.append(util.nameGeneralize(name).lower())
-
 	# sort the list alphebtically by name
-	temp, sorted_blocks = zip(*sorted(zip([block[1].lower() for block in meshswap_list], meshswap_list)))
-	conf.meshswap_list = sorted_blocks
+	_, sorted_blocks = zip(*sorted(zip([block[1].lower()
+		for block in meshswap_list], meshswap_list)))
 
 	# now re-populate the UI list
-	context.scene.mcprep_meshswap_list.clear()
-	for itm in conf.meshswap_list:
-		item = context.scene.mcprep_meshswap_list.add()
-		item.label = itm[2]
+	context.scene.mcprep_props.meshswap_list.clear()
+	for itm in sorted_blocks:
+		item = context.scene.mcprep_props.meshswap_list.add()
+		item.block = itm[0]
+		item.name = itm[1]
 		item.description = itm[2]
-		item.name = itm[1].title()
-
-	return conf.meshswap_list
 
 
 # -----------------------------------------------------------------------------
@@ -129,7 +123,7 @@ class McprepMeshswapSpawner(bpy.types.Operator):
 	def swap_enum(self, context):
 		return getMeshswapList(context)
 
-	meshswap_block = bpy.props.EnumProperty(items=swap_enum, name="Meshswap block")
+	block = bpy.props.EnumProperty(items=swap_enum, name="Meshswap block")
 	location = bpy.props.FloatVectorProperty(
 		default=(0,0,0),
 		name = "Location")
@@ -163,6 +157,10 @@ class McprepMeshswapSpawner(bpy.types.Operator):
 	# 	)
 	# instantiate if group?
 
+	@classmethod
+	def poll(self, context):
+		return context.mode == 'OBJECT'
+
 	track_function = "meshswapSpawner"
 	track_param = None
 	@tracking.report_error
@@ -170,7 +168,7 @@ class McprepMeshswapSpawner(bpy.types.Operator):
 		pre_groups = list(bpy.data.groups)
 
 		meshSwapPath = bpy.path.abspath(context.scene.meshswap_path)
-		method, block = self.meshswap_block.split("/")
+		method, block = self.block.split("/")
 		toLink = False
 
 		util.bAppendLink(os.path.join(meshSwapPath,method), block, toLink)
@@ -236,8 +234,17 @@ class McprepMeshswapSpawner(bpy.types.Operator):
 			ob["MCprep_noSwap"] = "True"
 			if self.make_real:
 				bpy.ops.object.duplicates_make_real()
+				# remove the empty added by making duplicates real.
+				for ob in context.selected_objects:
+					if ob.type != "EMPTY":
+						continue
+					elif ob.parent or ob.children:
+						continue
+					bpy.context.scene.objects.unlink(ob)
+					ob.user_clear()
+					bpy.data.objects.remove(ob)
 
-		self.exporter = self.meshswap_block
+		# self.exporter = self.meshswap_block  # was this doing anything?
 		return {'FINISHED'}
 
 
@@ -247,7 +254,9 @@ class McprepReloadMeshswap(bpy.types.Operator):
 	bl_label = "Reload MeshSwap"
 
 	@tracking.report_error
-	def execute(self,context):
+	def execute(self, context):
+		if not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
+			self.report({'WARNING'}, "Meshswap blend file does not exist")
 		updateMeshswapList(context)
 		return {'FINISHED'}
 
@@ -514,7 +523,6 @@ class meshSwap(bpy.types.Operator):
 	def execute(self, context):
 		runcount = 0 # counter.. if zero by end, raise error that no selected objects matched
 		## debug, restart check
-		if conf.v:print('###################################')
 		addon_prefs = util.get_prefs()
 		direc = context.scene.meshswap_path
 
@@ -932,24 +940,14 @@ class fixMinewaysScale(bpy.types.Operator):
 
 
 # -----------------------------------------------------------------------------
-#	Above for class functions/operators
-#	Below for UI/register
+#	Register functions
 # -----------------------------------------------------------------------------
 
 
-# for asset listing
-class ListColl(bpy.types.PropertyGroup):
-	label = bpy.props.StringProperty()
-	description = bpy.props.StringProperty()
-
-
 def register():
-	bpy.types.Scene.mcprep_meshswap_list = \
-			bpy.props.CollectionProperty(type=ListColl)
-	bpy.types.Scene.mcprep_meshswap_list_index = bpy.props.IntProperty(default=0)
+	pass
 
 
 def unregister():
-	del bpy.types.Scene.mcprep_meshswap_list
-	del bpy.types.Scene.mcprep_meshswap_list_index
+	pass
 

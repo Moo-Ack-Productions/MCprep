@@ -16,15 +16,22 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import bpy
 import os
+import bpy
 
 from .. import conf
 from .. import util
 
+
 # -----------------------------------------------------------------------------
 # Material prep and generation functions (no registration)
 # -----------------------------------------------------------------------------
+
+
+def update_mcprep_texturepack_path(self, context):
+	"""Triggered if the scene-level resource pack path is updated."""
+
+	bpy.ops.mcprep.reload_items()
 
 
 def get_mc_canonical_name(name):
@@ -32,7 +39,6 @@ def get_mc_canonical_name(name):
 
 	Returns: canonical name, and form (mc, jmc, or mineways)
 	"""
-
 	general_name = util.nameGeneralize(name)
 	if not conf.json_data:
 		res = util.load_mcprep_json()
@@ -42,7 +48,7 @@ def get_mc_canonical_name(name):
 			or "block_mapping_mc" not in conf.json_data["blocks"] \
 			or "block_mapping_jmc" not in conf.json_data["blocks"] \
 			or "block_mapping_mineways" not in conf.json_data["blocks"]:
-		if conf.v: print("Missing key values in json")
+		conf.log("Missing key values in json")
 		return general_name, None
 	if general_name in conf.json_data["blocks"]["block_mapping_mc"]:
 		canon = conf.json_data["blocks"]["block_mapping_mc"][general_name]
@@ -54,7 +60,8 @@ def get_mc_canonical_name(name):
 		canon = conf.json_data["blocks"]["block_mapping_mineways"][general_name]
 		form = "mineways"
 	else:
-		if conf.vv: print("Canonical name not matched: "+general_name)
+		if conf.vv:
+			print("Canonical name not matched: "+general_name)
 		canon = general_name
 		form = None
 
@@ -62,7 +69,7 @@ def get_mc_canonical_name(name):
 
 
 def find_from_texturepack(blockname, resource_folder=None):
-	"""Given a blockname (and resource fodler), find image filepath.
+	"""Given a blockname (and resource folder), find image filepath.
 
 	Finds textures following any pack which should have this structure, and
 	the input folder or default resource folder could target at any of the
@@ -71,10 +78,10 @@ def find_from_texturepack(blockname, resource_folder=None):
 	"""
 	if not resource_folder:
 		# default to internal pack
-		resource_folder = bpy.context.scene.mcprep_custom_texturepack_path
+		resource_folder = bpy.context.scene.mcprep_texturepack_path
 
 	if not os.path.isdir(resource_folder):
-		if conf.v: print("Error, resource folder does not exist")
+		conf.log("Error, resource folder does not exist")
 		return
 	elif os.path.isdir(os.path.join(resource_folder,"textures")):
 		resource_folder = os.path.join(resource_folder,"textures")
@@ -168,7 +175,6 @@ def checklist(matName, listName):
 	"""Helper function for expanding single wildcard within generalized
 	material names."""
 
-
 	if not conf.json_data:
 		conf.log("No json_data for checklist to call from!")
 	if not "blocks" in conf.json_data or not listName in conf.json_data["blocks"]:
@@ -238,7 +244,9 @@ def matprep_internal(mat, passes, use_reflections):
 		else:
 			mat.use_textures[index] = False
 
-	# TODO: selectively add additional passes beyond diffuse
+	if mat.texture_slots[diff_layer].texture.type != "IMAGE":
+		conf.log("No diffuse-detected texture, skipping material: "+mat.name)
+		return 1
 
 	# strip out the .00#
 	matGen = util.nameGeneralize(mat.name)
@@ -278,14 +286,12 @@ def matprep_internal(mat, passes, use_reflections):
 
 	if canon in conf.json_data['blocks']['desaturated']:
 		# cycle through and see if the layer exists to enable/disable blend
-		# pass  # TODO: add saturation based on whether saturate prop in material
 		if "texture_swapped" in mat:
 			if saturate_layer:
 				pass  # should be good
 			else:
 				# set_internal_texture(True)
 
-				print("Running saturate")
 				# TODO: code is duplicative to below, consolidate later
 				if mat.name+"_saturate" in bpy.data.textures:
 					new_tex = bpy.data.textures[mat.name+"_saturate"]

@@ -3,9 +3,9 @@ TO INSTALL MCprep
 
 ### Click the link below and download the .zip file (re-zip if auto-unzipped into a folder necessary), install into blender.
 
-[![Install MCprep](/visuals/mcprep_download.png)](http://theduckcow.com/dev/blender/mcprep-download/)
+[![Install MCprep](/visuals/mcprep_download.png)](https://theduckcow.com/dev/blender/mcprep-download/)
 
-*By downloading and installing, you agree to the following [privacy policy](http://theduckcow.com/privacy-policy).* **[Watch this video](https://www.youtube.com/watch?v=i6Ne07-eIyI) on how to install if running into troubles.**
+*By downloading and installing, you agree to the following [privacy policy](https://theduckcow.com/privacy-policy).* **[Watch this video](https://www.youtube.com/watch?v=i6Ne07-eIyI) on how to install if running into troubles.**
 
 
 It should remain a zip folder. In blender, go to preferences, then the addons tab, and at the bottom of the window install from file. Select the .zip file. **NOTE:** _Blender may not automatically enable the addon. If the MCprep addon is not already shown in the window after installing, search for it at left and then ensure the check box is enabled._ **Save user preferences** to keep it enabled next time blender opens.
@@ -27,7 +27,7 @@ Demo Usage
 
 *[Mob spawner tutorial](https://www.youtube.com/watch?v=asB4UcBuWBw)*
 
-*[Skin swapping overview](http://theduckcow.com/dev/blender/mcprep/skin-swapping/)*
+*[Skin swapping overview](https://theduckcow.com/dev/blender/mcprep/skin-swapping/)*
 
 *[Mob spawner demo](https://www.youtube.com/watch?v=C3YoZx-seFE)*
 
@@ -38,8 +38,11 @@ Demo Usage
  [![Alt text](/visuals/meshswap.demo.gif "Meshswap Preview")](https://www.youtube.com/watch?v=Nax7iuCTovk)
 
 Other video demos:
+
 - [Cycles Materials Update](https://www.youtube.com/watch?v=MRuPRnfdzfI)
 - [Grass field meshswapping](https://www.facebook.com/photo.php?v=737273036339269&l=2318416360725689976)
+- [Scale UV and delete alpha demo](https://twitter.com/TheDuckCow/status/1056659276465364993)
+- [Spawn items](https://twitter.com/TheDuckCow/status/1066494695734484992)
 
 
 About MCprep
@@ -63,6 +66,8 @@ Feature list
 | Combine materials/images | Consolidates duplicate materials and images down to the smallest number of unique datablocks. *Note: combine images is only available on blender 2.78+* |
 | Improve UI | A shortcut to quickly improve viewport settings for Minecraft sets. Sets textured solid mode & turns off mipmaps |
 | Mesh Swap | Allows you to replace simple models from 3D exported worlds with more intricate 3D models |
+| Scale UV Faces | Allows you to scale all UV faces of a mesh about their origin |
+| Select Alpha Faces | Allows you to select or delete mesh faces that are transparent in the applied image texture |
 
 
 
@@ -80,6 +85,7 @@ Feature list
 |----------|:-------------:|
 | Spawn: [rig] | Based on the actively selected rig, from an according spawning rig category, add the mob/character into the scene. These are fully rigged characters. Using the plus sign, you can even install your own rigs (rig must be part of a group). For quicker mapping, you can even set an entire folder and it will auto-create subcategories of rigs based on folders. |
 | Spawn: meshswap block | Place a block from the meshswap file into the 3D scene. Currently is limited to only having meshswap groups (e.g. torches and fire) and not objects (e.g. not supporting grass and flowers yet).|
+| Spawn: items | Convert any image icon into a 3D mesh, with faces per each pixel and transparent faces already removed. Defaults to loading Minecraft items.|
 
 
 ### Spawner mobs included in the current version of MCprep
@@ -161,6 +167,7 @@ How to use this addon
 - **Step 5:** Change settings (optional, defaults are good!) and press ok - and wait a moment while the addon does the rest! Settings
 
 *Settings popup for prep materials.*
+
 ![Prep material settings](/visuals/prepMaterialsSettings.png?raw=true)
 
 Setting options:
@@ -233,6 +240,28 @@ To add your own objects to meshswap (or groupswap):
 
 
 
+### Scale UV Faces:
+- **Purpose:** To take a UV map and scale all of the individual UV faces about their own origins, similar to "Individual origins" transformation available in the 3D view for scaling, but is not available for connected faces in the UV editing window. This would be used if you are experiencing "bleeding" of a texture around the edges of a face, sometimes an artifact of how Blender treats low resolution images, or as a quick way to fix loosely-done UV unwrapping.
+- **Step 1:** Select a mesh that already has a material and texture applied
+- **Step 2:** Go into edit mode on this mesh
+- **Step 3:** Press the Scale UV Face button from either location:
+  - 3D View > Toolshelf (left, press t) > MCprep Tab > World Imports
+  - Image Viewer > Toolshelf (left, press t) > Tools tab > Transform Panel, MCprep section
+- **Step 4:** Adjust the scale factor in the redo last (or F6) window, defaults to 0.75
+
+
+### Select Alpha Faces:
+- **Purpose:** To quickly select, or delete, all faces that fall on transparent pixels of the corresponding applied image for the active mesh. Useful if you want to speed up renders by not having to render transparent faces, or avoid other related issues. **Note**: The current implementation works well for "grid" unwrapped objects where the UV map has clear rows and columns aligned to the image axis, however it will still work to *some extent* with any unwrapped face UV shape over any image.
+- **Step 1:** Select a mesh that already has a material and texture applied
+- **Step 2:** Go into edit mode on this mesh
+- **Step 3:** Press the Select Alpha Faces button from either location:
+  - 3D View > Toolshelf (left, press t) > MCprep Tab > World Imports
+  - Image Viewer > Toolshelf (left, press t) > Tools tab > Transform Panel, MCprep section
+- **Step 4:** Adjust the properties in the redo last window, or by pressing F6
+  - Delete faces: If checked, this will automatically delete the selected faces (setting will be saved for the current blender session)
+  - Threshold: From 0-1, consider the face as transparent if the average of the image pixels falling within the given face is below this threshold.
+
+
 ### Prep World:
 - **Purpose:** This button found in the World Tools panel will assign nicer default world settings for rendering and animation, for both Blender Internal and Cycles.
 - Adds a basic day-sky texture. Works for both cycles and blender internal, and creates a better starting point than the default gray world background. No option yet for setting other times of day.
@@ -287,6 +316,7 @@ To add your own rigs to the Mob Spawner:
 
 
 *Sometimes you may need to reload a rig cache, click this button if the correct rigs aren't appearing - or if you've just added new rigs to the folder outside of blender*
+
 ![Reload rig cache](/visuals/reloadRigCache.png?raw=true)
 
 
@@ -303,6 +333,19 @@ To add your own rigs to the Mob Spawner:
   - Prep materials: run prep materials on the imported objects, particularly useful if using cycles
   - Snapping dropdown: Snap the placed block to a rounded coordinate. Optional offset by 0.5 as well
   - Make real: Instance the groups so they are made real, thus allowing you to individually modify the objects within the group. Note: this may clear any pre-applied animation.
+
+
+### Item Spawner:
+- **Purpose:** To be able to quickly generate 3D Minecraft items from images.
+- **Step 0:** By default this is already done for you; in advanced settings, point the folder to a valid Minecraft resource pack (with an items folder), or directly select the folder containing individual images per item.
+- **Step 1:** Navigate to the spawner panel and select items; press load if needed
+- **Step 2:** Select the item in the UI list, you can press the little plus at the bottom to open a free text search to hep bring up what you want
+- **Step 3:** Press the Place: {item} button below
+- **Step 4:** Modify redo last settings as needed (also accessible by pressing F6 after spawning). Options include:
+  - Maximum number of pixels: Will scale the image down if number of pixels exceeds this (unlikely for Minecraft resource packs)
+  - Thickness: If above 0, will add a solidify modifier with this level of thickness; can always be adjusted or removed later
+  - Alpha Threshold: At this level or lower of alpha values (0.0-1.0), delete the face from the resulting mesh.
+  - Use transparent pixels: If enabled, will setup the material so that transparent pixels will appear transparent in the render, othwise will be solid.
 
 
 Known Bugs

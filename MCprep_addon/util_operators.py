@@ -107,7 +107,7 @@ class McprepOpenFolder(bpy.types.Operator):
 
 class McprepOpenHelp(bpy.types.Operator):
 	"""Support operator for opening url in UI, but indicating through popup
-	text that it is a supporting/help button."""
+	text that it is a supporting/help button"""
 	bl_idname = "mcprep.open_help"
 	bl_label = "Open folder"
 	bl_description = "Need help? Click to open reference page"
