@@ -1187,6 +1187,10 @@ def register(bl_info):
 	if updater.error != None:
 		print("Exiting updater registration, error return")
 		return
+	if updater.update_ready is None:  # force clear out after blender restart
+		saved_state = updater.json
+		if saved_state.get("just_updated") is True:
+			updater.json_reset_postupdate()
 	updater.clear_state() # clear internal vars, avoids reloading oddities
 
 	updater.engine = "Github"
