@@ -189,6 +189,8 @@ class MCP_prep_world(bpy.types.Operator):
 	def execute(self, context):
 		engine = bpy.context.scene.render.engine
 		self.track_param = engine
+		if not context.scene.world:
+			context.scene.world = bpy.data.worlds.new("MCprep world")
 		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 			self.prep_world_cycles(context)
 		elif engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
@@ -230,6 +232,8 @@ class MCP_prep_world(bpy.types.Operator):
 
 	def prep_world_internal(self, context):
 		# check for any suns with the sky setting on;
+		if not context.scene.world:
+			return
 		context.scene.world.use_nodes = False
 		context.scene.world.horizon_color = (0.00938029, 0.0125943, 0.0140572)
 		context.scene.world.light_settings.use_ambient_occlusion = True

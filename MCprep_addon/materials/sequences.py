@@ -69,7 +69,10 @@ def animate_single_material(mat, engine, export_location='original', clear_cache
 		return affectable, False
 
 	# apply the sequence if any found, will be empty dict if not
-	source_path = diffuse_block.filepath
+	if diffuse_block:
+		source_path = diffuse_block.filepath
+	else:
+		source_path = None
 	if not source_path:
 		source_path = image_path_canon
 		conf.log("Fallback to using image cannon path instead of source path")
