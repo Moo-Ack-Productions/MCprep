@@ -18,6 +18,7 @@
 
 
 # library imports
+import operator
 import os
 import shutil
 
@@ -58,7 +59,11 @@ def update_rig_list(context):
 	def _add_rigs_from_blend(path, blend_name, category):
 		"""Block for loading blend file groups to get rigs"""
 		with bpy.data.libraries.load(path) as (data_from, data_to):
-			for name in data_from.groups:
+			if hasattr(data_from, "groups"): # blender 2.7
+				get_attr = "groups"
+			else: # 2.8
+				get_attr = "collections"
+			for name in getattr(data_from, get_attr):
 				# special cases, skip some groups
 				if name.lower() == "Rigidbodyworld".lower():
 					continue
@@ -144,7 +149,7 @@ def update_rig_category(context):
 # -----------------------------------------------------------------------------
 
 
-class McprepReloadMobs(bpy.types.Operator):
+class MCPREP_OT_reload_mobs(bpy.types.Operator):
 	"""Force reload the mob spawner rigs, use after manually adding rigs to folders"""
 	bl_idname = "mcprep.reload_mobs"
 	bl_label = "Reload the rigs and cache"
@@ -155,7 +160,7 @@ class McprepReloadMobs(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class McprepMobSpawnerDirect(bpy.types.Operator):
+class MCPREP_OT_mob_spawner_direct(bpy.types.Operator):
 	"""Instantly spawn this rig into scene, no menu"""
 	bl_idname = "mcprep.mob_spawner_direct"
 	bl_label = "Mob Spawner"
@@ -218,7 +223,7 @@ class McprepMobSpawnerDirect(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class McprepMobSpawner(bpy.types.Operator):
+class MCPREP_OT_mob_spawner(bpy.types.Operator):
 	"""Show menu and spawn built-in or custom rigs into a scene"""
 	bl_idname = "mcprep.mob_spawner"
 	bl_label = "Mob Spawner"
@@ -270,9 +275,8 @@ class McprepMobSpawner(bpy.types.Operator):
 	# 	return context.window_manager.invoke_props_dialog(self)
 
 	def proxySpawn(self):
-		if conf.v:
-			print("Attempting to do proxySpawn")
-			print("Mob to spawn: ", self.mcmob_type)
+		conf.log("Attempting to do proxySpawn")
+		conf.log("Mob to spawn: {}".format(self.mcmob_type))
 
 	def attemptScriptLoad(self,path):
 		# search for script that matches name of the blend file
@@ -377,9 +381,20 @@ class McprepMobSpawner(bpy.types.Operator):
 		for bone in armature.pose.bones:
 			if bone.name.lower() != lower_name:
 				continue
-			bone.location = (bone.bone.matrix.inverted() *
-				context.scene.cursor_location *
-				armature.matrix_world.inverted())
+			# bone.location = (bone.bone.matrix.inverted() *
+			# 	util.get_cuser_location(context) *
+			# 	armature.matrix_world.inverted())
+			if hasattr(bpy.app, "version") and bpy.app.version >= (2, 80):
+				mtm = getattr(operator, "matmul") # does not exist pre 2.7<#?>, syntax error
+				bone.location = (
+					mtm(bone.bone.matrix.inverted(),
+						mtm(util.get_cuser_location(context),
+							armature.matrix_world.inverted())))
+			else:
+				bone.location = (bone.bone.matrix.inverted() *
+					util.get_cuser_location(context) *
+					armature.matrix_world.inverted())
+
 			set_bone = True
 			break
 		return set_bone
@@ -388,7 +403,11 @@ class McprepMobSpawner(bpy.types.Operator):
 		"""Process for loading mob via linked library"""
 
 		path = bpy.path.abspath(path)
-		util.bAppendLink(os.path.join(path,'Group'), name, True)
+		if hasattr(bpy.data, "groups"):
+			g_or_c = 'Group'
+		elif hasattr(bpy.data, "collections"):
+			g_or_c = 'Collection'
+		util.bAppendLink(os.path.join(path, g_or_c), name, True)
 		# proxy any and all armatures
 		# here should do all that jazz with hacking by copying files, checking nth number
 		#probably consists of checking currently linked libraries, checking if which
@@ -406,18 +425,23 @@ class McprepMobSpawner(bpy.types.Operator):
 		if not act.type == "EMPTY":
 			self.report({'WARNING'}, "Linked object should be type: empty")
 			return
-		elif not act.dupli_group:
+		elif not util.instance_collection(act):
 			self.report({'WARNING'}, "Linked object has no dupligroup")
 			return
 		else:
-			prox_obj = self.get_rig_from_objects(act.dupli_group.objects)
-
+			prox_obj = self.get_rig_from_objects(
+				util.instance_collection(act).objects)
 		if not prox_obj:
 			self.report({'WARNING'}, "No object found to proxy")
 			return
+
 		bpy.ops.object.proxy_make(object=prox_obj.name)
-		gl = act.dupli_group.dupli_offset # if rig not centered in original file, assume its group is
-		cl = bpy.context.scene.cursor_location
+		coll = util.instance_collection(act)
+		if hasattr(coll, "dupli_offset"):
+			gl = coll.dupli_offset
+		elif hasattr(act, "instance_offset"):
+			gl = coll.instance_offset
+		cl = util.get_cuser_location(context)
 
 		if self.relocation == "Offset":
 			# do the offset stuff, set active etc
@@ -454,10 +478,14 @@ class McprepMobSpawner(bpy.types.Operator):
 		path = bpy.path.abspath(path)
 		sel = bpy.context.selected_objects # capture state before, technically also copy
 		for ob in context.scene.objects:
-			ob.select = False
+			util.select_set(ob, False)
 		# consider taking pre-exisitng group names and giving them a temp name to name back at the end
-		conf.log(os.path.join(path, 'Group') + ', ' + name)
-		util.bAppendLink(os.path.join(path, 'Group'), name, False)
+		if hasattr(bpy.data, "groups"):
+			subpath = 'Group'
+		elif hasattr(bpy.data, "collections"):
+			subpath = 'Collection'
+		conf.log(os.path.join(path, subpath) + ', ' + name)
+		util.bAppendLink(os.path.join(path, subpath), name, False)
 
 		try:
 			g1 = context.selected_objects[0]  # THE FOLLOWING is a common fail-point.
@@ -465,10 +493,14 @@ class McprepMobSpawner(bpy.types.Operator):
 		except:
 			# this is more likely to fail but serves as a fallback
 			conf.log("Mob spawn: Had to go to fallback group name grab")
-			grp_added = bpy.data.groups[name]
+			grp_added = util.collections()[name]
 
-		gl = grp_added.dupli_offset # if rig not centered in original file, assume its group is
-		cl = bpy.context.space_data.cursor_location
+		# if rig not centered in original file, assume its group is
+		if hasattr(grp_added, "dupli_offset"): # 2.7
+			gl = grp_added.dupli_offset
+		if hasattr(grp_added, "instance_offset"): # 2.8
+			gl = grp_added.instance_offset
+		cl = util.get_cuser_location(context)
 
 		# For some reason, adding group objects on its own doesn't work
 		all_objects = context.selected_objects
@@ -483,10 +515,10 @@ class McprepMobSpawner(bpy.types.Operator):
 		grp_added.name = "reload-blend-to-remove-this-empty-group"
 		for obj in grp_added.objects:
 		    grp_added.objects.unlink(obj)
-		    obj.select = True
+		    util.select_set(obj, True)
 		grp_added.user_clear()
 		# try:
-		# 	bpy.data.groups.remove(grp_added)
+		# 	util.collections().remove(grp_added)
 		# 	This can cause redo last issues
 		# except:
 		# 	pass
@@ -540,10 +572,10 @@ class McprepMobSpawner(bpy.types.Operator):
 												cl[2]-gl[2]))
 		# add the original selection back
 		for objs in sel:
-			objs.select = True
+			util.select_set(objs, True)
 
 
-class McprepInstallMob(bpy.types.Operator, ImportHelper):
+class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
 	"""Install custom rig popup for the mob spawner, all groups in selected blend file will become individually spawnable"""
 	bl_idname = "mcprep.mob_install_menu"
 	bl_label = "Install new mob"
@@ -589,7 +621,11 @@ class McprepInstallMob(bpy.types.Operator, ImportHelper):
 
 		# check the file with a quick look for any groups, any error return failed
 		with bpy.data.libraries.load(newrig) as (data_from, data_to):
-			if len(data_from.groups) < 1:
+			if hasattr(data_from, "groups"): # blender 2.7
+				get_attr = "groups"
+			else: # 2.8
+				get_attr = "collections"
+			if len(getattr(data_from, get_attr)) < 1:
 				conf.log("Error: no groups found in blend file!")
 				self.report({'ERROR'}, "No groups found in blend file!")
 				return {'CANCELLED'}
@@ -628,7 +664,7 @@ class McprepInstallMob(bpy.types.Operator, ImportHelper):
 		return {'FINISHED'}
 
 
-class McprepUninstallMob(bpy.types.Operator):
+class MCPREP_OT_uninstall_mob(bpy.types.Operator):
 	"""Uninstall selected mob by deleting source blend file"""
 	bl_idname = "mcprep.mob_uninstall"
 	bl_label = "Uninstall mob"
@@ -669,7 +705,7 @@ class McprepUninstallMob(bpy.types.Operator):
 		path = mob.split(":/:")[0]
 		path = os.path.join(context.scene.mcprep_mob_path, path)
 		if len(self.listing)>1:
-			row.label("Multiple mobs found in target blend file:")
+			row.label(text="Multiple mobs found in target blend file:")
 			row = self.layout.row()
 			row.scale_y=0.5
 
@@ -684,19 +720,19 @@ class McprepUninstallMob(bpy.types.Operator):
 			for grp in self.listing:
 				count+=1
 				if count%3==0:
-					col1.label(grp)
+					col1.label(text=grp)
 				elif count%3==1:
-					col2.label(grp)
+					col2.label(text=grp)
 				else:
-					col3.label(grp)
+					col3.label(text=grp)
 			row = self.layout.row()
-			row.label("Press okay to delete these mobs and file:")
+			row.label(text="Press okay to delete these mobs and file:")
 		else:
 			col = row.column()
 			col.scale_y = 0.7
-			col.label("Press okay to delete mob and file:")
+			col.label(text="Press okay to delete mob and file:")
 		row = self.layout.row()
-		row.label(path)
+		row.label(text=path)
 
 	@tracking.report_error
 	def execute(self,context):
@@ -763,8 +799,21 @@ def spawn_rigs_category_load(self, context):
 # -----------------------------------------------------------------------------
 
 
+classes = (
+	MCPREP_OT_reload_mobs,
+	MCPREP_OT_mob_spawner_direct,
+	MCPREP_OT_mob_spawner,
+	MCPREP_OT_install_mob,
+	MCPREP_OT_uninstall_mob,
+)
+
+
 def register():
-	pass
+	for cls in classes:
+		util.make_annotations(cls)
+		bpy.utils.register_class(cls)
+
 
 def unregister():
-	pass
+	for cls in reversed(classes):
+		bpy.utils.unregister_class(cls)

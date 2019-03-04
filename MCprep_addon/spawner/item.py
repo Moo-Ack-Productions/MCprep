@@ -22,6 +22,7 @@ import bpy
 from bpy_extras.io_utils import ImportHelper
 
 from .. import conf
+from .. import util
 from .. import tracking
 
 try:
@@ -246,7 +247,7 @@ def spawn_item_from_filepath(context, path, max_pixels, thickness, threshold,
 # -----------------------------------------------------------------------------
 
 
-class McprepSpawnItem(bpy.types.Operator):
+class MCPREP_OT_spawn_item(bpy.types.Operator):
 	"""Spawn in an item as a mesh from selected list item"""
 	bl_idname = "mcprep.spawn_item"
 	bl_label = "Spawn selected item"
@@ -315,7 +316,7 @@ class McprepSpawnItem(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class McprepSpawnItemFromFile(bpy.types.Operator, ImportHelper):
+class MCPREP_OT_spawn_item_from_file(bpy.types.Operator, ImportHelper):
 	"""Spawn in an item as a mesh from an image file"""
 	bl_idname = "mcprep.spawn_item_file"
 	bl_label = "Item from file"
@@ -374,7 +375,7 @@ class McprepSpawnItemFromFile(bpy.types.Operator, ImportHelper):
 		return {"FINISHED"}
 
 
-class McprepReloadItems(bpy.types.Operator):
+class MCPREP_OT_reload_items(bpy.types.Operator):
 	"""Reload item spawner, use after adding/removing/renaming files in the resource pack folder"""
 	bl_idname = "mcprep.reload_items"
 	bl_label = "Reload items"
@@ -390,9 +391,19 @@ class McprepReloadItems(bpy.types.Operator):
 # -----------------------------------------------------------------------------
 
 
+classes = (
+	MCPREP_OT_spawn_item,
+	MCPREP_OT_spawn_item_from_file,
+	MCPREP_OT_reload_items,
+)
+
+
 def register():
-	pass
+	for cls in classes:
+		util.make_annotations(cls)
+		bpy.utils.register_class(cls)
 
 
 def unregister():
-	pass
+	for cls in reversed(classes):
+		bpy.utils.unregister_class(cls)

@@ -212,7 +212,7 @@ def matprep_internal(mat, passes, use_reflections):
 	try:
 		bpy.data.textures[texList[0].name].name = newName
 	except:
-		if conf.v:print('\twarning: material '
+		conf.log('\twarning: material '
 			+mat.name+' has no texture slot. skipping...')
 		return
 
@@ -341,6 +341,8 @@ def matprep_cycles(mat, passes, use_reflections, use_principled):
 		res = matgen_cycles_principled(mat, passes, use_reflections)
 	else:
 		res = matgen_cycles_original(mat, passes, use_reflections)
+
+	# do check for eevee?
 	return res
 
 
@@ -402,7 +404,7 @@ def set_cycles_texture(image, material, extra_passes=False):
 		if "texture_swapped" in material and node.type == "MIX_RGB" and "SATURATE" in node:
 			node.mute = False
 			node.hide = False
-			if conf.v: print("Unmuting mix_rgb to saturate texture")
+			conf.log("Unmuting mix_rgb to saturate texture")
 
 		if node.type != "TEX_IMAGE": continue
 
@@ -476,7 +478,7 @@ def set_internal_texture(image, material, extra_passes=False):
 
 	# if no textures found, assert adding this one as the first
 	if tex==None:
-		if conf.v: print("Found no textures, asserting texture onto material")
+		conf.log("Found no textures, asserting texture onto material")
 		name = material.name+"_tex"
 		if name not in bpy.data.textures:
 			tex = bpy.data.textures.new(name=name,type="IMAGE")
@@ -705,7 +707,7 @@ def replace_missing_texture(image):
 		return 0
 	if image.size[0] != 0 and image.size[1] != 0:
 		return 0
-	if conf.v: print("Missing datablock detected: "+image.name)
+	conf.log("Missing datablock detected: "+image.name)
 
 	name = image.name
 	if len(name)>4 and name[-4] == ".":
@@ -942,6 +944,23 @@ def matgen_cycles_principled(mat, passes, use_reflections):
 
 		# faster, and appropriate for non-transparent (and refelctive?) materials
 		principled.distribution = 'GGX'
+		if hasattr(mat, "blend_method"):
+			mat.blend_method = 'OPAQUE' # eevee setting
+	else:
+		# non-solid (potentially, not necessarily though)
+		if hasattr(mat, "blend_method"):  # 2.8 eevee settings
+			# TODO: Work on finding the optimal decision here
+			# clip could be better in cases of true/false transparency
+			# could do work to detect this from the image directly..
+			# though would be slower
+
+			# noisy, but workable for partial trans; bad for materials with
+			# no partial trans (makes view-through all somewhat noisy)
+			mat.blend_method = 'HASHED'
+
+			# best if there is no partial transparency
+			# material.blend_method = 'CLIP' for no partial transparency
+			# both work fine with depth of field.
 
 	nodeSaturateMix.inputs[0].default_value = 1.0
 	nodeSaturateMix.blend_type = 'OVERLAY'

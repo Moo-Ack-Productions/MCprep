@@ -1,4 +1,4 @@
-GO TO http://theduckcow.com/MCprep for more help
+GO TO https://theduckcow.com/MCprep for more help
 
 
 HOW TO INSTALL
@@ -6,7 +6,7 @@ HOW TO INSTALL
 If you are reading this text file, then you’re already a step in the wrong direction. This addon must be installed as a .zip file, do not unzip it.
 
 — If your webbrowers automatically unzips zip files when downloaded, please *disable* that setting and re-download the addon. You may also try re-zipping/compressing the addon yourself, but this sometimes does not work.
-- This is a known thing for safari users on macs. Please re-download with "auto-open file when download completes" turned off. 
+- This is a known thing for safari users on macs. Please re-download with "auto-open file when download completes" turned off.
 
 In blender, version 2.75 and up:
 1) go to file > addons

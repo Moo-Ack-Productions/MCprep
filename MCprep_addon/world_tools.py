@@ -37,7 +37,7 @@ from . import tracking
 
 
 
-class MCP_open_jmc2obj(bpy.types.Operator):
+class MCPREP_OT_open_jmc2obj(bpy.types.Operator):
 	"""Open the jmc2obj executbale"""
 	bl_idname = "mcprep.open_jmc2obj"
 	bl_label = "Open jmc2obj"
@@ -53,7 +53,7 @@ class MCP_open_jmc2obj(bpy.types.Operator):
 	track_param = "jmc2obj"
 	@tracking.report_error
 	def execute(self,context):
-		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
+		addon_prefs = util.get_user_preferences(context)
 		res = util.open_program(addon_prefs.open_jmc2obj_path)
 
 		if res ==-1:
@@ -67,7 +67,7 @@ class MCP_open_jmc2obj(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class MCP_install_jmc2obj(bpy.types.Operator):
+class MCPREP_OT_install_jmc2obj(bpy.types.Operator):
 	"""Utility class to prompt jmc2obj installing"""
 	bl_idname = "mcprep.install_jmc2obj"
 	bl_label = "Install jmc2obj"
@@ -80,21 +80,21 @@ class MCP_install_jmc2obj(bpy.types.Operator):
 		return wm.invoke_popup(self, width=400*util.ui_scale(), height=200)
 
 	def draw(self, context):
-		self.layout.label("Valid program path not found!")
+		self.layout.label(text="Valid program path not found!")
 		self.layout.separator()
-		self.layout.label("Need to install jmc2obj?")
+		self.layout.label(text="Need to install jmc2obj?")
 		self.layout.operator("wm.url_open","Click to download").url =\
 				"http://www.jmc2obj.net/"
 		split = self.layout.split()
 		col = self.layout.column()
 		col.scale_y = 0.7
-		col.label("Then, go to MCprep's user preferences and set the jmc2obj")
-		col.label(" path to jmc2obj_ver#.jar, for example")
+		col.label(text="Then, go to MCprep's user preferences and set the jmc2obj")
+		col.label(text=" path to jmc2obj_ver#.jar, for example")
 		row = self.layout.row(align=True)
 		row.operator("mcprep.open_preferences",
 			"Open MCprep preferences", icon="PREFERENCES").tab = "settings"
 		row.operator("wm.url_open","Open tutorial").url =\
-				"http://theduckcow.com/dev/blender/mcprep/setup-world-exporters/"
+				"https://theduckcow.com/dev/blender/mcprep/setup-world-exporters/"
 		return
 
 	def execute(self, context):
@@ -104,7 +104,7 @@ class MCP_install_jmc2obj(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class MCP_open_mineways(bpy.types.Operator):
+class MCPREP_OT_open_mineways(bpy.types.Operator):
 	"""Open the Mineways executbale"""
 	bl_idname = "mcprep.open_mineways"
 	bl_label = "Open Mineways"
@@ -120,7 +120,7 @@ class MCP_open_mineways(bpy.types.Operator):
 	track_param = "mineways"
 	@tracking.report_error
 	def execute(self,context):
-		addon_prefs = bpy.context.user_preferences.addons[__package__].preferences
+		addon_prefs = util.get_user_preferences(context)
 		res = util.open_program(addon_prefs.open_mineways_path)
 
 		if res ==-1:
@@ -134,7 +134,7 @@ class MCP_open_mineways(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class MCP_install_mineways(bpy.types.Operator):
+class MCPREP_OT_install_mineways(bpy.types.Operator):
 	"""Utility class to prompt Mineways installing"""
 	bl_idname = "mcprep.install_mineways"
 	bl_label = "Install Mineways"
@@ -147,21 +147,21 @@ class MCP_install_mineways(bpy.types.Operator):
 		return wm.invoke_popup(self, width=400*util.ui_scale(), height=200)
 
 	def draw(self, context):
-		self.layout.label("Valid program path not found!")
+		self.layout.label(text="Valid program path not found!")
 		self.layout.separator()
-		self.layout.label("Need to install Mineways?")
+		self.layout.label(text="Need to install Mineways?")
 		self.layout.operator("wm.url_open","Click to download").url =\
 				"http://www.realtimerendering.com/erich/minecraft/public/mineways/"
 		split = self.layout.split()
 		col = self.layout.column()
 		col.scale_y = 0.7
-		col.label("Then, go to MCprep's user preferences and set the")
-		col.label(" Mineways path to Mineways.exe or Mineways.app, for example")
+		col.label(text="Then, go to MCprep's user preferences and set the")
+		col.label(text=" Mineways path to Mineways.exe or Mineways.app, for example")
 		row = self.layout.row(align=True)
 		row.operator("mcprep.open_preferences",
 			"Open MCprep preferences", icon="PREFERENCES").tab = "settings"
 		row.operator("wm.url_open","Open tutorial").url =\
-				"http://theduckcow.com/dev/blender/mcprep/setup-world-exporters/"
+				"https://theduckcow.com/dev/blender/mcprep/setup-world-exporters/"
 		return
 
 	def execute(self, context):
@@ -176,7 +176,7 @@ class MCP_install_mineways(bpy.types.Operator):
 # -----------------------------------------------------------------------------
 
 
-class MCP_prep_world(bpy.types.Operator):
+class MCPREP_OT_prep_world(bpy.types.Operator):
 	"""Class to prep world settings to appropriate default"""
 	bl_idname = "mcprep.world"
 	bl_label = "Prep World"
@@ -248,23 +248,23 @@ class MCP_prep_world(bpy.types.Operator):
 		# check for any sunlamps with sky setting
 		sky_used = False
 		for lamp in context.scene.objects:
-			if lamp.type != "LAMP" or lamp.data.type != "SUN":
+			if lamp.type not in ("LAMP", "LIGHT") or lamp.data.type != "SUN":
 				continue
 			if lamp.data.sky.use_sky:
 				sky_used = True
 				break
 		if sky_used:
-			if conf.v: print("MCprep sky being used with atmosphere")
+			conf.log("MCprep sky being used with atmosphere")
 			context.scene.world.use_sky_blend = False
 			context.scene.world.horizon_color = (0.00938029, 0.0125943, 0.0140572)
 		else:
-			if conf.v: print("No MCprep sky with atmosphere")
+			conf.log("No MCprep sky with atmosphere")
 			context.scene.world.use_sky_blend = True
 			context.scene.world.horizon_color = (0.647705, 0.859927, 0.940392)
 			context.scene.world.zenith_color = (0.0954261, 0.546859, 1)
 
 
-class MCP_add_world_time(bpy.types.Operator):
+class MCPREP_OT_add_world_time(bpy.types.Operator):
 	"""Add a sun lamp as part of a group into the scene"""
 	bl_idname = "mcprep.add_world_time"
 	bl_label = "Add sun lamp"
@@ -291,9 +291,9 @@ class MCP_add_world_time(bpy.types.Operator):
 		# setup drivers according to time setting
 		# set a reasonable initial default
 
-		if "mcprep_world" in bpy.data.groups:
-			bpy.data.groups["mcprep_world"].name = "mcprep_world_old"
-		time_group = bpy.data.groups.new("mcprep_world")
+		if "mcprep_world" in util.collections():
+			util.collections()["mcprep_world"].name = "mcprep_world_old"
+		time_group = util.collections().new("mcprep_world")
 		for obj in new_objs:
 			time_group.objects.link(obj)
 
@@ -302,12 +302,15 @@ class MCP_add_world_time(bpy.types.Operator):
 	def create_sunlamp(self, context):
 		if self.remove_existing_suns:
 			for lamp in context.scene.objects:
-				if lamp.type != "LAMP" or lamp.data.type != "SUN":
+				if lamp.type not in ("LAMP", "LIGHT") or lamp.data.type != "SUN":
 					continue
 				context.scene.objects.unlink(lamp)
 				bpy.data.objects.remove(lamp)
 
-		newlamp = bpy.data.lamps.new("Sun", "SUN")
+		if hasattr(bpy.data, "lamps"): # 2.7
+			newlamp = bpy.data.lamps.new("Sun", "SUN")
+		else: # 2.8
+			newlamp = bpy.data.lights.new("Sun", "SUN")
 		obj = bpy.data.objects.new("Sunlamp", newlamp)
 		obj.location = (0,0,20)
 		obj.rotation_euler[0] = 0.481711
@@ -326,7 +329,7 @@ class MCP_add_world_time(bpy.types.Operator):
 			context.scene.world.use_sky_blend = False
 
 			for lamp in context.scene.objects:
-				if lamp.type != "LAMP" or lamp.data.type != "SUN":
+				if lamp.type not in ("LAMP", "LIGHT") or lamp.data.type != "SUN":
 					continue
 				if lamp == obj:
 					continue
@@ -335,7 +338,7 @@ class MCP_add_world_time(bpy.types.Operator):
 		return obj
 
 
-class MCP_time_set(bpy.types.Operator):
+class MCPREP_OT_time_set(bpy.types.Operator):
 	"""Set the time affecting light, sun and moon position, similar to in-game commands"""
 	bl_idname = "mcprep.time_set"
 	bl_label = "Set time of day"
@@ -409,9 +412,23 @@ def world_time_update(self, context):
 # -----------------------------------------------------------------------------
 
 
+classes = (
+	MCPREP_OT_open_jmc2obj,
+	MCPREP_OT_install_jmc2obj,
+	MCPREP_OT_open_mineways,
+	MCPREP_OT_install_mineways,
+	MCPREP_OT_prep_world,
+	MCPREP_OT_add_world_time,
+	MCPREP_OT_time_set,
+)
+
+
 def register():
-	pass
+	for cls in classes:
+		util.make_annotations(cls)
+		bpy.utils.register_class(cls)
+
 
 def unregister():
-	pass
-
+	for cls in reversed(classes):
+		bpy.utils.unregister_class(cls)

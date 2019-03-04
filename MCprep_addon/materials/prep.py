@@ -39,7 +39,7 @@ from .. import util
 # -----------------------------------------------------------------------------
 
 
-class McprepPrepMaterials(bpy.types.Operator):
+class MCPREP_OT_prep_materials(bpy.types.Operator):
 	"""Fixes materials and textures on selected objects for Minecraft rendering"""
 	bl_idname = "mcprep.prep_materials"
 	bl_label = "MCprep Materials"
@@ -185,7 +185,7 @@ class McprepPrepMaterials(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class McprepMaterialHelp(bpy.types.Operator):
+class MCPREP_OT_materials_help(bpy.types.Operator):
 	"""Follow up popup to assist the user who may not have gotten expected change"""
 	bl_idname = "mcprep.prep_materials_help"
 	bl_label = "MCprep Materials Help"
@@ -219,29 +219,29 @@ class McprepMaterialHelp(bpy.types.Operator):
 		if self.help_num == 0:
 			# No specific error occured
 			col.scale_y = 0.7
-			col.label("No specific MCprep material issue identified.")
-			col.label("Still need help? Press OK below to open an issue.")
+			col.label(text="No specific MCprep material issue identified.")
+			col.label(text="Still need help? Press OK below to open an issue.")
 		elif self.help_num == 1:
 			# No materials modified, because no materials detected
 			col.scale_y = 0.7
-			col.label("Could not prep materials because")
-			col.label("because none of the selected objects")
-			col.label("have materials. Be sure to select the")
-			col.label("model or world import before prepping!")
+			col.label(text="Could not prep materials because")
+			col.label(text="because none of the selected objects")
+			col.label(text="have materials. Be sure to select the")
+			col.label(text="model or world import before prepping!")
 		elif self.help_num == 2:
 			# Missing SOME textures detected, either because find msising is off
 			# or if replacement still not found even with setting on
 			col.scale_y = 0.7
-			col.label("Some materials have missing textures,")
-			col.label("these may show up as pink or black materials")
-			col.label("in the viewport or in a render. Try using:")
-			col.label("file > External Data > Find missing files")
+			col.label(text="Some materials have missing textures,")
+			col.label(text="these may show up as pink or black materials")
+			col.label(text="in the viewport or in a render. Try using:")
+			col.label(text="file > External Data > Find missing files")
 		elif self.help_num == 3:
 			# It worked, but maybe the user isn't seeing what they expect
 			col.scale_y = 0.7
-			col.label("Material prepping worked, but you might need")
-			col.label("to \"Improve UI\" or go into texture/rendered")
-			col.label("mode (shift+z) to see imrpoved textures")
+			col.label(text="Material prepping worked, but you might need")
+			col.label(text="to \"Improve UI\" or go into texture/rendered")
+			col.label(text="mode (shift+z) to see imrpoved textures")
 
 		col.prop(self, "suppress_help")
 		self.help_num = 0  # reset in event of unset re-trigger
@@ -254,7 +254,7 @@ class McprepMaterialHelp(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class McprepSwapTexturePack(bpy.types.Operator, ImportHelper):
+class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper):
 	"""Swap current textures for that of a texture pack folder"""
 	bl_idname = "mcprep.swap_texture_pack"
 	bl_label = "Swap Texture Pack"
@@ -308,11 +308,11 @@ class McprepSwapTexturePack(bpy.types.Operator, ImportHelper):
 		col = row.column()
 		subcol = col.column()
 		subcol.scale_y = 0.7
-		subcol.label("Select any subfolder of an")
-		subcol.label("unzipped texture pack, then")
-		subcol.label("press 'Swap Texture Pack'")
-		subcol.label("after confirming these")
-		subcol.label("settings below:")
+		subcol.label(text="Select any subfolder of an")
+		subcol.label(text="unzipped texture pack, then")
+		subcol.label(text="press 'Swap Texture Pack'")
+		subcol.label(text="after confirming these")
+		subcol.label(text="settings below:")
 		col.prop(self, "extra_passes")
 		col.prop(self, "animateTextures")
 
@@ -326,7 +326,7 @@ class McprepSwapTexturePack(bpy.types.Operator, ImportHelper):
 		folder = self.filepath
 		if os.path.isfile(bpy.path.abspath(folder)):
 			folder = os.path.dirname(folder)
-		if conf.v: print("Folder: ", folder)
+		conf.log("Folder: " + folder)
 
 		if not os.path.isdir(bpy.path.abspath(folder)):
 			self.report({'ERROR'}, "Selected folder does not exist")
@@ -352,7 +352,7 @@ class McprepSwapTexturePack(bpy.types.Operator, ImportHelper):
 		# set the scene's folder for the texturepack being swapped
 		context.scene.mcprep_texturepack_path = folder
 
-		if conf.v: print("Materials detected:",len(mat_list))
+		conf.log("Materials detected: " + str(len(mat_list)))
 		res = 0
 		for mat in mat_list:
 			res += generate.set_texture_pack(mat, folder, self.extra_passes)
@@ -365,19 +365,19 @@ class McprepSwapTexturePack(bpy.types.Operator, ImportHelper):
 		return {'FINISHED'}
 
 
-class McprepResetTexturepackPath(bpy.types.Operator):
+class MCPREP_OT_reset_texturepack_path(bpy.types.Operator):
 	bl_idname = "mcprep.reset_texture_path"
 	bl_label = "Reset texture pack path"
 	bl_description = "Resets the texture pack folder to the MCprep default saved in preferences"
 
 	@tracking.report_error
 	def execute(self, context):
-		addon_prefs = util.get_prefs()
+		addon_prefs = util.get_user_preferences(context)
 		context.scene.mcprep_texturepack_path = addon_prefs.custom_texturepack_path
 		return {'FINISHED'}
 
 
-class McprepCombineMaterials(bpy.types.Operator):
+class MCPREP_OT_combine_materials(bpy.types.Operator):
 	bl_idname = "mcprep.combine_materials"
 	bl_label = "Combine materials"
 	bl_description = "Consolidate the same materials together e.g. mat.001 and mat.002"
@@ -399,7 +399,8 @@ class McprepCombineMaterials(bpy.types.Operator):
 		removeold = True
 
 		if self.selection_only==True and len(context.selected_objects)==0:
-			self.report({'ERROR',"Either turn selection only off or select objects with materials"})
+			self.report({'ERROR',
+				"Either turn selection only off or select objects with materials"})
 			return {'CANCELLED'}
 
 		# 2-level structure to hold base name and all
@@ -438,7 +439,7 @@ class McprepCombineMaterials(bpy.types.Operator):
 			elif mat.name not in name_cat[base]:
 				name_cat[base].append(mat.name)
 			else:
-				if conf.vv:print("Skipping, already added material")
+				conf.log("Skipping, already added material", True)
 
 
 		# pre 2.78 solution, deep loop
@@ -501,7 +502,7 @@ class McprepCombineMaterials(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class McprepCombineImages(bpy.types.Operator):
+class MCPREP_OT_combine_images(bpy.types.Operator):
 	bl_idname = "mcprep.combine_images"
 	bl_label = "Combine images"
 	bl_description = "Consolidate the same images together e.g. img.001 and img.002"
@@ -603,7 +604,7 @@ class McprepCombineImages(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class McprepScaleUV(bpy.types.Operator):
+class MCPREP_OT_scale_uv(bpy.types.Operator):
 	bl_idname = "mcprep.scale_uv"
 	bl_label = "Scale UV Faces"
 	bl_description = "Scale all selected UV faces. See F6 or redo-last panel to adjust factor"
@@ -703,7 +704,7 @@ class McprepScaleUV(bpy.types.Operator):
 		return None
 
 
-class McprepSelectAlphaFaces(bpy.types.Operator):
+class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 	bl_idname = "mcprep.select_alpha_faces"
 	bl_label = "Select alpha faces"
 	bl_description = "Select or delete transparent UV faces of a mesh"
@@ -853,7 +854,7 @@ class McprepSelectAlphaFaces(bpy.types.Operator):
 		return
 
 
-class McprepReplaceMissingTextures(bpy.types.Operator):
+class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 	"""Replace any missing textures with matching images in the active texture pack"""
 	bl_idname = "mcprep.replace_missing_textures"
 	bl_label = "Find missing textures"
@@ -897,11 +898,11 @@ class McprepReplaceMissingTextures(bpy.types.Operator):
 					updated = True
 			if updated:
 				count += 1
-				if conf.v: print("Updated " + mat.name)
+				conf.log("Updated " + mat.name)
 				if self.animateTextures:
 					sequences.animate_single_material(
 						mat, context.scene.render.engine)
-					if conf.v: print("Animated texture")
+					conf.log("Animated texture")
 		if count == 0:
 			self.report({'INFO'},
 				"No missing image blocks detected in {} materials".format(
@@ -918,9 +919,25 @@ class McprepReplaceMissingTextures(bpy.types.Operator):
 # -----------------------------------------------------------------------------
 
 
+classes = (
+	MCPREP_OT_prep_materials,
+	MCPREP_OT_materials_help,
+	MCPREP_OT_swap_texture_pack,
+	MCPREP_OT_reset_texturepack_path,
+	MCPREP_OT_combine_materials,
+	MCPREP_OT_combine_images,
+	MCPREP_OT_scale_uv,
+	MCPREP_OT_select_alpha_faces,
+	MCPREP_OT_replace_missing_textures
+)
+
+
 def register():
-	pass
+	for cls in classes:
+		util.make_annotations(cls)
+		bpy.utils.register_class(cls)
 
 
 def unregister():
-	pass
+	for cls in reversed(classes):
+		bpy.utils.unregister_class(cls)

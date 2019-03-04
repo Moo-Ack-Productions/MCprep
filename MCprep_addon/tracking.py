@@ -277,8 +277,9 @@ class Singleton_tracking(object):
 			connection.connect()
 			if self.verbose:
 				print(self._addon + ": Connection made to "+str(path))
-		except:
+		except Exception as err:
 			print(self._addon + ": Connection failed, intended report destination: "+str(path))
+			print("Error: "+str(err))
 			return {'status':'NO_CONNECTION'}
 
 		if method=="POST" or method=="PUT":
@@ -368,10 +369,14 @@ class Singleton_tracking(object):
 		sensitive information such as usernames or names"""
 		if not VALID_IMPORT:
 			return report
-		return re.sub(
+		try:
+			return re.sub(
 				r'(?i)File "[/\\]{1,2}.*[/\\]{1,2}',
 				'File "<addon_path>'+os.sep,
 				report)
+		except Exception as err:
+			print("Error occured while removing info: {}".format(err))
+			return "[pii] "+str(report)
 
 	def string_trunc(self, value):
 		"""Function which caps max string length."""
@@ -394,7 +399,7 @@ Tracker = Singleton_tracking()
 # -----------------------------------------------------------------------------
 
 
-class toggle_enable_tracking(bpy.types.Operator):
+class TRACK_OT_toggle_enable_tracking(bpy.types.Operator):
 	"""Enabled or disable usage tracking"""
 	bl_idname = IDNAME+".toggle_enable_tracking"
 	bl_label = "Toggle opt-in for analytics tracking"
@@ -422,7 +427,7 @@ class toggle_enable_tracking(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class popup_feedback(bpy.types.Operator):
+class TRACK_OT_popup_feedback(bpy.types.Operator):
 	bl_idname = IDNAME+".popup_feedback"
 	bl_label = "Thanks for using {}!".format(IDNAME)
 	bl_description = "Take a survey to give feedback about the addon"
@@ -438,11 +443,11 @@ class popup_feedback(bpy.types.Operator):
 		col = self.layout.column()
 		col.alignment='CENTER'
 		col.scale_y = 0.7
-		col.label("Want to help out even more?")
-		col.label("Press OK below to open the MCprep survey")
-		col.label("Responding helps direct development time,")
-		col.label("and identify those nasty bugs.")
-		col.label("You help everyone by responding!")
+		col.label(text="Want to help out even more?")
+		col.label(text="Press OK below to open the MCprep survey")
+		col.label(text="Responding helps direct development time,")
+		col.label(text="and identify those nasty bugs.")
+		col.label(text="You help everyone by responding!")
 
 	def execute(self, context):
 		bpy.ops.wm.url_open(url="bit.ly/MCprepSurvey")
@@ -450,7 +455,7 @@ class popup_feedback(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class popup_report_error(bpy.types.Operator):
+class TRACK_OT_popup_report_error(bpy.types.Operator):
 	bl_idname = IDNAME+".report_error"
 	bl_label = "MCprep ERROR OCCURED"
 	bl_description = "Report error to database, add additional comments for context"
@@ -477,12 +482,12 @@ class popup_report_error(bpy.types.Operator):
 		layout = self.layout
 
 		col = layout.column()
-		col.label("Error detected, press OK below to send to developer", icon="ERROR")
+		col.label(text="Error detected, press OK below to send to developer", icon="ERROR")
 		box = col.box()
 		boxcol = box.column()
 		boxcol.scale_y = 0.7
 		if self.error_report=="":
-			box.label(" # no error code identified # ")
+			box.label(text=" # no error code identified # ")
 		else:
 			width = 500
 			report_lines = self.error_report.split("\n")[:-1]
@@ -492,12 +497,12 @@ class popup_report_error(bpy.types.Operator):
 				sub_lns = textwrap.fill(ln, width-30)
 				spl = sub_lns.split("\n")
 				for i,s in enumerate(spl):
-					boxcol.label(s)
+					boxcol.label(text=s)
 					tot_ln+=1
 					if tot_ln==max_ln: break
 				if tot_ln==max_ln: break
-		boxcol.label("."*500)
-		# boxcol.label("System & addon information:")
+		boxcol.label(text="."*500)
+		# boxcol.label(text="System & addon information:")
 		sysinfo="Blender version: {}\nMCprep version: {}\nOS: {}\n MCprep install identifier: {}".format(
 				Tracker.blender_version,
 				Tracker.version,
@@ -505,22 +510,21 @@ class popup_report_error(bpy.types.Operator):
 				Tracker.json["install_id"],
 		)
 		for ln in sysinfo.split("\n"):
-			boxcol.label(ln)
+			boxcol.label(text=ln)
 
-		col.label("(Optional) Describe what you were trying to do when the error occured:")
+		col.label(text="(Optional) Describe what you were trying to do when the error occured:")
 		col.prop(self,"comment",text="")
 
 		row = col.row(align=True)
-		# spl = layout.split(percentage=80)
-		split = layout.split(percentage=0.6)
+		split = layout_split(layout, factor=0.6)
 		spcol = split.row()
-		spcol.label("Select 'Send' then press OK to share anonymous report")
-		split_two = split.split(percentage=0.4)
+		spcol.label(text="Select 'Send' then press OK to share anonymous report")
+		split_two = layout_split(split, factor=0.4)
 		spcol_two = split_two.row(align=True)
 		spcol_two.prop(self,"action",text="")
 		spcol_two = split_two.row(align=True)
 		p = spcol_two.operator("wm.url_open", text="How is this used?", icon="QUESTION")
-		p.url = "http://theduckcow.com/dev/blender/mcprep/reporting-errors/"
+		p.url = "https://theduckcow.com/dev/blender/mcprep/reporting-errors/"
 
 	def execute(self, context):
 		if not VALID_IMPORT:
@@ -783,6 +787,35 @@ def report_error(function):
 # -----------------------------------------------------------------------------
 
 
+def layout_split(layout, factor=0.0, align=False):
+	"""Intermediate method for pre and post blender 2.8 split UI function"""
+	if not hasattr(bpy.app, "version") or bpy.app.version < (2, 80):
+		return layout.split(percentage=factor, align=align)
+	return layout.split(factor=factor, align=align)
+
+
+def make_annotations(cls):
+	"""Add annotation attribute to class fields to avoid Blender 2.8 warnings"""
+	if not hasattr(bpy.app, "version") or bpy.app.version < (2, 80):
+		return cls
+	bl_props = {k: v for k, v in cls.__dict__.items() if isinstance(v, tuple)}
+	if bl_props:
+		if '__annotations__' not in cls.__dict__:
+			setattr(cls, '__annotations__', {})
+		annotations = cls.__dict__['__annotations__']
+		for k, v in bl_props.items():
+			annotations[k] = v
+			delattr(cls, k)
+	return cls
+
+
+classes = (
+	TRACK_OT_toggle_enable_tracking,
+	TRACK_OT_popup_feedback,
+	TRACK_OT_popup_report_error,
+)
+
+
 def register(bl_info):
 	"""Setup the tracker and register install."""
 	global VALID_IMPORT
@@ -791,15 +824,20 @@ def register(bl_info):
 	# for compatibility to prior blender (2.75?)
 	try:
 		bversion = bpy.app.version
-		print("Blender version detected: " + str(bversion))
 	except Exception as err:
 		err = traceback.format_exc()
+		print("Could not get blender version:")
 		print(err)
 
 	language = None
-	system = bpy.context.user_preferences.system
-	if system.use_international_fonts:
-		language = system.language
+	if hasattr(bpy.app, "version") and bpy.app.version >= (2, 80):
+		system = bpy.context.preferences.view
+		if system.use_international_fonts:
+			language = system.language
+	else:
+		system = bpy.context.user_preferences.system
+		if system.use_international_fonts:
+			language = system.language
 
 	try:
 		Tracker.initialize(
@@ -829,12 +867,17 @@ def register(bl_info):
 		Tracker.failsafe = True
 		Tracker.tracking_enabled = True # User accepted on download
 
+	for cls in classes:
+		make_annotations(cls)
+		bpy.utils.register_class(cls)
+
 	# register install
 	trackInstalled()
 
 
 def unregister():
-	pass
+	for cls in reversed(classes):
+		bpy.utils.unregister_class(cls)
 
 
 if __name__ == "__main__":
