@@ -30,6 +30,7 @@ try:
 	from . import conf
 	from . import util
 	import re
+	import requests
 	import traceback
 	import json
 	import http.client
@@ -81,6 +82,7 @@ class Singleton_tracking(object):
 		self._verbose = False
 		self._version = ""
 		self.json = {}
+		self._httpclient_fallback = None # set to True/False after first req
 
 
 	# -------------------------------------------------------------------------
@@ -266,9 +268,68 @@ class Singleton_tracking(object):
 
 
 	def raw_request(self, method, path, payload, callback=None):
-		"""Raw connection request, background or foreground."""
+		"""Raw connection request, background or foreground.
+
+		To support the widest range of installs, try first using the newer
+		requests module, else fall back and keep using http.client
+		"""
 		if not VALID_IMPORT:
 			return
+
+		if self._httpclient_fallback is None:
+			# first time run
+			resp = None
+			try:
+				resp = self._raw_request_mod_requests(method, path, payload)
+				self._httpclient_fallback = False
+			except:
+				resp = self._raw_request_mod_http(method, path, payload)
+				self._httpclient_fallback = True
+		elif self._httpclient_fallback is False:
+			resp =  self._raw_request_mod_requests(method, path, payload)
+		else:
+			resp = self._raw_request_mod_http(method, path, payload)
+
+		if callback is not None:
+			if self._verbose:
+				print(self._addon+": Running callback")
+			callback(resp)
+		return resp
+
+	def _raw_request_mod_requests(self, method, path, payload):
+		"""Method for connection using the requests library.
+
+		Intentionally raises when errors occur so that fallback method can
+		be used. This function works in blender 2.8, and at least 2.79.
+		"""
+		url = self._appurl + path
+		if method=="POST":
+			res = requests.post(url, payload)
+		elif method=="GET":
+			res = requests.get(url)
+		elif method=="PUT":
+			res = requests.put(url, payload)
+		else:
+			raise ValueError("raw_request input must be GET, POST, or PUT")
+
+		if not res.ok:
+			if self._verbose:
+				print("Error occured in requests req: ", str(res.reason))
+			raise ValueError("Error occured while requesting data (requests lib)")
+
+		if res.text:
+			resp = json.loads(res.text)
+		else:
+			resp = {}
+		if self._verbose:
+			print(self._addon +" response (requests lib): "+str(resp))
+		return resp
+
+	def _raw_request_mod_http(self, method, path, payload):
+		"""Method for connection using the http.client library.
+
+		This method functions consistently up until and not including b3d 2.8
+		"""
 
 		url = self._appurl.split("//")[1]
 		url = url.split("/")[0]
@@ -291,12 +352,8 @@ class Singleton_tracking(object):
 
 		raw = connection.getresponse().read()
 		resp = json.loads(raw.decode())
-		if self._verbose: print(self._addon +" response: "+str(resp))
-
-		if callback != None:
-			if self._verbose: print(self._addon+": Running callback")
-			callback(resp)
-
+		if self._verbose:
+			print(self._addon +" response (http lib): "+str(resp))
 		return resp
 
 	def set_tracker_json(self):
@@ -308,7 +365,8 @@ class Singleton_tracking(object):
 		if os.path.isfile(self._tracker_json) is True:
 			with open(self._tracker_json) as data_file:
 				self.json = json.load(data_file)
-				if self._verbose: print(self._addon+": Read in json settings from tracker file")
+				if self._verbose:
+					print(self._addon+": Read in json settings from tracker file")
 		else:
 			# set data structure
 			self.json = {
@@ -367,13 +425,14 @@ class Singleton_tracking(object):
 	def remove_indentifiable_information(self, report):
 		"""Remove filepath from report logs, which could have included
 		sensitive information such as usernames or names"""
+		report = report.replace('\\', '/')
 		if not VALID_IMPORT:
 			return report
 		try:
 			return re.sub(
 				r'(?i)File "[/\\]{1,2}.*[/\\]{1,2}',
 				'File "<addon_path>'+os.sep,
-				report)
+				str(report))
 		except Exception as err:
 			print("Error occured while removing info: {}".format(err))
 			return "[pii] "+str(report)
@@ -812,7 +871,7 @@ def make_annotations(cls):
 classes = (
 	TRACK_OT_toggle_enable_tracking,
 	TRACK_OT_popup_feedback,
-	TRACK_OT_popup_report_error,
+	TRACK_OT_popup_report_error
 )
 
 

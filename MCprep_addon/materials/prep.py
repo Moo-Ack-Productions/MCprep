@@ -89,6 +89,11 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 		max=1,
 		min=0
 		)
+	makeSolid = bpy.props.BoolProperty(
+		name = "Make materials solid",
+		description = "Make all materials solid only, for shadows and rendering",
+		default = False
+		)
 
 	skipUsage = bpy.props.BoolProperty(
 		default = False,
@@ -106,6 +111,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 		if engine=='CYCLES' or engine=='BLENDER_EEVEE':
 			col.prop(self, "usePrincipledShader")
 		col.prop(self, "useReflections")
+		col.prop(self, "makeSolid")
 		col.prop(self, "animateTextures")
 		col.prop(self, "autoFindMissingTextures")
 
@@ -157,16 +163,18 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 					if res>0:
 						mat["texture_swapped"] = True  # used to apply saturation
 			if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
-				res = generate.matprep_internal(
-						mat, passes, self.useReflections)
-				if res==0: count+=1
+				res = generate.matprep_internal(mat, passes,
+					self.useReflections, self.makeSolid)
+				if res==0:
+					count+=1
 				if self.animateTextures:
 					sequences.animate_single_material(
 						mat, context.scene.render.engine)
 			elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
-				res = generate.matprep_cycles(
-						mat, passes, self.useReflections, self.usePrincipledShader)
-				if res==0: count+=1
+				res = generate.matprep_cycles(mat, passes, self.useReflections,
+					self.usePrincipledShader, self.makeSolid)
+				if res==0:
+					count+=1
 				if self.animateTextures:
 					sequences.animate_single_material(
 						mat, context.scene.render.engine)
@@ -174,14 +182,13 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 				self.report({'ERROR'},"Only blender internal or cycles supported")
 				return {'CANCELLED'}
 
-		if self.combineMaterials==True:
+		if self.combineMaterials is True:
 			bpy.ops.mcprep.combine_materials(selection_only=True, skipUsage=True)
 		if self.improveUiSettings:
 			bpy.ops.mcprep.improve_ui()
 		self.report({"INFO"},"Modified "+str(count)+" materials")
 		self.track_param = context.scene.render.engine
 		self.track_exporter = generate.detect_form(mat_list)
-
 		return {'FINISHED'}
 
 
@@ -816,8 +823,8 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 				y = uv.data[loop.index].uv[1]%1
 				shape.append((x,y))
 
-			print("The shape coords:")
-			print(shape)
+			# print("The shape coords:")
+			# print(shape)
 			# could just do "the closest" pixel... but better is weighted area
 
 			if not shape:
@@ -829,7 +836,7 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 			xmax = round(max(xlist)*image.size[0])-0.5
 			ymin = round(min(ylist)*image.size[1])-0.5
 			ymax = round(max(ylist)*image.size[1])-0.5
-			print("\tSet size:",xmin,xmax,ymin,ymax)
+			conf.log(["\tSet size:",xmin,xmax,ymin,ymax])
 
 			# assuming faces are roughly rectangular, sum pixels a face covers
 			asum = 0

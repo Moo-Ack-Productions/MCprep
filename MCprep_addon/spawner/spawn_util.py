@@ -41,14 +41,13 @@ class MCPREP_OT_reload_spawners(bpy.types.Operator):
 	"""Relaod meshswapping and spawning lists"""
 	bl_idname = "mcprep.reload_spawners"
 	bl_label = "Reload meshswap and mob spawners"
+	bl_options = {'REGISTER', 'UNDO'}
 
 	@tracking.report_error
 	def execute(self, context):
-
 		bpy.ops.mcprep.reload_meshswap()
 		bpy.ops.mcprep.reload_mobs()
 		bpy.ops.mcprep.reload_items()
-
 		return {'FINISHED'}
 
 
@@ -73,7 +72,6 @@ class MCPREP_OT_spawn_path_reset(bpy.types.Operator):
 
 class MCPREP_UL_mob(bpy.types.UIList):
 	"""For mob asset listing UIList drawing"""
-	# previously McprepMobUiList
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
 			# col = layout.column()
@@ -87,7 +85,6 @@ class MCPREP_UL_mob(bpy.types.UIList):
 
 class MCPREP_UL_meshswap(bpy.types.UIList):
 	"""For meshswap asset listing UIList drawing"""
-	# previously McprepMeshswapUiList
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
 			layout.label(text=set.name)
@@ -100,7 +97,6 @@ class MCPREP_UL_meshswap(bpy.types.UIList):
 
 class MCPREP_UL_item(bpy.types.UIList):
 	"""For meshswap asset listing UIList drawing"""
-	# previously McprepItemUiList
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
 			col = layout.column()
@@ -128,11 +124,7 @@ class ListMobAssetsAll(bpy.types.PropertyGroup):
 class ListMobAssets(bpy.types.PropertyGroup):
 	"""For UI drawing of mob assets and holding data"""
 	description = bpy.props.StringProperty()
-
-	# TODO: add in fields here to avoid having data in conf
-	# local = bpy.props.StringProperty()  # is this the path?
 	category = bpy.props.StringProperty()  # category it belongs to
-	# relative_path = bpy.props.StringProperty()  # blend file path
 	mcmob_type = bpy.props.StringProperty()
 
 

@@ -209,8 +209,8 @@ class MCPREP_OT_mob_spawner_direct(bpy.types.Operator):
 			# default if called from non MCprep script
 			return {'CANCELLED'}
 		elif self.mcmob_index >= len(scn_props.mob_list):
-		 	self.report({'ERROR'}, "Invalid mob index " + str(self.mcmob_index))
-		 	return {'CANCELLED'}
+			self.report({'ERROR'}, "Invalid mob index " + str(self.mcmob_index))
+			return {'CANCELLED'}
 		else:
 			mob = scn_props.mob_list[self.mcmob_index].mcmob_type
 
@@ -509,14 +509,19 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 			if ob not in addedObjs:
 				conf.log("This obj not in group: " + ob.name)
 				# removes things like random bone shapes pulled in,
-				# without deleting them
-				context.scene.objects.unlink(ob)
+				# without deleting them, just unlinking them from the scene
+				util.obj_unlink_remove(ob, False, context)
 
-		grp_added.name = "reload-blend-to-remove-this-empty-group"
-		for obj in grp_added.objects:
-		    grp_added.objects.unlink(obj)
-		    util.select_set(obj, True)
-		grp_added.user_clear()
+		if not util.bv28():
+			grp_added.name = "reload-blend-to-remove-this-empty-group"
+			for obj in grp_added.objects:
+				grp_added.objects.unlink(obj)
+				util.select_set(obj, True)
+			grp_added.user_clear()
+		else:
+			for obj in grp_added.objects:
+				util.select_set(obj, True)
+
 		# try:
 		# 	util.collections().remove(grp_added)
 		# 	This can cause redo last issues
@@ -528,7 +533,7 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 			self.report({'WARNING'}, "No armatures found!")
 		else:
 			conf.log("Using object as primary rig: "+rig_obj.name)
-			bpy.context.scene.objects.active = rig_obj
+			util.set_active_object(context, rig_obj)
 
 		if rig_obj and self.clearPose or rig_obj and self.relocation=="Offset":
 			if self.relocation == "Offset":

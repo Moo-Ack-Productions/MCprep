@@ -118,7 +118,8 @@ def loadSkinFile(self, context, filepath, new_material=False):
 	else:
 		pass
 
-	setUVimage(context.selected_objects, image)
+	if not util.bv28():
+		setUVimage(context.selected_objects, image)
 
 	# TODO: adjust the UVs if appropriate, and fix eyes
 	if image.size[0] != 0 and image.size[1]/image.size[0] != 1:
@@ -260,10 +261,13 @@ def getMatsFromSelected(selected,new_material=False):
 
 
 def setUVimage(objs, image):
-	"""Set image for each face for viewport displaying."""
+	"""Set image for each face for viewport displaying (2.7 only)"""
 	for obj in objs:
 		if obj.type != "MESH":
 			continue
+		if not hasattr(obj.data, "uv_textures"):
+			conf.log("Called setUVimage on object with no uv_textures, 2.8?")
+			return
 		if obj.data.uv_textures.active is None:
 			continue
 		for uv_face in obj.data.uv_textures.active.data:

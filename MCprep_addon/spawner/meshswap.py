@@ -204,33 +204,34 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 			else:
 				layers[self.append_layer-1] = True
 			objlist = []
-			groupname = None
-			for g in util.collections():
-				if g in pre_groups:
+			group = None
+			for coll in util.collections():
+				if coll in pre_groups:
 					continue
-				for ob in g.objects:
+				for ob in coll.objects:
 					if ob.name in context.scene.objects:
 						#context.scene.objects.unlink(ob)
 						objlist.append(ob)
-				if util.nameGeneralize(g.name) == util.nameGeneralize(block):
-					groupname = g
+				if util.nameGeneralize(coll.name) == util.nameGeneralize(block):
+					group = coll
 
-			if groupname==None:
+			if group is None:
 				self.report({"ERROR"},"Could not retreive imported group")
 				return {'CANCELLED'}
 
-			if self.prep_materials==True:
+			if self.prep_materials is True:
 				for ob in objlist:
 					util.select_set(ob, True)
 				bpy.ops.mcprep.prep_materials(skipUsage=True) # if cycles
 				bpy.ops.object.select_all(action='DESELECT')
 
-			for ob in objlist:
-				ob.layers = layers
+			if hasattr(context.scene, "layers"): # 2.7 only
+				for obj in objlist:
+					obj.layers = layers
 
 			# now finally add the group instance
 			bpy.ops.object.select_all(action='DESELECT')
-			ob = util.addGroupInstance(groupname.name,self.location)
+			ob = util.addGroupInstance(group.name, self.location)
 			if self.snapping=="center":
 				offset=0 # could be 0.5
 				ob.location = [round(x+offset)-offset for x in self.location]
@@ -246,11 +247,9 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 						continue
 					elif ob.parent or ob.children:
 						continue
-					bpy.context.scene.objects.unlink(ob)
-					ob.user_clear()
-					bpy.data.objects.remove(ob)
+					util.obj_unlink_remove(ob, True, context)
 
-		# self.exporter = self.meshswap_block  # was this doing anything?
+		self.track_param = self.block
 		return {'FINISHED'}
 
 
@@ -662,7 +661,9 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				# 		#continue
 				# 		print("do nothing, this is for jmc2obj")
 				conf.log(" DUPLIST: ")
-				conf.log(str([x,y,z], [facebook[setNum][2][0], facebook[setNum][2][1], facebook[setNum][2][2]]), True)
+				conf.log(
+					str([[x,y,z], [facebook[setNum][2][0], facebook[setNum][2][1], facebook[setNum][2][2]]]),
+				True)
 
 				### START HACK PATCH, FOR MINEWAYS double-tall adding
 				# prevent double high grass... which mineways names sunflowers.
@@ -670,7 +671,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				if ([x,y-1,z] in dupList) and swapGen in ["Sunflower","Iron_Door","Wooden_Door"]:
 					overwrite = -1
 				elif ([x,y+1,z] in dupList) and swapGen in ["Sunflower","Iron_Door","Wooden_Door"]:
-					dupList[ dupList.index([x,y+1,z]) ] = [x,y,z]
+					dupList[dupList.index([x,y+1,z])] = [x,y,z]
 					overwrite = -1
 				### END HACK PATCH
 
@@ -908,9 +909,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				# if not rm.name in context.scene.objects:
 				# 	continue
 				try:
-					context.scene.objects.unlink(rm)
-					rm.user_clear()
-					bpy.data.objects.remove(rm)
+					util.obj_unlink_remove(rm, True, context)
 				except:
 					print("Failed to claer user/remove object")
 		for d in selList:

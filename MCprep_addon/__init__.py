@@ -37,7 +37,7 @@ Disclaimer: This is not an official Google product
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",
-	"version": (3, 1, 2),
+	"version": (3, 1, 1, 1),
 	"blender": (2, 80, 0),
 	"location": "3D window toolshelf > MCprep tab",
 	"description": "Minecraft workflow addon for rendering and animation",
@@ -58,12 +58,10 @@ import bpy
 
 
 def register():
-	# bpy.utils.register_module(__name__)
 	load_modules.register(bl_info)
 
 
 def unregister():
-	# bpy.utils.unregister_module(__name__)
 	load_modules.unregister(bl_info)
 
 

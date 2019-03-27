@@ -77,9 +77,12 @@ def materialsFromObj(obj_list):
 
 
 def bAppendLink(directory, name, toLink, active_layer=True):
-	"""For multiple version compatibility,
-	this function generalized appending/linking
-	blender post 2.71 changed to new append/link methods"""
+	"""For multiple version compatibility, this function generalized
+	appending/linking blender post 2.71 changed to new append/link methods
+
+	Note that for 2.8 compatibility, the directory passed in should
+	already be correctly identified (eg Group or Collection)
+	"""
 
 	conf.log("Appending " + directory + " : " + name, vv_only=True)
 	post272 = False
@@ -124,15 +127,13 @@ def obj_copy(base, context=None, vertex_groups=True, modifiers=True):
 
 	Input must be a valid object in bpy.data.objects
 	"""
-
 	if not base or base.name not in bpy.data.objects:
 		raise Exception("Invalid object passed")
+	if not context:
+		context = bpy.context
 
 	new_ob = bpy.data.objects.new(base.name, base.data.copy())
-	if context:
-		context.scene.objects.link(new_ob)
-	else:
-		bpy.context.scene.objects.link(new_ob)
+	obj_link_scene(new_ob, context)
 
 	if vertex_groups:
 		verts = len(base.data.vertices)
@@ -157,9 +158,13 @@ def obj_copy(base, context=None, vertex_groups=True, modifiers=True):
 	return new_ob
 
 
+BV_IS_28 = None  # global initialization
 def bv28():
 	"""Check if blender 2.8, for layouts, UI, and properties. """
-	return hasattr(bpy.app, "version") and bpy.app.version >= (2, 80)
+	global BV_IS_28
+	if not BV_IS_28:
+		BV_IS_28 = hasattr(bpy.app, "version") and bpy.app.version >= (2, 80)
+	return BV_IS_28
 
 
 def onEdge(faceLoc):
@@ -229,7 +234,7 @@ def link_selected_objects_to_scene():
 	# Not used by addon, but shortcut useful in one-off cases to copy/run code
 	for ob in bpy.data.objects:
 		if ob not in list(bpy.context.scene.objects):
-			bpy.context.scene.objects.link(ob)
+			obj_link_scene(ob)
 
 
 def open_program(executable):
@@ -319,13 +324,13 @@ def addGroupInstance(group_name, loc, select=True):
 	scene = bpy.context.scene
 	ob = bpy.data.objects.new(group_name, None)
 	if bv28():
-		ob.dupli_type = 'GROUP'
-		ob.dupli_group = collections().get(group_name)
-		scene.objects.link(ob)
-	else:
 		ob.instance_type = 'COLLECTION'
 		ob.instance_collection = collections().get(group_name)
 		scene.collection.objects.link(ob)  # links to scene collection
+	else:
+		ob.dupli_type = 'GROUP'
+		ob.dupli_group = collections().get(group_name)
+		scene.objects.link(ob)
 	ob.location = loc
 	select_set(ob, select)
 	return ob
@@ -435,6 +440,29 @@ class event_stream():
 			return ["NEGATIVE",""]
 		elif event.type == "X":
 			return ["X",""]
+
+
+def uv_select(obj, action='TOGGLE'):
+	"""Direct way to select all UV verts of an object, assumings 1 uv layer.
+
+	Actions are: SELECT, DESELECT, TOGGLE.
+	"""
+	if not obj.data.uv_layers.active:
+		return# consider raising error
+	uv_layer = obj.data.uv_layers.active
+	if action == 'TOGGLE':
+		for face in obj.data.polygons:
+			face.select = not face.select
+	elif action == 'SELECT':
+		for face in obj.data.polygons:
+			# if len(face.loop_indices) < 3:
+			# 	continue
+			face.select = True
+	elif action == 'DESELECT':
+		for face in obj.data.polygons:
+			# if len(face.loop_indices) < 3:
+			# 	continue
+			face.select = False
 
 
 # -----------------------------------------------------------------------------
@@ -568,3 +596,33 @@ def instance_collection(obj):
 		return obj.dupli_group
 	elif hasattr(obj, "instance_collection"):
 		return obj.instance_collection
+
+
+def obj_link_scene(obj, context=None):
+	"""Links object to scene, or for 2.8, the scene master collection"""
+	if not context:
+		context = bpy.context
+	if hasattr(context.scene.objects, "link"):
+		context.scene.objects.link(obj)
+	elif hasattr(context.scene, "collection"):
+		context.scene.collection.objects.link(obj)
+	# context.scene.update() # needed?
+
+
+def obj_unlink_remove(obj, remove, context=None):
+	"""Unlink an object from the scene, and remove from data if specified"""
+	if not context:
+		context = bpy.context
+	if hasattr(context.scene.objects, "unlink"):  # 2.7
+		context.scene.objects.unlink(obj)
+	elif hasattr(context.scene, "collection"):  # 2.8
+		try:
+			context.scene.collection.objects.unlink(obj)
+		except RuntimeError:
+			pass # if not in master collection
+		colls = list(obj.users_collection)
+		for coll in colls:
+			coll.objects.unlink(obj)
+	if remove is True:
+		obj.user_clear()
+		bpy.data.objects.remove(obj)

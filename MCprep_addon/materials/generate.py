@@ -30,7 +30,6 @@ from .. import util
 
 def update_mcprep_texturepack_path(self, context):
 	"""Triggered if the scene-level resource pack path is updated."""
-
 	bpy.ops.mcprep.reload_items()
 
 
@@ -60,8 +59,7 @@ def get_mc_canonical_name(name):
 		canon = conf.json_data["blocks"]["block_mapping_mineways"][general_name]
 		form = "mineways"
 	else:
-		if conf.vv:
-			print("Canonical name not matched: "+general_name)
+		conf.log("Canonical name not matched: "+general_name, True)
 		canon = general_name
 		form = None
 
@@ -195,7 +193,7 @@ def checklist(matName, listName):
 		return False
 
 
-def matprep_internal(mat, passes, use_reflections):
+def matprep_internal(mat, passes, use_reflections, only_solid):
 	"""Update existing internal materials with improved settings.
 	Will not necessarily properly convert cycles materials into internal."""
 
@@ -261,7 +259,7 @@ def matprep_internal(mat, passes, use_reflections):
 	mat.texture_slots[diff_layer].use_map_color_diffuse = True
 	mat.texture_slots[diff_layer].diffuse_color_factor = 1
 
-	if not checklist(canon, "solid"): # alpha default on
+	if only_solid is False and not checklist(canon, "solid"): # alpha default on
 		bpy.data.textures[newName].use_alpha = True
 		mat.texture_slots[diff_layer].use_map_alpha = True
 		mat.use_transparency = True
@@ -322,7 +320,7 @@ def matprep_internal(mat, passes, use_reflections):
 	return 0
 
 
-def matprep_cycles(mat, passes, use_reflections, use_principled):
+def matprep_cycles(mat, passes, use_reflections, use_principled, only_solid):
 	"""Determine how to prep or generate the cycles materials.
 
 	Args:
@@ -332,17 +330,18 @@ def matprep_cycles(mat, passes, use_reflections, use_principled):
 		use_principled: if available and cycles, use principled node
 		saturate: if a desaturated texture (by canonical resource), add color
 	"""
+	if util.bv28():
+		# ensure nodes are enabled esp. after importing from BI scenes
+		mat.use_nodes = True
 
 	matGen = util.nameGeneralize(mat.name)
 	canon, form = get_mc_canonical_name(matGen)
 	if checklist(canon, "emit"):
 		res = matgen_cycles_emit(mat, passes)
 	elif use_principled and hasattr(bpy.types, 'ShaderNodeBsdfPrincipled'):
-		res = matgen_cycles_principled(mat, passes, use_reflections)
+		res = matgen_cycles_principled(mat, passes, use_reflections, only_solid)
 	else:
-		res = matgen_cycles_original(mat, passes, use_reflections)
-
-	# do check for eevee?
+		res = matgen_cycles_original(mat, passes, use_reflections, only_solid)
 	return res
 
 
@@ -391,7 +390,6 @@ def set_cycles_texture(image, material, extra_passes=False):
 	Args:
 		image: image datablock
 	"""
-
 	if material.node_tree == None:
 		return False
 	# check if there is more data to see pass types
@@ -406,7 +404,7 @@ def set_cycles_texture(image, material, extra_passes=False):
 			node.hide = False
 			conf.log("Unmuting mix_rgb to saturate texture")
 
-		if node.type != "TEX_IMAGE": continue
+		# if node.type != "TEX_IMAGE": continue
 
 		# check to see nodes and their respective pre-named field,
 		# saved as an attribute on the node
@@ -416,8 +414,9 @@ def set_cycles_texture(image, material, extra_passes=False):
 			node.hide = False
 		elif "MCPREP_normal" in node:
 			if "normal" in img_sets:
-				new_img = util.loadTexture(img_sets["normal"])
-				node.image = new_img
+				if node.type == 'TEX_IMAGE':
+					new_img = util.loadTexture(img_sets["normal"])
+					node.image = new_img
 				node.mute = False
 				node.hide = False
 			else:
@@ -432,12 +431,14 @@ def set_cycles_texture(image, material, extra_passes=False):
 			else:
 				node.mute = True
 				node.hide = True
-		else:
+		elif node.type == "TEX_IMAGE":
 			# assume all unlabeled texture nodes should be the diffuse
 			node["MCPREP_diffuse"] = True  # annotate node for future reference
 			node.image = image
 			node.mute = False
 			node.hide = False
+		else:
+			continue
 
 		changed = True
 
@@ -794,7 +795,7 @@ def apply_texture_animation_pass_settings(mat, animated_data):
 		anim_node.image_user.use_cyclic = True
 
 
-def matgen_cycles_principled(mat, passes, use_reflections):
+def matgen_cycles_principled(mat, passes, use_reflections, only_solid):
 	"""Generate principled cycles material, defaults to using transparency."""
 
 	matGen = util.nameGeneralize(mat.name)
@@ -848,9 +849,9 @@ def matgen_cycles_principled(mat, passes, use_reflections):
 	nodeSaturateMix.location = (-200,0)
 	nodeTexSpec.location = (-600,0)
 	nodeSpecInv.location = (-400,-275)
-	nodeNormal.location = (-400,-375)
+	nodeNormal.location = (-400,-425)
 	principled.location = (0,0)
-	nodeTrans.location = (-400,100)
+	nodeTrans.location = (0,100)
 	nodeMix1.location = (300,0)
 	nodeOut.location = (500,0)
 
@@ -873,6 +874,7 @@ def matgen_cycles_principled(mat, passes, use_reflections):
 	nodeTexDiff["MCPREP_diffuse"] = True
 	nodeTexSpec["MCPREP_specular"] = True
 	nodeTexNorm["MCPREP_normal"] = True
+	nodeNormal["MCPREP_normal"] = True # to also be also muted if no normal tex
 	nodeSaturateMix["SATURATE"] = True
 	# nodeTexDisp["MCPREP_disp"] = True
 	nodeTexDiff.image = image_diff
@@ -884,7 +886,7 @@ def matgen_cycles_principled(mat, passes, use_reflections):
 		nodeTexNorm.image = image_norm
 	else:
 		nodeTexNorm.mute = True
-		# nodeNormal.mute = True
+		nodeNormal.mute = True
 
 	nodeTexDiff.interpolation = 'Closest'
 	nodeTexSpec.interpolation = 'Closest'
@@ -933,7 +935,7 @@ def matgen_cycles_principled(mat, passes, use_reflections):
 		principled.inputs[4].default_value = 0  # set dielectric
 
 
-	if checklist(canon, "solid"):
+	if only_solid is True or checklist(canon, "solid"):
 		# nodeMix1.inputs[0].default_value = 1 # no transparency
 		nodes.remove(nodeTrans)
 		nodes.remove(nodeMix1)
@@ -983,7 +985,7 @@ def matgen_cycles_principled(mat, passes, use_reflections):
 	return 0 # return 0 once implemented
 
 
-def matgen_cycles_original(mat, passes, use_reflections):
+def matgen_cycles_original(mat, passes, use_reflections, only_solid):
 	"""Generate basic cycles material, defaults to using transparency node."""
 
 	matGen = util.nameGeneralize(mat.name)
@@ -1035,11 +1037,11 @@ def matgen_cycles_original(mat, passes, use_reflections):
 	nodeTexDiff.location = (-600,0)
 	nodeTexNorm.location = (-600,-275)
 	nodeTexSpec.location = (-600,275)
-	nodeNormal.location = (-400,-375)
+	nodeNormal.location = (-400,-425)
 	nodeGloss.location = (0,-150)
 	nodeSaturateMix.location = (-400,0)
 	nodeDiff.location = (-200,-150)
-	nodeTrans.location = (-200,0)
+	nodeTrans.location = (200,0)
 	nodeMix1.location = (0,0)
 	nodeMix2.location = (200,0)
 	nodeOut.location = (400,0)
@@ -1099,7 +1101,7 @@ def matgen_cycles_original(mat, passes, use_reflections):
 		# setup the animation??
 		nodeMix2.inputs[0].default_value = 0.2
 		nodeGloss.inputs[1].default_value = 0.0
-	if checklist(canon, "solid"):
+	if only_solid is True or checklist(canon, "solid"):
 		# nodeMix1.inputs[0].default_value = 1 # no transparency
 		nodes.remove(nodeTrans)
 		nodes.remove(nodeMix1)

@@ -39,24 +39,40 @@ class MCPREP_OT_improve_ui(bpy.types.Operator):
 
 	@tracking.report_error
 	def execute(self, context):
-		if hasattr(context.space_data, "show_textured_solid"):
-			context.space_data.show_textured_solid = True
-		elif hasattr(context.scene, "display"):
-			context.scene.display.shading.color_type = "TEXTURE"
-			context.scene.display.shading.background_type = "WORLD"
+		# Disable mipmaps (not saved, but avoids on screen blurry textures)
 		prefs = util.get_preferences(context)
 		if hasattr(prefs.system, "use_mipmaps"):
 			prefs.system.use_mipmaps = False
 
+		# show textures in solid mode
+		view = context.space_data
+		if hasattr(view, "show_textured_solid"): # 2.7
+			context.space_data.show_textured_solid = True
+		elif view.type == 'VIEW_3D' and hasattr(context.scene, "display"):
+			print("Shading here, 3D view")
+			try: # can fail e.g. in workbench view
+				view.shading.color_type = "TEXTURE"
+				view.shading.background_type = "WORLD"
+			except:
+				pass
+		elif hasattr(context.screen, "shading"): # 2.8 non shaded view
+			try: # can fail e.g. in workbench view
+				context.scene.display.shading.color_type = "TEXTURE"
+				context.scene.display.shading.background_type = "WORLD"
+			except:
+				pass
+
+		# now change the active drawing level to a minimum of solid mode
 		view27 = ['TEXTURED','MATEIRAL','RENDERED']
 		view28 = ['SOLID', 'MATERIAL', 'RENDERED']
 		engine = bpy.context.scene.render.engine
 		if not util.bv28() and context.space_data.viewport_shade not in view27:
 			if engine == 'CYCLES': # or engine == 'BLENDER_EEVEE':
-				context.space_data.viewport_shade = 'TEXTURE'
+				context.space_data.viewport_shade = 'TEXTURED'
 			else:
 				context.space_data.viewport_shade = 'SOLID'
 		elif util.bv28() and context.scene.display.shading.type not in view28:
+			print("Shading type 28 not in list")
 
 			# must go through all spaces to find the match screen[].layout.space...
 			# and then apply, e.g.

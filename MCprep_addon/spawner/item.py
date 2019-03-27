@@ -104,7 +104,8 @@ def spawn_item_from_filepath(context, path, max_pixels, thickness, threshold,
 	name = os.path.splitext(img_str)[0]
 	abspath = bpy.path.abspath(path)
 
-	if img_str in bpy.data.images and bpy.path.abspath(bpy.data.images[img_str].filepath) == abspath:
+	if img_str in bpy.data.images and bpy.path.abspath(
+			bpy.data.images[img_str].filepath) == abspath:
 		image = bpy.data.images[img_str]
 	elif not path or not os.path.isfile(abspath):
 		return None, "File not found"
@@ -135,10 +136,17 @@ def spawn_item_from_filepath(context, path, max_pixels, thickness, threshold,
 	# Creating the mesh
 	while a < pix:
 		if image.pixels[n] >= threshold:
-			bpy.ops.mesh.primitive_plane_add(
-				location=(x,y,0), radius=.5, enter_editmode=1)
+			if util.bv28():
+				bpy.ops.mesh.primitive_plane_add(
+					location=(x,y,0), size=.5, enter_editmode=1)
+			else:
+				bpy.ops.mesh.primitive_plane_add(
+					location=(x,y,0), radius=.5, enter_editmode=1)
 			bpy.ops.uv.unwrap()
-			bpy.context.area.type = 'IMAGE_EDITOR'
+			if util.bv28():
+				bpy.context.area.type = 'UV_EDITOR'
+			else:
+				bpy.context.area.type = 'IMAGE_EDITOR'
 			if first is True:
 				bpy.context.space_data.mode = 'VIEW'
 				bpy.ops.uv.select_all(action='TOGGLE')
@@ -161,8 +169,9 @@ def spawn_item_from_filepath(context, path, max_pixels, thickness, threshold,
 
 	# Fix final mesh
 	# TODO: avoid all ops code here.
-	bpy.ops.mesh.select_all()
-	bpy.ops.mesh.select_all()
+	# bpy.ops.mesh.select_all() # action='SELECT'?
+	# bpy.ops.mesh.select_all()
+	bpy.ops.mesh.select_all(action='SELECT')
 	bpy.ops.mesh.remove_doubles()
 	bpy.ops.object.editmode_toggle()
 	if thickness > 0:
@@ -186,7 +195,7 @@ def spawn_item_from_filepath(context, path, max_pixels, thickness, threshold,
 		tex.use_mipmap = 0
 		tex.filter_type = 'BOX'
 		tex.filter_size = 0.1
-		if transparency is True:  # ?? not bool
+		if transparency is True:
 			mat.use_transparency = 1
 			mat.alpha = 0
 			mat.texture_slots[0].use_map_alpha = 1
@@ -225,9 +234,9 @@ def spawn_item_from_filepath(context, path, max_pixels, thickness, threshold,
 	# Final fixes to the object
 	for obj in bpy.context.selected_objects:
 		if thickness > 0:
-			bpy.data.objects[obj.name].modifiers['Solidify'].thickness = thickness*0.0625
-			bpy.data.objects[obj.name].modifiers['Solidify'].offset = 0.1
-		bpy.data.meshes[obj.name].name = name
+			obj.modifiers['Solidify'].thickness = thickness*0.0625
+			obj.modifiers['Solidify'].offset = 0.1
+		obj.data.name = name
 		bpy.context.object.data.materials.append(mat)
 		obj.name = name
 	bpy.ops.object.origin_set(type='ORIGIN_CURSOR')

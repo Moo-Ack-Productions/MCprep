@@ -33,7 +33,11 @@ from . import tracking
 from .materials.skin import update_skin_path
 from .materials.generate import update_mcprep_texturepack_path
 
-LOAD_FACTORY = 'DISK_DRIVE' if util.bv28() else 'LOAD_FACTORY'
+
+# blender 2.7 vs 2.8 icon selections
+LOAD_FACTORY = 'LOOP_BACK' if util.bv28() else 'LOAD_FACTORY'
+HAND_ICON = 'FILE_REFRESH' if util.bv28() else 'HAND'
+OPT_IN =  'URL' if util.bv28() else 'HAND'
 
 # -----------------------------------------------------------------------------
 #	Above for class functions/operators
@@ -54,7 +58,8 @@ class MCPREP_MT_mob_spawner(bpy.types.Menu):
 		# if mobs not loaded yet
 		if not scn_props.mob_list_all:
 			row = layout.row()
-			row.operator("mcprep.reload_mobs", text="Load mobs", icon='HAND')
+			row.operator("mcprep.reload_mobs", text="Load mobs",
+				icon=HAND_ICON)
 			row.scale_y = 2
 			row.alignment = 'CENTER'
 			return
@@ -98,13 +103,13 @@ class MCPREP_MT_item_spawn(bpy.types.Menu):
 		for item in context.scene.mcprep_props.item_list:
 			icn = "item-{}".format(item.index)
 			if conf.use_icons and icn in conf.preview_collections["items"]:
-				ops =layout.operator("mcprep.spawn_item", item.name,
+				ops =layout.operator("mcprep.spawn_item", text=item.name,
 					icon_value=conf.preview_collections["items"][icn].icon_id)
 			elif conf.use_icons:
-				ops = layout.operator("mcprep.spawn_item", item.name,
+				ops = layout.operator("mcprep.spawn_item", text=item.name,
 					icon="BLANK1")
 			else:
-				ops = layout.operator("mcprep.spawn_item", item.name)
+				ops = layout.operator("mcprep.spawn_item", text=item.name)
 			ops.filepath = item.path
 
 
@@ -129,7 +134,7 @@ class MCPREP_MT_3dview_add(bpy.types.Menu):
 		if not props.mob_list or not props.meshswap_list or not props.item_list:
 			row = layout.row()
 			row.operator("mcprep.reload_spawners", text="Load spawners",
-				icon='HAND')
+				icon=HAND_ICON)
 			row.scale_y = 2
 			row.alignment = 'CENTER'
 			return
@@ -310,11 +315,6 @@ class McprepPreference(bpy.types.AddonPreferences):
 			col.prop(self, "world_obj_path", text="")
 			split = util.layout_split(box, factor=factor_width)
 			col = split.column()
-			col.label(text="Default texture pack")
-			col = split.column()
-			col.prop(self, "custom_texturepack_path", text="")
-			split = util.layout_split(box, factor=factor_width)
-			col = split.column()
 			col.label(text="Meshwap assets")
 			col = split.column()
 			col.prop(self, "meshswap_path", text="")
@@ -426,7 +426,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 			if tracking.Tracker.tracking_enabled is False:
 				bcol.operator("mcprep.toggle_enable_tracking",
 						text="Opt into anonymous usage tracking",
-						icon="HAND")
+						icon=OPT_IN)
 			else:
 				bcol.operator("mcprep.toggle_enable_tracking",
 						text="Opt OUT of anonymous usage tracking",
@@ -586,20 +586,31 @@ class MCPREP_PT_world_tools(bpy.types.Panel):
 
 		rw = layout.row()
 		col = rw.column(align=True)
-		if "mcprep_world" not in util.collections():
-			col.operator("mcprep.add_world_time")
-		else:
-			col.label(text="MCprep sun already added")
+		col.operator("mcprep.add_mc_world")
+
+
+		# if "mcprep_world" not in util.collections():
+		# 	col.operator("mcprep.add_world_time")
+		# else:
+		# 	col.label(text="MCprep sun already added")
 			# col.prop(context.scene.mcprep_props,"world_time",text="")
 			# p = col.operator("mcprep.time_set")
 			# p.day_offset = int(context.scene.mcprep_props.world_time/24000)
 
 		col.operator("mcprep.world")
 
-		# layout.split()
-
-		# rw = layout.row()
-		# col = rw.column(align=True)
+		layout.split()
+		rw = layout.row()
+		col = rw.column(align=True)
+		obj = world_tools.get_time_object()
+		if obj and "MCprepHour" in obj:
+			col.label(text="Time of day")
+			col.prop(obj, "MCprepHour", text="")
+		else:
+			subcol = col.column()
+			subcol.scale_y = 0.8
+			subcol.label(text="No time control obj,")
+			subcol.label(text="create MC world.")
 		# col.label(text="World setup")
 		# col.operator("mcprep.world")
 		# col.operator("mcprep.world", text="Add clouds")
@@ -698,7 +709,7 @@ class MCPREP_PT_skins(bpy.types.Panel):
 					datapass = scn_props.mob_list[mob_ind].mcmob_type
 					tx = "Spawn {x} with {y}".format(
 								x=name, y=skinname)
-					row.operator("mcprep.spawn_with_skin", tx)
+					row.operator("mcprep.spawn_with_skin", text=tx)
 
 
 class MCPREP_PT_spawn(bpy.types.Panel):
@@ -1040,16 +1051,6 @@ class McprepProps(bpy.types.PropertyGroup):
 		items = [('mob', 'Mob', 'Show mob spawner'),
 				('meshswap', 'MeshSwap', 'Show MeshSwap spawner'),
 				('item', 'Items', 'Show item spawner')]
-	)
-
-	# World settings
-	world_time = bpy.props.IntProperty(
-		name="Time",
-		description="Set world time. 0=Day start, 12000=nightfall",
-		default=8000,
-		soft_min=0,
-		soft_max=24000,
-		update=world_tools.world_time_update
 	)
 
 	# spawn lists

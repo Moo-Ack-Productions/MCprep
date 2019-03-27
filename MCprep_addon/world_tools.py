@@ -16,9 +16,11 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import bpy
+import os
 import random
 import traceback
+
+import bpy
 
 from . import conf
 from . import util
@@ -30,11 +32,28 @@ from . import tracking
 # -----------------------------------------------------------------------------
 
 
+time_obj_cache = None
+
+def get_time_object():
+	"""Returns the time object if present in the file"""
+	global time_obj_cache # to avoid re parsing every time
+
+	if time_obj_cache is not None and "MCprepHour" not in time_obj_cache:
+		time_obj_cache = None
+	if time_obj_cache is not None and (time_obj_cache not in bpy.data.objects[:] or "MCprepHour" not in time_obj_cache):
+		time_obj_cache = None
+
+	if time_obj_cache is None:
+		for obj in bpy.data.objects:
+			if "MCprepHour" in obj:
+				time_obj_cache = obj
+
+	return time_obj_cache
+
 
 # -----------------------------------------------------------------------------
 # open mineways/jmc2obj related
 # -----------------------------------------------------------------------------
-
 
 
 class MCPREP_OT_open_jmc2obj(bpy.types.Operator):
@@ -183,6 +202,11 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 	bl_description = "Prep world render settings to something generally useful"
 	bl_options = {'REGISTER', 'UNDO'}
 
+	skipUsage = bpy.props.BoolProperty(
+		default = False,
+		options = {'HIDDEN'}
+		)
+
 	track_function = "prep_world"
 	track_param = None
 	@tracking.report_error
@@ -191,12 +215,14 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 		self.track_param = engine
 		if not context.scene.world:
 			context.scene.world = bpy.data.worlds.new("MCprep world")
-		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+		if engine == 'CYCLES':
 			self.prep_world_cycles(context)
+		elif engine == 'BLENDER_EEVEE':
+			self.prep_world_eevee(context)
 		elif engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
 			self.prep_world_internal(context)
 		else:
-			self.report({'ERROR'}, "Must be cycles or blender internal renderer")
+			self.report({'ERROR'}, "Must be cycles, eevee, or blender internal")
 		return {'FINISHED'}
 
 	def prep_world_cycles(self, context):
@@ -205,17 +231,62 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 
 		world_nodes = context.scene.world.node_tree.nodes
 		world_links = context.scene.world.node_tree.links
-		# if len(world_nodes) <= 2:
-		world_nodes.clear()
-		skynode = world_nodes.new("ShaderNodeTexSky")
-		background = world_nodes.new("ShaderNodeBackground")
-		output = world_nodes.new("ShaderNodeOutputWorld")
-		skynode.location = (-280, 300)
-		background.location = (10, 300)
-		output.location = (300, 300)
-		world_links.new(skynode.outputs["Color"], background.inputs[0])
-		world_links.new(background.outputs["Background"], output.inputs[0])
 
+		if "mcprep_world" not in context.scene.world:
+			world_nodes.clear()
+			skynode = world_nodes.new("ShaderNodeTexSky")
+			background = world_nodes.new("ShaderNodeBackground")
+			output = world_nodes.new("ShaderNodeOutputWorld")
+			skynode.location = (-280, 300)
+			background.location = (10, 300)
+			output.location = (300, 300)
+			world_links.new(skynode.outputs["Color"], background.inputs[0])
+			world_links.new(background.outputs["Background"], output.inputs[0])
+
+		context.scene.world.light_settings.use_ambient_occlusion = False
+		context.scene.cycles.caustics_reflective = False
+		context.scene.cycles.caustics_refractive = False
+
+		# higher = faster, though potentially noisier; this is a good balance
+		context.scene.cycles.light_sampling_threshold = 0.1
+		context.scene.cycles.max_bounces = 8
+
+		# Renders faster at a (minor?) cost of the image output
+		# TODO: given the output change, consider make a bool toggle for this
+		bpy.context.scene.render.use_simplify = True
+		bpy.context.scene.cycles.ao_bounces = 2
+		bpy.context.scene.cycles.ao_bounces_render = 2
+
+	def prep_world_eevee(self, context):
+		"""Default world settings for Eevee rendering"""
+		if not context.scene.world or not context.scene.world.use_nodes:
+			context.scene.world.use_nodes = True
+
+		world_nodes = context.scene.world.node_tree.nodes
+		world_links = context.scene.world.node_tree.links
+
+		if "mcprep_world" not in context.scene.world:
+			world_nodes.clear()
+			light_paths = world_nodes.new("ShaderNodeLightPath")
+			background_camera = world_nodes.new("ShaderNodeBackground")
+			background_others = world_nodes.new("ShaderNodeBackground")
+			mix_shader = world_nodes.new("ShaderNodeMixShader")
+			output = world_nodes.new("ShaderNodeOutputWorld")
+			light_paths.location = (-150, 400)
+			background_others.location = (10, 300)
+			background_camera.location = (10, 150)
+			mix_shader.location = (300, 300)
+			output.location = (500, 300)
+			background_others.inputs["Color"].default_value = (0.14965, 0.425823, 1, 1)
+			background_others.inputs["Strength"].default_value = 0.1 # to minimize light on scene
+			background_camera.inputs["Color"].default_value = (0.14965, 0.425823, 1, 1)
+			background_camera.inputs["Strength"].default_value = 1
+			world_links.new(light_paths.outputs[0], mix_shader.inputs[0])
+			world_links.new(background_others.outputs["Background"], mix_shader.inputs[1])
+			world_links.new(background_camera.outputs["Background"], mix_shader.inputs[2])
+			world_links.new(mix_shader.outputs["Shader"], output.inputs[0])
+
+		# is not great
 		context.scene.world.light_settings.use_ambient_occlusion = False
 		context.scene.cycles.caustics_reflective = False
 		context.scene.cycles.caustics_refractive = False
@@ -264,17 +335,65 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 			context.scene.world.zenith_color = (0.0954261, 0.546859, 1)
 
 
-class MCPREP_OT_add_world_time(bpy.types.Operator):
+class MCPREP_OT_add_mc_world(bpy.types.Operator):
 	"""Add a sun lamp as part of a group into the scene"""
-	bl_idname = "mcprep.add_world_time"
-	bl_label = "Add sun lamp"
+	bl_idname = "mcprep.add_mc_world"
+	bl_label = "Create MC World"
 	bl_options = {'REGISTER', 'UNDO'}
 
+	def enum_options(self, context):
+		"""Dynamic set of enums to show based on engine"""
+		engine = bpy.context.scene.render.engine
+		enums = []
+		# if engine == "BLENDER_RENDER":
+		# 	enums.append(("world_mesh", "Dynamic world + mesh sun/moon", "Import dynamic world and enable mesh-based sun and moon"))
+		# 	enums.append(("world_only", "Dynamic world only", "Import dynamic world, with no sun or moon"))
+		# 	enums.append(("world_static_mesh", "Static world + mesh sun/moon", "Create static world with mesh sun and moon"))
+		# 	enums.append(("world_static_only", "Static world only", "Create static world, with no sun or moon"))
+		# elif engine == "CYCLES" or engine == "BLENDER_EEVEE":
+		if bpy.app.version >= (2, 77) and engine in ("CYCLES", "BLENDER_EEVEE"):
+			enums.append(("world_shader", "Dynamic world + shader sun/moon", "Import dynamic world and shader-based sun and moon"))
+		enums.append(("world_only", "Dynamic world only", "Import dynamic world, with no sun or moon"))
+		enums.append(("world_mesh", "Dynamic world + mesh sun/moon", "Import dynamic world and mesh sun and moon"))
+		enums.append(("world_static_mesh", "Static world + mesh sun/moon", "Create static world with mesh sun and moon"))
+		enums.append(("world_static_only", "Static world only", "Create static world, with no sun or moon"))
+		return enums
+
+	world_type = bpy.props.EnumProperty(
+		name="World type",
+		description="Decide to improt dynamic (time/hour-controlled) vs static world (daytime only), and the type of sun/moon (if any) to use",
+		items=enum_options)
+	initial_time = bpy.props.EnumProperty(
+		name="Set time",
+		description="Set initial time of day, only supported for dynamic world types",
+		items = (
+			("8", "Morning", "Set initial time to 9am"),
+			("12", "Noon", "Set initial time to 12pm"),
+			("20", "Sunset", "Set initial time to 8pm"),
+			("0", "Midnight", "Set initial time to 12am"),
+			("6", "Sunrise", "Set initial time to 6am"))
+		)
+	add_clouds = bpy.props.BoolProperty(
+		name = "Add clouds",
+		description = "Add in a cloud mesh",
+		default = True
+		)
 	remove_existing_suns = bpy.props.BoolProperty(
-		name = "Remove suns",
+		name = "Remove initial suns",
 		description = "Remove any existing sunlamps",
 		default = True
 		)
+
+	def invoke(self, context, event):
+		return context.window_manager.invoke_props_dialog(self, width=400*util.ui_scale())
+
+	def draw(self, context):
+		self.layout.label(text="Set world type and initial time of day (dynamic worlds types only)")
+		self.layout.prop(self, "world_type")
+		self.layout.prop(self, "initial_time")
+		row = self.layout.row()
+		row.prop(self, "add_clouds")
+		row.prop(self, "remove_existing_suns")
 
 	track_function = "world_time"
 	track_param = None
@@ -282,14 +401,91 @@ class MCPREP_OT_add_world_time(bpy.types.Operator):
 	def execute(self, context):
 
 		new_objs = []
-		new_sun = self.create_sunlamp(context)
-		new_objs.append(new_sun)
+		if self.remove_existing_suns:
+			for lamp in context.scene.objects:
+				if lamp.type not in ("LAMP", "LIGHT") or lamp.data.type != "SUN":
+					continue
+				util.obj_unlink_remove(lamp, True)
 
-		# create sun mesh
-		# create moon mesh (and lamp)
-			# could we actually create these as world decals instead of meshes?
-		# setup drivers according to time setting
-		# set a reasonable initial default
+		engine = bpy.context.scene.render.engine
+		wname = None
+		if engine == "BLENDER_EEVEE":
+			blend = "clouds_moon_sun_eevee.blend"
+			wname = "MCprepWorldEevee"
+		else:
+			blend = "clouds_moon_sun.blend"
+			wname = "MCprepWorldCycles"
+		blendfile = os.path.join(os.path.dirname(__file__),
+			"MCprep_resources", blend)
+
+		prev_world = None
+		prev_world_name = None
+		if self.world_type in ("world_static_mesh", "world_static_only"):
+			# Create world dynamically (previous, simpler implementation)
+			new_sun = self.create_sunlamp(context)
+			new_objs.append(new_sun)
+
+			if engine in ('BLENDER_RENDER', 'BLENDER_GAME'):
+				new_sun.data.shadow_method = 'RAY_SHADOW'
+				new_sun.data.shadow_soft_size = 0.5
+				context.scene.world.use_sky_blend = False
+				context.scene.world.horizon_color = (0.00938029, 0.0125943, 0.0140572)
+			bpy.ops.mcprep.world(skipUsage=True) # do rest of sky setup
+
+		elif engine=='CYCLES' or engine=='BLENDER_EEVEE':
+			# append world setup from source file for dynamic world
+			if not os.path.isfile(blendfile):
+				self.report({'ERROR'}, "Source MCprep world blend file does not exist: "+blendfile)
+				conf.log("Source MCprep world blend file does not exist: "+blendfile)
+				return {'CANCELLED'}
+			if wname in bpy.data.worlds:
+				prev_world = bpy.data.worlds[wname]
+				prev_world.name = "-old"
+			resource = os.path.join(blendfile, "World")
+			util.bAppendLink(resource, wname, False)
+			if wname in bpy.data.worlds:
+				context.scene.world = bpy.data.worlds[wname]
+				context.scene.world["mcprep_world"] = True
+			else:
+				self.report({'ERROR'}, "Failed to import new world")
+				conf.log("Failed to import new world")
+				return {'CANCELLED'}
+
+			# assign sun/moon shader accordingly
+			use_shader = 1 if self.world_type == "world_shader" else 0
+			for node in context.scene.world.node_tree.nodes:
+				if node.type != "GROUP":
+					continue
+				node.inputs[3].default_value = use_shader
+			new_objs += list(context.selected_objects)
+		elif engine=='BLENDER_RENDER' or engine=='BLENDER_GAME':
+			# dynamic world, crate sun with atompshere
+			new_sun = self.create_sunlamp(context)
+			new_objs.append(new_sun)
+			new_sun.data.shadow_method = 'RAY_SHADOW'
+			new_sun.data.shadow_soft_size = 0.5
+			context.scene.world.use_sky_blend = False
+			context.scene.world.horizon_color = (0.00938029, 0.0125943, 0.0140572)
+
+			# be sure to turn off all other sun lamps with atmosphere set
+			new_sun.data.sky.use_sky = True  # use sun orientation settings if BI
+			for lamp in context.scene.objects:
+				if lamp.type not in ("LAMP", "LIGHT") or lamp.data.type != "SUN":
+					continue
+				if lamp == new_sun:
+					continue
+				lamp.data.sky.use_sky = False
+
+		# TODO: Import the sun and moon objects for the static ones/Internal
+
+		if prev_world:
+			prev_world.user_clear()
+			bpy.data.worlds.remove(prev_world)
+
+		# set initial times of day, if dynamic
+		time_obj = get_time_object()
+		if time_obj:
+			time_obj["MCprepHour"] = int(self.initial_time)
 
 		if "mcprep_world" in util.collections():
 			util.collections()["mcprep_world"].name = "mcprep_world_old"
@@ -297,16 +493,19 @@ class MCPREP_OT_add_world_time(bpy.types.Operator):
 		for obj in new_objs:
 			time_group.objects.link(obj)
 
+		# delete the sun and moon objects if not wanted
+		for ob in new_objs:
+			if self.world_type not in ("world_shader", "world_only", "world_static_only"):
+				continue
+			if "sun" in ob.name.lower() or "moon" in ob.name.lower():
+				util.obj_unlink_remove(ob, True)
+
+		self.track_param = self.world_type
+		self.track_param = engine
 		return {'FINISHED'}
 
 	def create_sunlamp(self, context):
-		if self.remove_existing_suns:
-			for lamp in context.scene.objects:
-				if lamp.type not in ("LAMP", "LIGHT") or lamp.data.type != "SUN":
-					continue
-				context.scene.objects.unlink(lamp)
-				bpy.data.objects.remove(lamp)
-
+		"""Create new sun lamp from primitives"""
 		if hasattr(bpy.data, "lamps"): # 2.7
 			newlamp = bpy.data.lamps.new("Sun", "SUN")
 		else: # 2.8
@@ -316,25 +515,9 @@ class MCPREP_OT_add_world_time(bpy.types.Operator):
 		obj.rotation_euler[0] = 0.481711
 		obj.rotation_euler[1] = 0.303687
 		obj.rotation_euler[1] = 0.527089
-		context.scene.objects.link(obj)
+		util.obj_link_scene(obj, context)
 		context.scene.update()
 		# update horizon info
-		engine = bpy.context.scene.render.engine
-
-		if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
-			context.scene.world.horizon_color = (0.00938029, 0.0125943, 0.0140572)
-			obj.data.sky.use_sky = True  # use sun orientation settings if BI
-			obj.data.shadow_method = 'RAY_SHADOW'
-			obj.data.shadow_soft_size = 0.5
-			context.scene.world.use_sky_blend = False
-
-			for lamp in context.scene.objects:
-				if lamp.type not in ("LAMP", "LIGHT") or lamp.data.type != "SUN":
-					continue
-				if lamp == obj:
-					continue
-				lamp.data.sky.use_sky = False
-		self.track_param = engine
 		return obj
 
 
@@ -373,7 +556,7 @@ class MCPREP_OT_time_set(bpy.types.Operator):
 
 	@tracking.report_error
 	def execute(self, context):
-		new_time = 24000*self.day_offset
+		new_time = 24*self.day_offset
 		new_time += int(self.time_enum)
 		context.scene.mcprep_props.world_time = new_time
 		if bpy.context.scene.tool_settings.use_keyframe_insert_auto:
@@ -418,7 +601,7 @@ classes = (
 	MCPREP_OT_open_mineways,
 	MCPREP_OT_install_mineways,
 	MCPREP_OT_prep_world,
-	MCPREP_OT_add_world_time,
+	MCPREP_OT_add_mc_world,
 	MCPREP_OT_time_set,
 )
 
