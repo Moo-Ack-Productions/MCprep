@@ -38,8 +38,12 @@ def get_time_object():
 	"""Returns the time object if present in the file"""
 	global time_obj_cache # to avoid re parsing every time
 
-	if time_obj_cache is not None and "MCprepHour" not in time_obj_cache:
-		time_obj_cache = None
+	if time_obj_cache is not None:
+		try:
+			if "MCprepHour" not in time_obj_cache:
+				time_obj_cache = None
+		except ReferenceError:
+			time_obj_cache = None # e.g. if item was deleted
 	if time_obj_cache is not None and (time_obj_cache not in bpy.data.objects[:] or "MCprepHour" not in time_obj_cache):
 		time_obj_cache = None
 
@@ -102,7 +106,7 @@ class MCPREP_OT_install_jmc2obj(bpy.types.Operator):
 		self.layout.label(text="Valid program path not found!")
 		self.layout.separator()
 		self.layout.label(text="Need to install jmc2obj?")
-		self.layout.operator("wm.url_open","Click to download").url =\
+		self.layout.operator("wm.url_open", text="Click to download").url =\
 				"http://www.jmc2obj.net/"
 		split = self.layout.split()
 		col = self.layout.column()
@@ -111,8 +115,8 @@ class MCPREP_OT_install_jmc2obj(bpy.types.Operator):
 		col.label(text=" path to jmc2obj_ver#.jar, for example")
 		row = self.layout.row(align=True)
 		row.operator("mcprep.open_preferences",
-			"Open MCprep preferences", icon="PREFERENCES").tab = "settings"
-		row.operator("wm.url_open","Open tutorial").url =\
+			text="Open MCprep preferences", icon="PREFERENCES").tab = "settings"
+		row.operator("wm.url_open", text="Open tutorial").url =\
 				"https://theduckcow.com/dev/blender/mcprep/setup-world-exporters/"
 		return
 
@@ -169,7 +173,7 @@ class MCPREP_OT_install_mineways(bpy.types.Operator):
 		self.layout.label(text="Valid program path not found!")
 		self.layout.separator()
 		self.layout.label(text="Need to install Mineways?")
-		self.layout.operator("wm.url_open","Click to download").url =\
+		self.layout.operator("wm.url_open", text="Click to download").url =\
 				"http://www.realtimerendering.com/erich/minecraft/public/mineways/"
 		split = self.layout.split()
 		col = self.layout.column()
@@ -178,8 +182,8 @@ class MCPREP_OT_install_mineways(bpy.types.Operator):
 		col.label(text=" Mineways path to Mineways.exe or Mineways.app, for example")
 		row = self.layout.row(align=True)
 		row.operator("mcprep.open_preferences",
-			"Open MCprep preferences", icon="PREFERENCES").tab = "settings"
-		row.operator("wm.url_open","Open tutorial").url =\
+			text="Open MCprep preferences", icon="PREFERENCES").tab = "settings"
+		row.operator("wm.url_open", text="Open tutorial").url =\
 				"https://theduckcow.com/dev/blender/mcprep/setup-world-exporters/"
 		return
 

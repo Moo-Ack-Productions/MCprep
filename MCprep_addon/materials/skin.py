@@ -279,8 +279,9 @@ def setUVimage(objs, image):
 # -----------------------------------------------------------------------------
 
 
-class McprepSkinUiList(bpy.types.UIList):
+class MCPREP_UL_skins(bpy.types.UIList):
 	"""For asset listing UIList drawing"""
+	bl_idname = "MCPREP_UL_skins"
 	def draw_item(self, context, layout, data, set, icon,
 					active_data, active_propname, index):
 		layout.prop(set, "name", text="", emboss=False)
@@ -649,7 +650,7 @@ class MCPREP_OT_spawn_mob_with_skin(bpy.types.Operator):
 
 
 classes = (
-	McprepSkinUiList,
+	MCPREP_UL_skins,
 	ListColl,
 	MCPREP_OT_swap_skin_from_file,
 	MCPREP_OT_apply_skin,

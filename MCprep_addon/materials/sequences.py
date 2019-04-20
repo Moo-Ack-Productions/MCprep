@@ -69,7 +69,7 @@ def animate_single_material(mat, engine, export_location='original', clear_cache
 		return affectable, False
 
 	# apply the sequence if any found, will be empty dict if not
-	if diffuse_block:
+	if diffuse_block and hasattr(diffuse_block, "filepath"):
 		source_path = diffuse_block.filepath
 	else:
 		source_path = None

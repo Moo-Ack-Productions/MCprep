@@ -18,6 +18,7 @@
 
 
 # library imports
+import errno
 import operator
 import os
 import shutil
@@ -63,24 +64,55 @@ def update_rig_list(context):
 				get_attr = "groups"
 			else: # 2.8
 				get_attr = "collections"
+
+			extensions = [".png",".jpg",".jpeg"]
+			icon_folder = os.path.join(os.path.dirname(path), "icons")
+			run_icons = os.path.isdir(icon_folder)
+			if not conf.use_icons or conf.preview_collections["mobs"] == "":
+				run_icons = False
+
 			for name in getattr(data_from, get_attr):
 				# special cases, skip some groups
 				if name.lower() == "Rigidbodyworld".lower():
 					continue
 				description = "Spawn one {x} rig".format(x=name)
-				item = context.scene.mcprep_props.mob_list_all.add()
-				item.description = description # add in non all-list
-				item.name = name.title()
-				item.category = category
+				mob = context.scene.mcprep_props.mob_list_all.add()
+				mob.description = description # add in non all-list
+				mob.name = name.title()
+				mob.category = category
+				mob.index = len(context.scene.mcprep_props.mob_list_all)
 				if category:
-					item.mcmob_type = os.path.join(
+					mob.mcmob_type = os.path.join(
 						category, blend_name) + ":/:" + name
 				else:
-					item.mcmob_type = blend_name + ":/:" + name
+					mob.mcmob_type = blend_name + ":/:" + name
+
+				# if available, load the custom icon too
+				if not run_icons:
+					continue
+				icons = [f for f in os.listdir(icon_folder)
+							if os.path.isfile(os.path.join(icon_folder, f))
+							and name.lower() in f.lower()
+							and not f.startswith(".")
+							and os.path.splitext(f.lower())[-1] in extensions
+							]
+				if not icons:
+					continue
+				conf.preview_collections["mobs"].load(
+					"mob-{}".format(mob.index),
+					os.path.join(icon_folder, icons[0]),
+					'IMAGE')
 
 	rigpath = bpy.path.abspath(context.scene.mcprep_mob_path)
 	context.scene.mcprep_props.mob_list.clear()
 	context.scene.mcprep_props.mob_list_all.clear()
+
+	if conf.use_icons and conf.preview_collections["mobs"]:
+		print("Removing mobs preview collection")
+		try:
+			bpy.utils.previews.remove(conf.preview_collections["mobs"])
+		except:
+			conf.log("MCPREP: Failed to remove icon set, mobs")
 
 	if os.path.isdir(rigpath) is False:
 		conf.log("Rigpath directory not found")
@@ -139,6 +171,7 @@ def update_rig_category(context):
 		item.name = mob.name
 		item.mcmob_type = mob.mcmob_type
 		item.category = mob.category
+		item.index = mob.index # for icons
 
 	if scn_props.mob_list_index >= len(scn_props.mob_list):
 		scn_props.mob_list_index = len(scn_props.mob_list)-1
@@ -338,12 +371,7 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 		self.attemptScriptLoad(path)
 
 		if self.auto_prep:
-			if not conf.internal_change:
-				conf.internal_change = True
-				bpy.ops.mcprep.prep_materials(skipUsage=True)
-				conf.internal_change = False
-			else:
-				bpy.ops.mcprep.prep_materials(skipUsage=True)
+			bpy.ops.mcprep.prep_materials(skipUsage=True)
 
 		self.track_param = self.mcmob_type.split(":/:")[1]
 		return {'FINISHED'}
@@ -441,7 +469,7 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 			gl = coll.dupli_offset
 		elif hasattr(act, "instance_offset"):
 			gl = coll.instance_offset
-		cl = util.get_cuser_location(context)
+		# cl = util.get_cuser_location(context)
 
 		if self.relocation == "Offset":
 			# do the offset stuff, set active etc
@@ -450,7 +478,7 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 
 		try:
 			bpy.ops.object.mode_set(mode='POSE')
-			act = bpy.context.scene.objects.active
+			act = bpy.context.object
 		except:
 			self.report({'WARNING'}, "Could not enter pose mode on linked character")
 			return
@@ -543,7 +571,7 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 			except Exception as e:
 				self.report({'ERROR'},"Exception occured, see logs")
 				print("Exception: ",str(e))
-				print(bpy.context.scene.objects.active)
+				print(bpy.context.object)
 				print(rig_obj)
 				print("-- end error context printout --")
 			posemode = context.mode == 'POSE'
@@ -609,7 +637,7 @@ class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
 
 	@tracking.report_error
 	def execute(self, context):
-		drpath = context.scene.mcprep_mob_path #addon_prefs.mcprep_mob_path
+		drpath = context.scene.mcprep_mob_path
 		newrig = bpy.path.abspath(self.filepath)
 
 		if not os.path.isfile(newrig):
@@ -624,49 +652,98 @@ class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
 			self.report({'ERROR'}, "Rig directory is not valid!")
 			return {'CANCELLED'}
 
-		# check the file with a quick look for any groups, any error return failed
+		# check the file for any groups, any error return failed
 		with bpy.data.libraries.load(newrig) as (data_from, data_to):
 			if hasattr(data_from, "groups"): # blender 2.7
 				get_attr = "groups"
 			else: # 2.8
 				get_attr = "collections"
-			if len(getattr(data_from, get_attr)) < 1:
-				conf.log("Error: no groups found in blend file!")
-				self.report({'ERROR'}, "No groups found in blend file!")
-				return {'CANCELLED'}
+			install_groups = list(getattr(data_from, get_attr)) # list of str's
+
+		if 'Collection' in install_groups: # don't count the default 2.8 group
+			install_groups.pop(install_groups.index('Collection'))
+
+		if not install_groups:
+			conf.log("Error: no groups found in blend file!")
+			self.report({'ERROR'}, "No groups found in blend file!")
+			return {'CANCELLED'}
 
 		# copy this file to the rig folder
-		filename = (newrig).split('/')[-1]
-		# path:rig folder / category / blend file
-		try:
-			if self.mob_category != "no_category" and self.mob_category != "all":
-				shutil.copy2(newrig,
-					os.path.join(drpath, self.mob_category, filename))
-				if os.path.isfile(newrig[:-5]+"py"):
-					# if there is a script, install that too
-					shutil.copy2(newrig[:-5]+"py",
-						os.path.join(drpath, self.mob_category, filename[:-5]+"py"))
-			else:
-				# no category, root of directory
-				shutil.copy2(newrig, os.path.join(drpath , filename))
-				if os.path.isfile(newrig[:-5]+"py"):
-					# if there is a script, install that too
-					shutil.copy2(newrig[:-5]+"py",
-					os.path.join(drpath, filename[:-5]+"py"))
+		filename = os.path.basename(newrig)
+		if self.mob_category != "no_category" and self.mob_category != "all":
+			end_path = os.path.join(drpath, self.mob_category)
+		else:
+			end_path = drpath
 
+		try:
+			shutil.copy2(newrig, os.path.join(end_path, filename))
 		except IOError as err:
 			print(err)
 			# can fail if permission denied, i.e. an IOError error
 			self.report({'ERROR'},
-				"Failed to copy, manually install by copying blend to folder: {x}".format(
-					x=os.path.join(drpath, self.mob_category)))
+				"Failed to copy, manually install by copying blend to folder: {}".format(
+					end_path))
 			return {'CANCELLED'}
+
+		# now do same to install py files if any or icons
+		# failure here is non critical
+		try:
+			if os.path.isfile(newrig[:-5]+"py"):
+				# if there is a script, install that too
+				shutil.copy2(newrig[:-5]+"py",
+					os.path.join(end_path, filename[:-5]+"py"))
+		except IOError as err:
+			print(err)
+			self.report({'WARNING'},
+				"Failed attempt to copy python file: {}".format(
+					end_path))
+
+		# copy all relevant icons, based on groups installed
+		### matching same folde or subfolder icons to append
+		if conf.use_icons:
+			basedir = os.path.dirname(newrig)
+			icon_files = self.identify_icons(install_groups, basedir)
+			icondir = os.path.join(basedir, "icons")
+			if os.path.isdir(icondir):
+				icon_files += self.identify_icons(install_groups, icondir)
+			if icon_files:
+				dst = os.path.join(end_path, "icons")
+				if not os.path.isdir(dst):
+					try:
+						os.mkdir(dst)
+					except OSError as exc:
+						if exc.errno == errno.EACCES:
+							print("Permission denied, try running blender as admin")
+						elif exc.errno != errno.EEXIST:
+							print("Path does not exist: "+dst)
+				for icn in icon_files:
+					icn_base = os.path.basename(icn)
+					try:
+						shutil.copy2(icn, os.path.join(dst, icn_base))
+					except IOError as err:
+						print("Failed to copy over icon file "+icn)
+						print("to "+os.path.join(icondir, icn_base))
 
 		# reload the cache
 		update_rig_list(context)
 		self.report({'INFO'}, "Mob-file Installed")
 
 		return {'FINISHED'}
+
+	def identify_icons(self, group_names, path):
+		"""Copy over all matching icons from single specific folder"""
+		if not group_names:
+			return []
+		extensions = [".png",".jpg",".jpeg"]
+		icons = []
+		for name in group_names:
+			icons += [os.path.join(path, f) for f in os.listdir(path)
+						if os.path.isfile(os.path.join(path, f))
+						and name.lower() in f.lower()
+						and not f.startswith(".")
+						and os.path.splitext(f.lower())[-1] in extensions
+						]
+		return icons
 
 
 class MCPREP_OT_uninstall_mob(bpy.types.Operator):
@@ -768,6 +845,90 @@ class MCPREP_OT_uninstall_mob(bpy.types.Operator):
 		return {'FINISHED'}
 
 
+class MCPREP_OT_install_mob_icon(bpy.types.Operator, ImportHelper):
+	"""Install custom icon for select group in mob spawner UI list"""
+	bl_idname = "mcprep.mob_install_icon"
+	bl_label = "Install mob icon"
+
+	#filename_ext = ".blend"
+	# filter_glob = bpy.props.StringProperty(
+	# 		default="*.blend",
+	# 		options={'HIDDEN'},
+	# 		)
+	# fileselectparams = "use_filter_image"
+	filter_glob = bpy.props.StringProperty(
+		default="",
+		options={'HIDDEN'})
+	fileselectparams = "use_filter_blender"
+	filter_image = bpy.props.BoolProperty(
+		default=True,
+		options={'HIDDEN', 'SKIP_SAVE'})
+
+	def execute(self, context):
+		if not self.filepath:
+			self.report({'ERROR'}, "No filename selected")
+			return {'CANCELLED'}
+		elif not os.path.isfile(self.filepath):
+			self.report({'ERROR'}, "File not found")
+			return {'CANCELLED'}
+
+		extensions = [".png",".jpg",".jpeg"]
+		ext = os.path.splitext(self.filepath)[-1] # get extension, includes .
+		if ext.lower() not in extensions:
+			self.report({'ERROR'}, "Wrong filetype, must be png or jpg")
+			return {'CANCELLED'}
+
+		scn_props = context.scene.mcprep_props
+		mob = scn_props.mob_list[scn_props.mob_list_index]
+		_, name = mob.mcmob_type.split(':/:')
+		path = context.scene.mcprep_mob_path
+
+
+		icon_dir = os.path.join(path, mob.category, "icons")
+		new_file = os.path.join(icon_dir, name+ext)
+		print("New icon file name would be:")
+		print(new_file)
+
+		if not os.path.isdir(icon_dir):
+			try:
+				os.mkdir(icon_dir)
+			except OSError as exc:
+				if exc.errno == errno.EACCES:
+					print("Permission denied, try running blender as admin")
+				elif exc.errno != errno.EEXIST:
+					print("Path does not exist: "+icon_dir)
+
+		# if the file exists already, remove it.
+		if os.path.isfile(new_file):
+			try:
+				os.remove(new_file)
+			except Exception as err:
+				print("Failed to remove previous icon file")
+				print(err)
+
+		try:
+			shutil.copy2(self.filepath, new_file)
+		except IOError as err:
+			print("Failed to copy, manually copy to file name: {}".format(
+					new_file))
+			print(err)
+			self.report({'ERROR'},
+				"Failed to copy, manually copy to file name: {}".format(
+					new_file))
+			return {'CANCELLED'}
+
+		# if successful, load or reload icon id
+		icon_id = "mob-{}".format(mob.index)
+		if icon_id in conf.preview_collections["mobs"]:
+			print("Deloading old icon for this mob")
+			print(dir(conf.preview_collections["mobs"][icon_id]))
+			conf.preview_collections["mobs"][icon_id].reload()
+		else:
+			conf.preview_collections["mobs"].load(icon_id, new_file, 'IMAGE')
+			print("Icon reloaded")
+
+		return {'FINISHED'}
+
 # -----------------------------------------------------------------------------
 #	Mob category related
 # -----------------------------------------------------------------------------
@@ -810,6 +971,7 @@ classes = (
 	MCPREP_OT_mob_spawner,
 	MCPREP_OT_install_mob,
 	MCPREP_OT_uninstall_mob,
+	MCPREP_OT_install_mob_icon
 )
 
 

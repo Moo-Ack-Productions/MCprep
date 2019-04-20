@@ -136,13 +136,13 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 
 		# get list of selected objects
 		obj_list = context.selected_objects
-		if len(obj_list)==0:
+		if not obj_list:
 			self.report({'ERROR'}, "No objects selected")
 			return {'CANCELLED'}
 
 		# gets the list of materials (without repetition) from selected
 		mat_list = util.materialsFromObj(obj_list)
-		if len(obj_list)==0:
+		if not mat_list:
 			self.report({'ERROR'}, "No materials found on selected objects")
 			return {'CANCELLED'}
 
@@ -450,15 +450,17 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 
 
 		# pre 2.78 solution, deep loop
-		if (bpy.app.version[0]>=2 and bpy.app.version[1] >= 78) == False:
+		if bpy.app.version < (2, 78):
 			for ob in bpy.data.objects:
 				for sl in ob.material_slots:
-					if sl == None or sl.material == None:continue
-					if sl.material not in data: continue # selection only
-					sl.material = bpy.data.materials[name_cat[ util.nameGeneralize(sl.material.name) ][0]]
+					if sl == None or sl.material == None:
+						continue
+					if sl.material not in data:
+						continue # selection only
+					sl.material = bpy.data.materials[name_cat[util.nameGeneralize(sl.material.name)][0]]
 			# doesn't remove old textures, but gets it to zero users
 
-			postcount = len( ["x" for x in bpy.data.materials if x.users >0] )
+			postcount = len([True for x in bpy.data.materials if x.users >0])
 			self.report({"INFO"},
 				"Consolidated {x} materials, down to {y} overall".format(
 				x=precount-postcount,
@@ -467,27 +469,33 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 
 		# perform the consolidation with one basename set at a time
 		for base in name_cat: # the keys of the dictionary
-			if len(base)<2: continue
+			if len(base)<2:
+				continue
 
 			name_cat[base].sort() # in-place sorting
-			baseMat = bpy.data.materials[ name_cat[base][0] ]
+			baseMat = bpy.data.materials[name_cat[base][0]]
 
-			if conf.vv:print(name_cat[base], "##", baseMat )
+			conf.log(name_cat[base]+" ## "+baseMat, vv_only=True)
 
 			for matname in name_cat[base][1:]:
 
 				# skip if fake user set
-				if bpy.data.materials[matname].use_fake_user == True: continue
+				if bpy.data.materials[matname].use_fake_user == True:
+					continue
 				# otherwise, remap
 				res = util.remap_users(bpy.data.materials[matname],baseMat)
 				if res != 0:
 					self.report({'ERROR'}, str(res))
 					return {'CANCELLED'}
 				old = bpy.data.materials[matname]
-				if conf.vv:print("removing old? ",bpy.data.materials[matname])
-				if removeold==True and old.users==0:
-					if conf.vv:print("removing old:")
-					data.remove( bpy.data.materials[matname] )
+				conf.log("removing old? "+matname, vv_only=True)
+				if removeold is True and old.users==0:
+					conf.log("removing old:"+matname, vv_only=True)
+					try:
+						data.remove(bpy.data.materials[matname])
+					except ReferenceError as err:
+						print('Error trying to remove material '+matname)
+						print(str(err))
 
 			# Final step.. rename to not have .001 if it does
 			genBase = util.nameGeneralize(baseMat.name)
@@ -618,6 +626,7 @@ class MCPREP_OT_scale_uv(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 
 	scale = bpy.props.FloatProperty(default=0.75, name="Scale")
+	selected_only = bpy.props.BoolProperty(default=True, name="Seleced only")
 	skipUsage = bpy.props.BoolProperty(
 		default = False,
 		options = {'HIDDEN'}
@@ -653,16 +662,18 @@ class MCPREP_OT_scale_uv(bpy.types.Operator):
 			self.report({'ERROR'}, "Active object must be a mesh")
 			return {'CANCELLED'}
 		elif not context.object.data.polygons:
-			self.report({'ERROR'}, "Active object has no faces")
+			self.report({'WARNING'}, "Active object has no faces")
 			return {'CANCELLED'}
 
 		if not context.object.data.uv_layers.active:#uv==None:
 			self.report({'ERROR'}, "No active UV map found")
 			return {'CANCELLED'}
 
+		mode_initial = context.mode
 		bpy.ops.object.mode_set(mode="OBJECT")
 		ret = self.scale_uv_faces(context.object, self.scale)
-		bpy.ops.object.mode_set(mode="EDIT")
+		if mode_initial != 'OBJECT':
+			bpy.ops.object.mode_set(mode="EDIT")
 
 		if ret is not None:
 			self.report({'ERROR'}, ret)
@@ -683,7 +694,7 @@ class MCPREP_OT_scale_uv(bpy.types.Operator):
 		# 				for d in ob.data.uv_layers.active.data]
 
 		for f in ob.data.polygons:
-			if not f.select:
+			if not f.select and self.selected_only is True:
 				continue  # if not selected, won't show up in UV editor
 
 			# initialize for avergae center on polygon
@@ -693,13 +704,13 @@ class MCPREP_OT_scale_uv(bpy.types.Operator):
 				l = ob.data.loops[i] # This polygon/edge
 				v = ob.data.vertices[l.vertex_index]  # The vertex data that loop entry refers to
 				# isolate to specific UV already used
-				if not uv.data[l.index].select:
+				if not uv.data[l.index].select and self.selected_only is True:
 					continue
 				x+=uv.data[l.index].uv[0]
 				y+=uv.data[l.index].uv[1]
 				n+=1
 			for i in f.loop_indices:
-				if not uv.data[l.index].select:
+				if not uv.data[l.index].select and self.selected_only is True:
 					continue
 				l = ob.data.loops[i]
 				uv.data[l.index].uv[0] = uv.data[l.index].uv[0]*(1-factor)+x/n*(factor)
@@ -750,7 +761,7 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 			self.report({"ERROR"}, "Active object must be a mesh")
 			return {"CANCELLED"}
 		elif not ob.data.polygons:
-			self.report({"ERROR"}, "Active object has no faces")
+			self.report({"WARNING"}, "Active object has no faces")
 			return {"CANCELLED"}
 		elif not ob.material_slots:
 			self.report({"ERROR"}, "Active object has no materials to check image for.")
@@ -816,17 +827,14 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 			# relate the polygon to the UV layer to the image coordinates
 			shape = []
 			for i in f.loop_indices:
-				loop = ob.data.loops[i]  # get the loop for this index
-				# if not uv.data[loop.index].select:
-				# 	continue
-				x = uv.data[loop.index].uv[0]%1
+				loop = ob.data.loops[i]
+				x = uv.data[loop.index].uv[0]%1 # TODO: fix this wraparound hack
 				y = uv.data[loop.index].uv[1]%1
 				shape.append((x,y))
 
 			# print("The shape coords:")
 			# print(shape)
 			# could just do "the closest" pixel... but better is weighted area
-
 			if not shape:
 				continue
 
@@ -836,7 +844,7 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 			xmax = round(max(xlist)*image.size[0])-0.5
 			ymin = round(min(ylist)*image.size[1])-0.5
 			ymax = round(max(ylist)*image.size[1])-0.5
-			conf.log(["\tSet size:",xmin,xmax,ymin,ymax])
+			conf.log(["\tSet size:",xmin,xmax,ymin,ymax], vv_only=True)
 
 			# assuming faces are roughly rectangular, sum pixels a face covers
 			asum = 0

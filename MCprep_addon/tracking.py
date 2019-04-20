@@ -83,6 +83,8 @@ class Singleton_tracking(object):
 		self._version = ""
 		self.json = {}
 		self._httpclient_fallback = None # set to True/False after first req
+		self._last_request = {} # used to debounce sequential requests
+		self._debounce = 3 # seconds to avoid duplicative requests
 
 
 	# -------------------------------------------------------------------------
@@ -680,8 +682,6 @@ def trackUsage(function, param=None, exporter=None, background=None):
 		return
 	if Tracker.tracking_enabled is False:
 		return # skip if not opted in
-	if conf.internal_change is True:
-		return # skip if internal run
 	if Tracker.verbose:
 		print("{} usage: {}, param: {}, exporter: {}".format(
 			Tracker.addon, function, str(param), str(exporter)))
@@ -818,24 +818,40 @@ def report_error(function):
 		if res=={'CANCELLED'}:
 			return res  # cancelled, so skip running usage
 		elif hasattr(self, "skipUsage") and self.skipUsage is True:
-			if Tracker.verbose:
-				print("Skipping usage")
+			# if Tracker.verbose:
+			# 	print("Skipping usage")
 			return res  # skip running usage
 
+		# Debounc multiple same requests
+		run_track = hasattr(self, "track_function") and self.track_function
+		if (run_track
+			and Tracker._last_request.get("function") == self.track_function
+			and Tracker._last_request.get("time") + Tracker._debounce > time.time()
+			):
+			if Tracker.verbose:
+				print("Skipping usage due to debounce")
+			run_track = False
+
 		# If successful completion, run analytics function if relevant
-		if hasattr(self, "track_function") and self.track_function:
+		if run_track:
 			param = None
 			exporter = None
 			if hasattr(self, "track_param"):
 				param = self.track_param
 			if hasattr(self, "track_exporter"):
 				exporter = self.track_exporter
+
 			try:
 				trackUsage(self.track_function, param=param, exporter=exporter)
 			except:
 				err = traceback.format_exc()
 				print("Error while reporting usage for "+str(self.track_function))
 				print(err)
+			# always update the last request gone through
+			Tracker._last_request = {
+				"time": time.time(),
+				"function": self.track_function
+			}
 		return res
 
 	return wrapper
@@ -890,8 +906,13 @@ def register(bl_info):
 
 	language = None
 	if hasattr(bpy.app, "version") and bpy.app.version >= (2, 80):
-		system = bpy.context.preferences.view
-		if system.use_international_fonts:
+		if hasattr(bpy.context, "preferences"):
+			system = bpy.context.preferences.view
+		elif hasattr(bpy.context, "user_preferences"):
+			system = bpy.context.user_preferences.view
+		else:
+			system = None
+		if system and system.use_international_fonts:
 			language = system.language
 	else:
 		system = bpy.context.user_preferences.system

@@ -69,10 +69,9 @@ def materialsFromObj(obj_list):
 				obj_list.append(dup_obj)
 		if obj.type != 'MESH':
 			continue
-		object_materials = obj.material_slots
-		for material_block in object_materials:
-			if material_block.material not in mat_list:
-				mat_list.append(material_block.material)
+		for slot in obj.material_slots:
+			if slot.material is not None and slot.material not in mat_list:
+				mat_list.append(slot.material)
 	return mat_list
 
 
@@ -576,8 +575,14 @@ def get_cuser_location(context=None):
 		context = bpy.context
 	if hasattr(context.scene, "cursor_location"):
 		return context.scene.cursor_location
-	else:
+	elif hasattr(context.scene, "cursor") and hasattr(context.scene.cursor, "location"):
+		return context.scene.cursor.location  # later 2.8 builds
+	elif hasattr(context.space_data, "cursor_location"):
 		return context.space_data.cursor_location
+	elif hasattr(context.space_data, "cursor") and hasattr(context.space_data.cursor, "location"):
+		return context.space_data.cursor.location
+	print("MCPREP WARNING! Unable to get cursor location, using (0,0,0)")
+	return (0, 0, 0)
 
 
 def set_cuser_location(loc, context=None):

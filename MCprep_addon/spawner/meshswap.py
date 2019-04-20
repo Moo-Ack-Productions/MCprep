@@ -184,11 +184,12 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 			# asset management for this to work
 			for ob in bpy.context.selected_objects:
 				if ob.type != 'MESH':
-					util.select_set(ob, False) # or filter to name match?
+					util.select_set(ob, False)
 			try:
 				importedObj = bpy.context.selected_objects[0]
 			except:
 				print("selected obejct not found") #in case nothing selected.. which happens even during selection?
+				self.report({'WARNING'}, "Imported object not found")
 				return {'CANCELLED'}
 			importedObj["MCprep_noSwap"] = "True"
 			importedObj.location = self.location
@@ -196,10 +197,13 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 				bpy.ops.mcprep.prep_materials(skipUsage=True) # if cycles
 		else:
 			# Group method first, move append to according layer
-			bpy.ops.object.select_all(action='DESELECT')
+			for ob in context.scene.objects:
+				util.select_set(ob, False)
 
 			layers = [False]*20
-			if self.append_layer==0:
+			if not hasattr(context.scene, "layers"):
+				pass
+			elif self.append_layer==0:
 				layers = context.scene.layers
 			else:
 				layers[self.append_layer-1] = True
@@ -223,14 +227,16 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 				for ob in objlist:
 					util.select_set(ob, True)
 				bpy.ops.mcprep.prep_materials(skipUsage=True) # if cycles
-				bpy.ops.object.select_all(action='DESELECT')
+				for ob in context.scene.objects:
+					util.select_set(ob, False)
 
 			if hasattr(context.scene, "layers"): # 2.7 only
 				for obj in objlist:
 					obj.layers = layers
 
 			# now finally add the group instance
-			bpy.ops.object.select_all(action='DESELECT')
+			for ob in context.scene.objects:
+				util.select_set(ob, False)
 			ob = util.addGroupInstance(group.name, self.location)
 			if self.snapping=="center":
 				offset=0 # could be 0.5
@@ -440,11 +446,15 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		if groupSwap:
 			if name not in util.collections():
 				# if group not linked, put appended group data onto the GUI field layer
-				activeLayers = list(context.scene.layers)
+				if hasattr(context.scene, "layers"):
+					activeLayers = list(context.scene.layers)
+				else:
+					activeLayers = None
 				if (not toLink) and (groupAppendLayer!=0):
 					x = [False]*20
 					x[groupAppendLayer-1] = True
-					context.scene.layers = x
+					if hasattr(context.scene, "layers"):
+						context.scene.layers = x
 
 				#special cases, make another list for this? number of variants can vary..
 				if name == "torch" or name == "Torch":
@@ -456,7 +466,10 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				# bpy.osps.object.delete()
 				grouped = True
 				# if activated a different layer, go back to the original ones
-				context.scene.layers = activeLayers
+				if hasattr(context.scene, "layers") and activeLayers:
+					context.scene.layers = activeLayers
+				else:
+					conf.log("TODO: assign meshswap 2.8 collections")
 			grouped = True
 			# set properties
 			for item in util.collections()[name].items():
@@ -523,14 +536,14 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				'edgeFlush':edgeFlush,'edgeFloat':edgeFloat,'torchlike':torchlike,
 				'removable':removable,'object':importedObj,'doorlike':doorlike}
 
-	def offsetByHalf(self,obj):
+	def offsetByHalf(self, obj):
 		if obj.type != 'MESH':
 			return
 		# bpy.ops.object.mode_set(mode='OBJECT')
 		conf.log("doing offset")
 		# bpy.ops.mesh.select_all(action='DESELECT')
-		active = bpy.context.active_object #preserve current active
-		bpy.context.scene.objects.active  = obj
+		active = bpy.context.object #preserve current active
+		util.set_active_object(bpy.context, obj)
 		bpy.ops.object.mode_set(mode='EDIT')
 		bpy.ops.mesh.select_all(action='SELECT')
 		bpy.ops.transform.translate(value=(0.5, 0.5, 0.5))
@@ -538,7 +551,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		obj.location[0] -= .5
 		obj.location[1] -= .5
 		obj.location[2] -= .5
-		bpy.context.scene.objects.active = active
+		util.set_active_object(bpy.context, active)
 
 	track_function = "meshswap"
 	@tracking.report_error
@@ -558,26 +571,25 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				return {'CANCELLED'}
 
 		# get some scene information
-		toLink = False #context.scene.MCprep_linkGroup
-		groupAppendLayer = self.append_layer
-		activeLayers = list(context.scene.layers) ## NEED TO BE PASSED INTO the thing.
-		# along with the scene name
 		doOffset = (addon_prefs.MCprep_exporter_type == "Mineways")
-		#separate each material into a separate object
-		#is this good practice? not sure what's better though
+		# separate each material into a separate object
 		# could also recombine similar materials here, so happens just once.
 		selList = context.selected_objects
 		for obj in selList:
-			try: bpy.ops.object.convert(target='MESH')
-			except: pass
+			try:
+				bpy.ops.object.convert(target='MESH')
+			except:
+				pass
 			bpy.ops.mesh.separate(type='MATERIAL')
 		# now do type checking and fix any name discrepencies
 		objList = []
 		removeList = []  # list of objects to remove at end
 		for obj in selList:
 			#ignore non mesh selected objects or objs labeled to not double swap
-			if obj.type != 'MESH' or ("MCprep_noSwap" in obj): continue
-			if obj.active_material == None: continue
+			if obj.type != 'MESH' or ("MCprep_noSwap" in obj):
+				continue
+			if not obj.active_material:
+				continue
 			obj.data.name = obj.active_material.name
 			obj.name = obj.active_material.name
 			objList.append(obj)
@@ -880,10 +892,9 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				bpy.ops.object.delete() # the original copy used for duplication
 
 			#join meshes together
-			if not grouped and (len(dupedObj) >0) and self.meshswap_join:
-				#print(len(dupedObj))
+			if not grouped and dupedObj and self.meshswap_join:
 				# ERROR HERE if don't do the len(dupedObj) thing.
-				bpy.context.scene.objects.active = dupedObj[0]
+				util.set_active_object(context, dupedObj[0])
 				for d in dupedObj:
 					if d.type != 'MESH':
 						print("Skipping non-mesh:", d)
@@ -950,7 +961,6 @@ class MCPREP_OT_fix_mineways_scale(bpy.types.Operator):
 		bpy.ops.transform.resize(value=(10, 10, 10))
 		bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
 		# bpy.ops.transform.resize(value=(.1, .1, .1))
-		#bpy.ops.object.select_all(action='DESELECT')
 		bpy.context.space_data.pivot_point = tmp
 		util.set_cuser_location((0,0,0), tmpLoc)
 		return {'FINISHED'}

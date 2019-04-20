@@ -141,6 +141,8 @@ def detect_form(materials):
 	mc = 0
 	mineways = 0
 	for mat in materials:
+		if not mat:
+			continue
 		name = util.nameGeneralize(mat.name)
 		_, form = get_mc_canonical_name(name)
 		if form == "jmc2obj":
@@ -755,7 +757,7 @@ def copy_texture_animation_pass_settings(mat):
 		elif "MCPREP_displace" in node:
 			passname = "displace"
 		else:
-			if not animated_data["diffuse"]:
+			if not animated_data.get("diffuse"):
 				passname = "diffuse"
 		animated_data[passname] = {
 			"frame_duration": node.image_user.frame_duration,

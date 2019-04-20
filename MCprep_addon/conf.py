@@ -46,13 +46,6 @@ def init():
 	global vv
 	vv = dev # $VERYVERBOSE
 
-	# -----------------------------------------------
-	# To prevent recusrive function calls on property changes
-	# -----------------------------------------------
-
-	global internal_change
-	internal_change = False
-
 
 	# -----------------------------------------------
 	# To display smart warnings and fixes
@@ -134,8 +127,6 @@ def icons_init():
 	collection_sets = ["main", "skins", "mobs", "blocks", "items"]
 
 	try:
-		# custom_icons = bpy.utils.previews.new()
-		# preview_collections["main"] = custom_icons
 		for iconset in collection_sets:
 			preview_collections[iconset] = bpy.utils.previews.new()
 

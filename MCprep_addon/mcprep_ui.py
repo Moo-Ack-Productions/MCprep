@@ -48,7 +48,7 @@ OPT_IN =  'URL' if util.bv28() else 'HAND'
 class MCPREP_MT_mob_spawner(bpy.types.Menu):
 	"""Shift-A menu in the 3D view"""
 	bl_label = "Mob Spawner"
-	bl_idname = "mcmob_spawn_menu"
+	bl_idname = "MCPREP_MT_mob_spawner"
 	bl_description = "Menu for placing in the shift-A add object menu"
 
 	def draw(self, context):
@@ -65,15 +65,23 @@ class MCPREP_MT_mob_spawner(bpy.types.Menu):
 			return
 
 		for mob in scn_props.mob_list_all:
-			layout.operator("mcprep.mob_spawner",
-						text=mob.name
-						).mcmob_type = mob.mcmob_type
+			# show icon if available
+			icn = "mob-{}".format(mob.index)
+			if conf.use_icons and icn in conf.preview_collections["mobs"]:
+				ops =layout.operator("mcprep.mob_spawner", text=mob.name,
+					icon_value=conf.preview_collections["mobs"][icn].icon_id)
+			elif conf.use_icons:
+				ops = layout.operator("mcprep.mob_spawner", text=mob.name,
+					icon="BLANK1")
+			else:
+				ops = layout.operator("mcprep.mob_spawner", text=mob.name)
+			ops.mcmob_type = mob.mcmob_type
 
 
 class MCPREP_MT_meshswap_place(bpy.types.Menu):
 	"""Menu for all the meshswap objects"""
 	bl_label = "Meshswap Objects"
-	bl_idname = "mcprep_meshswapobjs"
+	bl_idname = "MCPREP_MT_meshswap_place"
 
 	def draw(self, context):
 		layout = self.layout
@@ -96,7 +104,7 @@ class MCPREP_MT_meshswap_place(bpy.types.Menu):
 class MCPREP_MT_item_spawn(bpy.types.Menu):
 	"""Menu for loaded item spawners"""
 	bl_label = "Item Spawner"
-	bl_idname = "mcprep_item_menu"
+	bl_idname = "MCPREP_MT_item_spawn"
 
 	def draw(self, context):
 		layout = self.layout
@@ -116,7 +124,7 @@ class MCPREP_MT_item_spawn(bpy.types.Menu):
 class MCPREP_MT_3dview_add(bpy.types.Menu):
 	"""MCprep Shift-A menu for spawners"""
 	bl_label = "MCprep"
-	bl_idname = "mcprep_add_objects"
+	bl_idname = "MCPREP_MT_3dview_add"
 
 	def draw(self, context):
 		layout = self.layout
@@ -140,11 +148,9 @@ class MCPREP_MT_3dview_add(bpy.types.Menu):
 			return
 
 		if spawner_icon is not None:
-			#layout.operator_menu_enum("mcprep.mob_spawner", "mcmob_type")
 			layout.menu(MCPREP_MT_mob_spawner.bl_idname,
 				icon_value=spawner_icon.icon_id)
 		else:
-			#layout.operator_menu_enum("mcprep.mob_spawner", "mcmob_type")
 			layout.menu(MCPREP_MT_mob_spawner.bl_idname)
 		if grass_icon is not None:
 			layout.menu(MCPREP_MT_meshswap_place.bl_idname,
@@ -652,7 +658,7 @@ class MCPREP_PT_skins(bpy.types.Panel):
 				text="Press to reload", icon="ERROR")
 			return
 
-		col.template_list("McprepSkinUiList", "",
+		col.template_list("MCPREP_UL_skins", "",
 				context.scene, "mcprep_skins_list",
 				context.scene, "mcprep_skins_list_index",
 				rows=rows)
@@ -804,12 +810,18 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 			b_col = b_row.column(align=False)
 			b_col.label(text="Mob spawner folder")
 			subrow = b_col.row(align=True)
-			subrow.prop(context.scene,"mcprep_mob_path",text="")
+			subrow.prop(context.scene, "mcprep_mob_path", text="")
 			subrow.operator("mcprep.spawn_path_reset", icon=LOAD_FACTORY, text="")
 			b_row = box.row()
 			b_col = b_row.column(align=True)
-			p = b_col.operator("mcprep.openfolder", text="Open mob folder")
-			p.folder = context.scene.mcprep_mob_path
+			b_col.operator("mcprep.openfolder", text="Open mob folder"
+				).folder = context.scene.mcprep_mob_path
+
+			icon_index = scn_props.mob_list[scn_props.mob_list_index].index
+			if "mob-{}".format(icon_index) in conf.preview_collections["mobs"]:
+				b_col.operator("mcprep.mob_install_icon", text="Change mob icon")
+			else:
+				b_col.operator("mcprep.mob_install_icon")
 			b_col.operator("mcprep.mob_uninstall")
 			b_col.operator("mcprep.reload_mobs", text="Reload mobs")
 
