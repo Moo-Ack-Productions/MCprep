@@ -17,6 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import json
+import operator
 import os
 import random
 import subprocess
@@ -85,6 +86,7 @@ def bAppendLink(directory, name, toLink, active_layer=True):
 
 	conf.log("Appending " + directory + " : " + name, vv_only=True)
 	post272 = False
+	post280 = False
 	try:
 		version = bpy.app.version
 		post272 = True
@@ -138,7 +140,7 @@ def obj_copy(base, context=None, vertex_groups=True, modifiers=True):
 		verts = len(base.data.vertices)
 		for vgroup in base.vertex_groups:
 			print("Running vertex group: ", vgroup.name)
-			new_g = new_ob.vertex_groups.new(vgroup.name)
+			new_g = new_ob.vertex_groups.new(name=vgroup.name)
 			for i in range(0, verts):
 				try:
 					new_g.add([i], vgroup.weight(i), "REPLACE")
@@ -631,3 +633,23 @@ def obj_unlink_remove(obj, remove, context=None):
 	if remove is True:
 		obj.user_clear()
 		bpy.data.objects.remove(obj)
+
+
+def users_collection(obj):
+	"""Returns the collections/group of an object"""
+	if hasattr(obj, "users_collection"):
+		return obj.users_collection
+	elif hasattr(obj, "users_group"):
+		return obj.users_group
+
+
+def matmul(v1, v2, v3=None):
+	"""Multiplciation of matrix and/or vectors in cross compatible way"""
+	if bv28():
+		mtm = getattr(operator, "matmul") # does not exist pre 2.7<#?>, syntax error
+		if v3:
+			return mtm(v1, mtm(v2, v3))
+		return mtm(v1, v2)
+	if v3:
+		return v1 * v2 * v3
+	return v1 * v2

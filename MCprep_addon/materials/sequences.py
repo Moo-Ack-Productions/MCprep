@@ -142,7 +142,7 @@ def generate_material_sequence(source_path, image_path, form, export_location, c
 		# export frames next to current files
 		# use regex to see if source path already is an animated subfolder,
 		# preventing a recursive subfolder regeneration of tiles
-		seq_path_base =  os.path.dirname(bpy.path.abspath(source_path))
+		seq_path_base = os.path.dirname(bpy.path.abspath(source_path))
 		root = os.path.basename(seq_path_base)
 
 		# match string-ending pattern: .../lava_flow/lava_flow_0001.png
@@ -151,9 +151,13 @@ def generate_material_sequence(source_path, image_path, form, export_location, c
 			# now it will point to originating subfolder and check caching there
 			seq_path_base = os.path.dirname(seq_path_base)
 
+		if not os.path.isdir(seq_path_base):
+			# issue with the current output folder not already existing
+			seq_path_base = None
+
 	elif export_location == "texturepack":
 		# export to save frames in currently selected texturepack (could be addon)
-		seq_path_base =  os.path.dirname(bpy.path.abspath(image_path))
+		seq_path_base = os.path.dirname(bpy.path.abspath(image_path))
 
 	if conf.vv:
 		conf.log("Pre-sequence details")

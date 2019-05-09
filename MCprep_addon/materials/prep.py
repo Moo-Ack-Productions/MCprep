@@ -90,7 +90,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 		min=0
 		)
 	makeSolid = bpy.props.BoolProperty(
-		name = "Make materials solid",
+		name = "Make all materials solid",
 		description = "Make all materials solid only, for shadows and rendering",
 		default = False
 		)

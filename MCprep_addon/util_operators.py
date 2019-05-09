@@ -106,7 +106,7 @@ class MCPREP_OT_show_preferences(bpy.types.Operator):
 		addon_blinfo = addon_utils.module_bl_info(addons_ids[0])
 		if not addon_blinfo["show_expanded"]:
 			if hasattr(bpy.ops, "preferences") and hasattr(bpy.ops.preferences, "addon_expand"): # later 2.8 buids
-				bpy.ops.wm.addon_expand(module=__package__)
+				bpy.ops.preferences.addon_expand(module=__package__)
 			elif hasattr(bpy.ops, "wm") and hasattr(bpy.ops.wm, "addon_expand"): # old 2.8 and 2.7
 				bpy.ops.wm.addon_expand(module=__package__)
 			else:

@@ -856,6 +856,10 @@ def matgen_cycles_principled(mat, passes, use_reflections, only_solid):
 	nodeTrans.location = (0,100)
 	nodeMix1.location = (300,0)
 	nodeOut.location = (500,0)
+	if util.bv28():
+		nodeTexDiff.location[0] -= 100
+		nodeTexNorm.location[0] -= 200
+		nodeTexSpec.location[0] -= 200
 
 	# default links
 	links.new(nodeTexDiff.outputs["Color"],nodeSaturateMix.inputs[1])
@@ -1047,6 +1051,10 @@ def matgen_cycles_original(mat, passes, use_reflections, only_solid):
 	nodeMix1.location = (0,0)
 	nodeMix2.location = (200,0)
 	nodeOut.location = (400,0)
+	if util.bv28():
+		nodeTexDiff.location[0] -= 100
+		nodeTexNorm.location[0] -= 200
+		nodeTexSpec.location[0] -= 200
 
 	links.new(nodeTexDiff.outputs["Color"],nodeSaturateMix.inputs[1])
 	links.new(nodeSaturateMix.outputs["Color"],nodeDiff.inputs[0])
@@ -1186,6 +1194,9 @@ def matgen_cycles_emit(mat, passes):
 	nodeMix.location = (200, 0)
 	nodeFalloff.location = (-400, 0)
 	nodeOut.location = (400, 0)
+	if util.bv28():
+		nodeLightPath.location[0] -= 100
+		nodeTexDiff.location[0] -= 100
 
 	# links.new(nodeMixEmitDiff.outputs["Color"], nodeEmit.inputs[0])
 	links.new(nodeTexDiff.outputs["Color"], nodeEmit.inputs[0])

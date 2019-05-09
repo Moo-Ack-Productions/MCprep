@@ -427,13 +427,14 @@ class Singleton_tracking(object):
 	def remove_indentifiable_information(self, report):
 		"""Remove filepath from report logs, which could have included
 		sensitive information such as usernames or names"""
-		report = report.replace('\\', '/')
+		report = report.replace(r'\\', '/').replace(r'\\\\\\', '/')
 		if not VALID_IMPORT:
 			return report
 		try:
 			return re.sub(
-				r'(?i)File "[/\\]{1,2}.*[/\\]{1,2}',
-				'File "<addon_path>'+os.sep,
+				# case insensitive match: File "C:/path/.." or File "/path/.."
+				r'(?i)File "([a-z]:){0,1}[/\\]{1,2}.*[/\\]{1,2}',
+				'File "<addon_path>/',
 				str(report))
 		except Exception as err:
 			print("Error occured while removing info: {}".format(err))
@@ -518,7 +519,7 @@ class TRACK_OT_popup_feedback(bpy.types.Operator):
 
 class TRACK_OT_popup_report_error(bpy.types.Operator):
 	bl_idname = IDNAME+".report_error"
-	bl_label = "MCprep ERROR OCCURED"
+	bl_label = "MCprep Error, press OK below to send this report to developers"
 	bl_description = "Report error to database, add additional comments for context"
 
 	error_report = bpy.props.StringProperty(default="")
@@ -543,7 +544,6 @@ class TRACK_OT_popup_report_error(bpy.types.Operator):
 		layout = self.layout
 
 		col = layout.column()
-		col.label(text="Error detected, press OK below to send to developer", icon="ERROR")
 		box = col.box()
 		boxcol = box.column()
 		boxcol.scale_y = 0.7
@@ -579,7 +579,7 @@ class TRACK_OT_popup_report_error(bpy.types.Operator):
 		row = col.row(align=True)
 		split = layout_split(layout, factor=0.6)
 		spcol = split.row()
-		spcol.label(text="Select 'Send' then press OK to share anonymous report")
+		spcol.label(text="Select 'Send' then press OK to share report")
 		split_two = layout_split(split, factor=0.4)
 		spcol_two = split_two.row(align=True)
 		spcol_two.prop(self,"action",text="")

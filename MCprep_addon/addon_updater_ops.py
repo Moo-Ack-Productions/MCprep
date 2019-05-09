@@ -223,6 +223,7 @@ class addon_updater_check_now(bpy.types.Operator):
 														x=updater.addon)
 	bl_options = {'REGISTER', 'INTERNAL'}
 
+	@tracking.report_error
 	def execute(self,context):
 		if updater.invalidupdater == True:
 			return {'CANCELLED'}
@@ -559,6 +560,7 @@ class addon_updater_restore_backup(bpy.types.Operator):
 		except:
 			return False
 
+	@tracking.report_error
 	def execute(self, context):
 		# in case of error importing updater
 		if updater.invalidupdater == True:
@@ -583,6 +585,7 @@ class addon_updater_ignore(bpy.types.Operator):
 		else:
 			return False
 
+	@tracking.report_error
 	def execute(self, context):
 		# in case of error importing updater
 		if updater.invalidupdater == True:

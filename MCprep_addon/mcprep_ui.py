@@ -64,8 +64,10 @@ class MCPREP_MT_mob_spawner(bpy.types.Menu):
 			row.alignment = 'CENTER'
 			return
 
-		for mob in scn_props.mob_list_all:
+		keys = sorted(scn_props.mob_list_all.keys())
+		for mobkey in keys:
 			# show icon if available
+			mob = scn_props.mob_list_all[mobkey]
 			icn = "mob-{}".format(mob.index)
 			if conf.use_icons and icn in conf.preview_collections["mobs"]:
 				ops =layout.operator("mcprep.mob_spawner", text=mob.name,
@@ -553,7 +555,6 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			b_col.operator("mcprep.replace_missing_textures")
 			b_col.operator("mcprep.animate_textures")
 			# TODO: operator to make all local, all packed, or set to other location
-			# b_col.operator("mcprep.improve_ui", text="[WIP]Set tex location")
 			b_col.operator("mcprep.combine_materials",
 					text="Combine Materials").selection_only=True
 			if bpy.app.version > (2,77):
@@ -593,30 +594,30 @@ class MCPREP_PT_world_tools(bpy.types.Panel):
 		rw = layout.row()
 		col = rw.column(align=True)
 		col.operator("mcprep.add_mc_world")
-
-
-		# if "mcprep_world" not in util.collections():
-		# 	col.operator("mcprep.add_world_time")
-		# else:
-		# 	col.label(text="MCprep sun already added")
-			# col.prop(context.scene.mcprep_props,"world_time",text="")
-			# p = col.operator("mcprep.time_set")
-			# p.day_offset = int(context.scene.mcprep_props.world_time/24000)
-
 		col.operator("mcprep.world")
 
 		layout.split()
 		rw = layout.row()
 		col = rw.column(align=True)
 		obj = world_tools.get_time_object()
+		col.label(text="Time of day")
 		if obj and "MCprepHour" in obj:
-			col.label(text="Time of day")
-			col.prop(obj, "MCprepHour", text="")
+			time = obj["MCprepHour"]
+			col.prop(
+				obj,
+				'["MCprepHour"]',
+				text="")
+			col.label(text="{h}:{m}, day {d}".format(
+				h=str(int(time%24 - time%1)).zfill(2),
+				m=str(int(time%1 * 60)).zfill(2),
+				d=int((time - time%24) / 24)
+				))
 		else:
-			subcol = col.column()
+			box = col.box()
+			subcol = box.column()
 			subcol.scale_y = 0.8
-			subcol.label(text="No time control obj,")
-			subcol.label(text="create MC world.")
+			subcol.label(text="No time controller,")
+			subcol.label(text="add dynamic MC world.")
 		# col.label(text="World setup")
 		# col.operator("mcprep.world")
 		# col.operator("mcprep.world", text="Add clouds")
@@ -824,6 +825,7 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 				b_col.operator("mcprep.mob_install_icon")
 			b_col.operator("mcprep.mob_uninstall")
 			b_col.operator("mcprep.reload_mobs", text="Reload mobs")
+			b_col.label(text=mcmob_type)
 
 	def meshswap(self, context):
 		scn_props = context.scene.mcprep_props
@@ -972,6 +974,7 @@ def draw_mcprepadd(self, context):
 def mcprep_uv_tools(self, context):
 	"""Appended to UV tools in UV image editor tab, in object edit mode."""
 	layout = self.layout
+	layout.separator()
 	layout.label(text="MCprep tools")
 	col = layout.column(align=True)
 	col.operator("mcprep.scale_uv")

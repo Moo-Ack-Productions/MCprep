@@ -44,13 +44,16 @@ def get_time_object():
 				time_obj_cache = None
 		except ReferenceError:
 			time_obj_cache = None # e.g. if item was deleted
-	if time_obj_cache is not None and (time_obj_cache not in bpy.data.objects[:] or "MCprepHour" not in time_obj_cache):
+	if (time_obj_cache is not None
+			and (time_obj_cache not in bpy.data.objects[:]
+			or "MCprepHour" not in time_obj_cache)):
 		time_obj_cache = None
 
 	if time_obj_cache is None:
-		for obj in bpy.data.objects:
-			if "MCprepHour" in obj:
-				time_obj_cache = obj
+		time_objs = [obj for obj in bpy.data.objects if "MCprepHour" in obj]
+		if time_objs:
+			time_objs.sort(key=lambda x: x.name)
+			time_obj_cache = time_objs[-1]
 
 	return time_obj_cache
 
@@ -340,7 +343,7 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 
 
 class MCPREP_OT_add_mc_world(bpy.types.Operator):
-	"""Add a sun lamp as part of a group into the scene"""
+	"""Add sun lamp and time of day (dynamic) driver, setup sky with sun and moon"""
 	bl_idname = "mcprep.add_mc_world"
 	bl_label = "Create MC World"
 	bl_options = {'REGISTER', 'UNDO'}
@@ -349,16 +352,10 @@ class MCPREP_OT_add_mc_world(bpy.types.Operator):
 		"""Dynamic set of enums to show based on engine"""
 		engine = bpy.context.scene.render.engine
 		enums = []
-		# if engine == "BLENDER_RENDER":
-		# 	enums.append(("world_mesh", "Dynamic world + mesh sun/moon", "Import dynamic world and enable mesh-based sun and moon"))
-		# 	enums.append(("world_only", "Dynamic world only", "Import dynamic world, with no sun or moon"))
-		# 	enums.append(("world_static_mesh", "Static world + mesh sun/moon", "Create static world with mesh sun and moon"))
-		# 	enums.append(("world_static_only", "Static world only", "Create static world, with no sun or moon"))
-		# elif engine == "CYCLES" or engine == "BLENDER_EEVEE":
 		if bpy.app.version >= (2, 77) and engine in ("CYCLES", "BLENDER_EEVEE"):
 			enums.append(("world_shader", "Dynamic world + shader sun/moon", "Import dynamic world and shader-based sun and moon"))
-		enums.append(("world_only", "Dynamic world only", "Import dynamic world, with no sun or moon"))
 		enums.append(("world_mesh", "Dynamic world + mesh sun/moon", "Import dynamic world and mesh sun and moon"))
+		enums.append(("world_only", "Dynamic world only", "Import dynamic world, with no sun or moon"))
 		enums.append(("world_static_mesh", "Static world + mesh sun/moon", "Create static world with mesh sun and moon"))
 		enums.append(("world_static_only", "Static world only", "Create static world, with no sun or moon"))
 		return enums
@@ -368,12 +365,12 @@ class MCPREP_OT_add_mc_world(bpy.types.Operator):
 		description="Decide to improt dynamic (time/hour-controlled) vs static world (daytime only), and the type of sun/moon (if any) to use",
 		items=enum_options)
 	initial_time = bpy.props.EnumProperty(
-		name="Set time",
+		name="Set time (dynamic only)",
 		description="Set initial time of day, only supported for dynamic world types",
 		items = (
 			("8", "Morning", "Set initial time to 9am"),
 			("12", "Noon", "Set initial time to 12pm"),
-			("20", "Sunset", "Set initial time to 8pm"),
+			("18", "Sunset", "Set initial time to 6pm"),
 			("0", "Midnight", "Set initial time to 12am"),
 			("6", "Sunrise", "Set initial time to 6am"))
 		)
@@ -389,21 +386,22 @@ class MCPREP_OT_add_mc_world(bpy.types.Operator):
 		)
 
 	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self, width=400*util.ui_scale())
+		return context.window_manager.invoke_props_dialog(
+			self, width=400*util.ui_scale())
 
 	def draw(self, context):
-		self.layout.label(text="Set world type and initial time of day (dynamic worlds types only)")
 		self.layout.prop(self, "world_type")
-		self.layout.prop(self, "initial_time")
+		# self.layout.prop(self, "initial_time") # issue updating driver when set this way
 		row = self.layout.row()
 		row.prop(self, "add_clouds")
 		row.prop(self, "remove_existing_suns")
+		row = self.layout.row()
+		row.label(text="Note: Dynamic worlds use drivers, enable auto-run python scripts")
 
 	track_function = "world_time"
 	track_param = None
 	@tracking.report_error
 	def execute(self, context):
-
 		new_objs = []
 		if self.remove_existing_suns:
 			for lamp in context.scene.objects:
@@ -437,7 +435,6 @@ class MCPREP_OT_add_mc_world(bpy.types.Operator):
 			bpy.ops.mcprep.world(skipUsage=True) # do rest of sky setup
 
 		elif engine=='CYCLES' or engine=='BLENDER_EEVEE':
-			# append world setup from source file for dynamic world
 			if not os.path.isfile(blendfile):
 				self.report({'ERROR'}, "Source MCprep world blend file does not exist: "+blendfile)
 				conf.log("Source MCprep world blend file does not exist: "+blendfile)
@@ -445,25 +442,10 @@ class MCPREP_OT_add_mc_world(bpy.types.Operator):
 			if wname in bpy.data.worlds:
 				prev_world = bpy.data.worlds[wname]
 				prev_world.name = "-old"
-			resource = os.path.join(blendfile, "World")
-			util.bAppendLink(resource, wname, False)
-			if wname in bpy.data.worlds:
-				context.scene.world = bpy.data.worlds[wname]
-				context.scene.world["mcprep_world"] = True
-			else:
-				self.report({'ERROR'}, "Failed to import new world")
-				conf.log("Failed to import new world")
-				return {'CANCELLED'}
+			new_objs += self.create_dynamic_world(context, blendfile, wname)
 
-			# assign sun/moon shader accordingly
-			use_shader = 1 if self.world_type == "world_shader" else 0
-			for node in context.scene.world.node_tree.nodes:
-				if node.type != "GROUP":
-					continue
-				node.inputs[3].default_value = use_shader
-			new_objs += list(context.selected_objects)
 		elif engine=='BLENDER_RENDER' or engine=='BLENDER_GAME':
-			# dynamic world, crate sun with atompshere
+			# dynamic world using built-in sun sky and atmosphere
 			new_sun = self.create_sunlamp(context)
 			new_objs.append(new_sun)
 			new_sun.data.shadow_method = 'RAY_SHADOW'
@@ -480,29 +462,46 @@ class MCPREP_OT_add_mc_world(bpy.types.Operator):
 					continue
 				lamp.data.sky.use_sky = False
 
-		# TODO: Import the sun and moon objects for the static ones/Internal
+			time_obj = get_time_object()
+			if not time_obj:
+				conf.log("TODO: implement create time_obj, parent sun to it & driver setup")
+
+		if self.world_type in ("world_static_mesh", "world_mesh"):
+			if not os.path.isfile(blendfile):
+				self.report({'ERROR'}, "Source MCprep world blend file does not exist: "+blendfile)
+				conf.log("Source MCprep world blend file does not exist: "+blendfile)
+				return {'CANCELLED'}
+			resource = blendfile +"/Object"
+
+			util.bAppendLink(resource, "MoonMesh", False)
+			moonmesh = context.selected_objects[0]
+			moonmesh.parent = get_time_object()
+			new_objs.append(moonmesh)
+
+			util.bAppendLink(resource, "SunMesh", False)
+			sunmesh = context.selected_objects[0]
+			sunmesh.parent = get_time_object()
+			new_objs.append(sunmesh)
 
 		if prev_world:
-			prev_world.user_clear()
 			bpy.data.worlds.remove(prev_world)
 
-		# set initial times of day, if dynamic
-		time_obj = get_time_object()
-		if time_obj:
-			time_obj["MCprepHour"] = int(self.initial_time)
+		if self.add_clouds:
+			resource = blendfile +"/Object"
+			util.bAppendLink(resource, "clouds", False)
+			new_objs += list(context.selected_objects)
+			# if engine == "BLENDER_INTERNAL":
+			# 	mat = context.selected_objects[0].active_material
+			# 	mat.use_nodes = False
+			# 	mat.use_shadeless = False
+			# 	mat.translucency = 1
 
+		# ensure all new objects (lights, meshes, control objs) in same group
 		if "mcprep_world" in util.collections():
 			util.collections()["mcprep_world"].name = "mcprep_world_old"
 		time_group = util.collections().new("mcprep_world")
 		for obj in new_objs:
 			time_group.objects.link(obj)
-
-		# delete the sun and moon objects if not wanted
-		for ob in new_objs:
-			if self.world_type not in ("world_shader", "world_only", "world_static_only"):
-				continue
-			if "sun" in ob.name.lower() or "moon" in ob.name.lower():
-				util.obj_unlink_remove(ob, True)
 
 		self.track_param = self.world_type
 		self.track_param = engine
@@ -523,6 +522,74 @@ class MCPREP_OT_add_mc_world(bpy.types.Operator):
 		context.scene.update()
 		# update horizon info
 		return obj
+
+	def create_dynamic_world(self, context, blendfile, wname):
+		"""Setup fpr creating a dynamic world and setting up driver targets"""
+		resource = blendfile + "/World"
+		obj_list = []
+
+		global time_obj_cache
+		if time_obj_cache:
+			util.obj_unlink_remove(time_obj_cache, True, context)
+
+		time_obj_cache = None # force reset to use newer cache object
+
+		# Append the world (and time control elements)
+		util.bAppendLink(resource, wname, False)
+		obj_list += list(context.selected_objects)
+
+		if wname in bpy.data.worlds:
+			context.scene.world = bpy.data.worlds[wname]
+			context.scene.world["mcprep_world"] = True
+		else:
+			self.report({'ERROR'}, "Failed to import new world")
+			conf.log("Failed to import new world")
+
+		# assign sun/moon shader accordingly
+		use_shader = 1 if self.world_type == "world_shader" else 0
+		for node in context.scene.world.node_tree.nodes:
+			if node.type != "GROUP":
+				continue
+			node.inputs[3].default_value = use_shader
+
+		# set initial times of day, if dynamic
+		# time_obj = get_time_object()
+		# time_obj["MCprepHour"] = float(self.initial_time)
+
+		# # update drivers, needed if time has changed vs import source
+		# if context.scene.world.node_tree.animation_data:
+		# 	# context.scene.world.node_tree.animation_data.drivers[0].update()
+		# 	drivers = context.scene.world.node_tree.animation_data.drivers[0]
+		# 	drivers.driver.variables[0].targets[0].id = time_obj
+		# 	# nope, still doesn't work.
+
+		# if needed: create time object and setup drivers
+		# if not time_obj:
+		# 	conf.log("Creating time_obj")
+		# 	time_obj = bpy.data.objects.new('MCprep Time Control', None)
+		# 	util.obj_link_scene(time_obj, context)
+		# 	global time_obj_cache
+		# 	time_obj_cache = time_obj
+		# 	if hasattr(time_obj, "empty_draw_type"):  # 2.7
+		# 		time_obj.empty_draw_type = 'SPHERE'
+		# 	else:  # 2.8
+		# 		time_obj.empty_display_type = 'SPHERE'
+
+		# first, get the driver
+		# if (not world.node_tree.animation_data
+		# 		or not world.node_tree.animation_data.drivers
+		# 		or not world.node_tree.animation_data.drivers[0].driver):
+		# 	conf.log("Could not get driver from imported dynamic world")
+		# 	self.report({'WARNING'}, "Could not update driver for dynamic world")
+		# 	driver = None
+		# else:
+		# 	driver = world.node_tree.animation_data.drivers[0].driver
+		# if driver and driver.variables[0].targets[0].id_type == 'OBJECT':
+		# 	driver.variables[0].targets[0].id = time_obj
+		# add driver to control obj's x rotation
+
+
+		return obj_list
 
 
 class MCPREP_OT_time_set(bpy.types.Operator):

@@ -90,9 +90,10 @@ def update_rig_list(context):
 				# if available, load the custom icon too
 				if not run_icons:
 					continue
+
 				icons = [f for f in os.listdir(icon_folder)
 							if os.path.isfile(os.path.join(icon_folder, f))
-							and name.lower() in f.lower()
+							and name.lower() == os.path.splitext(f.lower())[0]
 							and not f.startswith(".")
 							and os.path.splitext(f.lower())[-1] in extensions
 							]
@@ -193,74 +194,11 @@ class MCPREP_OT_reload_mobs(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class MCPREP_OT_mob_spawner_direct(bpy.types.Operator):
-	"""Instantly spawn this rig into scene, no menu"""
-	bl_idname = "mcprep.mob_spawner_direct"
-	bl_label = "Mob Spawner"
-	bl_description = "Instantly spawn this rig into scene, no menu"
-	bl_options = {'REGISTER', 'UNDO'}
-
-	mcmob_index = bpy.props.IntProperty(
-		name="Mob index",
-		default=-1,
-		min=-1,
-		options={'HIDDEN'}
-		)
-	relocation = bpy.props.EnumProperty(
-		items = [('None', 'Cursor', 'No relocation'),
-				('Origin', 'Origin', 'Move the rig to the origin'),
-				('Offset', 'Offset root', 'Offset the root bone to curse while moving the rest pose to the origin')],
-		name = "Relocation"
-		)
-	toLink = bpy.props.BoolProperty(
-		name = "Library Link",
-		description = "Library link instead of append the group",
-		default = False
-		)
-	clearPose = bpy.props.BoolProperty(
-		name = "Clear Pose",
-		description = "Clear the pose to rest position",
-		default = False
-		)
-
-	@tracking.report_error
-	def execute(self, context):
-
-		scn_props = context.scene.mcprep_props
-
-		# fix the index if needed
-		# if self.mcmob_index>=len(scn_props.mob_list):
-		# 	self.mcmob_index = 0
-		# 	print("Wraparound)")
-		# elif self.mcmob_index<0:
-		# 	self.mcmob_index = len(scn_props.mob_list)-1
-		# 	print("neg wraparound")
-
-		if self.mcmob_index == -1:
-			mob = ""
-			self.report({'ERROR'},"Invalid mob index -1")
-			# default if called from non MCprep script
-			return {'CANCELLED'}
-		elif self.mcmob_index >= len(scn_props.mob_list):
-			self.report({'ERROR'}, "Invalid mob index " + str(self.mcmob_index))
-			return {'CANCELLED'}
-		else:
-			mob = scn_props.mob_list[self.mcmob_index].mcmob_type
-
-		bpy.ops.mcprep.mob_spawner('EXEC_DEFAULT',
-				mcmob_type = mob,
-				relocation = self.relocation,
-				toLink = self.toLink,
-				clearPose = self.clearPose)
-
-		return {'FINISHED'}
-
-
 class MCPREP_OT_mob_spawner(bpy.types.Operator):
 	"""Show menu and spawn built-in or custom rigs into a scene"""
 	bl_idname = "mcprep.mob_spawner"
 	bl_label = "Mob Spawner"
-	bl_description = "Spawn built-in or custom rigs into a scene with menu"
+	bl_description = "Spawn built-in or custom rigs into the scene"
 	bl_options = {'REGISTER', 'UNDO'}
 
 	def riglist_enum(self, context):
@@ -284,7 +222,7 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 		default = True
 		)
 	auto_prep = bpy.props.BoolProperty(
-		name = "Prep materials (will reset Cycles nodes)",
+		name = "Prep materials (will reset nodes)",
 		description = "Prep materials of the added rig, will replace cycles node groups with default",
 		default = True
 		)
@@ -304,29 +242,27 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 		else:
 			row.prop(self, "auto_prep", text="Prep materials")
 
-	# def invoke(self, context, event):
-	# 	return context.window_manager.invoke_props_dialog(self)
-
-	def proxySpawn(self):
-		conf.log("Attempting to do proxySpawn")
-		conf.log("Mob to spawn: {}".format(self.mcmob_type))
-
-	def attemptScriptLoad(self,path):
+	@staticmethod
+	def attemptScriptLoad(path):
 		# search for script that matches name of the blend file
 		# should also look into the blend if appropriate
-		if path[-5:]=="blend":
-			path = path[:-5]+"py"
-			#bpy.ops.script.python_file_run(filepath=path)
-			if not os.path.isfile(path):
-				return # no script found
-			conf.log("Script found, loading and running it")
-			bpy.ops.text.open(filepath=path,internal=True)
-			text = bpy.data.texts[ path.split("/")[-1] ]
-			text.use_module = True
-			ctx = bpy.context.copy()
-			ctx['edit_text'] = text
+		if not path[-5:]=="blend":
+			return
+		path = path[:-5]+"py"
+		if not os.path.isfile(path):
+			return # no script found
+		conf.log("Script found, loading and running it")
+		bpy.ops.text.open(filepath=path, internal=True)
+		text = bpy.data.texts[path.split("/")[-1]]
+		ctx = bpy.context.copy()
+		ctx['edit_text'] = text
+		try:
 			bpy.ops.text.run_script(ctx)
-			conf.log("Ran the script")
+		except:
+			conf.log("Failed to run the script, not registering")
+			return
+		conf.log("Ran the script")
+		text.use_module = True
 
 	def setRootLocation(self,context):
 		pass
@@ -370,7 +306,7 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 		# if there is a script with this rig, attempt to run it
 		self.attemptScriptLoad(path)
 
-		if self.auto_prep:
+		if self.auto_prep and not self.toLink:
 			bpy.ops.mcprep.prep_materials(skipUsage=True)
 
 		self.track_param = self.mcmob_type.split(":/:")[1]
@@ -409,19 +345,11 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 		for bone in armature.pose.bones:
 			if bone.name.lower() != lower_name:
 				continue
-			# bone.location = (bone.bone.matrix.inverted() *
-			# 	util.get_cuser_location(context) *
-			# 	armature.matrix_world.inverted())
-			if hasattr(bpy.app, "version") and bpy.app.version >= (2, 80):
-				mtm = getattr(operator, "matmul") # does not exist pre 2.7<#?>, syntax error
-				bone.location = (
-					mtm(bone.bone.matrix.inverted(),
-						mtm(util.get_cuser_location(context),
-							armature.matrix_world.inverted())))
-			else:
-				bone.location = (bone.bone.matrix.inverted() *
-					util.get_cuser_location(context) *
-					armature.matrix_world.inverted())
+			bone.location = util.matmul(
+				bone.bone.matrix.inverted(),
+				util.get_cuser_location(context),
+				armature.matrix_world.inverted()
+				)
 
 			set_bone = True
 			break
@@ -431,17 +359,26 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 		"""Process for loading mob via linked library"""
 
 		path = bpy.path.abspath(path)
+		act = None
 		if hasattr(bpy.data, "groups"):
-			g_or_c = 'Group'
+			util.bAppendLink(path + '/Group', name, True)
+			act = context.object  # assumption of object after linking, 2.7 only
 		elif hasattr(bpy.data, "collections"):
-			g_or_c = 'Collection'
-		util.bAppendLink(os.path.join(path, g_or_c), name, True)
+			util.bAppendLink(path + '/Collection', name, True)
+			act = context.selected_objects[0] # better for 2.8
+
+		# util.bAppendLink(os.path.join(path, g_or_c), name, True)
 		# proxy any and all armatures
 		# here should do all that jazz with hacking by copying files, checking nth number
 		#probably consists of checking currently linked libraries, checking if which
 		#have already been linked into existing rigs
+		# if util.bv28() and context.selected_objects:
+		# 	act = context.selected_objects[0] # better for 2.8
+		# elif context.object:
+		# 	act = context.object  # assumption of object after linking
+		conf.log("Identified new obj as: {}".format(
+			act), vv_only=True)
 
-		act = context.object  # assumption of object after linking
 		if not act:
 			self.report({'ERROR'}, "Could not grab linked in object if any.")
 			return
@@ -473,7 +410,6 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 
 		if self.relocation == "Offset":
 			# do the offset stuff, set active etc
-			#bpy.ops.object.mode_set(mode='OBJECT')
 			bpy.ops.transform.translate(value=(-gl[0],-gl[1],-gl[2]))
 
 		try:
@@ -508,26 +444,40 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 		for ob in context.scene.objects:
 			util.select_set(ob, False)
 		# consider taking pre-exisitng group names and giving them a temp name to name back at the end
+
 		if hasattr(bpy.data, "groups"):
 			subpath = 'Group'
 		elif hasattr(bpy.data, "collections"):
 			subpath = 'Collection'
-		conf.log(os.path.join(path, subpath) + ', ' + name)
-		util.bAppendLink(os.path.join(path, subpath), name, False)
 
-		try:
-			g1 = context.selected_objects[0]  # THE FOLLOWING is a common fail-point.
-			grp_added = g1.users_group[0] # to be safe, grab the group from one of the objects
-		except:
+		conf.log(os.path.join(path, subpath) + ', ' + name)
+		pregroups = list(util.collections())
+		util.bAppendLink(os.path.join(path, subpath), name, False)
+		postgroups = list(util.collections())
+
+		g1 = None
+		new_groups = list(set(postgroups)-set(pregroups))
+		if not new_groups and name in util.collections():
 			# this is more likely to fail but serves as a fallback
 			conf.log("Mob spawn: Had to go to fallback group name grab")
 			grp_added = util.collections()[name]
+		elif not new_groups:
+			conf.log("Warning, could not detect imported group")
+			self.report({'WARNING'}, "Could not detect imported group")
+			return
+		else:
+			grp_added = new_groups[0] # assume first
+
+		conf.log("Identified object {} with group {} as just imported".format(
+			g1, grp_added), vv_only=True)
 
 		# if rig not centered in original file, assume its group is
 		if hasattr(grp_added, "dupli_offset"): # 2.7
 			gl = grp_added.dupli_offset
-		if hasattr(grp_added, "instance_offset"): # 2.8
+		elif hasattr(grp_added, "instance_offset"): # 2.8
 			gl = grp_added.instance_offset
+		else:
+			conf.log("Warning, could not set offset for group; null type?")
 		cl = util.get_cuser_location(context)
 
 		# For some reason, adding group objects on its own doesn't work
@@ -967,7 +917,6 @@ def spawn_rigs_category_load(self, context):
 
 classes = (
 	MCPREP_OT_reload_mobs,
-	MCPREP_OT_mob_spawner_direct,
 	MCPREP_OT_mob_spawner,
 	MCPREP_OT_install_mob,
 	MCPREP_OT_uninstall_mob,

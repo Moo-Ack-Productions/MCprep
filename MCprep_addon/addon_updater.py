@@ -766,15 +766,16 @@ class Singleton_updater(object):
 			try:
 				shutil.rmtree(tempdest)
 			except:
-				if self._verbose:print("Failed to remove existing temp folder, contininuing")
+				if self._verbose:
+					print("Failed to remove existing temp folder, contininuing")
 		# make the full addon copy, which temporarily places outside the addon folder
 		if self._backup_ignore_patterns != None:
 			shutil.copytree(
 				self._addon_root,tempdest,
 				ignore=shutil.ignore_patterns(*self._backup_ignore_patterns))
 		else:
-			shutil.copytree(self._addon_root,tempdest)
-		shutil.move(tempdest,local)
+			shutil.copytree(self._addon_root, tempdest)
+		shutil.move(tempdest, local)
 
 		# save the date for future ref
 		now = datetime.now()
