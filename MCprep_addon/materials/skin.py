@@ -83,14 +83,13 @@ def handler_skins_enablehack(scene):
 
 @persistent
 def handler_skins_load(scene):
-	if conf.vv: print("Handler_skins_load running")
+	conf.log("Handler_skins_load running", True)
 
 	try:
-		if conf.vv: print("Reloading skins")
+		conf.log("Reloading skins", True)
 		reloadSkinList(bpy.context)
 	except:
-		if conf.v: print("Didn't run skin reloading callback")
-		pass
+		conf.log("Didn't run skin reloading callback")
 
 
 def loadSkinFile(self, context, filepath, new_material=False):
@@ -119,7 +118,8 @@ def loadSkinFile(self, context, filepath, new_material=False):
 	else:
 		pass
 
-	setUVimage(context.selected_objects, image)
+	if not util.bv28():
+		setUVimage(context.selected_objects, image)
 
 	# TODO: adjust the UVs if appropriate, and fix eyes
 	if image.size[0] != 0 and image.size[1]/image.size[0] != 1:
@@ -261,10 +261,13 @@ def getMatsFromSelected(selected,new_material=False):
 
 
 def setUVimage(objs, image):
-	"""Set image for each face for viewport displaying."""
+	"""Set image for each face for viewport displaying (2.7 only)"""
 	for obj in objs:
 		if obj.type != "MESH":
 			continue
+		if not hasattr(obj.data, "uv_textures"):
+			conf.log("Called setUVimage on object with no uv_textures, 2.8?")
+			return
 		if obj.data.uv_textures.active is None:
 			continue
 		for uv_face in obj.data.uv_textures.active.data:
@@ -276,8 +279,9 @@ def setUVimage(objs, image):
 # -----------------------------------------------------------------------------
 
 
-class McprepSkinUiList(bpy.types.UIList):
+class MCPREP_UL_skins(bpy.types.UIList):
 	"""For asset listing UIList drawing"""
+	bl_idname = "MCPREP_UL_skins"
 	def draw_item(self, context, layout, data, set, icon,
 					active_data, active_propname, index):
 		layout.prop(set, "name", text="", emboss=False)
@@ -292,7 +296,7 @@ class ListColl(bpy.types.PropertyGroup):
 	description = bpy.props.StringProperty()
 
 
-class McprepSkinSwapper(bpy.types.Operator, ImportHelper):
+class MCPREP_OT_swap_skin_from_file(bpy.types.Operator, ImportHelper):
 	"""Swap the skin of a rig (character, mob, etc) with another file"""
 	bl_idname = "mcprep.skin_swapper"
 	bl_label = "Swap skin"
@@ -320,7 +324,7 @@ class McprepSkinSwapper(bpy.types.Operator, ImportHelper):
 		return {'FINISHED'}
 
 
-class McprepApplySkin(bpy.types.Operator):
+class MCPREP_OT_apply_skin(bpy.types.Operator):
 	"""Apply the active UIlist skin to select characters"""
 	bl_idname = "mcprep.applyskin"
 	bl_label = "Apply skin"
@@ -349,7 +353,7 @@ class McprepApplySkin(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class McprepApplyUsernameSkin(bpy.types.Operator):
+class MCPREP_OT_apply_username_skin(bpy.types.Operator):
 	"""Apply the active UIlist skin to select characters"""
 	bl_idname = "mcprep.applyusernameskin"
 	bl_label = "Skin from user"
@@ -382,11 +386,11 @@ class McprepApplyUsernameSkin(bpy.types.Operator):
 			width=400*util.ui_scale())
 
 	def draw(self, context):
-		self.layout.label("Enter exact Minecraft username below")
+		self.layout.label(text="Enter exact Minecraft username below")
 		self.layout.prop(self,"username",text="")
 		self.layout.prop(self,"skip_redownload")
 		self.layout.label(
-			"and then press OK; blender may pause briefly to download")
+			text="and then press OK; blender may pause briefly to download")
 
 	track_function = "skin"
 	track_param = "username"
@@ -399,8 +403,7 @@ class McprepApplyUsernameSkin(bpy.types.Operator):
 		skins = [ str(skin[0]).lower() for skin in conf.skin_list ]
 		paths = [ skin[1] for skin in conf.skin_list ]
 		if self.username.lower() not in skins or not self.skip_redownload:
-			if conf.v:
-				print("Downloading skin")
+			conf.log("Downloading skin")
 			res = self.download_user(context)
 			return res
 		else:
@@ -452,7 +455,7 @@ class McprepApplyUsernameSkin(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class McprepSkinFixEyes():  # bpy.types.Operator
+class MCPREP_OT_skin_fix_eyes():  # bpy.types.Operator
 	"""Fix the eyes of a rig to fit a rig"""
 	bl_idname = "mcprep.fix_skin_eyes"
 	bl_label = "Fix eyes"
@@ -469,7 +472,7 @@ class McprepSkinFixEyes():  # bpy.types.Operator
 		return {'CANCELLED'}
 
 
-class McprepAddSkin(bpy.types.Operator, ImportHelper):
+class MCPREP_OT_add_skin(bpy.types.Operator, ImportHelper):
 	bl_idname = "mcprep.add_skin"
 	bl_label = "Add skin"
 	bl_description = "Add a new skin to the active folder"
@@ -525,7 +528,7 @@ class McprepAddSkin(bpy.types.Operator, ImportHelper):
 		return {'FINISHED'}
 
 
-class McprepRemoveSkin(bpy.types.Operator):
+class MCPREP_OT_remove_skin(bpy.types.Operator):
 	bl_idname = "mcprep.remove_skin"
 	bl_label = "Remove skin"
 	bl_description = "Remove a skin from the active folder (will delete file)"
@@ -538,9 +541,9 @@ class McprepRemoveSkin(bpy.types.Operator):
 		skin_path = conf.skin_list[context.scene.mcprep_skins_list_index]
 		col = self.layout.column()
 		col.scale_y = 0.7
-		col.label("Warning, will delete file {} from".format(
+		col.label(text="Warning, will delete file {} from".format(
 			os.path.basename(skin_path[0])))
-		col.label(os.path.dirname(skin_path[-1]))
+		col.label(text=os.path.dirname(skin_path[-1]))
 
 	@tracking.report_error
 	def execute(self,context):
@@ -567,7 +570,7 @@ class McprepRemoveSkin(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class McprepReloadSkins(bpy.types.Operator):
+class MCPREP_OT_reload_skin(bpy.types.Operator):
 	bl_idname = "mcprep.reload_skins"
 	bl_label = "Reload skins"
 	bl_description = "Reload the skins folder"
@@ -578,19 +581,19 @@ class McprepReloadSkins(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class McprepResetSkinPath(bpy.types.Operator):
+class MCPREP_OT_reset_skin_path(bpy.types.Operator):
 	bl_idname = "mcprep.skin_path_reset"
 	bl_label = "Reset skin path"
 	bl_description = "Reset the skins folder"
 
 	@tracking.report_error
 	def execute(self, context):
-		addon_prefs = util.get_prefs()
+		addon_prefs = util.get_user_preferences(context)
 		context.scene.mcprep_skin_path = addon_prefs.skin_path
 		return {'FINISHED'}
 
 
-class McprepSpawn_with_skin(bpy.types.Operator):
+class MCPREP_OT_spawn_mob_with_skin(bpy.types.Operator):
 	bl_idname = "mcprep.spawn_with_skin"
 	bl_label = "Spawn with skin"
 	bl_description = "Spawn rig and apply selected skin"
@@ -646,7 +649,26 @@ class McprepSpawn_with_skin(bpy.types.Operator):
 # -----------------------------------------------------------------------------
 
 
+classes = (
+	MCPREP_UL_skins,
+	ListColl,
+	MCPREP_OT_swap_skin_from_file,
+	MCPREP_OT_apply_skin,
+	MCPREP_OT_apply_username_skin,
+	# MCPREP_OT_skin_fix_eyes,
+	MCPREP_OT_add_skin,
+	MCPREP_OT_remove_skin,
+	MCPREP_OT_reload_skin,
+	MCPREP_OT_reset_skin_path,
+	MCPREP_OT_spawn_mob_with_skin,
+)
+
+
 def register():
+	for cls in classes:
+		util.make_annotations(cls)
+		bpy.utils.register_class(cls)
+
 	bpy.types.Scene.mcprep_skins_list = bpy.props.CollectionProperty(
 		type=ListColl)
 	bpy.types.Scene.mcprep_skins_list_index = bpy.props.IntProperty(default=0)
@@ -661,6 +683,9 @@ def register():
 
 
 def unregister():
+	for cls in reversed(classes):
+		bpy.utils.unregister_class(cls)
+
 	del bpy.types.Scene.mcprep_skins_list
 	del bpy.types.Scene.mcprep_skins_list_index
 

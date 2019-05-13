@@ -69,7 +69,10 @@ def animate_single_material(mat, engine, export_location='original', clear_cache
 		return affectable, False
 
 	# apply the sequence if any found, will be empty dict if not
-	source_path = diffuse_block.filepath
+	if diffuse_block and hasattr(diffuse_block, "filepath"):
+		source_path = diffuse_block.filepath
+	else:
+		source_path = None
 	if not source_path:
 		source_path = image_path_canon
 		conf.log("Fallback to using image cannon path instead of source path")
@@ -139,7 +142,7 @@ def generate_material_sequence(source_path, image_path, form, export_location, c
 		# export frames next to current files
 		# use regex to see if source path already is an animated subfolder,
 		# preventing a recursive subfolder regeneration of tiles
-		seq_path_base =  os.path.dirname(bpy.path.abspath(source_path))
+		seq_path_base = os.path.dirname(bpy.path.abspath(source_path))
 		root = os.path.basename(seq_path_base)
 
 		# match string-ending pattern: .../lava_flow/lava_flow_0001.png
@@ -148,17 +151,21 @@ def generate_material_sequence(source_path, image_path, form, export_location, c
 			# now it will point to originating subfolder and check caching there
 			seq_path_base = os.path.dirname(seq_path_base)
 
+		if not os.path.isdir(seq_path_base):
+			# issue with the current output folder not already existing
+			seq_path_base = None
+
 	elif export_location == "texturepack":
 		# export to save frames in currently selected texturepack (could be addon)
-		seq_path_base =  os.path.dirname(bpy.path.abspath(image_path))
+		seq_path_base = os.path.dirname(bpy.path.abspath(image_path))
 
-	if conf.v:
-		print("Pre-sequence details")
-		print(image_path)
-		print(image_dict)
-		print(img_pass_dict)
-		print(seq_path_base)
-		print("---")
+	if conf.vv:
+		conf.log("Pre-sequence details")
+		conf.log(image_path)
+		conf.log(image_dict)
+		conf.log(img_pass_dict)
+		conf.log(seq_path_base)
+		conf.log("---")
 
 	if form == "jmc2obj":
 		conf.log("DEBUG - jmc2obj aniamted texture detected")
@@ -333,7 +340,8 @@ def set_sequence_to_texnode(node, image_path):
 	image_path = bpy.path.abspath(image_path)
 	base_dir = os.path.dirname(image_path)
 	first_img = os.path.splitext(os.path.basename(image_path))[0]
-	conf.log("IMAGE path to apply: "+image_path + ", node/tex: "+node.name)
+	conf.log("IMAGE path to apply: {}, node/tex: {}".format(
+		image_path, node.name))
 
 	ind = get_sequence_int_index(first_img)
 	base_name = first_img[:-ind]
@@ -358,7 +366,7 @@ def set_sequence_to_texnode(node, image_path):
 # -----------------------------------------------------------------------------
 
 
-class McprepPrepAnimatedTextures(bpy.types.Operator):
+class MCPREP_OT_prep_animated_textures(bpy.types.Operator):
 	"""Replace static textures (where available) with animated sequence from the active texturepack"""
 	bl_idname = "mcprep.animate_textures"
 	bl_label = "Animate textures"
@@ -392,9 +400,9 @@ class McprepPrepAnimatedTextures(bpy.types.Operator):
 		col = row.column()
 		subcol = col.column()
 		subcol.scale_y = 0.7
-		subcol.label("Converts still textures into animated ones")
-		subcol.label("using the active resource pack's maps,")
-		subcol.label("saves each animation tile to an image on disk.")
+		subcol.label(text="Converts still textures into animated ones")
+		subcol.label(text="using the active resource pack's maps,")
+		subcol.label(text="saves each animation tile to an image on disk.")
 		col.prop(self, "export_location")
 		col.prop(self, "clear_cache")
 
@@ -452,9 +460,17 @@ class McprepPrepAnimatedTextures(bpy.types.Operator):
 # -----------------------------------------------------------------------------
 
 
+classes = (
+	MCPREP_OT_prep_animated_textures,
+)
+
+
 def register():
-	pass
+	for cls in classes:
+		util.make_annotations(cls)
+		bpy.utils.register_class(cls)
 
 
 def unregister():
-	pass
+	for cls in reversed(classes):
+		bpy.utils.unregister_class(cls)

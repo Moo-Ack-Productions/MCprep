@@ -13,7 +13,9 @@ It should remain a zip folder. In blender, go to preferences, then the addons ta
 *Again, please download from the link above or the releases page, __not__ by clicking `download zip` button above.*
 
 *The preferences panel should look like this after installing the zip file*
-![Installed MCprep](/visuals/install.png?raw=true)
+![Installed MCprep 2.7](/visuals/install.png?raw=true)
+
+![Installed MCprep 2.8](/visuals/install_28.png?raw=true)
 
 **If you like the addon, [please consider donating](http://bit.ly/donate2TheDuckCow) for the continued quality development! [Share this addon](https://twitter.com/intent/tweet?text=Make+easier+Minecraft+renders+using+the+MCprep+addon+bit.ly/MCprep+by+@TheDuckCow) so others can benefit from it! Or help by [taking this quick survey](http://bit.ly/MCprepSurvey)!**
 
@@ -70,6 +72,13 @@ Feature list
 | Select Alpha Faces | Allows you to select or delete mesh faces that are transparent in the applied image texture |
 
 
+| World Tools   |      Description      |
+|----------|:-------------:|
+| Create MC World | Operator which allows user to create either a static or dynamic sky. Options exist to also add clouds, remove existing sun lamps, and define how the Sun/Moon is imported (either as a shader, mesh, or neither). If a dynamic sky is created, a time-control slider will also be displayed below. |
+| Prep World | This operator makes several updates to either Blender Internal, Cycles, or Eevee scenes that are optimal and in most cases will notably improve render times (particularly for cycles) and increase overall aesthetic. |
+
+
+
 
 | Skin Swapper   |      Description      |
 |----------|:-------------:|
@@ -101,54 +110,71 @@ Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow),
 
 | Player Rigs   |      Creator      |
 |----------|:-------------:|
+| Fancy Feet Alex | Modified by [Jeremy Putnam](http://www.blendswap.com/user/lorddon) (MCprep exclusive) |
 | Fancy Feet Generic Player (ideal for skinswapping) |  [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) ([Rig link](http://bit.ly/MinecraftRig)) |
 | Fancy Feet Steve |  [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) ([Rig link](http://bit.ly/MinecraftRig)) |
-| Fancy Feet Alex | Modified by [Jeremy Putnam](http://www.blendswap.com/user/lorddon) (MCprep exclusive) |
-| Villager | [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) ([Rig link](http://www.blendswap.com/blends/view/73063)) |
-| VMcomix Steve (rounded) | [VMcomix](https://www.youtube.com/user/VMComix) ([Rig link](http://vmcomix.blogspot.com/)) |
+| Simple Player (modified) | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+| Shapekey Player | Derived from [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home), shapekeys and animation by [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) (MCprep exclusive) |
 | Story Mode Rig | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) (No direct link yet) |
+| VMcomix Steve (rounded) | [VMcomix](https://www.youtube.com/user/VMComix) ([Rig link](http://vmcomix.blogspot.com/)) |
 
 
 | Passive Rigs   |      Creator      |
 |----------|:-------------:|
 | Bat | [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) (MCprep exclusive) |
+| Cod fish | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Chicken | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) (No direct link yet) |
 | Cow | [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html)) |
+| Dolphin | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+| Parrot | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Pig | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) (No direct link yet) |
+| Pufferfish| [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Rabbit | [HissingCreeper](https://www.youtube.com/channel/UCHV3_5kFI93fFOl6KbmhkQA) (No direct link yet) |
+| Salmon | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Sheep | [HissingCreeper](https://www.youtube.com/channel/UCHV3_5kFI93fFOl6KbmhkQA) (No direct link yet) |
 | Squid | [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html)) |
+| Tropical Fish | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+| Cod fish | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+| Turtle | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 
 
 | Hostile Rigs   |      Creator      |
 |----------|:-------------:|
 | Blaze | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) (No direct link yet) |
 | Creeper | [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) (MCprep exclusive) |
+| Ender Dragon | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Enderman | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) ([Rig link](http://www.blendswap.com/blends/view/79750)) |
 | Endermite | [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html)) |
 | Ghast | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) (No direct link yet) |
 | Guardian | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) ([Rig link](http://www.blendswap.com/blends/view/79729)) |
+| Magma Cube | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+| Phantom | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Shulker | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) ([Rig link](http://www.blendswap.com/blends/view/79729)) |
 | Silverfish | [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html)) |
 | Skeleton | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) ([Rig link, outdated](http://www.blendswap.com/blends/view/79495)) |
 | Slime | [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) (MCprep exclusive) |
 | Spider | [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html)) |
+| Vindicator | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+| Witch | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+| Wither | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Zombie | [HissingCreeper](https://www.youtube.com/channel/UCHV3_5kFI93fFOl6KbmhkQA) (No direct link yet) |
+| Zombie Pigman | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+
 
 
 | Friendly/Utility Rigs   |      Creator      |
 |----------|:-------------:|
 | Horse | [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) ([Rig link](http://www.blendswap.com/blends/view/73064)) |
 | Iron Golem | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) ([Rig link](http://www.blendswap.com/blends/view/79455)) |
+| Llama | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Ocelot | [HissingCreeper](https://www.youtube.com/channel/UCHV3_5kFI93fFOl6KbmhkQA) (No direct link yet) |
 | Snow Golem | [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html)) |
+| Villager | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Wolf | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) ([Rig link, outdated](http://www.blendswap.com/blends/view/79628)) |
-
 
 
 If you use any of these rigs in your animation, give credit to the according creator or by directly referring back to this readme file which contains all the credits. *Models have been slightly modified to function best and consistently with the MCprep addon.*
 
-Icons generated by [Patrick W. Crawford](https://twitter.com/TheDuckCow), [MomentarilyEpic](https://www.youtube.com/channel/UCQFC0IHz4Jypi7JsWkKQgkA/about) and [HissingCreeper](https://www.youtube.com/channel/UCHV3_5kFI93fFOl6KbmhkQA).
 
 Thank you to all the contributors to this project! It will continue to grow and cover more assets in the near future.
 
@@ -205,6 +231,7 @@ Setting options:
 *Note 2: You can now also directly add meshswap blocks into the scene from the shift-A menu or the spawner:meshswap panel.*
 
 To add your own objects to meshswap (or groupswap):
+
 - **Step 1:** Check your imported world object and see the name of the material for the object you want to setup. You might think it is "glass plane", but if the importer names the material "glass_plane", you need to note this name down for step 3.
 - **Step 2:** Model you object in the mcprep_meshSwap.blend file, or append it.
 - **Step 3:** Rename your object to exactly match the previously noted material name. If you want to have a group swappable, then name the group to match the name above.
@@ -262,9 +289,24 @@ To add your own objects to meshswap (or groupswap):
   - Threshold: From 0-1, consider the face as transparent if the average of the image pixels falling within the given face is below this threshold.
 
 
+### Create MC World:
+- **Purpose:** This operator, new as of MCprep v3.2.0, provides options to add both simple and advanced, shader-driven skies to your worlds. There are two primary types of skies you can add. Works for Eevee, Cycles, and Blender Internal (no shader-driven option for adding sky/moon for Blender Internal)
+- Adds a basic day-sky texture. Works for both cycles and blender internal, and creates a better starting point than the default gray world background. No option yet for setting other times of day.
+- The optional settings:
+  - **Dynamic World**: This is an advanced node shader setup designed for both Cycles and Eevee. It allows for driving the sky colors and brightness based on the time of day, as driven by a time property which will appear in the panel after adding a dynamic world. This allows you to create day, morning, night, and sunrise/sunset scenes with ease, and furthermore even lets you freely animate the time such that you can create your own timelapse sequences. Dynamic skies also import sun lamps, and either shader-based or mesh-based sun/moon. You can even somewhat easily hack the shader to insert HDRs in place of the procedural blended sky colors, and have the shader automatically and smoothly blend between these images. As you change the time, the sun and moon (if enabled) and physical sun lamp follow the time of day in sync. Variants of the Dynamic World include:
+    - **With Shader sun/moon**: This unique feature allows you to have a sun and moon that will appear in the scene but at a distance of infinity, without having to change your camera render distance limit!
+    - **With mesh sun/moon**: The mesh is imported from a source library, and place into the scene around the origin of the scene. Note that, of course, your sun/moon objects exist in the scene like any other object, and so you make want to scale them out to limit the effect of parallax effects relative to the camera, and likewise update your camera’s render distance if you do scale out the distance of the sun/moon meshes from the camera.
+    - **No sun or moon** imported/setup
+  - **Static World**: This is a simpler shader setup and does not offer the ability to animate the time of day, but still is better than the default gray background! Best fit for a midday scene. Options include:
+    - With mesh sun/moon: Same description as in the section above.
+    - No sun or moon mesh imported
+  - Import cloud mesh
+  - Remove existing sun lamps (as dynamic and static sky will import their own sun lamps, you may want to use this to remove existing ones)
+
+
 ### Prep World:
 - **Purpose:** This button found in the World Tools panel will assign nicer default world settings for rendering and animation, for both Blender Internal and Cycles.
-- Adds a basic day-sky texture. Works for both cycles and blender internal, and creates a better starting point than the default gray world background. No option yet for setting other times of day.
+- Note: Previously this operator added simple sky materials, now it is focused on only render settings. Use "Create MC World" above to initial world settings.
 - Optimizes/improves render settings (cycles):
   - Turns off reflective and refractive caustics (will increase speed over default)
   - Increases light sampling threshold to a better balance (will increase speed over default)
@@ -306,10 +348,12 @@ To add your own objects to meshswap (or groupswap):
 ![Meshswap options](/visuals/spawnOptions.png?raw=true)
 
 To add your own rigs to the Mob Spawner:
+
 - **Step 1:** Make your rig, or download one you want to use!
 - **Step 2:** Make sure all elements of the rig, ie all armatures, body parts, and extra objects, are added to a single group (select and press control+g) inside your rig file. The name of this group is what will appear under the shift-a menu, and typically matches the name of the file if there is just one rig per blend file.
 - **Step 3:** Optional but useful, rename the root/main bone of the rig to one of [MAIN, root, base], used for relocation. Additionally, make the armature for animation named [name].arma where [name] exactly matches the name of the group. This is used for auto-proxying of the armature and relocation methods.
 - **Step 4:** Optional, if you have a custom script for the rig, save it as an external file whose name matches the blend file exactly, but with .py instead of .blend, place this in the same folder as the blend file.
+  - Additionally, to auto import an icon with this rig, create a folder next tot he blend file called "icons" and create a file with the name that exactly matches the name of the rig's *group name*, e.g. Group name "Zombie Pigman" could have the icon file "zombie pigman.png" (not how this is not case-sensitive, but it is space-sensitive)
 - **Step 5:** Either from Blender Preferences > Addon > MCprep preferences panel > "Install file for mob spawning" or from the MCprep 3D view tab, go to spawner > mob > menu "Install new mob". From there, use the file browser to select the blend file and install it! This copies the file to the current mob folder, by default inside the MCprep addon.
 - **Alternative:** To specify a different, custom folder in a location of your choosing for mob spawning, simply change the "Mob spawner folder" path in the MCprep mob spawner advanced section (this setting is saved to blend file), or save a new default in the addon's preferences (becomes the default for all new blend scenes).
 - Note: all groups inside installed blend files will appear for mob spawning. After installing a blend file, you do *not* need to save user preferences to use it in future blender sessions.

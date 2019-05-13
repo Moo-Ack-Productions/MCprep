@@ -17,6 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import json
+import operator
 import os
 import random
 import subprocess
@@ -60,25 +61,32 @@ def materialsFromObj(obj_list):
 
 	mat_list = []
 	for obj in obj_list:
-		if obj.dupli_group:
+		# also capture obj materials from dupliverts/instances on e.g. empties
+		if hasattr(obj, "dupli_group") and obj.dupli_group: # 2.7
 			for dup_obj in obj.dupli_group.objects:
+				obj_list.append(dup_obj)
+		elif hasattr(obj, "instance_collection") and obj.instance_collection: # 2.8
+			for dup_obj in obj.instance_collection.objects:
 				obj_list.append(dup_obj)
 		if obj.type != 'MESH':
 			continue
-		object_materials = obj.material_slots
-		for material_block in object_materials:
-			if material_block.material not in mat_list:
-				mat_list.append(material_block.material)
+		for slot in obj.material_slots:
+			if slot.material is not None and slot.material not in mat_list:
+				mat_list.append(slot.material)
 	return mat_list
 
 
 def bAppendLink(directory, name, toLink, active_layer=True):
-	"""For multiple version compatibility,
-	this function generalized appending/linking
-	blender post 2.71 changed to new append/link methods"""
+	"""For multiple version compatibility, this function generalized
+	appending/linking blender post 2.71 changed to new append/link methods
+
+	Note that for 2.8 compatibility, the directory passed in should
+	already be correctly identified (eg Group or Collection)
+	"""
 
 	conf.log("Appending " + directory + " : " + name, vv_only=True)
 	post272 = False
+	post280 = False
 	try:
 		version = bpy.app.version
 		post272 = True
@@ -120,21 +128,19 @@ def obj_copy(base, context=None, vertex_groups=True, modifiers=True):
 
 	Input must be a valid object in bpy.data.objects
 	"""
-
 	if not base or base.name not in bpy.data.objects:
 		raise Exception("Invalid object passed")
+	if not context:
+		context = bpy.context
 
 	new_ob = bpy.data.objects.new(base.name, base.data.copy())
-	if context:
-		context.scene.objects.link(new_ob)
-	else:
-		bpy.context.scene.objects.link(new_ob)
+	obj_link_scene(new_ob, context)
 
 	if vertex_groups:
 		verts = len(base.data.vertices)
 		for vgroup in base.vertex_groups:
 			print("Running vertex group: ", vgroup.name)
-			new_g = new_ob.vertex_groups.new(vgroup.name)
+			new_g = new_ob.vertex_groups.new(name=vgroup.name)
 			for i in range(0, verts):
 				try:
 					new_g.add([i], vgroup.weight(i), "REPLACE")
@@ -153,9 +159,13 @@ def obj_copy(base, context=None, vertex_groups=True, modifiers=True):
 	return new_ob
 
 
+BV_IS_28 = None  # global initialization
 def bv28():
 	"""Check if blender 2.8, for layouts, UI, and properties. """
-	return bpy.app.version >= (2, 80)
+	global BV_IS_28
+	if not BV_IS_28:
+		BV_IS_28 = hasattr(bpy.app, "version") and bpy.app.version >= (2, 80)
+	return BV_IS_28
 
 
 def onEdge(faceLoc):
@@ -225,7 +235,7 @@ def link_selected_objects_to_scene():
 	# Not used by addon, but shortcut useful in one-off cases to copy/run code
 	for ob in bpy.data.objects:
 		if ob not in list(bpy.context.scene.objects):
-			bpy.context.scene.objects.link(ob)
+			obj_link_scene(ob)
 
 
 def open_program(executable):
@@ -314,11 +324,16 @@ def addGroupInstance(group_name, loc, select=True):
 	"""Add object instance not working, so workaround function."""
 	scene = bpy.context.scene
 	ob = bpy.data.objects.new(group_name, None)
-	ob.dupli_type = 'GROUP'
-	ob.dupli_group = bpy.data.groups.get(group_name)
-	scene.objects.link(ob)
+	if bv28():
+		ob.instance_type = 'COLLECTION'
+		ob.instance_collection = collections().get(group_name)
+		scene.collection.objects.link(ob)  # links to scene collection
+	else:
+		ob.dupli_type = 'GROUP'
+		ob.dupli_group = collections().get(group_name)
+		scene.objects.link(ob)
 	ob.location = loc
-	ob.select = select
+	select_set(ob, select)
 	return ob
 
 
@@ -354,7 +369,7 @@ def load_mcprep_json():
 
 def ui_scale():
 	"""Returns scale of UI, for width drawing. Compatible down to blender 2.72"""
-	prefs = bpy.context.user_preferences
+	prefs = get_preferences()
 	if not hasattr(prefs, "view"):
 		return 1
 	elif hasattr(prefs.view, "ui_scale") and hasattr(prefs.view, "pixel_size"):
@@ -363,11 +378,6 @@ def ui_scale():
 		return prefs.system.dpi/72
 	else:
 		return 1
-
-
-def get_prefs():
-	"""Function to easily get prefs even in subclasses and folders."""
-	return bpy.context.user_preferences.addons[__package__].preferences
 
 
 class event_stream():
@@ -431,3 +441,215 @@ class event_stream():
 			return ["NEGATIVE",""]
 		elif event.type == "X":
 			return ["X",""]
+
+
+def uv_select(obj, action='TOGGLE'):
+	"""Direct way to select all UV verts of an object, assumings 1 uv layer.
+
+	Actions are: SELECT, DESELECT, TOGGLE.
+	"""
+	if not obj.data.uv_layers.active:
+		return# consider raising error
+	uv_layer = obj.data.uv_layers.active
+	if action == 'TOGGLE':
+		for face in obj.data.polygons:
+			face.select = not face.select
+	elif action == 'SELECT':
+		for face in obj.data.polygons:
+			# if len(face.loop_indices) < 3:
+			# 	continue
+			face.select = True
+	elif action == 'DESELECT':
+		for face in obj.data.polygons:
+			# if len(face.loop_indices) < 3:
+			# 	continue
+			face.select = False
+
+
+# -----------------------------------------------------------------------------
+# Cross blender 2.7 and 2.8 functions
+# -----------------------------------------------------------------------------
+
+
+def make_annotations(cls):
+	"""Add annotation attribute to class fields to avoid Blender 2.8 warnings"""
+	if not hasattr(bpy.app, "version") or bpy.app.version < (2, 80):
+		return cls
+	bl_props = {k: v for k, v in cls.__dict__.items() if isinstance(v, tuple)}
+	if bl_props:
+		if '__annotations__' not in cls.__dict__:
+			setattr(cls, '__annotations__', {})
+		annotations = cls.__dict__['__annotations__']
+		for k, v in bl_props.items():
+			annotations[k] = v
+			delattr(cls, k)
+	return cls
+
+
+def layout_split(layout, factor=0.0, align=False):
+	"""Intermediate method for pre and post blender 2.8 split UI function"""
+	if not hasattr(bpy.app, "version") or bpy.app.version < (2, 80):
+		return layout.split(percentage=factor, align=align)
+	return layout.split(factor=factor, align=align)
+
+
+def get_user_preferences(context=None):
+	"""Intermediate method for pre and post blender 2.8 grabbing preferences"""
+	if not context:
+		context = bpy.context
+	prefs = None
+	if hasattr(context, "user_preferences"):
+		prefs = context.user_preferences.addons.get(__package__, None)
+	elif hasattr(context, "preferences"):
+		prefs = context.preferences.addons.get(__package__, None)
+	if prefs:
+		return prefs.preferences
+	# To make the addon stable and non-exception prone, return None
+	# raise Exception("Could not fetch user preferences")
+	return None
+
+
+def get_preferences(context=None):
+	"""Function to easily get general user prefs in 2.7 and 2.8 friendly way"""
+	if hasattr(context, "user_preferences"):
+		return context.user_preferences
+	elif hasattr(context, "preferences"):
+		return context.preferences
+	return None
+
+
+def set_active_object(context, obj):
+	"""Get the active object in a 2.7 and 2.8 compatible way"""
+	if hasattr(context, "view_layer"):
+		context.view_layer.objects.active = obj # the 2.8 way
+	else:
+		context.scene.objects.active = obj # the 2.7 way
+
+
+def select_get(obj):
+	"""Multi version compatibility for getting object selection"""
+	if hasattr(obj, "select_get"):
+		return obj.select_get()
+	else:
+		return obj.select
+
+
+def select_set(obj, state):
+	"""Multi version compatibility for setting object selection"""
+	if hasattr(obj, "select_set"):
+		obj.select_set(state)
+	else:
+		obj.select = state
+
+
+def hide_viewport(obj, state):
+	"""Multi version compatibility for setting the viewport hide state"""
+	if hasattr(obj, "hide_viewport"):
+		obj.hide_viewport = state # where state is a boolean True or False
+	else:
+		obj.hide = state
+
+
+def collections():
+	"""Returns group or collection object for 2.7 and 2.8"""
+	if hasattr(bpy.data, "collections"):
+		return bpy.data.collections
+	else:
+		return bpy.data.groups
+
+
+def viewport_textured(context=None):
+	"""Returns state of viewport solid being textured or not"""
+	if not context:
+		context = bpy.context
+
+	if hasattr(context.space_data, "show_textured_solid"): # 2.7
+		return context.space_data.show_textured_solid
+	elif hasattr(context.scene, "display"): # 2.8
+		# makes textured if any
+		return context.scene.display.shading.color_type == "TEXTURE"
+	return None # unsure
+
+
+def get_cuser_location(context=None):
+	"""Returns the location vector of the 3D cursor"""
+	if not context:
+		context = bpy.context
+	if hasattr(context.scene, "cursor_location"):
+		return context.scene.cursor_location
+	elif hasattr(context.scene, "cursor") and hasattr(context.scene.cursor, "location"):
+		return context.scene.cursor.location  # later 2.8 builds
+	elif hasattr(context.space_data, "cursor_location"):
+		return context.space_data.cursor_location
+	elif hasattr(context.space_data, "cursor") and hasattr(context.space_data.cursor, "location"):
+		return context.space_data.cursor.location
+	print("MCPREP WARNING! Unable to get cursor location, using (0,0,0)")
+	return (0, 0, 0)
+
+
+def set_cuser_location(loc, context=None):
+	"""Returns the location vector of the 3D cursor"""
+	if not context:
+		context = bpy.context
+	if hasattr(context.scene, "cursor_location"):
+		context.scene.cursor_location = loc
+	else:
+		context.space_data.cursor_location = loc
+
+
+def instance_collection(obj):
+	"""Cross compatible way to get an objects dupligroup or collection"""
+	if hasattr(obj, "dupli_group"):
+		return obj.dupli_group
+	elif hasattr(obj, "instance_collection"):
+		return obj.instance_collection
+
+
+def obj_link_scene(obj, context=None):
+	"""Links object to scene, or for 2.8, the scene master collection"""
+	if not context:
+		context = bpy.context
+	if hasattr(context.scene.objects, "link"):
+		context.scene.objects.link(obj)
+	elif hasattr(context.scene, "collection"):
+		context.scene.collection.objects.link(obj)
+	# context.scene.update() # needed?
+
+
+def obj_unlink_remove(obj, remove, context=None):
+	"""Unlink an object from the scene, and remove from data if specified"""
+	if not context:
+		context = bpy.context
+	if hasattr(context.scene.objects, "unlink"):  # 2.7
+		context.scene.objects.unlink(obj)
+	elif hasattr(context.scene, "collection"):  # 2.8
+		try:
+			context.scene.collection.objects.unlink(obj)
+		except RuntimeError:
+			pass # if not in master collection
+		colls = list(obj.users_collection)
+		for coll in colls:
+			coll.objects.unlink(obj)
+	if remove is True:
+		obj.user_clear()
+		bpy.data.objects.remove(obj)
+
+
+def users_collection(obj):
+	"""Returns the collections/group of an object"""
+	if hasattr(obj, "users_collection"):
+		return obj.users_collection
+	elif hasattr(obj, "users_group"):
+		return obj.users_group
+
+
+def matmul(v1, v2, v3=None):
+	"""Multiplciation of matrix and/or vectors in cross compatible way"""
+	if bv28():
+		mtm = getattr(operator, "matmul") # does not exist pre 2.7<#?>, syntax error
+		if v3:
+			return mtm(v1, mtm(v2, v3))
+		return mtm(v1, v2)
+	if v3:
+		return v1 * v2 * v3
+	return v1 * v2

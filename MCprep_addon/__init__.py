@@ -22,7 +22,7 @@
 
 """
 By installing and using this addon, you agree to the following privacy policy:
-http://theduckcow.com/privacy-policy/
+https://theduckcow.com/privacy-policy/
 which should have been present on the original download page.
 
 Source code available on github as well as more information:
@@ -37,12 +37,12 @@ Disclaimer: This is not an official Google product
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",
-	"version": (3, 1, 1),
-	"blender": (2, 72, 0),
+	"version": (3, 2, 0),
+	"blender": (2, 80, 0),
 	"location": "3D window toolshelf > MCprep tab",
 	"description": "Minecraft workflow addon for rendering and animation",
 	"warning": "",
-	"wiki_url": "http://TheDuckCow.com/MCprep",
+	"wiki_url": "https://TheDuckCow.com/MCprep",
 	"author": "Patrick W. Crawford <support@theduckcow.com>",
 	"tracker_url":"https://github.com/TheDuckCow/MCprep/issues"
 }
@@ -58,12 +58,10 @@ import bpy
 
 
 def register():
-	bpy.utils.register_module(__name__)
 	load_modules.register(bl_info)
 
 
 def unregister():
-	bpy.utils.unregister_module(__name__)
 	load_modules.unregister(bl_info)
 
 

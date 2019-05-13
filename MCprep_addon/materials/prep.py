@@ -39,7 +39,7 @@ from .. import util
 # -----------------------------------------------------------------------------
 
 
-class McprepPrepMaterials(bpy.types.Operator):
+class MCPREP_OT_prep_materials(bpy.types.Operator):
 	"""Fixes materials and textures on selected objects for Minecraft rendering"""
 	bl_idname = "mcprep.prep_materials"
 	bl_label = "MCprep Materials"
@@ -89,6 +89,11 @@ class McprepPrepMaterials(bpy.types.Operator):
 		max=1,
 		min=0
 		)
+	makeSolid = bpy.props.BoolProperty(
+		name = "Make all materials solid",
+		description = "Make all materials solid only, for shadows and rendering",
+		default = False
+		)
 
 	skipUsage = bpy.props.BoolProperty(
 		default = False,
@@ -106,6 +111,7 @@ class McprepPrepMaterials(bpy.types.Operator):
 		if engine=='CYCLES' or engine=='BLENDER_EEVEE':
 			col.prop(self, "usePrincipledShader")
 		col.prop(self, "useReflections")
+		col.prop(self, "makeSolid")
 		col.prop(self, "animateTextures")
 		col.prop(self, "autoFindMissingTextures")
 
@@ -130,13 +136,13 @@ class McprepPrepMaterials(bpy.types.Operator):
 
 		# get list of selected objects
 		obj_list = context.selected_objects
-		if len(obj_list)==0:
+		if not obj_list:
 			self.report({'ERROR'}, "No objects selected")
 			return {'CANCELLED'}
 
 		# gets the list of materials (without repetition) from selected
 		mat_list = util.materialsFromObj(obj_list)
-		if len(obj_list)==0:
+		if not mat_list:
 			self.report({'ERROR'}, "No materials found on selected objects")
 			return {'CANCELLED'}
 
@@ -157,16 +163,18 @@ class McprepPrepMaterials(bpy.types.Operator):
 					if res>0:
 						mat["texture_swapped"] = True  # used to apply saturation
 			if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
-				res = generate.matprep_internal(
-						mat, passes, self.useReflections)
-				if res==0: count+=1
+				res = generate.matprep_internal(mat, passes,
+					self.useReflections, self.makeSolid)
+				if res==0:
+					count+=1
 				if self.animateTextures:
 					sequences.animate_single_material(
 						mat, context.scene.render.engine)
 			elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
-				res = generate.matprep_cycles(
-						mat, passes, self.useReflections, self.usePrincipledShader)
-				if res==0: count+=1
+				res = generate.matprep_cycles(mat, passes, self.useReflections,
+					self.usePrincipledShader, self.makeSolid)
+				if res==0:
+					count+=1
 				if self.animateTextures:
 					sequences.animate_single_material(
 						mat, context.scene.render.engine)
@@ -174,18 +182,17 @@ class McprepPrepMaterials(bpy.types.Operator):
 				self.report({'ERROR'},"Only blender internal or cycles supported")
 				return {'CANCELLED'}
 
-		if self.combineMaterials==True:
+		if self.combineMaterials is True:
 			bpy.ops.mcprep.combine_materials(selection_only=True, skipUsage=True)
 		if self.improveUiSettings:
 			bpy.ops.mcprep.improve_ui()
 		self.report({"INFO"},"Modified "+str(count)+" materials")
 		self.track_param = context.scene.render.engine
 		self.track_exporter = generate.detect_form(mat_list)
-
 		return {'FINISHED'}
 
 
-class McprepMaterialHelp(bpy.types.Operator):
+class MCPREP_OT_materials_help(bpy.types.Operator):
 	"""Follow up popup to assist the user who may not have gotten expected change"""
 	bl_idname = "mcprep.prep_materials_help"
 	bl_label = "MCprep Materials Help"
@@ -219,29 +226,29 @@ class McprepMaterialHelp(bpy.types.Operator):
 		if self.help_num == 0:
 			# No specific error occured
 			col.scale_y = 0.7
-			col.label("No specific MCprep material issue identified.")
-			col.label("Still need help? Press OK below to open an issue.")
+			col.label(text="No specific MCprep material issue identified.")
+			col.label(text="Still need help? Press OK below to open an issue.")
 		elif self.help_num == 1:
 			# No materials modified, because no materials detected
 			col.scale_y = 0.7
-			col.label("Could not prep materials because")
-			col.label("because none of the selected objects")
-			col.label("have materials. Be sure to select the")
-			col.label("model or world import before prepping!")
+			col.label(text="Could not prep materials because")
+			col.label(text="because none of the selected objects")
+			col.label(text="have materials. Be sure to select the")
+			col.label(text="model or world import before prepping!")
 		elif self.help_num == 2:
 			# Missing SOME textures detected, either because find msising is off
 			# or if replacement still not found even with setting on
 			col.scale_y = 0.7
-			col.label("Some materials have missing textures,")
-			col.label("these may show up as pink or black materials")
-			col.label("in the viewport or in a render. Try using:")
-			col.label("file > External Data > Find missing files")
+			col.label(text="Some materials have missing textures,")
+			col.label(text="these may show up as pink or black materials")
+			col.label(text="in the viewport or in a render. Try using:")
+			col.label(text="file > External Data > Find missing files")
 		elif self.help_num == 3:
 			# It worked, but maybe the user isn't seeing what they expect
 			col.scale_y = 0.7
-			col.label("Material prepping worked, but you might need")
-			col.label("to \"Improve UI\" or go into texture/rendered")
-			col.label("mode (shift+z) to see imrpoved textures")
+			col.label(text="Material prepping worked, but you might need")
+			col.label(text="to \"Improve UI\" or go into texture/rendered")
+			col.label(text="mode (shift+z) to see imrpoved textures")
 
 		col.prop(self, "suppress_help")
 		self.help_num = 0  # reset in event of unset re-trigger
@@ -254,7 +261,7 @@ class McprepMaterialHelp(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class McprepSwapTexturePack(bpy.types.Operator, ImportHelper):
+class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper):
 	"""Swap current textures for that of a texture pack folder"""
 	bl_idname = "mcprep.swap_texture_pack"
 	bl_label = "Swap Texture Pack"
@@ -308,11 +315,11 @@ class McprepSwapTexturePack(bpy.types.Operator, ImportHelper):
 		col = row.column()
 		subcol = col.column()
 		subcol.scale_y = 0.7
-		subcol.label("Select any subfolder of an")
-		subcol.label("unzipped texture pack, then")
-		subcol.label("press 'Swap Texture Pack'")
-		subcol.label("after confirming these")
-		subcol.label("settings below:")
+		subcol.label(text="Select any subfolder of an")
+		subcol.label(text="unzipped texture pack, then")
+		subcol.label(text="press 'Swap Texture Pack'")
+		subcol.label(text="after confirming these")
+		subcol.label(text="settings below:")
 		col.prop(self, "extra_passes")
 		col.prop(self, "animateTextures")
 
@@ -326,7 +333,7 @@ class McprepSwapTexturePack(bpy.types.Operator, ImportHelper):
 		folder = self.filepath
 		if os.path.isfile(bpy.path.abspath(folder)):
 			folder = os.path.dirname(folder)
-		if conf.v: print("Folder: ", folder)
+		conf.log("Folder: " + folder)
 
 		if not os.path.isdir(bpy.path.abspath(folder)):
 			self.report({'ERROR'}, "Selected folder does not exist")
@@ -352,7 +359,7 @@ class McprepSwapTexturePack(bpy.types.Operator, ImportHelper):
 		# set the scene's folder for the texturepack being swapped
 		context.scene.mcprep_texturepack_path = folder
 
-		if conf.v: print("Materials detected:",len(mat_list))
+		conf.log("Materials detected: " + str(len(mat_list)))
 		res = 0
 		for mat in mat_list:
 			res += generate.set_texture_pack(mat, folder, self.extra_passes)
@@ -365,19 +372,19 @@ class McprepSwapTexturePack(bpy.types.Operator, ImportHelper):
 		return {'FINISHED'}
 
 
-class McprepResetTexturepackPath(bpy.types.Operator):
+class MCPREP_OT_reset_texturepack_path(bpy.types.Operator):
 	bl_idname = "mcprep.reset_texture_path"
 	bl_label = "Reset texture pack path"
 	bl_description = "Resets the texture pack folder to the MCprep default saved in preferences"
 
 	@tracking.report_error
 	def execute(self, context):
-		addon_prefs = util.get_prefs()
+		addon_prefs = util.get_user_preferences(context)
 		context.scene.mcprep_texturepack_path = addon_prefs.custom_texturepack_path
 		return {'FINISHED'}
 
 
-class McprepCombineMaterials(bpy.types.Operator):
+class MCPREP_OT_combine_materials(bpy.types.Operator):
 	bl_idname = "mcprep.combine_materials"
 	bl_label = "Combine materials"
 	bl_description = "Consolidate the same materials together e.g. mat.001 and mat.002"
@@ -399,7 +406,8 @@ class McprepCombineMaterials(bpy.types.Operator):
 		removeold = True
 
 		if self.selection_only==True and len(context.selected_objects)==0:
-			self.report({'ERROR',"Either turn selection only off or select objects with materials"})
+			self.report({'ERROR',
+				"Either turn selection only off or select objects with materials"})
 			return {'CANCELLED'}
 
 		# 2-level structure to hold base name and all
@@ -438,19 +446,21 @@ class McprepCombineMaterials(bpy.types.Operator):
 			elif mat.name not in name_cat[base]:
 				name_cat[base].append(mat.name)
 			else:
-				if conf.vv:print("Skipping, already added material")
+				conf.log("Skipping, already added material", True)
 
 
 		# pre 2.78 solution, deep loop
-		if (bpy.app.version[0]>=2 and bpy.app.version[1] >= 78) == False:
+		if bpy.app.version < (2, 78):
 			for ob in bpy.data.objects:
 				for sl in ob.material_slots:
-					if sl == None or sl.material == None:continue
-					if sl.material not in data: continue # selection only
-					sl.material = bpy.data.materials[name_cat[ util.nameGeneralize(sl.material.name) ][0]]
+					if sl == None or sl.material == None:
+						continue
+					if sl.material not in data:
+						continue # selection only
+					sl.material = bpy.data.materials[name_cat[util.nameGeneralize(sl.material.name)][0]]
 			# doesn't remove old textures, but gets it to zero users
 
-			postcount = len( ["x" for x in bpy.data.materials if x.users >0] )
+			postcount = len([True for x in bpy.data.materials if x.users >0])
 			self.report({"INFO"},
 				"Consolidated {x} materials, down to {y} overall".format(
 				x=precount-postcount,
@@ -459,27 +469,33 @@ class McprepCombineMaterials(bpy.types.Operator):
 
 		# perform the consolidation with one basename set at a time
 		for base in name_cat: # the keys of the dictionary
-			if len(base)<2: continue
+			if len(base)<2:
+				continue
 
 			name_cat[base].sort() # in-place sorting
-			baseMat = bpy.data.materials[ name_cat[base][0] ]
+			baseMat = bpy.data.materials[name_cat[base][0]]
 
-			if conf.vv:print(name_cat[base], "##", baseMat )
+			conf.log([name_cat[base]," ## ",baseMat], vv_only=True)
 
 			for matname in name_cat[base][1:]:
 
 				# skip if fake user set
-				if bpy.data.materials[matname].use_fake_user == True: continue
+				if bpy.data.materials[matname].use_fake_user == True:
+					continue
 				# otherwise, remap
 				res = util.remap_users(bpy.data.materials[matname],baseMat)
 				if res != 0:
 					self.report({'ERROR'}, str(res))
 					return {'CANCELLED'}
 				old = bpy.data.materials[matname]
-				if conf.vv:print("removing old? ",bpy.data.materials[matname])
-				if removeold==True and old.users==0:
-					if conf.vv:print("removing old:")
-					data.remove( bpy.data.materials[matname] )
+				conf.log("removing old? "+matname, vv_only=True)
+				if removeold is True and old.users==0:
+					conf.log("removing old:"+matname, vv_only=True)
+					try:
+						data.remove(bpy.data.materials[matname])
+					except ReferenceError as err:
+						print('Error trying to remove material '+matname)
+						print(str(err))
 
 			# Final step.. rename to not have .001 if it does
 			genBase = util.nameGeneralize(baseMat.name)
@@ -501,7 +517,7 @@ class McprepCombineMaterials(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class McprepCombineImages(bpy.types.Operator):
+class MCPREP_OT_combine_images(bpy.types.Operator):
 	bl_idname = "mcprep.combine_images"
 	bl_label = "Combine images"
 	bl_description = "Consolidate the same images together e.g. img.001 and img.002"
@@ -603,13 +619,14 @@ class McprepCombineImages(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class McprepScaleUV(bpy.types.Operator):
+class MCPREP_OT_scale_uv(bpy.types.Operator):
 	bl_idname = "mcprep.scale_uv"
 	bl_label = "Scale UV Faces"
 	bl_description = "Scale all selected UV faces. See F6 or redo-last panel to adjust factor"
 	bl_options = {'REGISTER', 'UNDO'}
 
 	scale = bpy.props.FloatProperty(default=0.75, name="Scale")
+	selected_only = bpy.props.BoolProperty(default=True, name="Seleced only")
 	skipUsage = bpy.props.BoolProperty(
 		default = False,
 		options = {'HIDDEN'}
@@ -645,16 +662,18 @@ class McprepScaleUV(bpy.types.Operator):
 			self.report({'ERROR'}, "Active object must be a mesh")
 			return {'CANCELLED'}
 		elif not context.object.data.polygons:
-			self.report({'ERROR'}, "Active object has no faces")
+			self.report({'WARNING'}, "Active object has no faces")
 			return {'CANCELLED'}
 
 		if not context.object.data.uv_layers.active:#uv==None:
 			self.report({'ERROR'}, "No active UV map found")
 			return {'CANCELLED'}
 
+		mode_initial = context.mode
 		bpy.ops.object.mode_set(mode="OBJECT")
 		ret = self.scale_uv_faces(context.object, self.scale)
-		bpy.ops.object.mode_set(mode="EDIT")
+		if mode_initial != 'OBJECT':
+			bpy.ops.object.mode_set(mode="EDIT")
 
 		if ret is not None:
 			self.report({'ERROR'}, ret)
@@ -675,7 +694,7 @@ class McprepScaleUV(bpy.types.Operator):
 		# 				for d in ob.data.uv_layers.active.data]
 
 		for f in ob.data.polygons:
-			if not f.select:
+			if not f.select and self.selected_only is True:
 				continue  # if not selected, won't show up in UV editor
 
 			# initialize for avergae center on polygon
@@ -685,13 +704,13 @@ class McprepScaleUV(bpy.types.Operator):
 				l = ob.data.loops[i] # This polygon/edge
 				v = ob.data.vertices[l.vertex_index]  # The vertex data that loop entry refers to
 				# isolate to specific UV already used
-				if not uv.data[l.index].select:
+				if not uv.data[l.index].select and self.selected_only is True:
 					continue
 				x+=uv.data[l.index].uv[0]
 				y+=uv.data[l.index].uv[1]
 				n+=1
 			for i in f.loop_indices:
-				if not uv.data[l.index].select:
+				if not uv.data[l.index].select and self.selected_only is True:
 					continue
 				l = ob.data.loops[i]
 				uv.data[l.index].uv[0] = uv.data[l.index].uv[0]*(1-factor)+x/n*(factor)
@@ -703,7 +722,7 @@ class McprepScaleUV(bpy.types.Operator):
 		return None
 
 
-class McprepSelectAlphaFaces(bpy.types.Operator):
+class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 	bl_idname = "mcprep.select_alpha_faces"
 	bl_label = "Select alpha faces"
 	bl_description = "Select or delete transparent UV faces of a mesh"
@@ -742,7 +761,7 @@ class McprepSelectAlphaFaces(bpy.types.Operator):
 			self.report({"ERROR"}, "Active object must be a mesh")
 			return {"CANCELLED"}
 		elif not ob.data.polygons:
-			self.report({"ERROR"}, "Active object has no faces")
+			self.report({"WARNING"}, "Active object has no faces")
 			return {"CANCELLED"}
 		elif not ob.material_slots:
 			self.report({"ERROR"}, "Active object has no materials to check image for.")
@@ -808,17 +827,14 @@ class McprepSelectAlphaFaces(bpy.types.Operator):
 			# relate the polygon to the UV layer to the image coordinates
 			shape = []
 			for i in f.loop_indices:
-				loop = ob.data.loops[i]  # get the loop for this index
-				# if not uv.data[loop.index].select:
-				# 	continue
-				x = uv.data[loop.index].uv[0]%1
+				loop = ob.data.loops[i]
+				x = uv.data[loop.index].uv[0]%1 # TODO: fix this wraparound hack
 				y = uv.data[loop.index].uv[1]%1
 				shape.append((x,y))
 
-			print("The shape coords:")
-			print(shape)
+			# print("The shape coords:")
+			# print(shape)
 			# could just do "the closest" pixel... but better is weighted area
-
 			if not shape:
 				continue
 
@@ -828,7 +844,7 @@ class McprepSelectAlphaFaces(bpy.types.Operator):
 			xmax = round(max(xlist)*image.size[0])-0.5
 			ymin = round(min(ylist)*image.size[1])-0.5
 			ymax = round(max(ylist)*image.size[1])-0.5
-			print("\tSet size:",xmin,xmax,ymin,ymax)
+			conf.log(["\tSet size:",xmin,xmax,ymin,ymax], vv_only=True)
 
 			# assuming faces are roughly rectangular, sum pixels a face covers
 			asum = 0
@@ -853,7 +869,7 @@ class McprepSelectAlphaFaces(bpy.types.Operator):
 		return
 
 
-class McprepReplaceMissingTextures(bpy.types.Operator):
+class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 	"""Replace any missing textures with matching images in the active texture pack"""
 	bl_idname = "mcprep.replace_missing_textures"
 	bl_label = "Find missing textures"
@@ -897,11 +913,11 @@ class McprepReplaceMissingTextures(bpy.types.Operator):
 					updated = True
 			if updated:
 				count += 1
-				if conf.v: print("Updated " + mat.name)
+				conf.log("Updated " + mat.name)
 				if self.animateTextures:
 					sequences.animate_single_material(
 						mat, context.scene.render.engine)
-					if conf.v: print("Animated texture")
+					conf.log("Animated texture")
 		if count == 0:
 			self.report({'INFO'},
 				"No missing image blocks detected in {} materials".format(
@@ -918,9 +934,25 @@ class McprepReplaceMissingTextures(bpy.types.Operator):
 # -----------------------------------------------------------------------------
 
 
+classes = (
+	MCPREP_OT_prep_materials,
+	MCPREP_OT_materials_help,
+	MCPREP_OT_swap_texture_pack,
+	MCPREP_OT_reset_texturepack_path,
+	MCPREP_OT_combine_materials,
+	MCPREP_OT_combine_images,
+	MCPREP_OT_scale_uv,
+	MCPREP_OT_select_alpha_faces,
+	MCPREP_OT_replace_missing_textures
+)
+
+
 def register():
-	pass
+	for cls in classes:
+		util.make_annotations(cls)
+		bpy.utils.register_class(cls)
 
 
 def unregister():
-	pass
+	for cls in reversed(classes):
+		bpy.utils.unregister_class(cls)

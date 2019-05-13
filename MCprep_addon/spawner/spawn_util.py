@@ -37,22 +37,21 @@ from .. import tracking
 # -----------------------------------------------------------------------------
 
 
-class McprepReloadSpawners(bpy.types.Operator):
+class MCPREP_OT_reload_spawners(bpy.types.Operator):
 	"""Relaod meshswapping and spawning lists"""
 	bl_idname = "mcprep.reload_spawners"
 	bl_label = "Reload meshswap and mob spawners"
+	bl_options = {'REGISTER', 'UNDO'}
 
 	@tracking.report_error
 	def execute(self, context):
-
 		bpy.ops.mcprep.reload_meshswap()
 		bpy.ops.mcprep.reload_mobs()
 		bpy.ops.mcprep.reload_items()
-
 		return {'FINISHED'}
 
 
-class McprepSpawnPathReset(bpy.types.Operator):
+class MCPREP_OT_spawn_path_reset(bpy.types.Operator):
 	"""Reset the spawn path to the default specified in the addon preferences panel"""
 	bl_idname = "mcprep.spawn_path_reset"
 	bl_label = "Reset spawn path"
@@ -60,8 +59,7 @@ class McprepSpawnPathReset(bpy.types.Operator):
 
 	@tracking.report_error
 	def execute(self,context):
-
-		addon_prefs = util.get_prefs()
+		addon_prefs = util.get_user_preferences(context)
 		context.scene.mcprep_mob_path = addon_prefs.mob_path
 		mobs.update_rig_list(context)
 		return {'FINISHED'}
@@ -72,48 +70,60 @@ class McprepSpawnPathReset(bpy.types.Operator):
 # -----------------------------------------------------------------------------
 
 
-class McprepMobUiList(bpy.types.UIList):
+class MCPREP_UL_mob(bpy.types.UIList):
 	"""For mob asset listing UIList drawing"""
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
+		icon = "mob-{}".format(set.index)
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
-			# col = layout.column()
-			# col.prop(set, "name", text="", emboss=False)
-			layout.label(set.name)
-
-		elif self.layout_type in {'GRID'}:
-			layout.alignment = 'CENTER'
-			layout.label("", icon='QUESTION')
-
-
-class McprepMeshswapUiList(bpy.types.UIList):
-	"""For meshswap asset listing UIList drawing"""
-	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
-		if self.layout_type in {'DEFAULT', 'COMPACT'}:
-			layout.label(set.name)
-			# col.prop(set, "name", text="", emboss=False)
-
-		elif self.layout_type in {'GRID'}:
-			layout.alignment = 'CENTER'
-			layout.label("", icon='QUESTION')
-
-
-class McprepItemUiList(bpy.types.UIList):
-	"""For meshswap asset listing UIList drawing"""
-	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
-		if self.layout_type in {'DEFAULT', 'COMPACT'}:
-			col = layout.column()
-			icon = "item-{}".format(set.index)
 			if not conf.use_icons:
-				col.label(set.name)
+				layout.label(text=set.name)
+			elif conf.use_icons and icon in conf.preview_collections["mobs"]:
+				layout.label(text=set.name,
+					icon_value=conf.preview_collections["mobs"][icon].icon_id)
+			else:
+				layout.label(text=set.name, icon="BLANK1")
+
+		elif self.layout_type in {'GRID'}:
+			layout.alignment = 'CENTER'
+			if conf.use_icons and icon in conf.preview_collections["mobs"]:
+				layout.label(text="",
+					icon_value=conf.preview_collections["mobs"][icon].icon_id)
+			else:
+				layout.label(text="", icon='QUESTION')
+
+
+class MCPREP_UL_meshswap(bpy.types.UIList):
+	"""For meshswap asset listing UIList drawing"""
+	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
+		if self.layout_type in {'DEFAULT', 'COMPACT'}:
+			layout.label(text=set.name)
+			# col.prop(set, "name", text="", emboss=False)
+
+		elif self.layout_type in {'GRID'}:
+			layout.alignment = 'CENTER'
+			layout.label(text="", icon='QUESTION')
+
+
+class MCPREP_UL_item(bpy.types.UIList):
+	"""For meshswap asset listing UIList drawing"""
+	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
+		icon = "item-{}".format(set.index)
+		if self.layout_type in {'DEFAULT', 'COMPACT'}:
+			if not conf.use_icons:
+				layout.label(text=set.name)
 			elif conf.use_icons and icon in conf.preview_collections["items"]:
-				col.label(set.name,
+				layout.label(text=set.name,
 					icon_value=conf.preview_collections["items"][icon].icon_id)
 			else:
-				col.label(set.name, icon="BLANK1")
+				layout.label(text=set.name, icon="BLANK1")
 
 		elif self.layout_type in {'GRID'}:
 			layout.alignment = 'CENTER'
-			layout.label("", icon='QUESTION')
+			if conf.use_icons and icon in conf.preview_collections["items"]:
+				layout.label(text="",
+					icon_value=conf.preview_collections["items"][icon].icon_id)
+			else:
+				layout.label(text="", icon='QUESTION')
 
 
 class ListMobAssetsAll(bpy.types.PropertyGroup):
@@ -121,17 +131,15 @@ class ListMobAssetsAll(bpy.types.PropertyGroup):
 	description = bpy.props.StringProperty()
 	category = bpy.props.StringProperty()
 	mcmob_type = bpy.props.StringProperty()
+	index = bpy.props.IntProperty(min=0, default=0)  # for icon drawing
 
 
 class ListMobAssets(bpy.types.PropertyGroup):
 	"""For UI drawing of mob assets and holding data"""
 	description = bpy.props.StringProperty()
-
-	# TODO: add in fields here to avoid having data in conf
-	# local = bpy.props.StringProperty()  # is this the path?
 	category = bpy.props.StringProperty()  # category it belongs to
-	# relative_path = bpy.props.StringProperty()  # blend file path
 	mcmob_type = bpy.props.StringProperty()
+	index = bpy.props.IntProperty(min=0, default=0)  # for icon drawing
 
 
 class ListMeshswapAssets(bpy.types.PropertyGroup):
@@ -153,9 +161,25 @@ class ListItemAssets(bpy.types.PropertyGroup):
 # -----------------------------------------------------------------------------
 
 
+classes = (
+	ListMobAssetsAll,
+	ListMobAssets,
+	ListMeshswapAssets,
+	ListItemAssets,
+	MCPREP_UL_mob,
+	MCPREP_UL_meshswap,
+	MCPREP_UL_item,
+	MCPREP_OT_reload_spawners,
+	MCPREP_OT_spawn_path_reset,
+)
+
+
 def register():
-	pass
+	for cls in classes:
+		util.make_annotations(cls)
+		bpy.utils.register_class(cls)
 
 
 def unregister():
-	pass
+	for cls in reversed(classes):
+		bpy.utils.unregister_class(cls)
