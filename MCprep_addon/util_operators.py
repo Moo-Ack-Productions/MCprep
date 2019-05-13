@@ -49,7 +49,6 @@ class MCPREP_OT_improve_ui(bpy.types.Operator):
 		if hasattr(view, "show_textured_solid"): # 2.7
 			context.space_data.show_textured_solid = True
 		elif view.type == 'VIEW_3D' and hasattr(context.scene, "display"):
-			print("Shading here, 3D view")
 			try: # can fail e.g. in workbench view
 				view.shading.color_type = "TEXTURE"
 				view.shading.background_type = "WORLD"
@@ -72,11 +71,8 @@ class MCPREP_OT_improve_ui(bpy.types.Operator):
 			else:
 				context.space_data.viewport_shade = 'SOLID'
 		elif util.bv28() and context.scene.display.shading.type not in view28:
-			print("Shading type 28 not in list")
-
 			# must go through all spaces to find the match screen[].layout.space...
 			# and then apply, e.g.
-
 
 			# make it solid mode, regardless of cycles or eevee
 			context.scene.display.shading.type = 'SOLID'
@@ -105,10 +101,10 @@ class MCPREP_OT_show_preferences(bpy.types.Operator):
 						if mod.__name__ == __package__]
 		addon_blinfo = addon_utils.module_bl_info(addons_ids[0])
 		if not addon_blinfo["show_expanded"]:
-			if hasattr(bpy.ops, "preferences") and hasattr(bpy.ops.preferences, "addon_expand"): # later 2.8 buids
-				bpy.ops.preferences.addon_expand(module=__package__)
-			elif hasattr(bpy.ops, "wm") and hasattr(bpy.ops.wm, "addon_expand"): # old 2.8 and 2.7
+			if hasattr(bpy.ops, "wm") and hasattr(bpy.ops.wm, "addon_expand"): # old 2.8 and 2.7
 				bpy.ops.wm.addon_expand(module=__package__)
+			elif hasattr(bpy.ops, "preferences") and hasattr(bpy.ops.preferences, "addon_expand"): # later 2.8 buids
+				bpy.ops.preferences.addon_expand(module=__package__)
 			else:
 				self.report({"INFO"}, "Navigate to the MCprep addon in preferences")
 
@@ -183,7 +179,7 @@ class MCPREP_OT_prep_material_legacy(bpy.types.Operator):
 	track_function = "materials_legacy"
 	@tracking.report_error
 	def execute(self, context):
-		print("Using legacy operator call for MCprep materials")
+		print("Using legacy operator call for MCprep materials, move to use bpy.ops.mcprep.prep_materials")
 		bpy.ops.mcprep.prep_materials(
 			useReflections = self.useReflections,
 			combineMaterials = self.combineMaterials

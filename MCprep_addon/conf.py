@@ -38,7 +38,7 @@ def init():
 	# Used to print out extra information, set false with distribution
 	# -----------------------------------------------
 	global dev
-	dev = True
+	dev = False
 
 	global v
 	v = True # $VERBOSE, UI setting
@@ -181,7 +181,10 @@ def unregister():
 	global preview_collections
 	if use_icons:
 		for pcoll in preview_collections.values():
-			bpy.utils.previews.remove(pcoll)
+			try:
+				bpy.utils.previews.remove(pcoll)
+			except:
+				log('Issue clearing preview set '+str(pcoll))
 	preview_collections.clear()
 
 	global json_data

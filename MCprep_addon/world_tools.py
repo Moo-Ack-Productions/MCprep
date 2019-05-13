@@ -520,7 +520,8 @@ class MCPREP_OT_add_mc_world(bpy.types.Operator):
 		obj.rotation_euler[1] = 0.527089
 		util.obj_link_scene(obj, context)
 		context.scene.update()
-		# update horizon info
+		if hasattr(obj, "use_contact_shadow"):
+			obj.use_contact_shadow = True
 		return obj
 
 	def create_dynamic_world(self, context, blendfile, wname):
@@ -587,7 +588,6 @@ class MCPREP_OT_add_mc_world(bpy.types.Operator):
 		# if driver and driver.variables[0].targets[0].id_type == 'OBJECT':
 		# 	driver.variables[0].targets[0].id = time_obj
 		# add driver to control obj's x rotation
-
 
 		return obj_list
 

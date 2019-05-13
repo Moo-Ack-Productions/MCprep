@@ -475,7 +475,7 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 			name_cat[base].sort() # in-place sorting
 			baseMat = bpy.data.materials[name_cat[base][0]]
 
-			conf.log(name_cat[base]+" ## "+baseMat, vv_only=True)
+			conf.log([name_cat[base]," ## ",baseMat], vv_only=True)
 
 			for matname in name_cat[base][1:]:
 

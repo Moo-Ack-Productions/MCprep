@@ -251,7 +251,16 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 
 			# cleanup
 			if self.make_real:
-				bpy.ops.object.duplicates_make_real()
+				# get objects before vs after, because
+				if util.bv28(): # make real doesn't select resulting output now
+					pre_objs = list(bpy.data.objects)
+					bpy.ops.object.duplicates_make_real()
+					post_objs = list(bpy.data.objects)
+					new_objs = list(set(post_objs)-set(pre_objs))
+					for obj in new_objs:
+						util.select_set(obj, True)
+				else:
+					bpy.ops.object.duplicates_make_real()
 				# remove the empty added by making duplicates real.
 				if group is not None:
 					self.fix_armature_target(
@@ -276,6 +285,7 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 
 	def fix_armature_target(self, context, new_objs, src_coll):
 		"""To address 2.8 bug where group made real might not update armature source"""
+
 		src_armas = [arma for arma in src_coll.objects
 			if arma.type == 'ARMATURE']
 		new_armas = [arma for arma in new_objs
@@ -306,14 +316,13 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 				# but for blender 2.7, the mod target will already have changed
 				if old_target.animation_data:
 					new_target.animation_data_create()
-					print(new_target)
 					new_target.animation_data.action = old_target.animation_data.action
+					conf.log("Updated animation of armature for instance of "+src_coll.name)
 
 				if mod.object in new_objs:
 					continue # was already the new object target for modifier
 				mod.object = new_target
 				conf.log("Updated target of armature for instance of "+src_coll.name)
-
 
 	def prep_collection(self, context, block, pre_groups):
 		"""Prep the imported collection, ran only if newly imported (not cached)"""
@@ -1070,9 +1079,9 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 					continue
 			util.select_set(d, True)
 
-		if util.bv28():
-			for grp in new_groups:
-				util.hide_viewport(grp, True)
+		# if util.bv28():
+			# for grp in new_groups:
+				# util.hide_viewport(grp, True)
 				# grp.hide_render = True
 
 		if runcount==0:
