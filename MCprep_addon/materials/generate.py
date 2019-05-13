@@ -896,8 +896,12 @@ def matgen_cycles_principled(mat, passes, use_reflections, only_solid):
 
 	nodeTexDiff.interpolation = 'Closest'
 	nodeTexSpec.interpolation = 'Closest'
-	nodeTexSpec.color_space = 'NONE'  # for better interpretation of specmaps
-	nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
+	if hasattr(nodeTexSpec, "color_space"): # 2.7 and earlier 2.8 versions
+		nodeTexSpec.color_space = 'NONE'  # for better interpretation of specmaps
+		nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
+	elif hasattr(nodeTexSpec, "colorspace_settings"): # 2.7 and earlier 2.8 versions
+		nodeTexSpec.colorspace_settings.name = 'Non-Color'
+		nodeTexNorm.colorspace_settings.name = 'Non-Color'
 
 	# apply additional settings
 	mat.cycles.sample_as_light = False
@@ -1088,8 +1092,12 @@ def matgen_cycles_original(mat, passes, use_reflections, only_solid):
 
 	nodeTexDiff.interpolation = 'Closest'
 	nodeTexSpec.interpolation = 'Closest' # should this be closest or not?
-	nodeTexSpec.color_space = 'NONE'  # for better interpretation of specmaps
-	nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
+	if hasattr(nodeTexSpec, "color_space"): # 2.7 and earlier 2.8 versions
+		nodeTexSpec.color_space = 'NONE'  # for better interpretation of specmaps
+		nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
+	elif hasattr(nodeTexSpec, "colorspace_settings"): # 2.7 and earlier 2.8 versions
+		nodeTexSpec.colorspace_settings.name = 'Non-Color'
+		nodeTexNorm.colorspace_settings.name = 'Non-Color'
 
 	#set other default values, e.g. the mixes
 	nodeMix2.inputs[0].default_value = 0 # factor mix with glossy

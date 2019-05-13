@@ -1,7 +1,7 @@
 TO INSTALL MCprep
 ======
 
-### Click the link below and download the .zip file (re-zip if auto-unzipped into a folder necessary), install into blender.
+### Click the link below and download the .zip file (re-zip if auto-unzipped into a folder necessary), install into blender 2.7 or 2.8.
 
 [![Install MCprep](/visuals/mcprep_download.png)](https://theduckcow.com/dev/blender/mcprep-download/)
 
@@ -15,6 +15,7 @@ It should remain a zip folder. In blender, go to preferences, then the addons ta
 *The preferences panel should look like this after installing the zip file*
 ![Installed MCprep 2.7](/visuals/install.png?raw=true)
 
+*Or, if using Blender 2.8, follow these similar steps*
 ![Installed MCprep 2.8](/visuals/install_28.png?raw=true)
 
 **If you like the addon, [please consider donating](http://bit.ly/donate2TheDuckCow) for the continued quality development! [Share this addon](https://twitter.com/intent/tweet?text=Make+easier+Minecraft+renders+using+the+MCprep+addon+bit.ly/MCprep+by+@TheDuckCow) so others can benefit from it! Or help by [taking this quick survey](http://bit.ly/MCprepSurvey)!**
@@ -54,7 +55,7 @@ This is a blender python addon to increase workflow for creating Minecraft rende
 
 This addon is made to work with an asset library directory, from which models and groups are linked or imported from. This library blend file is included, but does not have all types of blocks generated yet. This will be improved in the future.
 
-This addon is compatible officially down to 2.72 official builds, up to blender 2.78+. Not all features are available in all versions, try to use the latest available blender. *Run into any problems? [Submit bugs/issues here](https://github.com/TheDuckCow/MCprep/issues).*
+This addon is compatible officially down to 2.72 official builds, and up to blender 2.80. Not all features are available in all versions, try to use the latest available blender. *Run into any problems? [Submit bugs/issues here](https://github.com/TheDuckCow/MCprep/issues).*
 
 
 Feature list
