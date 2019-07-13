@@ -406,8 +406,8 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 		removeold = True
 
 		if self.selection_only==True and len(context.selected_objects)==0:
-			self.report({'ERROR',
-				"Either turn selection only off or select objects with materials"})
+			self.report({'ERROR'},
+				"Either turn selection only off or select objects with materials")
 			return {'CANCELLED'}
 
 		# 2-level structure to hold base name and all

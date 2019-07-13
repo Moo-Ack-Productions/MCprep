@@ -252,10 +252,13 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 		if not os.path.isfile(path):
 			return # no script found
 		conf.log("Script found, loading and running it")
-		bpy.ops.text.open(filepath=path, internal=True)
-		text = bpy.data.texts[path.split("/")[-1]]
-		ctx = bpy.context.copy()
-		ctx['edit_text'] = text
+		text = bpy.data.texts.load(filepath=path, internal=True)
+		try:
+			ctx = bpy.context.copy()
+			ctx['edit_text'] = text
+		except Exception as err:
+			print("Error trying to create context to run script in:")
+			print(str(err))
 		try:
 			bpy.ops.text.run_script(ctx)
 		except:
@@ -306,7 +309,7 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 		# if there is a script with this rig, attempt to run it
 		self.attemptScriptLoad(path)
 
-		if self.auto_prep and not self.toLink:
+		if self.auto_prep and not self.toLink and context.selected_objects:
 			bpy.ops.mcprep.prep_materials(skipUsage=True)
 
 		self.track_param = self.mcmob_type.split(":/:")[1]

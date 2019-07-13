@@ -658,6 +658,12 @@ class MCPREP_PT_skins(bpy.types.Panel):
 			p = col.operator("mcprep.reload_skins",
 				text="Press to reload", icon="ERROR")
 			return
+		elif conf.skin_list and len(conf.skin_list) <= sind:
+			col = layout.column()
+			col.label(text="Reload skins")
+			p = col.operator("mcprep.reload_skins",
+				text="Press to reload", icon="ERROR")
+			return
 
 		col.template_list("MCPREP_UL_skins", "",
 				context.scene, "mcprep_skins_list",

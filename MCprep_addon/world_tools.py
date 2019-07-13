@@ -519,7 +519,9 @@ class MCPREP_OT_add_mc_world(bpy.types.Operator):
 		obj.rotation_euler[1] = 0.303687
 		obj.rotation_euler[1] = 0.527089
 		util.obj_link_scene(obj, context)
-		context.scene.update()
+		if hasattr(context.scene, "update"):
+			# not avaialble in 2.8
+			context.scene.update()
 		if hasattr(obj, "use_contact_shadow"):
 			obj.use_contact_shadow = True
 		return obj
