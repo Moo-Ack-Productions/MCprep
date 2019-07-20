@@ -522,6 +522,8 @@ class MCPREP_OT_add_mc_world(bpy.types.Operator):
 		if hasattr(context.scene, "update"):
 			# not avaialble in 2.8
 			context.scene.update()
+		elif hasattr(context, "view_layer"):
+			context.view_layer.update()
 		if hasattr(obj, "use_contact_shadow"):
 			obj.use_contact_shadow = True
 		return obj

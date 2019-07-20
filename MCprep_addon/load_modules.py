@@ -31,6 +31,7 @@ if "bpy" in locals():
 	importlib.reload(mobs)
 	importlib.reload(world_tools)
 	importlib.reload(item)
+	importlib.reload(bridge)
 	importlib.reload(mcprep_ui)
 
 	if conf.v:
@@ -57,21 +58,31 @@ else:
 		meshswap,
 		item
 		)
+	from .mineways_bridge import(
+		bridge
+		)
+
+
+module_list = (
+	util_operators,
+	prep,
+	skin,
+	sequences,
+	spawn_util,
+	meshswap,
+	mobs,
+	item,
+	world_tools,
+	bridge,
+	mcprep_ui
+	)
 
 
 def register(bl_info):
 	conf.register()
 	tracking.register(bl_info)
-	util_operators.register()
-	prep.register()
-	skin.register()
-	sequences.register()
-	spawn_util.register()
-	meshswap.register()
-	mobs.register()
-	item.register()
-	world_tools.register()
-	mcprep_ui.register()
+	for mod in module_list:
+		mod.register()
 
 	# addon updater code and configurations
 	addon_updater_ops.register(bl_info)
@@ -83,16 +94,9 @@ def register(bl_info):
 
 
 def unregister(bl_info):
-	mcprep_ui.unregister()
-	world_tools.unregister()
-	item.unregister()
-	mobs.unregister()
-	meshswap.unregister()
-	spawn_util.unregister()
-	sequences.unregister()
-	skin.unregister()
-	prep.unregister()
-	util_operators.unregister()
+	for mod in reversed(module_list):
+		mod.unregister()
+
 	tracking.unregister()
 	conf.unregister()
 

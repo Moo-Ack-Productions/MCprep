@@ -930,9 +930,10 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				runcount +=1
 				if (self.counterObject > self.countMax):
 					self.counterObject = 0
-					#below technically a "hack", should use: bpy.data.scenes[0].update()
 					if not util.bv28():
 						bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+					elif hasattr(context, "view_layer"):
+						context.view_layer.update() # but does not redraw ui
 
 				loc = util.matmul(swap.matrix_world, mathutils.Vector(set))
 
@@ -1028,7 +1029,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				util.set_active_object(context, dupedObj[0])
 				for d in dupedObj:
 					if d.type != 'MESH':
-						print("Skipping non-mesh:", d)
+						# conf.log("Skipping non-mesh:", d)
 						continue
 					util.select_set(d, True)
 				if context.mode != "OBJECT":
@@ -1079,6 +1080,8 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 					continue
 			util.select_set(d, True)
 
+		# attempt to hide the reference group in 2.8, but creates odd effects
+		# such as group instances not showing correctly in viewport (hidden)
 		# if util.bv28():
 			# for grp in new_groups:
 				# util.hide_viewport(grp, True)

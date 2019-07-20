@@ -32,7 +32,7 @@ from . import addon_updater_ops
 from . import tracking
 from .materials.skin import update_skin_path
 from .materials.generate import update_mcprep_texturepack_path
-
+from .mineways_bridge import bridge
 
 # blender 2.7 vs 2.8 icon selections
 LOAD_FACTORY = 'LOOP_BACK' if util.bv28() else 'LOAD_FACTORY'
@@ -575,6 +575,18 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		addon_updater_ops.update_notice_box_ui(self, context)
 
 
+class MCPREP_PT_bridge(bpy.types.Panel):
+	"""MCprep panel for directly importing and reloading minecraft saves"""
+	bl_label = "World Bridge"
+	bl_space_type = "VIEW_3D"
+	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
+	bl_context = "objectmode"
+	bl_category = "MCprep"
+
+	def draw(self, context):
+		bridge.panel_draw(self, context)
+
+
 class MCPREP_PT_world_tools(bpy.types.Panel):
 	"""World settings and tools"""
 	bl_label = "World Tools"
@@ -1083,6 +1095,20 @@ class McprepProps(bpy.types.PropertyGroup):
 	item_list = bpy.props.CollectionProperty(type=spawn_util.ListItemAssets)
 	item_list_index = bpy.props.IntProperty(default=0)
 
+	# Mineways bridge/Minecraft direct settings
+	save_dir_default = '/Users/patrickcrawford/Library/Application Support/minecraft/saves/'
+	save_folder = bpy.props.StringProperty(
+		name = "Saves folder",
+		description = "Folder containing Minecraft world saves directories, for the direct import bridge",
+		subtype = 'FILE_PATH',
+		default = save_dir_default)
+	bridge_world = bpy.props.EnumProperty(
+		name = "World Save",
+		description = "World to use for the direct import bridge",
+		items = bridge.world_saves_enum,
+		update = bridge.world_save_update
+	)
+
 
 # -----------------------------------------------------------------------------
 # Register functions
@@ -1097,6 +1123,7 @@ classes = (
 	MCPREP_MT_item_spawn,
 	MCPREP_MT_3dview_add,
 	MCPREP_PT_world_imports,
+	MCPREP_PT_bridge,
 	MCPREP_PT_world_tools,
 	MCPREP_PT_skins,
 	MCPREP_PT_spawn
