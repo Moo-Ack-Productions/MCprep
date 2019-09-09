@@ -92,9 +92,12 @@ def find_from_texturepack(blockname, resource_folder=None):
 
 	search_paths = [resource_folder,
 					os.path.join(resource_folder,"blocks"),
+					os.path.join(resource_folder,"block"),
 					os.path.join(resource_folder,"items"),
+					os.path.join(resource_folder,"item"),
 					os.path.join(resource_folder,"entity"),
 					os.path.join(resource_folder,"models"),
+					os.path.join(resource_folder,"model"),
 					]
 	res = None
 
@@ -868,8 +871,9 @@ def matgen_cycles_principled(mat, passes, use_reflections, only_solid):
 	links.new(nodeTexSpec.outputs["Color"],nodeSpecInv.inputs[1]) # "proper" way
 	links.new(nodeSpecInv.outputs["Color"],principled.inputs[7]) # "proper" way
 	links.new(nodeTexNorm.outputs["Color"],nodeNormal.inputs[1])
-	links.new(nodeNormal.outputs["Normal"],principled.inputs[17])
+	links.new(nodeNormal.outputs["Normal"], principled.inputs["Normal"])
 
+	# TODO: Use alpha socket of princpled node for newer blender versions
 	links.new(nodeTexDiff.outputs["Alpha"],nodeMix1.inputs[0])
 	links.new(nodeTrans.outputs["BSDF"],nodeMix1.inputs[1])
 	links.new(principled.outputs["BSDF"],nodeMix1.inputs[2])
@@ -894,14 +898,15 @@ def matgen_cycles_principled(mat, passes, use_reflections, only_solid):
 		nodeTexNorm.mute = True
 		nodeNormal.mute = True
 
-	nodeTexDiff.interpolation = 'Closest'
-	nodeTexSpec.interpolation = 'Closest'
+	if hasattr(nodeTexDiff, "interpolation"): # 2.72+
+		nodeTexDiff.interpolation = 'Closest'
+		nodeTexSpec.interpolation = 'Closest'
 	if hasattr(nodeTexSpec, "color_space"): # 2.7 and earlier 2.8 versions
 		nodeTexSpec.color_space = 'NONE'  # for better interpretation of specmaps
 		nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
-	elif hasattr(nodeTexSpec, "colorspace_settings"): # 2.7 and earlier 2.8 versions
-		nodeTexSpec.colorspace_settings.name = 'Non-Color'
-		nodeTexNorm.colorspace_settings.name = 'Non-Color'
+	elif hasattr(nodeTexSpec.image, "colorspace_settings"): # later 2.8 versions
+		nodeTexSpec.image.colorspace_settings.name = 'Non-Color'
+		nodeTexNorm.image.colorspace_settings.name = 'Non-Color'
 
 	# apply additional settings
 	mat.cycles.sample_as_light = False
@@ -969,10 +974,13 @@ def matgen_cycles_principled(mat, passes, use_reflections, only_solid):
 			# noisy, but workable for partial trans; bad for materials with
 			# no partial trans (makes view-through all somewhat noisy)
 			mat.blend_method = 'HASHED'
+			mat.shadow_method = 'HASHED'
 
 			# best if there is no partial transparency
 			# material.blend_method = 'CLIP' for no partial transparency
 			# both work fine with depth of field.
+
+			# but, BLEND does NOT work well with Depth of Field or layering
 
 	nodeSaturateMix.inputs[0].default_value = 1.0
 	nodeSaturateMix.blend_type = 'OVERLAY'
@@ -1090,8 +1098,9 @@ def matgen_cycles_original(mat, passes, use_reflections, only_solid):
 		nodeNormal.mute = True
 	# nodeTexDisp.image = image_disp
 
-	nodeTexDiff.interpolation = 'Closest'
-	nodeTexSpec.interpolation = 'Closest' # should this be closest or not?
+	if hasattr(nodeTexDiff, "interpolation"): # only avail 2.72+
+		nodeTexDiff.interpolation = 'Closest'
+		nodeTexSpec.interpolation = 'Closest' # should this be closest or not?
 	if hasattr(nodeTexSpec, "color_space"): # 2.7 and earlier 2.8 versions
 		nodeTexSpec.color_space = 'NONE'  # for better interpretation of specmaps
 		nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
@@ -1218,7 +1227,8 @@ def matgen_cycles_emit(mat, passes):
 	links.new(nodeMixEmits.outputs["Shader"], nodeMix.inputs[2])
 	links.new(nodeMix.outputs["Shader"], nodeOut.inputs[0])
 
-	nodeTexDiff.interpolation = 'Closest'
+	if hasattr(nodeTexDiff, "interpolation"): # 2.72+
+		nodeTexDiff.interpolation = 'Closest'
 	nodeTexDiff.image = image_diff
 	nodeTexDiff["MCPREP_diffuse"] = True  # or call it emit?
 	nodeEmitVisible.inputs[1].default_value = 1.0

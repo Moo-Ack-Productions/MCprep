@@ -19,6 +19,7 @@
 import json
 import operator
 import os
+import platform
 import random
 import subprocess
 from subprocess import Popen, PIPE
@@ -85,27 +86,20 @@ def bAppendLink(directory, name, toLink, active_layer=True):
 	"""
 
 	conf.log("Appending " + directory + " : " + name, vv_only=True)
-	post272 = False
-	post280 = False
-	try:
-		version = bpy.app.version
-		post272 = True
-		post280 = bv28()
-	except:
-		pass #  "version" didn't exist before 72!
-	#if (version[0] >= 2 and version[1] >= 72):
 
 	# for compatibility, add ending character
 	if directory[-1] != "/" and directory[-1] != os.path.sep:
 		directory += os.path.sep
 
-	if post272:
+	if "link_append" in dir(bpy.ops.wm):
+		# OLD method of importing, e.g. in blender 2.70
+		conf.log("Using old method of append/link, 2.72 <=", vv_only=True)
+		bpy.ops.wm.link_append(directory=directory, filename=name, link=toLink)
+	elif "link" in dir(bpy.ops.wm) and "append" in dir(bpy.ops.wm):
 		conf.log("Using post-2.72 method of append/link", vv_only=True)
-		# new method of importing
-
 		if toLink:
 			bpy.ops.wm.link(directory=directory, filename=name)
-		elif post280 is True:
+		elif bv28():
 			bpy.ops.wm.append(
 					directory=directory,
 					filename=name
@@ -117,10 +111,6 @@ def bAppendLink(directory, name, toLink, active_layer=True):
 					filename=name,
 					active_layer=active_layer
 					) #, activelayer=True
-	else:
-		# OLD method of importing
-		conf.log("Using old method of append/link, 2.72 <=", vv_only=True)
-		bpy.ops.wm.link_append(directory=directory, filename=name, link=toLink)
 
 
 def obj_copy(base, context=None, vertex_groups=True, modifiers=True):
@@ -224,15 +214,24 @@ def remap_users(old, new):
 	"""Consistent, general way to remap datablock users."""
 	# Todo: write equivalent function of user_remap for older blender versions
 	try:
-		old.user_remap( new )
+		old.user_remap(new)
 		return 0
 	except:
 		return "not available prior to blender 2.78"
 
 
+def get_objects_conext(context):
+	"""Returns list of objects, either from view layer if 2.8 or scene if 2.8"""
+	if bv28():
+		return context.view_layer.objects
+	return context.scene.objects
+
+
 def link_selected_objects_to_scene():
-	# Quick script for linking all objects back into a scene
-	# Not used by addon, but shortcut useful in one-off cases to copy/run code
+	"""Quick script for linking all objects back into a scene.
+
+	Not used by addon, but shortcut useful in one-off cases to copy/run code
+	"""
 	for ob in bpy.data.objects:
 		if ob not in list(bpy.context.scene.objects):
 			obj_link_scene(ob)
@@ -241,11 +240,26 @@ def link_selected_objects_to_scene():
 def open_program(executable):
 	# Open an external program from filepath/executbale
 	executable = bpy.path.abspath(executable)
-	if (os.path.isfile(executable) == False):
-		if (os.path.isdir(executable) == False):
+
+	# input could be .app file, which appears as if a folder
+	if not os.path.isfile(executable) :
+		if not os.path.isdir(executable):
 			return -1
 		elif ".app" not in executable:
 			return -1
+
+	# try to open with wine, if available
+	osx_or_linux = platform.system() == "Darwin" or 'linux' in platform.system().lower()
+	if executable.lower().endswith('.exe') and osx_or_linux:
+		p = Popen(['which', 'wine'], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+		stdout, err = p.communicate(b"")
+		if stdout and not err:
+			# wine is installed; this will hang blender until mineways closes.
+			p = Popen(['wine', executable], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+			stdout, err = p.communicate(b"")
+			for line in iter(p.stdout.readline, ''):
+				# will print lines as they come, instead of just at end
+				print(stdout)
 
 	try:  # first attempt to use blender's built-in method
 		res = bpy.ops.wm.path_open(filepath=executable)
@@ -257,7 +271,7 @@ def open_program(executable):
 	# for mac, if folder, check that it has .app otherwise throw -1
 	# (right now says will open even if just folder!!)
 
-	p = Popen(['open',executable], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+	p = Popen(['open', executable], stdin=PIPE, stdout=PIPE, stderr=PIPE)
 	stdout, err = p.communicate(b"")
 
 	if err != b"":
@@ -653,3 +667,13 @@ def matmul(v1, v2, v3=None):
 	if v3:
 		return v1 * v2 * v3
 	return v1 * v2
+
+
+def scene_update(context=None):
+	"""Update scene, such as after loading new objects or ensuring dep. graph refresh"""
+	if not context:
+		context = bpy.context
+	if hasattr(context.scene, "update"): # 2.7
+		context.scene.update()
+	elif hasattr(context, "view_layer"): # 2.8
+		context.view_layer.update()

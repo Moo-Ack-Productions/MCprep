@@ -31,7 +31,7 @@ if "bpy" in locals():
 	importlib.reload(mobs)
 	importlib.reload(world_tools)
 	importlib.reload(item)
-	importlib.reload(bridge)
+	# importlib.reload(bridge)
 	importlib.reload(mcprep_ui)
 
 	if conf.v:
@@ -58,9 +58,9 @@ else:
 		meshswap,
 		item
 		)
-	from .mineways_bridge import(
-		bridge
-		)
+	# from .mineways_bridge import(
+	# 	bridge
+	# 	)
 
 
 module_list = (
@@ -73,7 +73,7 @@ module_list = (
 	mobs,
 	item,
 	world_tools,
-	bridge,
+	# bridge,
 	mcprep_ui
 	)
 

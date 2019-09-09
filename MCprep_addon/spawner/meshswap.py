@@ -101,6 +101,8 @@ def updateMeshswapList(context):
 	cache = get_meshswap_cache(context)
 	prefix = "Group/" if hasattr(bpy.data, "groups") else "Collection/"
 	for name in cache.get("groups"):
+		if not name:
+			continue
 		if util.nameGeneralize(name).lower() in temp_meshswap_list:
 			continue
 		if util.nameGeneralize(name).lower() == "Rigidbodyworld".lower():
@@ -238,7 +240,7 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 				return {'CANCELLED'}
 
 			# now finally add the group instance
-			for obj in context.scene.objects:
+			for obj in util.get_objects_conext(context):
 				util.select_set(obj, False)
 			ob = util.addGroupInstance(group.name, self.location)
 			if self.snapping=="center":
@@ -328,7 +330,7 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 		"""Prep the imported collection, ran only if newly imported (not cached)"""
 
 		# Group method first, move append to according layer
-		for ob in context.scene.objects:
+		for ob in util.get_objects_conext(context):
 			util.select_set(ob, False)
 
 		layers = [False]*20
@@ -358,7 +360,7 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 			for ob in objlist:
 				util.select_set(ob, True)
 			bpy.ops.mcprep.prep_materials(skipUsage=True) # if cycles
-			for ob in context.scene.objects:
+			for ob in util.get_objects_conext(context):
 				util.select_set(ob, False)
 
 		if hasattr(context.scene, "layers"): # 2.7 only

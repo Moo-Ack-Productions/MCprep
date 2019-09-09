@@ -24,6 +24,7 @@ import bpy
 from bpy_extras.io_utils import ImportHelper
 
 from .mineways_connector import MinewaysConnector
+from .jmc_connector import JmcConnector
 from .. import conf
 from .. import util
 from .. import tracking
@@ -41,6 +42,9 @@ exec_exists_cache = None # cache OS filecheck
 def initialize_connector(context):
 	"""Setup the global connector and load some initial values"""
 	global connector
+
+	prefs = util.get_user_preferences(context)
+	#if prefs.MCprep_exporter_type ==
 
 	if connector:
 		return
@@ -71,10 +75,10 @@ def world_saves_enum(self, context):
 	return world_saves
 
 
-def world_save_update(self, context):
-	"""Update after changing the world save file"""
-	initialize_connector(context)
-	connector.set_world(context.scene.mcprep_props.bridge_world)
+# def world_save_update(self, context):
+# 	"""Update after changing the world save file"""
+# 	initialize_connector(context)
+# 	connector.set_world(context.scene.mcprep_props.bridge_world)
 
 
 def exec_exists(exec_path):
@@ -117,6 +121,9 @@ def panel_draw(self, context):
 
 class MCPREP_OT_preview_import(bpy.types.Operator):
 	"""Load and place a preview image of the world to be imported."""
+	bl_idname = "mcprep.bridge_world_preview"
+	bl_label = "Preview World Import"
+	bl_options = {'REGISTER', 'UNDO'}
 
 class MCPREP_OT_import_world_from_objmeta(bpy.types.Operator, ImportHelper):
 	"""Loads a Minecraft world into Blender using same settings as referenced OBJ file exported from Mineways"""
@@ -135,7 +142,7 @@ class MCPREP_OT_import_world_from_objmeta(bpy.types.Operator, ImportHelper):
 	# 	default=True,
 	# 	options={'HIDDEN', 'SKIP_SAVE'})
 
-	track_function = "bridge_import"
+	track_function = "bridge_import_ref"
 	# track_param = ""
 	@tracking.report_error
 	def execute(self, context):
@@ -158,30 +165,73 @@ class MCPREP_OT_import_new_world(bpy.types.Operator):
 	bl_label = "Import World"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	# TODO: change to first xz, last xz, and lower height, max height
-	first_corner = bpy.props.IntVectorProperty(
-		name = "Corner 1",
-		description = "Select first corner of box of export",
+	world_center = bpy.props.IntVectorProperty(
+		name = "World center",
+		description = "Select the X-Z center of import from the Minecraft save",
+		default = (0, 0),
+		subtype = 'XZ',
+		size = 2,
+		)
+	import_center = bpy.props.IntVectorProperty(
+		name = "Import location",
+		description = "Move the center of the imported world to this location",
 		default = (0, 0, 0),
 		subtype = 'XYZ',
 		size = 3,
-		options={'HIDDEN'}
 		)
-	second_corner = bpy.props.IntVectorProperty(
-		name = "Corner 2",
-		description = "Select another corner of box of export",
-		default = (10, 100, 10),
-		subtype = 'XYZ',
-		size = 3,
-		options={'HIDDEN'}
+	import_height_offset = bpy.props.IntProperty(
+		name = "Height offset",
+		description = "Lower or raise the imported world by this amount",
+		default = 0,
+		)
+	block_radius = bpy.props.IntProperty(
+		name = "Block radius",
+		description = "Radius of export, from World Center to all directions around",
+		default = 100,
+		min = 1
+		)
+	ceiling = bpy.props.IntProperty(
+		name = "Height/ceiling",
+		description = "The top level of the world to import",
+		default = 256,
+		min = 1,
+		max = 512
+		)
+	floor = bpy.props.IntProperty(
+		name = "Depth/floor",
+		description = "The bottom level of the world to import",
+		default = 0,
+		min = 1,
+		max = 512
 		)
 	use_chunks = bpy.props.BoolProperty(
 		name = "Use chunks",
+		description = "Export the world with separate sections per chunk. In the background, each chunk is one export from Mineways",
 		default = True
 		)
 	chunk_size = bpy.props.IntProperty(
 		name = "Chunk size",
-		default = 16
+		description = "Custom size of chunks to import",
+		default = 16,
+		min = 8
+		)
+	separate_blocks = bpy.props.BoolProperty(
+		name = "Object per block",
+		description = "Create one object per each block in the world (warning: will be slow, make exports larger, and make Blender slower!!)",
+		default = False
+		)
+	prep_materials = bpy.props.BoolProperty(
+		name = "Prep materials",
+		default = True
+		)
+	animate_textures = bpy.props.BoolProperty(
+		name = "Animate textures",
+		default = False
+		)
+	single_texture = bpy.props.BoolProperty(
+		name = "Single texture file",
+		description = "Export the world with a single texture. Cannot use with animate textures",
+		default = False
 		)
 	skipUsage = bpy.props.BoolProperty(
 		default = False,
@@ -203,13 +253,13 @@ class MCPREP_OT_import_new_world(bpy.types.Operator):
 
 		col = self.layout.column(align=True)
 		col.scale_y = 0.8
-		col.label(text="Press OK to start bridging world.", icon='TRIA_DOWN')
+		col.label(text="Press OK to import/bridge world.", icon='TRIA_DOWN')
 		col.label(text="This will launch Mineways in background.")
 		col.label(text="The program may pop up or show dialogs,")
 		col.label(text="Blender will hang until Mineways closes or is closed.")
 
 	track_function = "bridge_import"
-	# track_param = ""
+	track_param = ""
 	@tracking.report_error
 	def execute(self, context):
 		initialize_connector(context)

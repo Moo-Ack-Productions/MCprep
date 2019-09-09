@@ -16,29 +16,22 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+"""Mineways Connector
+
+Pure-python wrapper for running and managing Mienways exports.
+"""
 
 import tempfile
 import os
 import platform
 from subprocess import Popen, PIPE
 
+from . import connector_common as common
+# import connector_common as common
 
-class MinewaysConnector(object):
+
+class MinewaysConnector(common.Common):
 	"""Pure python bridge class for calling and controlling Mineways sans UI"""
-
-	def __init__(self, exec_path, saves, open_ui=False):
-		self.exec_path = exec_path # path to mineways executable
-		self.saves_path = saves # path to folder of world saves (directories)
-		self.open_ui = open_ui # If true, opens UI; if not, minimized & closes
-		self.world = None  # folder name of save, child of saves_path above
-		self.layer = None  # one of Overworld, Nether, The End
-
-	def set_world(self, world, layer='Overworld'):
-		"""Set the world save and region."""
-		if layer not in ['Overworld', 'Nether', 'The End']:
-			raise Exception("layer")
-		self.world = world
-		self.layer = layer
 
 	def save_script(self, cmds):
 		"""Save script commands to temp file, returning the path"""
@@ -76,12 +69,6 @@ class MinewaysConnector(object):
 			return "Error occured while running command: "+str(err)
 		return [False, []]
 
-	def list_worlds(self):
-		"""Get the list of MC worlds on this machine"""
-		worlds = [fold for fold in os.listdir(self.saves_path)
-			if os.path.isdir(os.path.join(self.saves_path, fold))]
-		return worlds
-
 	def default_mcprep_obj(self):
 		"""Decent default commands to set for output"""
 		cmds = [
@@ -113,10 +100,6 @@ class MinewaysConnector(object):
 			"Melt snow blocks: no"
 		]
 		return cmds
-
-	def run_export_single(self, obj_path, coord_a, coord_b):
-		"""Run mineways export based on world name and coordinates."""
-		return self.run_export_multiple(obj_path, [[coord_a, coord_b]])
 
 	def run_export_multiple(self, export_path, coord_list):
 		"""Run mineways export based on world name and coordinates.

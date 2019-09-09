@@ -32,7 +32,7 @@ from . import addon_updater_ops
 from . import tracking
 from .materials.skin import update_skin_path
 from .materials.generate import update_mcprep_texturepack_path
-from .mineways_bridge import bridge
+# from .import_bridge import bridge
 
 # blender 2.7 vs 2.8 icon selections
 LOAD_FACTORY = 'LOOP_BACK' if util.bv28() else 'LOAD_FACTORY'
@@ -448,8 +448,8 @@ class McprepPreference(bpy.types.AddonPreferences):
 
 			# updater draw function
 			addon_updater_ops.update_settings_ui(self,context)
-
-		layout.label(text="Don't forget to save user preferences!")
+		if not util.bv28():
+			layout.label(text="Don't forget to save user preferences!")
 
 
 class MCPREP_PT_world_imports(bpy.types.Panel):
@@ -575,16 +575,16 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		addon_updater_ops.update_notice_box_ui(self, context)
 
 
-class MCPREP_PT_bridge(bpy.types.Panel):
-	"""MCprep panel for directly importing and reloading minecraft saves"""
-	bl_label = "World Bridge"
-	bl_space_type = "VIEW_3D"
-	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
-	bl_context = "objectmode"
-	bl_category = "MCprep"
+# class MCPREP_PT_bridge(bpy.types.Panel):
+# 	"""MCprep panel for directly importing and reloading minecraft saves"""
+# 	bl_label = "World Bridge"
+# 	bl_space_type = "VIEW_3D"
+# 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
+# 	bl_context = "objectmode"
+# 	bl_category = "MCprep"
 
-	def draw(self, context):
-		bridge.panel_draw(self, context)
+# 	def draw(self, context):
+# 		bridge.panel_draw(self, context)
 
 
 class MCPREP_PT_world_tools(bpy.types.Panel):
@@ -1049,20 +1049,10 @@ class McprepProps(bpy.types.PropertyGroup):
 		name = "show spawner settings",
 		description = "Show extra MCprep panel settings",
 		default = False)
-	use_reflections = bpy.props.BoolProperty(
-		name = "Use reflections",
-		description = "Allow appropriate materials to be rendered reflective",
-		default = True
-		)
 	combine_materials = bpy.props.BoolProperty(
 		name = "Combine materials",
 		description = "Consolidate duplciate materials & textures",
 		default = False
-		)
-	use_principled_shader = bpy.props.BoolProperty(
-		name = "Use Principled Shader",
-		description = "If available and using cycles, build materials using the principled shader",
-		default = True
 		)
 	autoFindMissingTextures = bpy.props.BoolProperty(
 		name = "Auto-find missing images",
@@ -1102,12 +1092,12 @@ class McprepProps(bpy.types.PropertyGroup):
 		description = "Folder containing Minecraft world saves directories, for the direct import bridge",
 		subtype = 'FILE_PATH',
 		default = save_dir_default)
-	bridge_world = bpy.props.EnumProperty(
-		name = "World Save",
-		description = "World to use for the direct import bridge",
-		items = bridge.world_saves_enum,
-		update = bridge.world_save_update
-	)
+	# bridge_world = bpy.props.EnumProperty(
+	# 	name = "World Save",
+	# 	description = "World to use for the direct import bridge",
+	# 	items = bridge.world_saves_enum,
+	# 	update = bridge.world_save_update
+	# )
 
 
 # -----------------------------------------------------------------------------
@@ -1123,7 +1113,7 @@ classes = (
 	MCPREP_MT_item_spawn,
 	MCPREP_MT_3dview_add,
 	MCPREP_PT_world_imports,
-	MCPREP_PT_bridge,
+	# MCPREP_PT_bridge,
 	MCPREP_PT_world_tools,
 	MCPREP_PT_skins,
 	MCPREP_PT_spawn

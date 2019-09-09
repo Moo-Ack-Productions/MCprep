@@ -137,21 +137,29 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 		# get list of selected objects
 		obj_list = context.selected_objects
 		if not obj_list:
-			self.report({'ERROR'}, "No objects selected")
+			if not self.skipUsage:
+				self.report({'ERROR'}, "No objects selected")
 			return {'CANCELLED'}
 
 		# gets the list of materials (without repetition) from selected
 		mat_list = util.materialsFromObj(obj_list)
 		if not mat_list:
-			self.report({'ERROR'}, "No materials found on selected objects")
+			if not self.skipUsage:
+				self.report({'ERROR'}, "No materials found on selected objects")
 			return {'CANCELLED'}
 
 		# check if linked material exists
 		engine = context.scene.render.engine
 		count = 0
+		count_lib_skipped = 0
 
-		# TODO: run differently if a linked material
 		for mat in mat_list:
+			if not mat:
+				conf.log("During prep, found null material:"+str(mat), vv_only=True)
+				continue
+			elif mat.library:
+				count_lib_skipped += 1
+				continue
 			passes = generate.get_textures(mat)
 			if not self.useExtraMaps:
 				for pass_name in passes:
@@ -179,14 +187,24 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 					sequences.animate_single_material(
 						mat, context.scene.render.engine)
 			else:
-				self.report({'ERROR'},"Only blender internal or cycles supported")
+				self.report({'ERROR'}, "Only Blender Internal, Cycles, or Eevee supported")
 				return {'CANCELLED'}
 
 		if self.combineMaterials is True:
 			bpy.ops.mcprep.combine_materials(selection_only=True, skipUsage=True)
 		if self.improveUiSettings:
 			bpy.ops.mcprep.improve_ui()
-		self.report({"INFO"},"Modified "+str(count)+" materials")
+
+		if not self.skipUsage:
+			pass # don't report if a meta-call
+		elif count_lib_skipped > 0:
+			self.report({"INFO"},
+				"Modified {} materials, skipped {} linked ones.".format(
+					count, count_lib_skipped))
+		elif count >0:
+			self.report({"INFO"},"Modified "+str(count)+" materials")
+		else:
+			self.report({"ERROR"}, "Nothing modified, be sure you selected objects with existing materials!")
 		self.track_param = context.scene.render.engine
 		self.track_exporter = generate.detect_form(mat_list)
 		return {'FINISHED'}
@@ -539,7 +557,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 		removeold = True
 
 		if self.selection_only==True and len(context.selected_objects)==0:
-			self.report({'ERROR',"Either turn selection only off or select objects with materials/images"})
+			self.report({'ERROR'},"Either turn selection only off or select objects with materials/images")
 			return {'CANCELLED'}
 
 		# 2-level structure to hold base name and all

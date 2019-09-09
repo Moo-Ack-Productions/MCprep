@@ -295,18 +295,20 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 
 		# is not great
 		context.scene.world.light_settings.use_ambient_occlusion = False
-		context.scene.cycles.caustics_reflective = False
-		context.scene.cycles.caustics_refractive = False
+		if hasattr(context.scene, "cycles"):
+			context.scene.cycles.caustics_reflective = False
+			context.scene.cycles.caustics_refractive = False
 
-		# higher = faster, though potentially noisier; this is a good balance
-		context.scene.cycles.light_sampling_threshold = 0.1
-		context.scene.cycles.max_bounces = 8
+			# higher = faster, though potentially noisier; this is a good balance
+			context.scene.cycles.light_sampling_threshold = 0.1
+			context.scene.cycles.max_bounces = 8
+			bpy.context.scene.cycles.ao_bounces = 2
+			bpy.context.scene.cycles.ao_bounces_render = 2
 
 		# Renders faster at a (minor?) cost of the image output
 		# TODO: given the output change, consider make a bool toggle for this
 		bpy.context.scene.render.use_simplify = True
-		bpy.context.scene.cycles.ao_bounces = 2
-		bpy.context.scene.cycles.ao_bounces_render = 2
+
 
 	def prep_world_internal(self, context):
 		# check for any suns with the sky setting on;
@@ -402,6 +404,10 @@ class MCPREP_OT_add_mc_world(bpy.types.Operator):
 	track_param = None
 	@tracking.report_error
 	def execute(self, context):
+		# must be in object mode
+		if context.mode != "OBJECT":
+			bpy.ops.object.mode_set(mode="OBJECT")
+
 		new_objs = []
 		if self.remove_existing_suns:
 			for lamp in context.scene.objects:
@@ -519,11 +525,7 @@ class MCPREP_OT_add_mc_world(bpy.types.Operator):
 		obj.rotation_euler[1] = 0.303687
 		obj.rotation_euler[1] = 0.527089
 		util.obj_link_scene(obj, context)
-		if hasattr(context.scene, "update"):
-			# not avaialble in 2.8
-			context.scene.update()
-		elif hasattr(context, "view_layer"):
-			context.view_layer.update()
+		util.scene_update(context)
 		if hasattr(obj, "use_contact_shadow"):
 			obj.use_contact_shadow = True
 		return obj
@@ -535,7 +537,10 @@ class MCPREP_OT_add_mc_world(bpy.types.Operator):
 
 		global time_obj_cache
 		if time_obj_cache:
-			util.obj_unlink_remove(time_obj_cache, True, context)
+			try:
+				util.obj_unlink_remove(time_obj_cache, True, context)
+			except:
+				print("Error, could not unlink time_obj_cache "+str(time_obj_cache))
 
 		time_obj_cache = None # force reset to use newer cache object
 

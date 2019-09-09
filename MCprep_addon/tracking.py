@@ -324,7 +324,10 @@ class Singleton_tracking(object):
 		else:
 			resp = {}
 		if self._verbose:
-			print(self._addon +" response (requests lib): "+str(resp))
+			if self._dev:
+				print(self._addon+" dev response (requests lib): "+str(resp))
+			else:
+				print(self._addon+" response (requests lib): "+str(resp))
 		return resp
 
 	def _raw_request_mod_http(self, method, path, payload):
