@@ -244,27 +244,40 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 
 	@staticmethod
 	def attemptScriptLoad(path):
-		# search for script that matches name of the blend file
-		# should also look into the blend if appropriate
+		"""Search for script that matches name of the blend file"""
+
+		# TODO: should also look into the blend if appropriate
+		# if the script already exists in blender, assume can reuse this
 		if not path[-5:]=="blend":
 			return
 		path = path[:-5]+"py"
+
+		if os.path.basename(path) in [txt.name for txt in bpy.data.texts]:
+			conf.log("Script {} already imported, not importing a new one".format(
+				os.path.basename(path)))
+			return
+
 		if not os.path.isfile(path):
 			return # no script found
 		conf.log("Script found, loading and running it")
-		bpy.ops.text.open(filepath=path, internal=True)
-		text = bpy.data.texts[path.split("/")[-1]]
-		ctx = bpy.context.copy()
-		ctx['edit_text'] = text
+		text = bpy.data.texts.load(filepath=path, internal=True)
+		try:
+			ctx = bpy.context.copy()
+			ctx['edit_text'] = text
+		except Exception as err:
+			print("MCprep: Error trying to create context to run script in:")
+			print(str(err))
 		try:
 			bpy.ops.text.run_script(ctx)
+			ctx.use_fake_user = True
+			ctx.use_module = True
 		except:
 			conf.log("Failed to run the script, not registering")
 			return
 		conf.log("Ran the script")
 		text.use_module = True
 
-	def setRootLocation(self,context):
+	def setRootLocation(self, context):
 		pass
 		# should be the consolidated code for
 		# both linking and appending below, .. they branched right now.
@@ -306,7 +319,7 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 		# if there is a script with this rig, attempt to run it
 		self.attemptScriptLoad(path)
 
-		if self.auto_prep and not self.toLink:
+		if self.auto_prep and not self.toLink and context.selected_objects:
 			bpy.ops.mcprep.prep_materials(skipUsage=True)
 
 		self.track_param = self.mcmob_type.split(":/:")[1]
@@ -441,7 +454,7 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 
 		path = bpy.path.abspath(path)
 		sel = bpy.context.selected_objects # capture state before, technically also copy
-		for ob in context.scene.objects:
+		for ob in util.get_objects_conext(context):
 			util.select_set(ob, False)
 		# consider taking pre-exisitng group names and giving them a temp name to name back at the end
 
@@ -519,11 +532,14 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 			try:
 				bpy.ops.object.mode_set(mode='POSE')
 			except Exception as e:
-				self.report({'ERROR'},"Exception occured, see logs")
+				self.report({'ERROR'},"Failed to enter pose mode, see logs")
+				print("Failed to enter pose mode, see logs")
 				print("Exception: ",str(e))
 				print(bpy.context.object)
 				print(rig_obj)
+				print("Mode: ", context.mode)
 				print("-- end error context printout --")
+
 			posemode = context.mode == 'POSE'
 
 			if self.clearPose:

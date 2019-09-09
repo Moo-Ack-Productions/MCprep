@@ -186,7 +186,10 @@ def spawn_item_from_filepath(context, path, max_pixels, thickness, threshold,
 			img_y = int((face.center[1]*height + h_even_add)/2)
 
 			# now verify this index of image is below alpha threshold
-			alpha = alpha_faces[img_y*height + img_x]
+			if len(alpha_faces) > img_y*height + img_x:
+				alpha = alpha_faces[img_y*height + img_x]
+			else: # this shouldn't occur, but reports were filed
+				continue
 			if alpha < threshold:
 				face.select = True
 

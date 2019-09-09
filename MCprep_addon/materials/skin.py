@@ -105,11 +105,13 @@ def loadSkinFile(self, context, filepath, new_material=False):
 		self.report({'ERROR'}, "Failed to properly load image")
 		return 1
 
-	mats = getMatsFromSelected(context.selected_objects,new_material)
-	if len(mats)==0:
+	mats, skipped = getMatsFromSelected(context.selected_objects, new_material)
+	if not mats:
 		self.report({'ERROR'}, "No materials found to update")
 		# special message for library linking?
 		return 1
+	if skipped>0:
+		self.report({'WARNING'}, "Skinswap skipped {} linked objects".format(skipped))
 
 	status = generate.assert_textures_on_materials(image, mats)
 	if status is False:
@@ -214,23 +216,29 @@ def convert_skin_layout(image_file):
 		return False
 
 
-def getMatsFromSelected(selected,new_material=False):
-	"""Get materials, and if new material provided, ensure material slot
-	is added"""
-	obj_list = []
+def getMatsFromSelected(selected, new_material=False):
+	"""Get materials; if new material provided, ensure material slot is added
 
+	Used by skin swapping, to either update existing material or create new one
+	"""
+	obj_list = []
 	for ob in selected:
 		if ob.type == 'MESH':
 			obj_list.append(ob)
 		elif ob.type == 'ARMATURE':
 			for ch in ob.children:
-				if ch.type == 'MESH': obj_list.append(ch)
+				if ch.type == 'MESH':obj_list.append(ch)
 		else:
 			continue
 
 	mat_list = []
 	mat_ret = []
+	linked_objs = 0
 	for ob in obj_list:
+		if ob.data.library:
+			conf.log("Library object, skipping")
+			linked_objs += 1
+			continue
 		if new_material is False:
 			for slot in ob.material_slots:
 				if slot.material is None: continue
@@ -246,7 +254,7 @@ def getMatsFromSelected(selected,new_material=False):
 					slot.material = new_mat
 				else:
 					# if already created, re-assign with new material
-					slot.material = mat_ret[ mat_list.index(slot.material) ]
+					slot.material = mat_ret[mat_list.index(slot.material)]
 
 	# if internal, also ensure textures are made unique per new mat
 	engine = bpy.context.scene.render.engine
@@ -257,7 +265,7 @@ def getMatsFromSelected(selected,new_material=False):
 					continue
 				tx.texture = tx.texture.copy()
 
-	return mat_ret
+	return mat_ret, linked_objs
 
 
 def setUVimage(objs, image):

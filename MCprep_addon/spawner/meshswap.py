@@ -101,6 +101,8 @@ def updateMeshswapList(context):
 	cache = get_meshswap_cache(context)
 	prefix = "Group/" if hasattr(bpy.data, "groups") else "Collection/"
 	for name in cache.get("groups"):
+		if not name:
+			continue
 		if util.nameGeneralize(name).lower() in temp_meshswap_list:
 			continue
 		if util.nameGeneralize(name).lower() == "Rigidbodyworld".lower():
@@ -238,7 +240,7 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 				return {'CANCELLED'}
 
 			# now finally add the group instance
-			for obj in context.scene.objects:
+			for obj in util.get_objects_conext(context):
 				util.select_set(obj, False)
 			ob = util.addGroupInstance(group.name, self.location)
 			if self.snapping=="center":
@@ -328,7 +330,7 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 		"""Prep the imported collection, ran only if newly imported (not cached)"""
 
 		# Group method first, move append to according layer
-		for ob in context.scene.objects:
+		for ob in util.get_objects_conext(context):
 			util.select_set(ob, False)
 
 		layers = [False]*20
@@ -358,7 +360,7 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 			for ob in objlist:
 				util.select_set(ob, True)
 			bpy.ops.mcprep.prep_materials(skipUsage=True) # if cycles
-			for ob in context.scene.objects:
+			for ob in util.get_objects_conext(context):
 				util.select_set(ob, False)
 
 		if hasattr(context.scene, "layers"): # 2.7 only
@@ -930,9 +932,10 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				runcount +=1
 				if (self.counterObject > self.countMax):
 					self.counterObject = 0
-					#below technically a "hack", should use: bpy.data.scenes[0].update()
 					if not util.bv28():
 						bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+					elif hasattr(context, "view_layer"):
+						context.view_layer.update() # but does not redraw ui
 
 				loc = util.matmul(swap.matrix_world, mathutils.Vector(set))
 
@@ -1028,7 +1031,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				util.set_active_object(context, dupedObj[0])
 				for d in dupedObj:
 					if d.type != 'MESH':
-						print("Skipping non-mesh:", d)
+						# conf.log("Skipping non-mesh:", d)
 						continue
 					util.select_set(d, True)
 				if context.mode != "OBJECT":
@@ -1079,6 +1082,8 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 					continue
 			util.select_set(d, True)
 
+		# attempt to hide the reference group in 2.8, but creates odd effects
+		# such as group instances not showing correctly in viewport (hidden)
 		# if util.bv28():
 			# for grp in new_groups:
 				# util.hide_viewport(grp, True)

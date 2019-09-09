@@ -336,7 +336,7 @@ def set_sequence_to_texnode(node, image_path):
 
 	Note: this also works as-is where "node" is actually a texture block
 	"""
-
+	conf.log("Sequence exporting "+os.path.basename(image_path), vv_only=True)
 	image_path = bpy.path.abspath(image_path)
 	base_dir = os.path.dirname(image_path)
 	first_img = os.path.splitext(os.path.basename(image_path))[0]
