@@ -195,7 +195,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 		if self.improveUiSettings:
 			bpy.ops.mcprep.improve_ui()
 
-		if not self.skipUsage:
+		if self.skipUsage is True:
 			pass # don't report if a meta-call
 		elif count_lib_skipped > 0:
 			self.report({"INFO"},
