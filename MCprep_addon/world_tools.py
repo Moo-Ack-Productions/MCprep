@@ -251,18 +251,20 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 			world_links.new(background.outputs["Background"], output.inputs[0])
 
 		context.scene.world.light_settings.use_ambient_occlusion = False
-		context.scene.cycles.caustics_reflective = False
-		context.scene.cycles.caustics_refractive = False
 
-		# higher = faster, though potentially noisier; this is a good balance
-		context.scene.cycles.light_sampling_threshold = 0.1
-		context.scene.cycles.max_bounces = 8
+		if hasattr(context.scene, "cycles"):
+			context.scene.cycles.caustics_reflective = False
+			context.scene.cycles.caustics_refractive = False
 
-		# Renders faster at a (minor?) cost of the image output
-		# TODO: given the output change, consider make a bool toggle for this
-		bpy.context.scene.render.use_simplify = True
-		bpy.context.scene.cycles.ao_bounces = 2
-		bpy.context.scene.cycles.ao_bounces_render = 2
+			# higher = faster, though potentially noisier; this is a good balance
+			context.scene.cycles.light_sampling_threshold = 0.1
+			context.scene.cycles.max_bounces = 8
+
+			# Renders faster at a (minor?) cost of the image output
+			# TODO: given the output change, consider adding a bool toggle
+			context.scene.render.use_simplify = True
+			context.scene.cycles.ao_bounces = 2
+			context.scene.cycles.ao_bounces_render = 2
 
 	def prep_world_eevee(self, context):
 		"""Default world settings for Eevee rendering"""
@@ -302,8 +304,8 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 			# higher = faster, though potentially noisier; this is a good balance
 			context.scene.cycles.light_sampling_threshold = 0.1
 			context.scene.cycles.max_bounces = 8
-			bpy.context.scene.cycles.ao_bounces = 2
-			bpy.context.scene.cycles.ao_bounces_render = 2
+			context.scene.cycles.ao_bounces = 2
+			context.scene.cycles.ao_bounces_render = 2
 
 		# Renders faster at a (minor?) cost of the image output
 		# TODO: given the output change, consider make a bool toggle for this

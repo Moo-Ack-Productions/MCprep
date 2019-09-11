@@ -909,7 +909,8 @@ def matgen_cycles_principled(mat, passes, use_reflections, only_solid):
 		nodeTexNorm.image.colorspace_settings.name = 'Non-Color'
 
 	# apply additional settings
-	mat.cycles.sample_as_light = False
+	if hasattr(mat, "cycles"):
+		mat.cycles.sample_as_light = False
 	addToAlpha = None
 	if use_reflections and checklist(canon, "reflective"):
 		principled.inputs[5].default_value = 0.5  # spec
@@ -1114,7 +1115,8 @@ def matgen_cycles_original(mat, passes, use_reflections, only_solid):
 	nodeNormal.inputs[0].default_value = 0.1 # tone down normal maps
 
 	# the above are all default nodes. Now see if in specific lists
-	mat.cycles.sample_as_light = False
+	if hasattr(mat, "cycles"):
+		mat.cycles.sample_as_light = False
 	if use_reflections and checklist(canon, "reflective"):
 		nodeMix2.inputs[0].default_value = 0.3  # mix factor
 		nodeGloss.inputs[1].default_value = 0.0 # roughness, used to be 0.05
@@ -1235,7 +1237,8 @@ def matgen_cycles_emit(mat, passes):
 	nodeFalloff.inputs[0].default_value = 30  # controls actual light emitted
 	nodeFalloff.inputs[1].default_value = 0.03
 
-	mat.cycles.sample_as_light = True
+	if hasattr(mat, "cycles"):
+		mat.cycles.sample_as_light = True
 
 	# reapply animation data if any to generated nodes
 	apply_texture_animation_pass_settings(mat, animated_data)
