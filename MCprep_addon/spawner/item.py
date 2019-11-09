@@ -129,6 +129,9 @@ def spawn_item_from_filepath(context, path, max_pixels, thickness, threshold,
 	width = image.size[0] # ie columns
 	height = image.size[1] # ie rows
 
+	if width == 0 or height == 0:
+		return None, "Image has invalid 0-size dimension"
+
 	w_even_add = (-0.5 if width%2==0 else 0) + width
 	h_even_add = (-0.5 if height%2==0 else 0) + height
 
@@ -157,6 +160,10 @@ def spawn_item_from_filepath(context, path, max_pixels, thickness, threshold,
 			calc_uvs=True,
 			location=(0,0,0))
 	itm_obj = context.object
+
+	if not itm_obj:
+		print("Error, could not create the item primitive object")
+		return None, "Could not create the item primitive object"
 
 	# scale the object to match ratio, keeping max dimension as set above
 	if width < height:

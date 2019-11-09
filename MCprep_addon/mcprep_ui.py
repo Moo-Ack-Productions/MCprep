@@ -497,9 +497,10 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		col.operator("mcprep.prep_materials", text="Prep Materials")
 		p = col.operator("mcprep.swap_texture_pack")
 		p.filepath = context.scene.mcprep_texturepack_path
-		col.operator("mcprep.meshswap", text="Mesh Swap")
-		if addon_prefs.MCprep_exporter_type == "(choose)":
-			col.label(text="Select exporter!",icon='ERROR')
+		if context.mode == "OBJECT":
+			col.operator("mcprep.meshswap", text="Mesh Swap")
+			if addon_prefs.MCprep_exporter_type == "(choose)":
+				col.label(text="Select exporter!",icon='ERROR')
 		if context.mode == 'EDIT_MESH':
 			col.operator("mcprep.scale_uv")
 			col.operator("mcprep.select_alpha_faces")

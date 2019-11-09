@@ -482,14 +482,20 @@ class MCPREP_OT_add_mc_world(bpy.types.Operator):
 			resource = blendfile +"/Object"
 
 			util.bAppendLink(resource, "MoonMesh", False)
-			moonmesh = context.selected_objects[0]
-			moonmesh.parent = get_time_object()
-			new_objs.append(moonmesh)
+			if context.selected_objects:
+				moonmesh = context.selected_objects[0]
+				moonmesh.parent = get_time_object()
+				new_objs.append(moonmesh)
+			else:
+				self.report({'WARNING'}, "Could not add moon")
 
 			util.bAppendLink(resource, "SunMesh", False)
-			sunmesh = context.selected_objects[0]
-			sunmesh.parent = get_time_object()
-			new_objs.append(sunmesh)
+			if context.selected_objects:
+				sunmesh = context.selected_objects[0]
+				sunmesh.parent = get_time_object()
+				new_objs.append(sunmesh)
+			else:
+				self.report({'WARNING'}, "Could not add sun")
 
 		if prev_world:
 			bpy.data.worlds.remove(prev_world)

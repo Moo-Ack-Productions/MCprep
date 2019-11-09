@@ -974,8 +974,12 @@ def matgen_cycles_principled(mat, passes, use_reflections, only_solid):
 
 			# noisy, but workable for partial trans; bad for materials with
 			# no partial trans (makes view-through all somewhat noisy)
-			mat.blend_method = 'HASHED'
-			mat.shadow_method = 'HASHED'
+			# Note: placed with hasattr to reduce bugs, seemingly only on old
+			# 2.80 build
+			if hasattr(mat, "blend_method"):
+				mat.blend_method = 'HASHED'
+			if hasattr(mat, "shadow_method"):
+				mat.shadow_method = 'HASHED'
 
 			# best if there is no partial transparency
 			# material.blend_method = 'CLIP' for no partial transparency

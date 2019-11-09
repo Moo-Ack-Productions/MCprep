@@ -320,7 +320,10 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 		self.attemptScriptLoad(path)
 
 		if self.auto_prep and not self.toLink and context.selected_objects:
-			bpy.ops.mcprep.prep_materials(skipUsage=True)
+			try:
+				bpy.ops.mcprep.prep_materials(skipUsage=True)
+			except:
+				self.report({"WARNING"}, "Failed to prep materials on mob load")
 
 		self.track_param = self.mcmob_type.split(":/:")[1]
 		return {'FINISHED'}
