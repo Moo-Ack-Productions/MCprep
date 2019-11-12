@@ -33,6 +33,11 @@ if "bpy" in locals():
 	importlib.reload(item)
 	# importlib.reload(bridge)
 	importlib.reload(mcprep_ui)
+	importlib.reload(util)
+	importlib.reload(tracking)
+	importlib.reload(addon_updater)
+	importlib.reload(addon_updater_ops)
+	importlib.reload(generate)
 
 	if conf.v:
 		print("Reload, verbose is enabled")
@@ -45,12 +50,17 @@ else:
 		mcprep_ui,
 		util_operators,
 		world_tools,
+		addon_updater_ops,
+		util,
+		tracking,
+		addon_updater,
 		addon_updater_ops
 	)
 	from .materials import(
 		prep,
 		skin,
-		sequences
+		sequences,
+		generate
 		)
 	from .spawner import(
 		spawn_util,
@@ -74,7 +84,7 @@ module_list = (
 	item,
 	world_tools,
 	# bridge,
-	mcprep_ui
+	mcprep_ui,
 	)
 
 

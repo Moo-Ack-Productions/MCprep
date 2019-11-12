@@ -180,13 +180,11 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 		default=True,
 		description="Automatically make groups real after placement")
 
-
 	# toLink = bpy.props.BoolProperty(
 	# 	name = "Library Link mob",
 	# 	description = "Library link instead of append the group",
 	# 	default = False
 	# 	)
-
 	# option to force load from library instead of reuse local group?
 
 	@classmethod
@@ -229,7 +227,11 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 			importedObj["MCprep_noSwap"] = "True"
 			importedObj.location = self.location
 			if self.prep_materials is True:
-				bpy.ops.mcprep.prep_materials(skipUsage=True) # if cycles
+				try:
+					bpy.ops.mcprep.prep_materials(skipUsage=True) # if cycles
+				except:
+					print("Could not prep materials")
+					self.report({"WARNING"}, "Could not prep materials")
 		else:
 			if not use_cache:
 				group = self.prep_collection(context, block, pre_groups)
@@ -359,7 +361,10 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 		if self.prep_materials is True:
 			for ob in objlist:
 				util.select_set(ob, True)
-			bpy.ops.mcprep.prep_materials(skipUsage=True) # if cycles
+			try:
+				bpy.ops.mcprep.prep_materials(skipUsage=True) # if cycles
+			except:
+				print("Could not prep materials")
 			for ob in util.get_objects_conext(context):
 				util.select_set(ob, False)
 
@@ -367,7 +372,6 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 			for obj in objlist:
 				obj.layers = layers
 		return group
-
 
 
 class MCPREP_OT_reload_meshswap(bpy.types.Operator):
@@ -451,7 +455,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 	@classmethod
 	def poll(cls, context):
 		addon_prefs = util.get_user_preferences(context)
-		return addon_prefs.MCprep_exporter_type != "(choose)"
+		return addon_prefs.MCprep_exporter_type != "(choose)" and context.mode == 'OBJECT'
 
 	def invoke(self, context, event):
 		return context.window_manager.invoke_props_dialog(
@@ -725,8 +729,13 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		conf.log("Using scale: {}".format(gScale))
 		conf.log(objList)
 
+		# setup the progress bar
+		denom = len(objList)
+		bpy.context.window_manager.progress_begin(0, 100)
+
 		#primary loop, for each OBJECT needing swapping
-		for swap in objList:
+		for iter_index, swap in enumerate(objList):
+			bpy.context.window_manager.progress_update(iter_index/denom)
 			swapGen = util.nameGeneralize(swap.name)
 			conf.log("Simplified name: {x}".format(x=swapGen))
 			swapProps = self.checkExternal(context, swapGen) # IMPORTS, gets lists properties, etc
@@ -1042,7 +1051,10 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 					if obtemp in selList:
 						selList.pop(selList.index(obtemp))
 				bpy.ops.object.join()
-				selList.append(context.selected_objects[0])
+				if context.selected_objects:
+					selList.append(context.selected_objects[0])
+				else:
+					conf.log("No selected objects after join")
 
 			removeList.append(swap)
 
@@ -1088,6 +1100,9 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			# for grp in new_groups:
 				# util.hide_viewport(grp, True)
 				# grp.hide_render = True
+
+		# end progress bar, end of primary section
+		bpy.context.window_manager.progress_end()
 
 		if runcount==0:
 			self.report({'ERROR'}, "Nothing swapped, likely no materials of selected objects match the meshswap file objects/groups")

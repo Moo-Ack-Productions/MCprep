@@ -427,6 +427,11 @@ def set_cycles_texture(image, material, extra_passes=False):
 			else:
 				node.mute = True
 				node.hide = True
+
+				# remove the link between normal map and principled shader
+				# normal_map = node.outputs[0].links[0].to_node
+				# principled = ...
+
 		elif "MCPREP_specular" in node:
 			if "specular" in img_sets:
 				new_img = util.loadTexture(img_sets["specular"])
@@ -436,6 +441,7 @@ def set_cycles_texture(image, material, extra_passes=False):
 			else:
 				node.mute = True
 				node.hide = True
+
 		elif node.type == "TEX_IMAGE":
 			# assume all unlabeled texture nodes should be the diffuse
 			node["MCPREP_diffuse"] = True  # annotate node for future reference
@@ -909,7 +915,8 @@ def matgen_cycles_principled(mat, passes, use_reflections, only_solid):
 		nodeTexNorm.image.colorspace_settings.name = 'Non-Color'
 
 	# apply additional settings
-	mat.cycles.sample_as_light = False
+	if hasattr(mat, "cycles"):
+		mat.cycles.sample_as_light = False
 	addToAlpha = None
 	if use_reflections and checklist(canon, "reflective"):
 		principled.inputs[5].default_value = 0.5  # spec
@@ -973,8 +980,12 @@ def matgen_cycles_principled(mat, passes, use_reflections, only_solid):
 
 			# noisy, but workable for partial trans; bad for materials with
 			# no partial trans (makes view-through all somewhat noisy)
-			mat.blend_method = 'HASHED'
-			mat.shadow_method = 'HASHED'
+			# Note: placed with hasattr to reduce bugs, seemingly only on old
+			# 2.80 build
+			if hasattr(mat, "blend_method"):
+				mat.blend_method = 'HASHED'
+			if hasattr(mat, "shadow_method"):
+				mat.shadow_method = 'HASHED'
 
 			# best if there is no partial transparency
 			# material.blend_method = 'CLIP' for no partial transparency
@@ -1114,7 +1125,8 @@ def matgen_cycles_original(mat, passes, use_reflections, only_solid):
 	nodeNormal.inputs[0].default_value = 0.1 # tone down normal maps
 
 	# the above are all default nodes. Now see if in specific lists
-	mat.cycles.sample_as_light = False
+	if hasattr(mat, "cycles"):
+		mat.cycles.sample_as_light = False
 	if use_reflections and checklist(canon, "reflective"):
 		nodeMix2.inputs[0].default_value = 0.3  # mix factor
 		nodeGloss.inputs[1].default_value = 0.0 # roughness, used to be 0.05
@@ -1235,7 +1247,8 @@ def matgen_cycles_emit(mat, passes):
 	nodeFalloff.inputs[0].default_value = 30  # controls actual light emitted
 	nodeFalloff.inputs[1].default_value = 0.03
 
-	mat.cycles.sample_as_light = True
+	if hasattr(mat, "cycles"):
+		mat.cycles.sample_as_light = True
 
 	# reapply animation data if any to generated nodes
 	apply_texture_animation_pass_settings(mat, animated_data)

@@ -180,10 +180,14 @@ class MCPREP_OT_prep_material_legacy(bpy.types.Operator):
 	@tracking.report_error
 	def execute(self, context):
 		print("Using legacy operator call for MCprep materials, move to use bpy.ops.mcprep.prep_materials")
-		bpy.ops.mcprep.prep_materials(
-			useReflections = self.useReflections,
-			combineMaterials = self.combineMaterials
-		)
+		try:
+			bpy.ops.mcprep.prep_materials(
+				useReflections = self.useReflections,
+				combineMaterials = self.combineMaterials
+			)
+		except:
+			self.report({"ERROR"}, "Legacy Prep Materials failed; use new operator name 'mcprep.prep_materials' going forward and to get more info")
+			return {'CANCELLED'}
 		return {'FINISHED'}
 
 

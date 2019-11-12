@@ -563,7 +563,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 		# 2-level structure to hold base name and all
 		# images blocks with the same base
 		if (bpy.app.version[0]>=2 and bpy.app.version[1] >= 78) == False:
-			self.report({'ERROR',"Must use blender 2.78 or higher to use this operator"})
+			self.report({'ERROR'}, "Must use blender 2.78 or higher to use this operator")
 			return {'CANCELLED'}
 
 		if self.selection_only==True:

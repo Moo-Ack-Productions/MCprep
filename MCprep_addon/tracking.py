@@ -41,7 +41,7 @@ try:
 	from datetime import datetime
 except Exception as err:
 	print("[MCPREP Error] Failed tracker module load, invalid import module:")
-	print('\t'+err)
+	print('\t'+str(err))
 	VALID_IMPORT = False
 
 
@@ -84,7 +84,7 @@ class Singleton_tracking(object):
 		self.json = {}
 		self._httpclient_fallback = None # set to True/False after first req
 		self._last_request = {} # used to debounce sequential requests
-		self._debounce = 3 # seconds to avoid duplicative requests
+		self._debounce = 5 # seconds to avoid duplicative requests
 
 
 	# -------------------------------------------------------------------------
