@@ -427,6 +427,11 @@ def set_cycles_texture(image, material, extra_passes=False):
 			else:
 				node.mute = True
 				node.hide = True
+
+				# remove the link between normal map and principled shader
+				# normal_map = node.outputs[0].links[0].to_node
+				# principled = ...
+
 		elif "MCPREP_specular" in node:
 			if "specular" in img_sets:
 				new_img = util.loadTexture(img_sets["specular"])
@@ -436,6 +441,7 @@ def set_cycles_texture(image, material, extra_passes=False):
 			else:
 				node.mute = True
 				node.hide = True
+
 		elif node.type == "TEX_IMAGE":
 			# assume all unlabeled texture nodes should be the diffuse
 			node["MCPREP_diffuse"] = True  # annotate node for future reference

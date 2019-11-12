@@ -73,8 +73,9 @@ def update_rig_list(context):
 
 			for name in getattr(data_from, get_attr):
 				# special cases, skip some groups
-				if name.lower() == "Rigidbodyworld".lower():
+				if name.lower() in ("rigidbodyworld", "collection"):
 					continue
+
 				description = "Spawn one {x} rig".format(x=name)
 				mob = context.scene.mcprep_props.mob_list_all.add()
 				mob.description = description # add in non all-list
