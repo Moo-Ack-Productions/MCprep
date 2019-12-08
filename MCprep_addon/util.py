@@ -245,7 +245,7 @@ def open_program(executable):
 	if not os.path.isfile(executable) :
 		if not os.path.isdir(executable):
 			return -1
-		elif ".app" not in executable:
+		elif not executable.lower().endswith(".app"):
 			return -1
 
 	# try to open with wine, if available
@@ -253,31 +253,39 @@ def open_program(executable):
 	if executable.lower().endswith('.exe') and osx_or_linux:
 		p = Popen(['which', 'wine'], stdin=PIPE, stdout=PIPE, stderr=PIPE)
 		stdout, err = p.communicate(b"")
-		if stdout and not err:
+		has_wine = stdout and not err
+
+		if has_wine:
 			# wine is installed; this will hang blender until mineways closes.
 			p = Popen(['wine', executable], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-			stdout, err = p.communicate(b"")
-			for line in iter(p.stdout.readline, ''):
-				# will print lines as they come, instead of just at end
-				print(stdout)
+			conf.log("Opening via wine + direct executable, will hang blender till closed")
 
-	try:  # first attempt to use blender's built-in method
+			# communicating with process makes it hang, so trust it works
+			# stdout, err = p.communicate(b"")
+			# for line in iter(p.stdout.readline, ''):
+			# 	# will print lines as they come, instead of just at end
+			# 	print(stdout)
+			return 0
+
+	try:  # attempt to use blender's built-in method
 		res = bpy.ops.wm.path_open(filepath=executable)
 		if res == {"FINISHED"}:
+			conf.log("Opened using built in path opener")
 			return 0
+		else:
+			conf.log("Did not get finished response: ", str(res))
 	except:
+		conf.log("failed to open using builtin mehtod")
 		pass
 
-	# for mac, if folder, check that it has .app otherwise throw -1
-	# (right now says will open even if just folder!!)
-
-	p = Popen(['open', executable], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-	stdout, err = p.communicate(b"")
-
-	if err != b"":
-		return "Error occured while trying to open Sync: "+str(err)
-
-	return 0
+	if platform.system() == "Darwin" and executable.lower().endswith(".app"):
+		# for mac, if folder, check that it has .app otherwise throw -1
+		# (right now says will open even if just folder!!)
+		p = Popen(['open', executable], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+		stdout, err = p.communicate(b"")
+		if err != b"":
+			return "Error occured while trying to open executable: "+str(err)
+	return "Failed to open executable"
 
 
 def open_folder_crossplatform(folder):
