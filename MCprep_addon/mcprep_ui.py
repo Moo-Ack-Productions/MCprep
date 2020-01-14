@@ -488,8 +488,13 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			row.operator("mcprep.open_jmc2obj")
 
 		wpath = addon_prefs.world_obj_path
-		col.operator("import_scene.obj",
-			text="OBJ world import").filepath = wpath
+		if util.bv28():
+			# custom operator for splitting via mats after importing
+			col.operator("mcprep.import_world_split",
+				text="OBJ world import").filepath = wpath
+		else:
+			col.operator("import_scene.obj",
+				text="OBJ world import").filepath = wpath
 
 		split = layout.split()
 		col = split.column(align=True)

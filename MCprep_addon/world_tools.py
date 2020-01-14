@@ -21,6 +21,7 @@ import random
 import traceback
 
 import bpy
+from bpy_extras.io_utils import ImportHelper
 
 from . import conf
 from . import util
@@ -200,6 +201,44 @@ class MCPREP_OT_install_mineways(bpy.types.Operator):
 # -----------------------------------------------------------------------------
 # Additional world tools
 # -----------------------------------------------------------------------------
+
+
+class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
+	"""Imports an obj file, and auto splits it by material"""
+	bl_idname = "mcprep.import_world_split"
+	bl_label = "Import World"
+
+	filter_glob = bpy.props.StringProperty(
+		default="*.obj;*.mtl",
+		options={'HIDDEN'})
+	fileselectparams = "use_filter_blender"
+	skipUsage = bpy.props.BoolProperty(
+		default = False,
+		options={'HIDDEN'}
+		)
+
+	track_function = "import_split"
+	@tracking.report_error
+	def execute(self, context):
+		# for consistency with the built in one, only import the active path
+		if not self.filepath:
+			self.report({"WARNING"}, "File not found, could not import obj")
+			return {'CANCELLED'}
+
+		res = bpy.ops.import_scene.obj(filepath=self.filepath)
+		if res != {'FINISHED'}:
+			self.report({"WARNING"}, "Issue encountered while importing world")
+			return {'CANCELLED'}
+
+		if not util.bv28():
+			conf.log("No need to split")
+		elif context.object:
+			conf.log("Splitting imported obj by material")
+			bpy.ops.mesh.separate(type='MATERIAL')
+		else:
+			conf.log("No object active found to split")
+
+		return {'FINISHED'}
 
 
 class MCPREP_OT_prep_world(bpy.types.Operator):
@@ -691,6 +730,7 @@ classes = (
 	MCPREP_OT_prep_world,
 	MCPREP_OT_add_mc_world,
 	MCPREP_OT_time_set,
+	MCPREP_OT_import_world_split
 )
 
 
