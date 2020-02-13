@@ -748,10 +748,16 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 	bl_label = "Spawner"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
-	bl_context = "objectmode"
 	bl_category = "MCprep"
 
 	def draw(self, context):
+		if context.mode != "OBJECT":
+			col = self.layout.column(align=True)
+			col.label(text="Enter object mode", icon="ERROR")
+			col.label(text="to use spawner", icon="BLANK1")
+			col.operator("object.mode_set").mode="OBJECT"
+			col.label(text="")
+			return
 		row = self.layout.row(align=True)
 		row.prop(context.scene.mcprep_props,"spawn_mode", expand=True)
 		row.operator("mcprep.open_help", text="", icon="QUESTION"

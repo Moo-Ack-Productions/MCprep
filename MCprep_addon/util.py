@@ -194,7 +194,6 @@ def duplicatedDatablock(name):
 
 def loadTexture(texture):
 	"""Load texture once, reusing existing texture if present."""
-
 	base = nameGeneralize(bpy.path.basename(texture))
 	if base in bpy.data.images:
 		if bpy.path.abspath(bpy.data.images[base].filepath) == bpy.path.abspath(texture):
@@ -388,6 +387,7 @@ def load_mcprep_json():
 			print("Failed to load json file:")
 			print('\t', err)
 			conf.json_data = default
+
 
 def ui_scale():
 	"""Returns scale of UI, for width drawing. Compatible down to blender 2.72"""
