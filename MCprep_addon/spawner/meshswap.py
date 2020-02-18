@@ -112,8 +112,11 @@ def updateMeshswapList(context):
 		temp_meshswap_list.append(util.nameGeneralize(name).lower())
 
 	# sort the list alphabetically by name
-	_, sorted_blocks = zip(*sorted(zip([block[1].lower()
-		for block in meshswap_list], meshswap_list)))
+	if meshswap_list:
+		_, sorted_blocks = zip(*sorted(zip([block[1].lower()
+			for block in meshswap_list], meshswap_list)))
+	else:
+		sorted_blocks = []
 
 	# now re-populate the UI list
 	context.scene.mcprep_props.meshswap_list.clear()
@@ -207,8 +210,16 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 			group = util.collections()[block]
 			# if blender 2.8, see if collection part of the MCprepLib coll.
 			use_cache = True
+			sel_count = 0
 			for obj in group.objects:
-				util.select_set(obj, True)
+				try:
+					util.select_set(obj, True)
+				except RuntimeError:
+					# likely particles like for the torch, not added to scene
+					conf.log("Skip {} select, not in view layer".format(obj.name))
+					continue
+			if sel_count == 0: # added with try/except above, to catch reports since non replicated
+				raise Exception("No objects selected for cache: "+block)
 		else:
 			util.bAppendLink(os.path.join(meshSwapPath,method), block, toLink)
 
@@ -1126,7 +1137,7 @@ class MCPREP_OT_fix_mineways_scale(bpy.types.Operator):
 		conf.log("Attempting to fix Mineways scaling for meshswap")
 		# get cursor loc first? shouldn't matter which mode/location though
 		tmp = bpy.context.space_data.pivot_point
-		tmpLoc = util.get_cuser_location(context)
+		tmp_loc = util.get_cuser_location(context)
 		bpy.context.space_data.pivot_point = 'CURSOR'
 		util.set_cuser_location((0,0,0), context)
 
@@ -1134,7 +1145,7 @@ class MCPREP_OT_fix_mineways_scale(bpy.types.Operator):
 		bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
 		# bpy.ops.transform.resize(value=(.1, .1, .1))
 		bpy.context.space_data.pivot_point = tmp
-		util.set_cuser_location((0,0,0), tmpLoc)
+		util.set_cuser_location(tmp_loc, context)
 		return {'FINISHED'}
 
 

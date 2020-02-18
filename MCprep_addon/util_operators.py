@@ -66,13 +66,17 @@ class MCPREP_OT_improve_ui(bpy.types.Operator):
 		view28 = ['SOLID', 'MATERIAL', 'RENDERED']
 		engine = bpy.context.scene.render.engine
 		if not util.bv28() and context.space_data.viewport_shade not in view27:
-			if engine == 'CYCLES': # or engine == 'BLENDER_EEVEE':
+			if not hasattr(context.space_data, "viewport_shade"):
+				self.report({"WARNING"}, "Improve UI is meant for the 3D view")
+				return {'FINISHED'}
+			if engine == 'CYCLES':
 				context.space_data.viewport_shade = 'TEXTURED'
 			else:
 				context.space_data.viewport_shade = 'SOLID'
 		elif util.bv28() and context.scene.display.shading.type not in view28:
-			# must go through all spaces to find the match screen[].layout.space...
-			# and then apply, e.g.
+			if not hasattr(context.scene, "display") or not hasattr(context.scene.display, "shading"):
+				self.report({"WARNING"}, "Improve UI is meant for the 3D view")
+				return {'FINISHED'}
 
 			# make it solid mode, regardless of cycles or eevee
 			context.scene.display.shading.type = 'SOLID'

@@ -817,9 +817,8 @@ class Singleton_updater(object):
 		outdir = os.path.join(self._updater_path, "source")
 		try:
 			shutil.rmtree(outdir)
-			os.makedirs(outdir)
 			if self._verbose:
-				print("Source folder cleared and recreated")
+				print("Source folder cleared")
 		except:
 			pass
 
@@ -830,9 +829,6 @@ class Singleton_updater(object):
 		except Exception as err:
 			print("Error occurred while making extract dir:")
 			print(str(err))
-			self._error = "Install failed"
-			self._error_msg = "Failed to make extract directory"
-			return -1
 
 		if not os.path.isdir(outdir):
 			print("Failed to create source directory")

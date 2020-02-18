@@ -239,9 +239,11 @@ def link_selected_objects_to_scene():
 def open_program(executable):
 	# Open an external program from filepath/executbale
 	executable = bpy.path.abspath(executable)
+	conf.log("Open program request: "+executable)
 
 	# input could be .app file, which appears as if a folder
-	if not os.path.isfile(executable) :
+	if not os.path.isfile(executable):
+		conf.log("File not executable")
 		if not os.path.isdir(executable):
 			return -1
 		elif not executable.lower().endswith(".app"):
@@ -250,6 +252,7 @@ def open_program(executable):
 	# try to open with wine, if available
 	osx_or_linux = platform.system() == "Darwin" or 'linux' in platform.system().lower()
 	if executable.lower().endswith('.exe') and osx_or_linux:
+		conf.log("Opening program via wine")
 		p = Popen(['which', 'wine'], stdin=PIPE, stdout=PIPE, stderr=PIPE)
 		stdout, err = p.communicate(b"")
 		has_wine = stdout and not err
@@ -280,6 +283,7 @@ def open_program(executable):
 	if platform.system() == "Darwin" and executable.lower().endswith(".app"):
 		# for mac, if folder, check that it has .app otherwise throw -1
 		# (right now says will open even if just folder!!)
+		conf.log("Attempting to open .app via system Open")
 		p = Popen(['open', executable], stdin=PIPE, stdout=PIPE, stderr=PIPE)
 		stdout, err = p.communicate(b"")
 		if err != b"":

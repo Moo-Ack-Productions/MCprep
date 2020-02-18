@@ -23,6 +23,7 @@ assigment of textures which are animated.
 
 import bpy
 import errno
+import json
 import os
 import re
 
@@ -45,28 +46,36 @@ def animate_single_material(mat, engine, export_location='original', clear_cache
 		export_location: enum of {original, texturepack, local}
 		clear_cache: whether to pre-remove existing sequence if existing
 	Returns:
-		Bool (if canonically affectable), Bool (if actually updated or not)
+		Bool (if canonically affectable),
+		Bool (if actually updated or not),
+		Str (error text if any handled, e.g. OS permission error)
 	"""
 	mat_gen = util.nameGeneralize(mat.name)
 	canon, form = generate.get_mc_canonical_name(mat_gen)
-
-	if canon not in conf.json_data["blocks"]["animated"]:
-		affectable = False
-	else:
-		affectable = True
+	affectable = False
 
 	# get the primary loaded diffuse of the material
 	diffuse_block = generate.get_textures(mat)["diffuse"]
 	currently_tiled = is_image_tiled(diffuse_block)
 	if not currently_tiled and not affectable:
-		return False, False
-	else:
 		affectable = True  # retroactively assign to true, as tiled image found
 
 	# get the base image from the texturepack (cycles/BI general)
 	image_path_canon = generate.find_from_texturepack(canon)
 	if not image_path_canon:
-		return affectable, False
+		conf.log("Canon path not found for {}:{}, form {}, path: {}".format(
+			mat_gen, canon, form, image_path_canon), vv_only=True)
+		return affectable, False, None
+
+	if not os.path.isfile(image_path_canon+".mcmeta"):
+		conf.log(".mcmeta not found for "+mat_gen, vv_only=True)
+		affectable = False
+		return affectable, False, None
+	affectable = True
+	mcmeta = {}
+	with open(image_path_canon+".mcmeta", "r") as mcf:
+		mcmeta = json.load(mcf)
+	conf.log("MCmeta for {}: {}".format(diffuse_block, mcmeta))
 
 	# apply the sequence if any found, will be empty dict if not
 	if diffuse_block and hasattr(diffuse_block, "filepath"):
@@ -76,10 +85,14 @@ def animate_single_material(mat, engine, export_location='original', clear_cache
 	if not source_path:
 		source_path = image_path_canon
 		conf.log("Fallback to using image cannon path instead of source path")
-	tile_path_dict = generate_material_sequence(source_path, image_path_canon,
+	tile_path_dict, err = generate_material_sequence(source_path, image_path_canon,
 		form, export_location, clear_cache)
+	if err:
+		conf.log("Error occured during sequence generation:")
+		conf.log(err)
+		return affectable, False, err
 	if tile_path_dict == {}:
-		return affectable, False
+		return affectable, False, None
 
 	affected_materials = 0
 	for pass_name in tile_path_dict:
@@ -98,7 +111,7 @@ def animate_single_material(mat, engine, export_location='original', clear_cache
 				continue
 			set_sequence_to_texnode(texture, tile_path_dict[pass_name])
 			affected_materials += 1
-	return affectable, affected_materials>0
+	return affectable, affected_materials>0, None
 
 
 def is_image_tiled(image_block):
@@ -124,6 +137,9 @@ def generate_material_sequence(source_path, image_path, form, export_location, c
 		form: jmc2obj, mineways, or none
 		export_location: enum of type of location output
 		clear_cache: whether to delete and re-export frames, even if existing found
+	Returns:
+		tile_path_dict: list of filepaths
+		err: Error if any handled
 	"""
 
 	# get the currently assigned image passes (normal, spec. etc)
@@ -194,15 +210,15 @@ def generate_material_sequence(source_path, image_path, form, export_location, c
 			os.mkdir(os.path.dirname(seq_path))
 		except OSError as exc:
 			if exc.errno == errno.EACCES:
-				raise Exception(perm_denied)
-			elif exc.errno != errno.EEXIST:
-				raise
+				return {}, perm_denied
+			elif exc.errno != errno.EEXIST: # ok if error is that it exists
+				raise Exception("Failed to make director, missing path: "+seq_path)
 		try:  # check folder exists/create if needed
 			os.mkdir(seq_path)
 		except OSError as exc:
 			if exc.errno == errno.EACCES:
-				raise Exception(perm_denied)
-			elif exc.errno != errno.EEXIST:
+				return {}, perm_denied
+			elif exc.errno != errno.EEXIST: # ok if error is that it exists
 				raise Exception("Path does not exist: "+seq_path)
 
 		# overwrite the files found if not cached
@@ -220,7 +236,9 @@ def generate_material_sequence(source_path, image_path, form, export_location, c
 					os.remove(os.path.join(seq_path, tile))
 				except OSError as exc:
 					if exc.errno == errno.EACCES:
-						raise Exception(perm_denied)
+						return {}, perm_denied
+					else:
+						raise Exception(exc)
 
 		# generate the sequences
 		params = [] # TODO: get from json file
@@ -232,7 +250,7 @@ def generate_material_sequence(source_path, image_path, form, export_location, c
 		# save first tile to dict
 		if first_tile:
 			image_dict[img_pass] = first_tile
-	return image_dict
+	return image_dict, None
 
 
 def export_image_to_sequence(image_path, params, output_folder=None, form=None):
@@ -431,16 +449,25 @@ class MCPREP_OT_prep_animated_textures(bpy.types.Operator):
 
 		affectable_materials = 0
 		affected_materials = 0
+		break_err = None
 		for mat in mats:
-			affectable, affected = animate_single_material(
+			affectable, affected, err = animate_single_material(
 				mat, context.scene.render.engine,
 				self.export_location, self.clear_cache)
+			if err:
+				break_err = err
+				break
 			if affectable:
 				affectable_materials += 1
 			if affected:
 				affected_materials += 1
 
-		if affectable_materials == 0:
+		if break_err:
+			print(break_err)
+			self.report({"ERROR"},
+				"Halted: "+str(break_err))
+			return {'CANCELLED'}
+		elif affectable_materials == 0:
 			self.report({"ERROR"},
 				"No animate-able textures found on selected objects")
 			return {'CANCELLED'}

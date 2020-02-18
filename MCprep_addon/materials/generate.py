@@ -910,9 +910,10 @@ def matgen_cycles_principled(mat, passes, use_reflections, only_solid):
 	if hasattr(nodeTexSpec, "color_space"): # 2.7 and earlier 2.8 versions
 		nodeTexSpec.color_space = 'NONE'  # for better interpretation of specmaps
 		nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
-	elif hasattr(nodeTexSpec.image, "colorspace_settings"): # later 2.8 versions
+	elif nodeTexSpec.image and hasattr(nodeTexSpec.image, "colorspace_settings"): # later 2.8 versions
 		nodeTexSpec.image.colorspace_settings.name = 'Non-Color'
-		nodeTexNorm.image.colorspace_settings.name = 'Non-Color'
+		if nodeTexNorm.image:
+			nodeTexNorm.image.colorspace_settings.name = 'Non-Color'
 
 	# apply additional settings
 	if hasattr(mat, "cycles"):
@@ -1117,7 +1118,8 @@ def matgen_cycles_original(mat, passes, use_reflections, only_solid):
 		nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
 	elif nodeTexSpec.image and hasattr(nodeTexSpec.image, "colorspace_settings"): # 2.7 and earlier 2.8 versions
 		nodeTexSpec.image.colorspace_settings.name = 'Non-Color'
-		nodeTexNorm.iamge.colorspace_settings.name = 'Non-Color'
+		if nodeTexNorm.iamge:
+			nodeTexNorm.iamge.colorspace_settings.name = 'Non-Color'
 
 	#set other default values, e.g. the mixes
 	nodeMix2.inputs[0].default_value = 0 # factor mix with glossy
@@ -1180,6 +1182,9 @@ def matgen_cycles_original(mat, passes, use_reflections, only_solid):
 
 def matgen_cycles_emit(mat, passes):
 	"""Generates light emiting cycles material, with transaprency."""
+
+	mat_gen = util.nameGeneralize(mat.name)
+	canon, _ = get_mc_canonical_name(mat_gen)
 
 	image_diff = passes["diffuse"]
 	# image_norm = passes["normal"]
@@ -1249,6 +1254,22 @@ def matgen_cycles_emit(mat, passes):
 
 	if hasattr(mat, "cycles"):
 		mat.cycles.sample_as_light = True
+
+	# 2.8 eevee settings
+	if not checklist(canon, "solid") and hasattr(mat, "blend_method"):
+		# TODO: Work on finding the optimal decision here
+		# clip could be better in cases of true/false transparency
+		# could do work to detect this from the image directly..
+		# though would be slower
+
+		# noisy, but workable for partial trans; bad for materials with
+		# no partial trans (makes view-through all somewhat noisy)
+		# Note: placed with hasattr to reduce bugs, seemingly only on old
+		# 2.80 build
+		if hasattr(mat, "blend_method"):
+			mat.blend_method = 'HASHED'
+		if hasattr(mat, "shadow_method"):
+			mat.shadow_method = 'HASHED'
 
 	# reapply animation data if any to generated nodes
 	apply_texture_animation_pass_settings(mat, animated_data)

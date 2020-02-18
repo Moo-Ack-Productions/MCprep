@@ -43,8 +43,12 @@ def reloadSkinList(context):
 
 	skinfolder = context.scene.mcprep_skin_path
 	skinfolder = bpy.path.abspath(skinfolder)
-	files = [ f for f in os.listdir(skinfolder) if\
-					os.path.isfile(os.path.join(skinfolder,f)) ]
+	if os.path.isdir(skinfolder):
+		files = [f for f in os.listdir(skinfolder)
+				if os.path.isfile(os.path.join(skinfolder,f))
+				]
+	else:
+		files = []
 
 	skinlist = []
 	for path in files:
@@ -77,7 +81,7 @@ def handler_skins_enablehack(scene):
 		bpy.app.handlers.scene_update_pre.remove(handler_skins_enablehack)
 	except:
 		pass
-	if conf.vv:print("Triggering Handler_skins_load from first enable")
+	conf.log("Triggering Handler_skins_load from first enable", vv_only=True)
 	handler_skins_load(scene)
 
 
@@ -503,10 +507,10 @@ class MCPREP_OT_add_skin(bpy.types.Operator, ImportHelper):
 	track_param = None
 	@tracking.report_error
 	def execute(self,context):
-
 		source_location = bpy.path.abspath(self.filepath)
 		base = os.path.basename(source_location)
 		new_location = os.path.join(context.scene.mcprep_skin_path, base)
+		new_location = bpy.path.abspath(new_location)
 		if os.path.isfile(source_location) == False:
 			self.report({"ERROR"}, "Not a image file path")
 			return {'CANCELLED'}
@@ -585,7 +589,12 @@ class MCPREP_OT_reload_skin(bpy.types.Operator):
 
 	@tracking.report_error
 	def execute(self, context):
-		reloadSkinList(context)
+		skinfolder = context.scene.mcprep_skin_path
+		skinfolder = bpy.path.abspath(skinfolder)
+		reloadSkinList(context) # run load even if none found
+		if not os.path.isdir(skinfolder):
+			self.report({'ERROR'}, "Skin directory does not exist")
+			return {'CANCELLED'}
 		return {'FINISHED'}
 
 
@@ -647,7 +656,7 @@ class MCPREP_OT_spawn_mob_with_skin(bpy.types.Operator):
 
 		# bpy.ops.mcprep.spawn_with_skin() spawn based on active mob
 		ind = context.scene.mcprep_skins_list_index
-		bpy.ops.mcprep.applyskin(filepath=conf.skin_list[ind][1])
+		res = loadSkinFile(self, context, conf.skin_list[ind][1])
 
 		return {'FINISHED'}
 
