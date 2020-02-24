@@ -847,11 +847,14 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 			b_col.operator("mcprep.openfolder", text="Open mob folder"
 				).folder = context.scene.mcprep_mob_path
 
-			icon_index = scn_props.mob_list[scn_props.mob_list_index].index
-			if "mob-{}".format(icon_index) in conf.preview_collections["mobs"]:
-				b_col.operator("mcprep.mob_install_icon", text="Change mob icon")
-			else:
+			if not scn_props.mob_list:
 				b_col.operator("mcprep.mob_install_icon")
+			else:
+				icon_index = scn_props.mob_list[scn_props.mob_list_index].index
+				if "mob-{}".format(icon_index) in conf.preview_collections["mobs"]:
+					b_col.operator("mcprep.mob_install_icon", text="Change mob icon")
+				else:
+					b_col.operator("mcprep.mob_install_icon")
 			b_col.operator("mcprep.mob_uninstall")
 			b_col.operator("mcprep.reload_mobs", text="Reload mobs")
 			b_col.label(text=mcmob_type)

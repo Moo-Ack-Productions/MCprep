@@ -71,7 +71,7 @@ def reloadSkinList(context):
 
 def update_skin_path(self, context):
 	"""For UI list path callback"""
-	if conf.vv: print("Updating rig path")
+	conf.log("Updating rig path", vv_only=True)
 	reloadSkinList(context)
 
 
@@ -235,23 +235,27 @@ def getMatsFromSelected(selected, new_material=False):
 		else:
 			continue
 
+	obj_list = list(set(obj_list))
 	mat_list = []
 	mat_ret = []
 	linked_objs = 0
+
 	for ob in obj_list:
 		if ob.data.library:
 			conf.log("Library object, skipping")
 			linked_objs += 1
 			continue
-		if new_material is False:
+		elif new_material is False:
 			for slot in ob.material_slots:
-				if slot.material is None: continue
+				if slot.material is None:
+					continue
 				if slot.material not in mat_ret:
 					mat_ret.append(slot.material)
 		else:
 			for slot in ob.material_slots:
 				if slot.material not in mat_list:
-					if slot.material is None: continue
+					if slot.material is None:
+						continue
 					mat_list.append(slot.material)
 					new_mat = slot.material.copy()
 					mat_ret.append(new_mat)
@@ -324,12 +328,21 @@ class MCPREP_OT_swap_skin_from_file(bpy.types.Operator, ImportHelper):
 	filter_image = bpy.props.BoolProperty(
 		default=True,
 		options={'HIDDEN', 'SKIP_SAVE'})
+	new_material = bpy.props.BoolProperty(
+		name = "New Material",
+		description = "Create a new material instead of overwriting existing one",
+		default = True
+		)
+	skipUsage = bpy.props.BoolProperty(
+		default = False,
+		options = {'HIDDEN'}
+		)
 
 	track_function = "skin"
 	track_param = "file import"
 	@tracking.report_error
 	def execute(self,context):
-		res = loadSkinFile(self, context, self.filepath)
+		res = loadSkinFile(self, context, self.filepath, self.new_material)
 		if res!=0:
 			return {'CANCELLED'}
 
@@ -352,6 +365,10 @@ class MCPREP_OT_apply_skin(bpy.types.Operator):
 		name = "New Material",
 		description = "Create a new material instead of overwriting existing one",
 		default = True
+		)
+	skipUsage = bpy.props.BoolProperty(
+		default = False,
+		options = {'HIDDEN'}
 		)
 
 	track_function = "skin"
@@ -376,22 +393,26 @@ class MCPREP_OT_apply_username_skin(bpy.types.Operator):
 		name="Username",
 		description="Exact name of user to get texture from",
 		default=""
-	)
+		)
 	skip_redownload = bpy.props.BoolProperty(
 		name="Skip download if skin already local",
 		description="Avoid re-downloading skin and apply local file instead",
 		default=True
-	)
+		)
 	new_material = bpy.props.BoolProperty(
 		name = "New Material",
 		description = "Create a new material instead of overwriting existing one",
 		default = True
-	)
+		)
 	convert_layout = bpy.props.BoolProperty(
 		name = "Convert pre 1.8 skins",
 		description = "If an older skin layout (pre Minecraft 1.8) is detected, convert to new format (with clothing layers)",
 		default = True
-	)
+		)
+	skipUsage = bpy.props.BoolProperty(
+		default = False,
+		options = {'HIDDEN'}
+		)
 
 	def invoke(self, context, event):
 		return context.window_manager.invoke_props_dialog(self,
@@ -501,7 +522,11 @@ class MCPREP_OT_add_skin(bpy.types.Operator, ImportHelper):
 		name = "Convert pre 1.8 skins",
 		description = "If an older skin layout (pre Minecraft 1.8) is detected, convert to new format (with clothing layers)",
 		default = True
-	)
+		)
+	skipUsage = bpy.props.BoolProperty(
+		default = False,
+		options = {'HIDDEN'}
+		)
 
 	track_function = "add_skin"
 	track_param = None
@@ -630,6 +655,10 @@ class MCPREP_OT_spawn_mob_with_skin(bpy.types.Operator):
 		name = "Clear Pose",
 		description = "Clear the pose to rest position",
 		default = True
+		)
+	skipUsage = bpy.props.BoolProperty(
+		default = False,
+		options = {'HIDDEN'}
 		)
 
 	track_function = "spawn_with_skin"

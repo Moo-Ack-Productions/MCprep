@@ -46,7 +46,12 @@ class MCPREP_OT_improve_ui(bpy.types.Operator):
 
 		# show textures in solid mode
 		view = context.space_data
-		if hasattr(view, "show_textured_solid"): # 2.7
+		if bpy.app.background:
+			return {'CANCELLED'} # headless mode, no visual to improve anyways
+		if not view:
+			self.report({'ERROR'}, "Cannot improve display, no view context")
+			return {'CANCELLED'} # should not occur
+		elif hasattr(view, "show_textured_solid"): # 2.7
 			context.space_data.show_textured_solid = True
 		elif view.type == 'VIEW_3D' and hasattr(context.scene, "display"):
 			try: # can fail e.g. in workbench view
@@ -65,14 +70,14 @@ class MCPREP_OT_improve_ui(bpy.types.Operator):
 		view27 = ['TEXTURED','MATEIRAL','RENDERED']
 		view28 = ['SOLID', 'MATERIAL', 'RENDERED']
 		engine = bpy.context.scene.render.engine
-		if not util.bv28() and context.space_data.viewport_shade not in view27:
+		if not util.bv28() and view.viewport_shade not in view27:
 			if not hasattr(context.space_data, "viewport_shade"):
 				self.report({"WARNING"}, "Improve UI is meant for the 3D view")
 				return {'FINISHED'}
 			if engine == 'CYCLES':
-				context.space_data.viewport_shade = 'TEXTURED'
+				view.viewport_shade = 'TEXTURED'
 			else:
-				context.space_data.viewport_shade = 'SOLID'
+				view.viewport_shade = 'SOLID'
 		elif util.bv28() and context.scene.display.shading.type not in view28:
 			if not hasattr(context.scene, "display") or not hasattr(context.scene.display, "shading"):
 				self.report({"WARNING"}, "Improve UI is meant for the 3D view")

@@ -325,6 +325,10 @@ class MCPREP_OT_spawn_item(bpy.types.Operator):
 	filepath = bpy.props.StringProperty(
 		default="",
 		options={'HIDDEN', 'SKIP_SAVE'})
+	skipUsage = bpy.props.BoolProperty(
+		default = False,
+		options = {'HIDDEN'}
+		)
 
 	@classmethod
 	def poll(cls, context):
