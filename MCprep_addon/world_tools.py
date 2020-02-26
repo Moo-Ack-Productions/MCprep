@@ -240,16 +240,20 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 	def execute(self, context):
 		# for consistency with the built in one, only import the active path
 		if not self.filepath:
-			self.report({"WARNING"}, "File not found, could not import obj")
+			self.report({"ERROR"}, "File not found, could not import obj")
+			return {'CANCELLED'}
+		if not os.path.isfile(self.filepath):
+			self.report({"ERROR"}, "File not found, could not import obj")
 			return {'CANCELLED'}
 
 		res = bpy.ops.import_scene.obj(filepath=self.filepath)
 		if res != {'FINISHED'}:
-			self.report({"WARNING"}, "Issue encountered while importing world")
+			self.report({"ERROR"}, "Issue encountered while importing world")
 			return {'CANCELLED'}
 
 		if not util.bv28():
-			conf.log("No need to split")
+			# conf.log("No need to split")
+			pass
 		elif context.object:
 			conf.log("Splitting imported obj by material")
 			bpy.ops.mesh.separate(type='MATERIAL')

@@ -26,9 +26,11 @@ import bpy
 import traceback
 
 import os
+import json
 import sys
 import io
 from contextlib import redirect_stdout
+import importlib
 
 
 # -----------------------------------------------------------------------------
@@ -49,9 +51,14 @@ class mcprep_testing():
 			self.spawn_mob,
 			self.change_skin,
 			self.import_world_split,
-			self.import_world_fail
+			self.import_world_fail,
+			self.import_jmc2obj,
+			self.import_mineways_separated,
+			self.import_mineways_combined
 			]
 		self.run_only = None # name to give to only run this test
+
+		self.mcprep_json = {}
 		# 	0:["prep_materials", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
 		# 	1:["combine_materials", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
 		# 	2:["combine_images", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
@@ -141,6 +148,27 @@ class mcprep_testing():
 			self.test_status[test_func.__name__] = {"check":-1, "res": traceback.format_exc()}
 		# print("\tFinished test {}".format(test_func.__name__))
 
+	def setup_env_paths(self):
+		"""Adds the MCprep installed addon path to sys for easier importing."""
+		to_add = None
+
+		for base in bpy.utils.script_paths():
+			init = os.path.join(base, "addons", "MCprep_addon", "__init__.py")
+			if os.path.isfile(init):
+				to_add = init
+				break
+		if not to_add:
+			raise Exception("Could not add the environment path for direct importing")
+
+		# add to path and bind so it can use relative improts (3.5 trick)
+		spec = importlib.util.spec_from_file_location("MCprep", to_add)
+		module = importlib.util.module_from_spec(spec)
+		sys.modules[spec.name] = module
+		spec.loader.exec_module(module)
+
+		from MCprep import conf
+		conf.init()
+
 	# -----------------------------------------------------------------------------
 	# Testing utilities, not tests themselves (ie assumed to work)
 	# -----------------------------------------------------------------------------
@@ -170,7 +198,21 @@ class mcprep_testing():
 		"""Import the full jmc2obj test set"""
 		testdir = os.path.dirname(__file__)
 		obj_path = os.path.join(testdir, "jmc2obj", "jmc2obj_test_1_14_4.obj")
-		bpy.ops.mcprep.import_world_split(filepath=obj_path, skipUsage=False)
+		bpy.ops.mcprep.import_world_split(filepath=obj_path)
+
+	def _import_mineways_separated(self):
+		"""Import the full jmc2obj test set"""
+		testdir = os.path.dirname(__file__)
+		obj_path = os.path.join(testdir, "mineways", "separated_textures",
+			"mineways_test_texs_1_14_4.obj")
+		bpy.ops.mcprep.import_world_split(filepath=obj_path)
+
+	def _import_mineways_combined(self):
+		"""Import the full jmc2obj test set"""
+		testdir = os.path.dirname(__file__)
+		obj_path = os.path.join(testdir, "mineways", "combined_textures",
+			"mineways_test_single_1_14_4.obj")
+		bpy.ops.mcprep.import_world_split(filepath=obj_path)
 
 	def _create_canon_mat(self):
 		"""Creates a material that should be recognized"""
@@ -192,6 +234,20 @@ class mcprep_testing():
 			print(ln.body)
 		print("END printlines")
 		return bpy.data.texts['Recent Reports'].lines[-1].body
+
+	# def _get_mcprep_data(self):
+	# 	"""Return the contents of the mcprep_data.json file"""
+	# 	if self.mcprep_json:
+	# 		return self.mcprep_json
+	# 	base = os.path.dirname(os.path.dirname(__file__))
+	# 	json_path = os.path.join(base, "MCprep_addon", "MCprep_resources", "mcprep_data_update.json")
+
+	# 	with open(json_path) as jpth:
+	# 		self.mcprep_json = json.load(jpth)
+
+	# 	if not self.mcprep_json:
+	# 		raise Exception("Could not load json resource")
+	# 	return self.mcprep_json
 
 
 	# -----------------------------------------------------------------------------
@@ -427,14 +483,120 @@ class mcprep_testing():
 
 	def import_world_fail(self):
 		"""Ensure loader fails if an invalid path is loaded"""
-		testdir = os.path.dirname(__file__+"xxx")
-		obj_path = os.path.join(testdir, "jmc2obj", "jmc2obj_test_1_14_4.obj")
+		testdir = os.path.dirname(__file__)
+		obj_path = os.path.join(testdir, "jmc2obj", "xx_jmc2obj_test_1_14_4.obj")
 		try:
-			bpy.ops.mcprep.import_world_split(filepath=obj_path, skipUsage=False)
+			bpy.ops.mcprep.import_world_split(filepath=obj_path)
 		except Exception as e:
 			print("Failed, as intended: "+str(e))
 			return ""
 		return "World import should have returned an error"
+
+	def import_materials_util(self, mapping_set):
+		"""Reusable function for testing on different obj setups"""
+		from MCprep.materials.generate import get_mc_canonical_name
+		from MCprep.materials.generate import find_from_texturepack
+		from MCprep import util
+		from MCprep import conf
+
+		util.load_mcprep_json() # force load json cache
+		mcprep_data = conf.json_data["blocks"][mapping_set]
+
+		# first detect alignment to the raw underlining mappings, nothing to
+		# do with canonical yet
+		mapped = [mat.name for mat in bpy.data.materials
+			if mat.name in mcprep_data] # ok!
+		unmapped = [mat.name for mat in bpy.data.materials
+			if mat.name not in mcprep_data] # not ok
+		fullset = mapped+unmapped # ie all materials
+		unleveraged = [mat for mat in mcprep_data
+			if mat not in fullset] # not ideal, means maybe missed check
+
+		print("Mapped: {}, unmapped: {}, unleveraged: {}".format(
+			len(mapped), len(unmapped), len(unleveraged)))
+
+		if len(unmapped):
+			err = "Textures not mapped to json file"
+			print(err)
+			print(sorted(unmapped))
+			print("")
+			#return err
+		if len(unleveraged) > 20:
+			err = "Json file materials not found in obj test file, may need to update world"
+			print(err)
+			print(sorted(unleveraged))
+			# return err
+
+		if len(mapped) == 0:
+			return "No materials mapped"
+		elif len(mapped) < len(unmapped)+len(unleveraged):
+			# not a very optimistic threshold, but better than none
+			return "More materials unmapped than mapped"
+		print("")
+
+		mc_count=0
+		jmc_count=0
+		mineways_count=0
+
+		# each element is [cannon_name, form], form is none if not matched
+		mapped = [get_mc_canonical_name(mat.name) for mat in bpy.data.materials]
+
+		# no matching canon name (warn)
+		mats_not_canon = [itm[0] for itm in mapped if itm[1] is None]
+		if mats_not_canon:
+			print("Non-canon material names found: ({})".format(len(mats_not_canon)))
+			print(mats_not_canon)
+			if len(mats_not_canon)>30: # arbitrary threshold
+				return "Too many materials found without canonical name ({})".format(
+					len(mats_not_canon))
+		else:
+			print("Confirmed - no non-canon images found")
+
+		# affirm the correct mappings
+		mats_no_packimage = [find_from_texturepack(itm[0]) for itm in mapped
+			if itm[1] is not None]
+		mats_no_packimage = [path for path in mats_no_packimage if path]
+		print("Mapped paths: "+str(len(mats_no_packimage)))
+
+		# could not resolve image from resource pack (warn) even though in mapping
+		mats_no_packimage = [itm[0] for itm in mapped
+			if itm[1] is not None and not find_from_texturepack(itm[0])]
+		print("No resource images found for mapped items: ({})".format(
+			len(mats_no_packimage)))
+		print("These would appear to have cannon mappings, but then fail on lookup")
+		for itm in mats_no_packimage:
+			print("\t"+itm)
+		if len(mats_no_packimage)>5: # known number up front, e.g. chests, stone_slab_side, stone_slab_top
+			return "Missing images for blocks specified in mcprep_data.json"
+
+		# also test that there are not raw image names not in mapping list
+		# but that otherwise could be added to the mapping list as file exists
+
+	def import_jmc2obj(self):
+		"""Checks that material names in output obj match the mapping file"""
+		self._clear_scene()
+		self._import_jmc2obj_full()
+
+		res = self.import_materials_util("block_mapping_jmc")
+		return res
+
+	def import_mineways_separated(self):
+		"""Checks Mineways (multi-image) material name mapping to mcprep_data"""
+		self._clear_scene()
+		self._import_mineways_separated()
+
+		#mcprep_data = self._get_mcprep_data()
+		res = self.import_materials_util("block_mapping_jmc")
+		return res
+
+	def import_mineways_combined(self):
+		"""Checks Mineways (multi-image) material name mapping to mcprep_data"""
+		self._clear_scene()
+		self._import_mineways_combined()
+
+		#mcprep_data = self._get_mcprep_data()
+		res = self.import_materials_util("block_mapping_jmc")
+		return res
 
 
 class OCOL:
@@ -589,6 +751,9 @@ if __name__ == "__main__":
 	test_class = mcprep_testing()
 
 	register()
+
+	# setup paths to the target
+	test_class.setup_env_paths()
 
 	# check for additional args, e.g. if running from console beyond blender
 	if "--" in sys.argv:
