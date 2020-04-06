@@ -10,22 +10,25 @@
 # Run all tests on all versions of blender
 # ./run_tests.sh -all
 
-# Run only a single unit test
-# ./run_tests.sh --run change_skin
+# Run only a single unit test within the first version of blender listed
+# ./run_tests.sh -run change_skin
 
 # Run only a single unit test, but across all blender versions
-# python3 mcprep_data_refresh.py -auto --run change_skin
+# ./run_tests.sh -all -run change_skin
 
 TEST_ALL=$1 # pass in -all or only does first
 
 
 VERSIONS=(
 	"/Applications/blender 2.80/Blender.app/Contents/MacOS/Blender"
-	"/Applications/blender 2.82/Blender.app/Contents/MacOS/Blender"
 	"/Applications/blender 2.79/Blender.app/Contents/MacOS/Blender"
-	#"/Applications/blender 2.72/Blender.app/Contents/MacOS/Blender"
+	"/Applications/blender 2.82/Blender.app/Contents/MacOS/Blender"
+	"/Applications/blender 2.72/Blender.app/Contents/MacOS/Blender"
 	)
 
+# remove old test results
+rm test_results.tsv
+echo -e "blender\tfailed_test\tshort_err" > test_results.tsv
 
 for ((i = 0; i < ${#VERSIONS[@]}; i++))
 do

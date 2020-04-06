@@ -84,7 +84,7 @@ def animate_single_material(mat, engine, export_location='original', clear_cache
 		source_path = None
 	if not source_path:
 		source_path = image_path_canon
-		conf.log("Fallback to using image cannon path instead of source path")
+		conf.log("Fallback to using image canon path instead of source path")
 	tile_path_dict, err = generate_material_sequence(source_path, image_path_canon,
 		form, export_location, clear_cache)
 	if err:

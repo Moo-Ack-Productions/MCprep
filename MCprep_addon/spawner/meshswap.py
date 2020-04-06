@@ -26,6 +26,7 @@ import mathutils
 
 # addon imports
 from .. import conf
+from ..materials import generate
 from .. import util
 from .. import tracking
 
@@ -58,11 +59,15 @@ def get_meshswap_cache(context, clear=False):
 			else: # 2.8
 				get_attr = "collections"
 				prefix = "Collection/"
-			meshswap_cache["groups"] = list(getattr(data_from, get_attr))
+			grp_list = list(getattr(data_from, get_attr))
+			# canons = [generate.get_mc_canonical_name(grp) for grp in grp_list]
+			meshswap_cache["groups"] = grp_list
 			for obj in list(data_from.objects):
 				if obj in meshswap_cache["groups"]:
 					# conf.log("Skipping meshwap obj already in cache: "+str(obj))
 					continue
+				# ignore list? e.g. Point.001,
+				# canon = generate.get_mc_canonical_name(obj)
 				meshswap_cache["objects"].append(obj)
 		return meshswap_cache
 	else:
@@ -239,7 +244,10 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 			importedObj.location = self.location
 			if self.prep_materials is True:
 				try:
-					bpy.ops.mcprep.prep_materials(skipUsage=True) # if cycles
+					bpy.ops.mcprep.prep_materials(
+						autoFindMissingTextures=False,
+						improveUiSettings=False,
+						skipUsage=True) # if cycles
 				except:
 					print("Could not prep materials")
 					self.report({"WARNING"}, "Could not prep materials")
@@ -373,7 +381,10 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 			for ob in objlist:
 				util.select_set(ob, True)
 			try:
-				bpy.ops.mcprep.prep_materials(skipUsage=True) # if cycles
+				bpy.ops.mcprep.prep_materials(
+					autoFindMissingTextures=False,
+					improveUiSettings=False,
+					skipUsage=True) # if cycles
 			except:
 				print("Could not prep materials")
 			for ob in util.get_objects_conext(context):
@@ -530,10 +541,11 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		meshSwapPath = context.scene.meshswap_path
 		rmable = []
 		if addon_prefs.MCprep_exporter_type == "jmc2obj":
-			rmable = ['double_plant_grass_top','torch_flame','cactus_side','cactus_bottom','book',
+			rmable = ['double_plant_grass_top','torch_flame','cactus_top','cactus_bottom','book',
 						'enchant_table_side','enchant_table_bottom','door_iron_top','door_wood_top',
 						'brewing_stand','door_dark_oak_upper','door_acacia_upper','door_jungle_upper',
-						'door_birch_upper','door_spruce_upper','tnt_top','tnt_bottom']
+						'door_birch_upper','door_spruce_upper','tnt_side','tnt_bottom',
+						'pumpkin_top_lit', 'pumpkin_side_lit', 'workbench_back', 'workbench_front']
 		elif addon_prefs.MCprep_exporter_type == "Mineways":
 			rmable = [] # Mineways removable objs
 		else:
@@ -546,11 +558,26 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			return {'removable':removable}
 
 		# check the actual name against the library
+		name = generate.get_mc_canonical_name(name)[0]
 		cache = get_meshswap_cache(context)
+		if name in conf.json_data["blocks"]["canon_mapping_block"]:
+			# e.g. remaps entity/chest/normal back to chest
+			name_remap = conf.json_data["blocks"]["canon_mapping_block"][name]
+		else:
+			name_remap = None
+
 		if name in cache["groups"] or name in util.collections():
 			groupSwap = True
 		elif name in cache["objects"]:
 			meshSwap = True
+		elif not name_remap:
+			return False
+		elif name_remap in cache["groups"] or name_remap in util.collections():
+			groupSwap = True
+			name = name_remap
+		elif name_remap in cache["objects"]:
+			meshSwap = True
+			name = name_remap
 		else:
 			return False # if not present, continue
 
@@ -562,7 +589,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			util.select_set(ob, False)
 		#import: guaranteed to have same name as "appendObj" for the first instant afterwards
 		grouped = False # used to check if to join or not
-		importedObj = None		# need to initialize to something, though this obj not used
+		importedObj = None # need to initialize to something, though this obj not used
 		groupAppendLayer = self.append_layer
 
 		# for blender 2.8 compatibility
@@ -574,7 +601,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		if groupSwap:
 			if name not in util.collections():
 				# if group not linked, put appended group data onto the GUI field layer
-				if hasattr(context.scene, "layers"):
+				if hasattr(context.scene, "layers"): # blender 2.7x
 					activeLayers = list(context.scene.layers)
 				else:
 					activeLayers = None
@@ -670,9 +697,9 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		conf.log("groupSwap: {}, meshSwap: {}".format(groupSwap, meshSwap))
 		conf.log("edgeFloat: {}, variance: {}, torchlike: {}".format(
 			edgeFloat, variance, torchlike))
-		return {'meshSwap':meshSwap, 'groupSwap':groupSwap,'variance':variance,
+		return {'importName':name,'object':importedObj,'meshSwap':meshSwap, 'groupSwap':groupSwap,'variance':variance,
 				'edgeFlush':edgeFlush,'edgeFloat':edgeFloat,'torchlike':torchlike,
-				'removable':removable,'object':importedObj,'doorlike':doorlike,
+				'removable':removable,'doorlike':doorlike,
 				'new_groups':new_groups}
 
 	def offsetByHalf(self, obj):
@@ -748,6 +775,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		for iter_index, swap in enumerate(objList):
 			bpy.context.window_manager.progress_update(iter_index/denom)
 			swapGen = util.nameGeneralize(swap.name)
+			#swapGen = generate.get_mc_canonical_name(swap.name)
 			conf.log("Simplified name: {x}".format(x=swapGen))
 			swapProps = self.checkExternal(context, swapGen) # IMPORTS, gets lists properties, etc
 			if swapProps == False: # issue in swapProps, e.g. not a mesh or not in lib or some error
@@ -962,12 +990,8 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				# loc = swap.matrix_world*mathutils.Vector(set) #local to global
 				if grouped:
 					# definition for randimization, defined at top!
-					randGroup = util.randomizeMeshSawp(swapGen,3)
+					randGroup = util.randomizeMeshSawp(swapProps['importName'],3)
 					conf.log("Rand group: {}".format(randGroup))
-
-					# The built in method fails, bpy.ops.object.group_instance_add(...)
-					#UPDATE: I reported the bug, and they fixed it nearly instantly =D
-					# but it was recommended to do the below anyways.
 					new_ob = util.addGroupInstance(randGroup,loc)
 
 				else:

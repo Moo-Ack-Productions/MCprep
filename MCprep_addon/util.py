@@ -36,21 +36,21 @@ from . import conf
 def nameGeneralize(name):
 	"""Get base name from datablock, accounts for duplicates and animated tex."""
 	if duplicatedDatablock(name) == True:
-		name = name[:-4] # removes .001 or .png
+		name = name[:-4] # removes .001
 
 	# if name ends in _####, drop those numbers (for animated sequences)
-		"""Return the index of the image name, number of digits at filename end."""
-	ind = 0
+	# noting it is specifically 4 numbers
+	# could use regex, but some historical issues within including this lib
+	# in certain blender builds
 	nums = '0123456789'
-	for i in range(len(name)):
-		if not name[-i-1] in nums:
-			break
-		ind += 1
-	if ind > 0:
-		if name[-ind] in ["-", "_", " "]:
-			name = name[:-ind-1]
+	if len(name) < 5:
+		return name
+	any_nonnumbs = [1 if ltr in nums else 0 for ltr in name[-4:]]
+	if sum(any_nonnumbs)==4: # all leters are numbers
+		if name[-5] in ["-", "_", " "]:
+			name = name[:-5]
 		else:
-			name = name[:-ind]
+			name = name[:-4]
 	return name
 
 
@@ -59,7 +59,6 @@ def materialsFromObj(obj_list):
 
 	Loop over every object, adding each material if not already added
 	"""
-
 	mat_list = []
 	for obj in obj_list:
 		# also capture obj materials from dupliverts/instances on e.g. empties
@@ -293,7 +292,6 @@ def open_program(executable):
 
 def open_folder_crossplatform(folder):
 	"""Cross platform way to open folder in host operating system."""
-
 	folder = bpy.path.abspath(folder)
 	if not os.path.isdir(folder):
 		return False
@@ -310,17 +308,19 @@ def open_folder_crossplatform(folder):
 		subprocess.Popen('explorer "{x}"'.format(x=folder))
 		return True
 	except:
-		try:
-			# mac... works on Yosemite minimally
-			subprocess.call(["open", folder])
-			return True
-		except:
-			# linux
-			try:
-				subprocess.call(["xdg-open", folder])
-				return True
-			except:
-				return False
+		pass
+	try:
+		# mac... works on Yosemite minimally
+		subprocess.call(["open", folder])
+		return True
+	except:
+		pass
+	try:
+		# linux
+		subprocess.call(["xdg-open", folder])
+		return True
+	except:
+		return False
 
 
 def exec_path_expand(self, context):
@@ -347,6 +347,10 @@ def exec_path_expand(self, context):
 
 def addGroupInstance(group_name, loc, select=True):
 	"""Add object instance not working, so workaround function."""
+	# The built in method fails, bpy.ops.object.group_instance_add(...)
+	#UPDATE: I reported the bug, and they fixed it nearly instantly =D
+	# but it was recommended to do the below anyways.
+
 	scene = bpy.context.scene
 	ob = bpy.data.objects.new(group_name, None)
 	if bv28():
@@ -375,7 +379,8 @@ def load_mcprep_json():
 			"animated":[],
 			"block_mapping_mc":{},
 			"block_mapping_jmc":{},
-			"block_mapping_mineways":{}
+			"block_mapping_mineways":{},
+			"canon_mapping_block":{}
 		}
 	}
 	if not os.path.isfile(path):

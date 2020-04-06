@@ -257,16 +257,28 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		elif context.object:
 			conf.log("Splitting imported obj by material")
 			bpy.ops.mesh.separate(type='MATERIAL')
+			for obj in context.selected_objects:
+				self.obj_name_to_material(obj)
 		elif context.selected_objects:
 			for obj in context.selected_objects:
 				if obj.type != 'MESH':
 					continue
 				util.set_active_object(context, obj)
 				bpy.ops.mesh.separate(type='MATERIAL')
+			# again to force renames based on material
+			for obj in context.selected_objects:
+				self.obj_name_to_material(obj)
 		else:
 			conf.log("No object active found to split")
 
+
 		return {'FINISHED'}
+
+	def obj_name_to_material(self, obj):
+		"""Update an objects name based on its first material"""
+		if not obj or not obj.active_material:
+			return
+		obj.name = util.nameGeneralize(obj.active_material.name)
 
 
 class MCPREP_OT_prep_world(bpy.types.Operator):
@@ -377,7 +389,6 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 		# Renders faster at a (minor?) cost of the image output
 		# TODO: given the output change, consider make a bool toggle for this
 		bpy.context.scene.render.use_simplify = True
-
 
 	def prep_world_internal(self, context):
 		# check for any suns with the sky setting on;

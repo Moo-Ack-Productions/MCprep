@@ -32,6 +32,7 @@ import io
 from contextlib import redirect_stdout
 import importlib
 
+TEST_FILE = "test_results.tsv"
 
 # -----------------------------------------------------------------------------
 # Primary test loop
@@ -54,7 +55,10 @@ class mcprep_testing():
 			self.import_world_fail,
 			self.import_jmc2obj,
 			self.import_mineways_separated,
-			self.import_mineways_combined
+			self.import_mineways_combined,
+			self.name_generalize,
+			self.meshswap_jmc2obj,
+			self.meshswap_mineways_separated
 			]
 		self.run_only = None # name to give to only run this test
 
@@ -117,11 +121,19 @@ class mcprep_testing():
 			for tst in self.test_status:
 				if self.test_status[tst]["check"] > 0:
 					continue
-				ert = self.test_status[tst]["res"]
-				ert.replace('\n', '\\n ')
-				if len(ert)>70:
-					ert = ert[-70:]
+				ert = suffix_chars(self.test_status[tst]["res"], 70)
 				print("\t{}{}{}: {}".format(COL.UNDERLINE, tst, COL.ENDC, ert))
+
+		# save outputs to .tsv file
+		write_out = [
+			"{}\t{}\t{}\n".format(bpy.app.version, tst, suffix_chars(self.test_status[tst]["res"], 20))
+			for tst in failed_tests]
+		with open(TEST_FILE, 'a') as tsv:
+			if write_out:
+				for row in write_out:
+					tsv.write(row)
+			else:
+				tsv.write("{}\t{}\t-\n".format(bpy.app.version, "ALL PASSED"))
 
 	def mcrprep_run_test(self, test_func):
 		"""Run a single MCprep test"""
@@ -235,19 +247,17 @@ class mcprep_testing():
 		print("END printlines")
 		return bpy.data.texts['Recent Reports'].lines[-1].body
 
-	# def _get_mcprep_data(self):
-	# 	"""Return the contents of the mcprep_data.json file"""
-	# 	if self.mcprep_json:
-	# 		return self.mcprep_json
-	# 	base = os.path.dirname(os.path.dirname(__file__))
-	# 	json_path = os.path.join(base, "MCprep_addon", "MCprep_resources", "mcprep_data_update.json")
-
-	# 	with open(json_path) as jpth:
-	# 		self.mcprep_json = json.load(jpth)
-
-	# 	if not self.mcprep_json:
-	# 		raise Exception("Could not load json resource")
-	# 	return self.mcprep_json
+	def _set_exporter(self, name):
+		"""Sets the exporter name"""
+		if name not in ['(choose)', 'jmc2obj', 'Mineways']:
+			raise Exception('Invalid exporter set tyep')
+		from MCprep.util import get_user_preferences
+		context = bpy.context
+		if hasattr(context, "user_preferences"):
+			prefs = context.user_preferences.addons.get("MCprep_addon", None)
+		elif hasattr(context, "preferences"):
+			prefs = context.preferences.addons.get("MCprep_addon", None)
+		prefs.preferences.MCprep_exporter_type = name
 
 
 	# -----------------------------------------------------------------------------
@@ -529,7 +539,7 @@ class mcprep_testing():
 
 		if len(mapped) == 0:
 			return "No materials mapped"
-		elif len(mapped) < len(unmapped)+len(unleveraged):
+		elif len(mapped) < len(unmapped): # +len(unleveraged), too many esp. for Mineways
 			# not a very optimistic threshold, but better than none
 			return "More materials unmapped than mapped"
 		print("")
@@ -586,7 +596,7 @@ class mcprep_testing():
 		self._import_mineways_separated()
 
 		#mcprep_data = self._get_mcprep_data()
-		res = self.import_materials_util("block_mapping_jmc")
+		res = self.import_materials_util("block_mapping_mineways")
 		return res
 
 	def import_mineways_combined(self):
@@ -595,8 +605,124 @@ class mcprep_testing():
 		self._import_mineways_combined()
 
 		#mcprep_data = self._get_mcprep_data()
-		res = self.import_materials_util("block_mapping_jmc")
+		res = self.import_materials_util("block_mapping_mineways")
 		return res
+
+	def name_generalize(self):
+		"""Tests the outputs of the generalize function"""
+		from MCprep.util import nameGeneralize
+		test_sets = {
+			"ab":"ab",
+			"table.001":"table",
+			"table.100":"table",
+			"table001":"table001",
+			"fire_0":"fire_0",
+			# "fire_0_0001.png":"fire_0", not current behavior, but desired?
+			"fire_0_0001":"fire_0",
+			"fire_0_0001.001":"fire_0",
+			"fire_layer_1":"fire_layer_1",
+			"cartography_table_side1":"cartography_table_side1"
+		}
+		errors = []
+		for key in list(test_sets):
+			res = nameGeneralize(key)
+			if res != test_sets[key]:
+				errors.append("{} converts to {} and should be {}".format(
+					key, res, test_sets[key]))
+			else:
+				print("{}:{} passed".format(key, res))
+
+		if errors:
+			return "Generalize failed: "+", ".join(errors)
+
+	def meshswap_util(self, mat_name):
+		"""Run meshswap on the first object with found mat_name"""
+		if mat_name not in bpy.data.materials:
+			return "Not a material: "+mat_name
+		print("\nAttempt meshswap of "+mat_name)
+		mat = bpy.data.materials[mat_name]
+
+		obj = None
+		for ob in bpy.data.objects:
+			for slot in ob.material_slots:
+				if slot and slot.material == mat:
+					obj = ob
+					break
+			if obj:
+				break
+		if not obj:
+			return "Failed to find obj for "+mat_name
+		print("Found the object - "+obj.name)
+
+		from MCprep.util import select_set
+		bpy.ops.object.select_all(action='DESELECT')
+		select_set(obj, True)
+		res = bpy.ops.mcprep.meshswap()
+		if res != {'FINISHED'}:
+			return "Meshswap returned cancelled for "+mat_name
+
+	def meshswap_jmc2obj(self):
+		"""Tests jmc2obj meshswapping"""
+		self._clear_scene()
+		self._import_jmc2obj_full()
+		self._set_exporter('jmc2obj')
+
+		# known jmc2obj material names which we expect to be able to meshswap
+		test_materials = [
+			"torch",
+			"fire",
+			"lantern",
+			"cactus_side",
+			"vines", # plural
+			"enchant_table_top",
+			"redstone_torch_on",
+			"glowstone",
+			"redstone_lamp_on",
+			"pumpkin_front_lit",
+			"sugarcane",
+			"chest",
+			"largechest"
+		]
+
+		errors = []
+		for mat_name in test_materials:
+			res = self.meshswap_util(mat_name)
+			if res:
+				errors.append(res)
+		if errors:
+			return "Meshswap failed: "+", ".join(errors)
+
+	def meshswap_mineways_separated(self):
+		"""Tests jmc2obj meshswapping"""
+		self._clear_scene()
+		self._import_mineways_separated()
+		self._set_exporter('Mineways')
+
+		# known Mineways (separated) material names expected for meshswap
+		test_materials = [
+			"grass",
+			"torch",
+			"fire_0",
+			# "lantern", not in test object
+			"cactus_side",
+			"vine", # singular
+			"enchanting_table_top",
+			"redstone_torch_on",
+			"glowstone",
+			"redstone_torch",
+			"jack_o_lantern",
+			"sugar_cane",
+			"MWO_chest_top",
+			"MWO_double_chest_top_left" #
+		]
+
+		errors = []
+		for mat_name in test_materials:
+			res = self.meshswap_util(mat_name)
+			if res:
+				errors.append(res)
+		if errors:
+			return "Meshswap failed: "+", ".join(errors)
 
 
 class OCOL:
@@ -622,6 +748,14 @@ class COL:
 	BOLD = '\033[1m'
 	UNDERLINE = '\033[4m'
 
+
+def suffix_chars(string, max_char):
+	"""Returns passed string or the last max_char characters if longer"""
+	string = string.replace('\n', '\\n ')
+	string = string.replace(',', ' ')
+	if len(string)>max_char:
+		return string[-max_char:]
+	return string
 
 # -----------------------------------------------------------------------------
 # Testing file, to semi-auto check addon functionality is working

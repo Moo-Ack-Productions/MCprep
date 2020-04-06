@@ -44,9 +44,9 @@ def get_mc_canonical_name(name):
 		if not res:
 			return general_name, None
 	if "blocks" not in conf.json_data \
-			or "block_mapping_mc" not in conf.json_data["blocks"] \
 			or "block_mapping_jmc" not in conf.json_data["blocks"] \
 			or "block_mapping_mineways" not in conf.json_data["blocks"]:
+			# or "block_mapping_mc" not in conf.json_data["blocks"] \
 		conf.log("Missing key values in json")
 		return general_name, None
 	if general_name in conf.json_data["blocks"]["block_mapping_mc"]:
@@ -1071,7 +1071,7 @@ def matgen_cycles_original(mat, passes, use_reflections, only_solid):
 	nodeGloss.location = (0,-150)
 	nodeSaturateMix.location = (-400,0)
 	nodeDiff.location = (-200,-150)
-	nodeTrans.location = (200,0)
+	nodeTrans.location = (-200,0)
 	nodeMix1.location = (0,0)
 	nodeMix2.location = (200,0)
 	nodeOut.location = (400,0)

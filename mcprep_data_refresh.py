@@ -177,6 +177,100 @@ def get_mineways_list(vanilla):
 				#mats.append(name.lower()) # make it none?
 	return outlist
 
+def mineways_extras():
+	"""Known additional mappings for Mineways"""
+	outlist = {
+		"Acacia_Door":"acacia_door_bottom",
+		"Activator_Rail":"activator_rail",
+		"Beacon":"beacon",
+		# do NOT include Bamboo, it's completely off (overloaded w/ campfire)
+		"Birch_Door":"birch_door_bottom",
+		"Brewing_Stand":"brewing_stand_base", # maybe don't? since only for meshswap
+		"Bookshelf":"bookshelf",
+		"Bricks":"bricks",
+		"Cactus":"cactus_top",
+		"Command_Block":"chain_command_block",
+		"Chain_Command_Block":"chain_command_block",
+		"Carrots":"carrots_stage3",
+		"Campfire":"campfire_log",
+		"Chest":"entity/chest/normal",
+		"Cobweb":"cobweb",
+		"Crafting_Table":"crafting_table_top",
+		"Crafting_Table__Cartography_Table":"cartography_table_top",
+		"Crafting_Table__Fletching_Table":"fletching_table_top",
+		"Crafting_Table__Smithing_Table":"smithing_table_top",
+		"Dandelion":"dandelion",
+		"Dark_Oak_Door":"dark_oak_door_bottom",
+		"Dead_Bush":"dead_bush",
+		"Detector_Rail":"detector_rail",
+		"Enchanting_Table":"enchanting_table_top",
+		"End_Rod":"end_rod",
+		"Ender_Chest":"entity/chest/ender",
+		"Furnace":"furnace_front_on", # assume on? meshswap implication
+		"Furnace__Blast_Furnace":"blast_furnace_front_on", # assume on? meshswap implication
+		"Furnace__Loom":"loom_top",
+		"Furnace__Smoker":"smoker_front_on", # assume on? meshswap implication
+		"Fire":"fire_0",
+		"Glowstone":"glowstone",
+		"Grass__Fern":"fern", # single block high
+		"Grass__Tall_Grass":"grass", # ie tall grass
+		"Glass":"glass",
+		"Glass_Pane":"glass_pane_top",
+		"Lily_Pad":"lily_pad",
+		"Iron_Door":"iron_door_bottom",
+		"Jack_o'Lantern":"pumpkin_face_on",
+		"Kelp":"kelp",
+		"Kelp__1":"",
+		"Ladder":"ladder",
+		"Lantern":"lantern",
+		"Large_Flowers":"sunflower", # decide block
+		"Large_Flowers__1":"",
+		"Large_Flowers__2":"",
+		"Large_Flowers__3":"large_fern_bottom",
+		"Large_Flowers__4":"",
+		"Large_Flowers__5":"",
+		"Magma_Block":"magma",
+		"Poppy":"",
+		"Poppy__Allium":"",
+		"Poppy__Azure_Bluet":"",
+		"Poppy__Blue_Orchid":"",
+		"Poppy__Orange_Tulip":"",
+		"Poppy__Oxeye_Daisy":"",
+		"Poppy__Pink_Tulip":"",
+		"Poppy__Red_Tulip":"",
+		"Poppy__White_Tulip":"",
+		"Poppy__Wither_Rose":"",
+		"Powered_Rail":"powered_rail",
+		"Rail":"rail",
+		"Redstone_Lamp_(active)":"redstone_lamp",
+		"Redstone_Lamp_(inactive)":"redstone_lamp_off",
+		"Redstone_Torch_(active)":"redstone_torch",
+		"Redstone_Torch_(inactive)":"redstone_torch_off",
+		"Sapling":"",
+		"Sapling__Acacia_Sapling":"",
+		"Sapling__Birch_Sapling":"",
+		"Sapling__Dark_Oak_Sapling":"",
+		"Sapling__Jungle_Sapling":"",
+		"Sapling__Spruce_Sapling":"",
+		"Spruce_Door":"spruce_door_bottom",
+		"Seagrass":"tall_seagrass_bottom",
+		"Sea_Pickle":"sea_pickle",
+		"Sea_Lantern":"sea_lantern",
+		"Sugar_Cane":"sugar_cane",
+		"Stationary_Lava":"lava_still",
+		"Stationary_Water":"water_still",
+		"Stained_Glass*":"",
+		"Stone_Bricks*":"",
+		"Stone_Cutter":"",
+		"Sunflower":"",
+		"Trapped_Chest":"",
+		"Torch":"torch",
+		"TNT":"tnt_top",
+		"Vines":"vines",
+		"Wheat":"wheat_stage7",
+		"Wooden_Door":"oak_door_bottom"
+	}
+	return outlist
 
 def mineways2mc(name, vanilla):
 	"""Function that attemtps to map Mineways texture name to canonical"""
@@ -237,6 +331,8 @@ def get_vanilla_list():
 
 		if name.startswith(prefix+"block"):
 			outlist[base] = base
+		elif name.startswith(prefix+"item"):
+			continue # skip adding duplicative item mappings
 		elif name.startswith(prefix): # at least in textures folder
 			outlist[base] = name[len(prefix):-4]
 		else:
@@ -245,6 +341,16 @@ def get_vanilla_list():
 			# mostly just "realms" stuff
 
 	archive.close()
+	return outlist
+
+
+def vanilla_overrides(vanilla_map):
+	"""go through and create the mapping with special overrides"""
+	outlist = vanilla_map.copy()
+	overrides = {
+		"fire":"fire_0"
+	}
+	outlist.update(overrides)
 	return outlist
 
 
@@ -267,6 +373,18 @@ def read_base_mapping():
 		data = json.load(rawfile)
 	return data
 
+def get_cannon_block_mappping():
+	"""Returns a dict of the Block (not material) names to texturepack map"""
+
+	# only include those special cases that need overrides,
+	# used in meshswap for display name
+	outlist = {
+		"entity/chest/normal":"chest",
+		"entity/chest/normal_double":"chest_double",
+		"fire_0":"fire"
+	}
+	return outlist
+
 
 def run_all(auto=False):
 	"""Execute getting all of the texture lists and to compare."""
@@ -274,10 +392,12 @@ def run_all(auto=False):
 	data = {"blocks": {}}
 
 	# loads in existing resource json, for truly hand-stated things
+	# ie reflection, emission, etc
 	base_override = read_base_mapping()
 
 	# consider also passing in pref to get specific version, for old names
 	vanilla = get_vanilla_list()
+	vanilla_map = vanilla_overrides(vanilla) # don't need to return as pass ref?
 
 	# load material lists from online blobs
 	jmc = get_jmc2obj_mapping()
@@ -298,6 +418,10 @@ def run_all(auto=False):
 	# 	mat:jmc2mc(mat, vanilla) for mat in jmc
 	# 	if jmc2mc(mat, vanilla) is not None}
 	data["blocks"]["block_mapping_mineways"] = mineways
+	data["blocks"]["block_mapping_mineways"].update(mineways_extras())
+
+	data["blocks"]["block_mapping_mc"] = vanilla_map
+	data["blocks"]["canon_mapping_block"] = get_cannon_block_mappping()
 	# data["blocks"]["block_mapping_mineways"] = {
 	# 	mat:mineways2mc(mat, vanilla) for mat in mineways
 	# 	if mineways2mc(mat, vanilla) is not None}
