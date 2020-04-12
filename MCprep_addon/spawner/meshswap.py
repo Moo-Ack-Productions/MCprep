@@ -20,6 +20,7 @@
 import math
 import os
 import random
+import time
 
 import bpy
 import mathutils
@@ -433,6 +434,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 	# used for only occasionally refreshing the 3D scene while mesh swapping
 	counterObject = 0  # used in count
 	countMax = 5  # count compared to this, frequency of refresh (number of objs)
+	runcount = 0  # current counter status of swapped meshes
 
 	# properties for draw
 	meshswap_join = bpy.props.BoolProperty(
@@ -518,6 +520,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 	track_param = ""
 	@tracking.report_error
 	def execute(self, context):
+		tprep = time.time()
 		addon_prefs = util.get_user_preferences(context)
 		self.track_param = addon_prefs.MCprep_exporter_type
 
@@ -530,8 +533,8 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				return {'CANCELLED'}
 
 		# Assign vars used across operator
-		doOffset = (self.track_param == "Mineways")
-		runcount = 0 # counter; if zero by end, raise error nothing matched
+		# doOffset = (self.track_param == "Mineways")
+		self.runcount = 0 # counter; if zero by end, raise error nothing matched
 		objList = self.prep_obj_list(context)
 		selList = context.selected_objects # re-grab having made new objects
 		new_groups = [] # for new imported groups
@@ -542,13 +545,24 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		conf.log("Meshswap to check over {} objects".format(denom))
 		bpy.context.window_manager.progress_begin(0, 100)
 
+		tprep = time.time() - tprep
+		t0s = [] # start of loop
+		t1s = [] # between prep and face process
+		t2s = [] # between face process and
+		t3s = [] # end of loop
+
 		# primary loop, for each OBJECT needing swapping
 		for iter_index, swap in enumerate(objList):
+			t0s.append(time.time())
+			t1s.append(t0s[-1])
+			t2s.append(t0s[-1])
+			t3s.append(t0s[-1])
 			bpy.context.window_manager.progress_update(iter_index/denom)
 			swapGen = util.nameGeneralize(swap.name)
 			#swapGen = generate.get_mc_canonical_name(swap.name)
 			conf.log("Simplified name: {x}".format(x=swapGen))
 			swapProps = self.checkExternal(context, swapGen) # IMPORTS, gets lists properties, etc
+
 			if swapProps == False: # issue in swapProps, e.g. not a mesh or not in lib or some error
 				continue
 
@@ -570,258 +584,29 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			for poly in swap.data.polygons:
 				poly.select = False
 
-			#loop through each face or "polygon" of mesh
+			# loop through each face or "polygon" of mesh
+			t1s[-1] = time.time()
 			facebook = self.get_face_list(swap)
 
-			for ob in context.selected_objects:
-				if util.bv28():
-					continue
-				util.select_set(ob, False)
+			if not util.bv28():
+				for obj in context.selected_objects:
+					util.select_set(obj, False)
+
+			### START CRITICAL SECTION
 
 			# removing duplicates and checking orientation
-			dupList = []	#where actual blocks are to be added
-			rotList = []	#rotation of blocks
+			dupList = []	# where actual blocks are to be added
+			rotList = []	# rotation of blocks
 			for setNum in range(0,len(facebook)):
-				# LOCAL coordinates!!!
-				x = round(facebook[setNum][2][0]) #since center's are half ints..
-				y = round(facebook[setNum][2][1]) #don't need (+0.5) -.5 structure
-				z = round(facebook[setNum][2][2])
+				dups, rots = self.proccess_poly_orientations(facebook, swapProps, setNum, swapGen)
+				dupList += dups
+				rotList += rots
 
-				outsideBool = -1
-				if (swapProps['edgeFloat']): outsideBool = 1
-
-				if util.onEdge(facebook[setNum][2]): #check if face is on unit block boundary (local coord!)
-					a = facebook[setNum][0][0] * 0.4 * outsideBool #x normal
-					b = facebook[setNum][0][1] * 0.4 * outsideBool #y normal
-					c = facebook[setNum][0][2] * 0.4 * outsideBool #z normal
-					x = round(facebook[setNum][2][0]+a)
-					y = round(facebook[setNum][2][1]+b)
-					z = round(facebook[setNum][2][2]+c)
-					#print("ON EDGE, BRO! line, "+str(x) +","+str(y)+","+str(z))
-					#print([facebook[setNum][2][0], facebook[setNum][2][1], facebook[setNum][2][2]])
-
-				#### TORCHES, hack removes duplicates while not removing "edge" floats
-				# if facebook[setNum][2][1]+0.5 - math.floor(facebook[setNum][2][1]+0.5) < 0.3:
-				# 	#continue if coord. is < 1/3 of block height, to do with torch's base in wrong cube.
-				# 	if not swapProps['edgeFloat']:
-				# 		#continue
-				# 		print("do nothing, this is for jmc2obj")
-				conf.log(" DUPLIST: ")
-				conf.log(
-					str([[x,y,z], [facebook[setNum][2][0], facebook[setNum][2][1], facebook[setNum][2][2]]]),
-				True)
-
-				### START HACK PATCH, FOR MINEWAYS double-tall adding
-				# prevent double high grass... which mineways names sunflowers.
-				overwrite = 0 # 0 means normal, -1 means skip, 1 means overwrite the one below
-				if ([x,y-1,z] in dupList) and swapGen in ["Sunflower","Iron_Door","Wooden_Door"]:
-					overwrite = -1
-				elif ([x,y+1,z] in dupList) and swapGen in ["Sunflower","Iron_Door","Wooden_Door"]:
-					dupList[dupList.index([x,y+1,z])] = [x,y,z]
-					overwrite = -1
-				### END HACK PATCH
-
-				# rotation value (second append value: 0 means nothing, rest 1-4.
-				if ((not [x,y,z] in dupList) or (swapProps['edgeFloat'])) and overwrite >=0:
-					# append location
-					dupList.append([x,y,z])
-					# check difference from rounding, this gets us the rotation!
-					x_diff = x-facebook[setNum][2][0]
-					#print(facebook[setNum][2][0],x,x_diff)
-					z_diff = z-facebook[setNum][2][2]
-					#print(facebook[setNum][2][2],z,z_diff)
-
-					# append rotation, exporter dependent
-					if self.track_param == "jmc2obj":
-						if swapProps['torchlike']: # needs fixing
-							if (x_diff>.1 and x_diff < 0.4):
-								rotList.append(1)
-							elif (z_diff>.1 and z_diff < 0.4):
-								rotList.append(2)
-							elif (x_diff<-.1 and x_diff > -0.4):
-								rotList.append(3)
-							elif (z_diff<-.1 and z_diff > -0.4):
-								rotList.append(4)
-							else:
-								rotList.append(0)
-						elif swapProps['edgeFloat']:
-							if (y-facebook[setNum][2][1] < 0):
-								rotList.append(8)
-							elif (x_diff > 0.3):
-								rotList.append(7)
-							elif (z_diff > 0.3):
-								rotList.append(0)
-							elif (z_diff < -0.3):
-								rotList.append(6)
-							else:
-								rotList.append(5)
-						elif swapProps['edgeFlush']:
-							# actually 6 cases here, can need rotation below...
-							# currently not necessary/used, so not programmed..
-							rotList.append(0)
-						elif swapProps['doorlike']:
-							if (y-facebook[setNum][2][1] < 0):
-								rotList.append(8)
-							elif (x_diff > 0.3):
-								rotList.append(7)
-							elif (z_diff > 0.3):
-								rotList.append(0)
-							elif (z_diff < -0.3):
-								rotList.append(6)
-							else:
-								rotList.append(5)
-						else:
-							rotList.append(0)
-					elif self.track_param == "Mineways":
-						conf.log("checking: {} {}".format(x_diff,z_diff))
-						if swapProps['torchlike']: # needs fixing
-							conf.log("recognized it's a torchlike obj..")
-							if (x_diff>.1 and x_diff < 0.6):
-								rotList.append(1)
-								#print("rot 1?")
-							elif (z_diff>.1 and z_diff < 0.6):
-								rotList.append(2)
-								#print("rot 2?")
-							elif (x_diff<-.1 and x_diff > -0.6):
-								#print("rot 3?")
-								rotList.append(3)
-							elif (z_diff<-.1 and z_diff > -0.6):
-								rotList.append(4)
-								#print("rot 4?")
-							else:
-								rotList.append(0)
-								#print("rot 0?")
-						elif swapProps['edgeFloat']:
-							if (y-facebook[setNum][2][1] < 0):
-								rotList.append(8)
-							elif (x_diff > 0.3):
-								rotList.append(7)
-							elif (z_diff > 0.3):
-								rotList.append(0)
-							elif (z_diff < -0.3):
-								rotList.append(6)
-							else:
-								rotList.append(5)
-						elif swapProps['edgeFlush']:
-							# actually 6 cases here, can need rotation below...
-							# currently not necessary/used, so not programmed..
-							rotList.append(0)
-						elif swapProps['doorlike']:
-							if (y-facebook[setNum][2][1] < 0):
-								rotList.append(8)
-							elif (x_diff > 0.3):
-								rotList.append(7)
-							elif (z_diff > 0.3):
-								rotList.append(0)
-							elif (z_diff < -0.3):
-								rotList.append(6)
-							else:
-								rotList.append(5)
-						else:
-							rotList.append(0)
-					else:
-						rotList.append(0)
-
-			##### OPTION HERE TO SEGMENT INTO NEW FUNCTION
-			conf.log("### > trans")
-			for ob in context.selected_objects:
-				if util.bv28():
-					continue
-				util.select_set(ob, False)
+			# Primary function for adding the actual instances
+			t2s[-1] = time.time()
+			grouped, dupedObj = self.add_instances_with_transforms(
+				context, swap, swapProps, dupList, rotList)
 			base = swapProps["object"]
-			grouped = swapProps["groupSwap"]
-			#self.counterObject = 0
-			# duplicating, rotating and moving
-			dupedObj = []
-
-			for (set,rot) in zip(dupList,rotList):
-				### HIGH COMPUTATION/CRITICAL SECTION
-				#refresh the scene every once in awhile
-				self.counterObject+=1
-				runcount +=1
-				if (self.counterObject > self.countMax):
-					self.counterObject = 0
-					if not util.bv28():
-						bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
-					elif hasattr(context, "view_layer"):
-						context.view_layer.update() # but does not redraw ui
-
-				loc = util.matmul(swap.matrix_world, mathutils.Vector(set))
-
-				# loc = swap.matrix_world*mathutils.Vector(set) #local to global
-				if grouped:
-					# definition for randimization, defined at top!
-					randGroup = util.randomizeMeshSawp(swapProps['importName'],3)
-					conf.log("Rand group: {}".format(randGroup))
-					new_ob = util.addGroupInstance(randGroup,loc)
-
-				else:
-					new_ob = util.obj_copy(base, context)
-					new_ob.location = mathutils.Vector(loc)
-					util.select_set(new_ob, True)  # needed?
-					dupedObj.append(new_ob)
-
-				obj = new_ob # bpy.context.selected_objects[-1]
-				# do extra transformations now as necessary
-				obj.rotation_euler = swap.rotation_euler
-				# special case of un-applied, 90(+/- 0.01)-0-0 rotation on source (y-up conversion)
-				if (swap.rotation_euler[0]>= math.pi/2-.01 and swap.rotation_euler[0]<= math.pi/2+.01
-					and swap.rotation_euler[1]==0 and swap.rotation_euler[2]==0):
-					obj.rotation_euler[0] -= math.pi/2
-				obj.scale = swap.scale
-
-				#rotation/translation for walls, assumes last added object still selected
-				x,y,offset,rotValue,z = 0,0,0.28,0.436332,0.12
-
-				if rot == 1:
-					# torch rotation 1
-					x = -offset
-					obj.location += mathutils.Vector((x, y, z))
-					obj.rotation_euler[1]+=rotValue
-				elif rot == 2:
-					# torch rotation 2
-					y = offset
-					obj.location += mathutils.Vector((x, y, z))
-					obj.rotation_euler[0]+=rotValue
-				elif rot == 3:
-					# torch rotation 3
-					x = offset
-					obj.location += mathutils.Vector((x, y, z))
-					obj.rotation_euler[1]-=rotValue
-				elif rot == 4:
-					# torch rotation 4
-					y = -offset
-					obj.location += mathutils.Vector((x, y, z))
-					obj.rotation_euler[0]-=rotValue
-				elif rot == 5:
-					# edge block rotation 1
-					obj.rotation_euler[2]+= -math.pi/2
-				elif rot == 6:
-					# edge block rotation 2
-					obj.rotation_euler[2]+= math.pi
-				elif rot == 7:
-					# edge block rotation 3
-					obj.rotation_euler[2]+= math.pi/2
-				elif rot==8:
-					# edge block rotation 4 (ceiling, not 'keep same')
-					obj.rotation_euler[0]+= math.pi/2
-
-				# extra variance to break up regularity, e.g. for tall grass
-				# first, xy and z variance
-				if [True,1] == swapProps['variance']:
-					x = (random.random()-0.5)*0.5
-					y = (random.random()-0.5)*0.5
-					z = (random.random()/2-0.5)*0.6
-					obj.location += mathutils.Vector((x, y, z))
-				# now for just xy variance, base stays the same
-				elif [True,0] == swapProps['variance']: # for non-z variance
-					x = (random.random()-0.5)*0.5	 # values LOWER than *1.0 make it less variable
-					y = (random.random()-0.5)*0.5
-					obj.location += mathutils.Vector((x, y, 0))
-				for ob in context.selected_objects:
-					if util.bv28():
-						continue
-					util.select_set(ob, False)
 
 			### END CRITICAL SECTION
 
@@ -867,15 +652,18 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 					continue
 				selList.append(d)
 
+			t3s[-1] = time.time()
+
+		t4 = time.time()
 		# final re-selection and deletion
-		if runcount > 0:
+		if self.runcount > 0:
 			for rm in removeList:
 				if rm in selList:
-					selList.pop(selList.index(rm)) # to be safe, pop from list before removal
+					selList.pop(selList.index(rm)) # prevent later operations on deleted object
 				try:
 					util.obj_unlink_remove(rm, True, context)
 				except:
-					print("Failed to clear user/remove object")
+					print("Failed to clear user/remove object: "+rm.name)
 
 		for d in selList:
 			# Risk if object was joined against another object that its data
@@ -899,16 +687,29 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 
 		# end progress bar, end of primary section
 		bpy.context.window_manager.progress_end()
+		t5 = time.time()
 
-		if runcount==0:
-			self.report({'ERROR'}, "Nothing swapped, likely no materials of selected objects match the meshswap file objects/groups")
+		# run timing calculations
+		if conf.vv:
+			loop_prep = sum(t1s) - sum(t0s)
+			face_process = sum(t2s) - sum(t1s)
+			instancing = sum(t3s) - sum(t2s)
+			cleanup = t5-t4
+
+			total = tprep+loop_prep+face_process+instancing+cleanup
+			print("Total time: {}s, init: {}, prep: {}, poly process: {}, instance:{}, cleanup: {}".format(
+				round(total), round(tprep), round(loop_prep), round(face_process),
+				round(instancing), round(cleanup)))
+
+		if self.runcount==0:
+			self.report({'ERROR'}, ("Nothing swapped, likely no materials of "
+				"selected objects match the meshswap file objects/groups"))
 			return {'CANCELLED'}
-		elif runcount==1:
+		elif self.runcount==1:
 			self.report({'INFO'}, "Swapped 1 object")
 			return {'FINISHED'}
-		else:
-			self.report({'INFO'}, "Swapped {x} objects".format(x=runcount))
-			return {'FINISHED'}
+		self.report({'INFO'}, "Swapped {} objects".format(self.runcount))
+		return {'FINISHED'}
 
 	def prep_obj_list(self, context):
 		"""Initial operator prep to get list of objects to check over"""
@@ -1128,6 +929,263 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				'edgeFlush':edgeFlush,'edgeFloat':edgeFloat,'torchlike':torchlike,
 				'removable':removable,'doorlike':doorlike,
 				'new_groups':new_groups}
+
+	def proccess_poly_orientations(self, facebook, swapProps, setNum, swapGen):
+		"""Process the poly face information, returning rotation and duplication locations"""
+
+		dupList = []
+		rotList = []
+
+		# LOCAL coordinates!!!
+		x = round(facebook[setNum][2][0]) #since center's are half ints..
+		y = round(facebook[setNum][2][1]) #don't need (+0.5) -.5 structure
+		z = round(facebook[setNum][2][2])
+
+		outsideBool = -1
+		if (swapProps['edgeFloat']): outsideBool = 1
+
+		if util.onEdge(facebook[setNum][2]): #check if face is on unit block boundary (local coord!)
+			a = facebook[setNum][0][0] * 0.4 * outsideBool #x normal
+			b = facebook[setNum][0][1] * 0.4 * outsideBool #y normal
+			c = facebook[setNum][0][2] * 0.4 * outsideBool #z normal
+			x = round(facebook[setNum][2][0]+a)
+			y = round(facebook[setNum][2][1]+b)
+			z = round(facebook[setNum][2][2]+c)
+			#print("ON EDGE, BRO! line, "+str(x) +","+str(y)+","+str(z))
+			#print([facebook[setNum][2][0], facebook[setNum][2][1], facebook[setNum][2][2]])
+
+		#### TORCHES, hack removes duplicates while not removing "edge" floats
+		# if facebook[setNum][2][1]+0.5 - math.floor(facebook[setNum][2][1]+0.5) < 0.3:
+		# 	#continue if coord. is < 1/3 of block height, to do with torch's base in wrong cube.
+		# 	if not swapProps['edgeFloat']:
+		# 		#continue
+		# 		print("do nothing, this is for jmc2obj")
+		conf.log(" DUPLIST: ")
+		conf.log(
+			str([[x,y,z], [facebook[setNum][2][0], facebook[setNum][2][1], facebook[setNum][2][2]]]),
+		True)
+
+		### START HACK PATCH, FOR MINEWAYS double-tall adding
+		# prevent double high grass... which mineways names sunflowers.
+		overwrite = 0 # 0 means normal, -1 means skip, 1 means overwrite the one below
+		if ([x,y-1,z] in dupList) and swapGen in ["Sunflower","Iron_Door","Wooden_Door"]:
+			overwrite = -1
+		elif ([x,y+1,z] in dupList) and swapGen in ["Sunflower","Iron_Door","Wooden_Door"]:
+			dupList[dupList.index([x,y+1,z])] = [x,y,z]
+			overwrite = -1
+		### END HACK PATCH
+
+		# rotation value (second append value: 0 means nothing, rest 1-4.
+		if ((not [x,y,z] in dupList) or (swapProps['edgeFloat'])) and overwrite >=0:
+			# append location
+			dupList.append([x,y,z])
+			# check difference from rounding, this gets us the rotation!
+			x_diff = x-facebook[setNum][2][0]
+			#print(facebook[setNum][2][0],x,x_diff)
+			z_diff = z-facebook[setNum][2][2]
+			#print(facebook[setNum][2][2],z,z_diff)
+
+			# append rotation, exporter dependent
+			if self.track_param == "jmc2obj":
+				if swapProps['torchlike']: # needs fixing
+					if (x_diff>.1 and x_diff < 0.4):
+						rotList.append(1)
+					elif (z_diff>.1 and z_diff < 0.4):
+						rotList.append(2)
+					elif (x_diff<-.1 and x_diff > -0.4):
+						rotList.append(3)
+					elif (z_diff<-.1 and z_diff > -0.4):
+						rotList.append(4)
+					else:
+						rotList.append(0)
+				elif swapProps['edgeFloat']:
+					if (y-facebook[setNum][2][1] < 0):
+						rotList.append(8)
+					elif (x_diff > 0.3):
+						rotList.append(7)
+					elif (z_diff > 0.3):
+						rotList.append(0)
+					elif (z_diff < -0.3):
+						rotList.append(6)
+					else:
+						rotList.append(5)
+				elif swapProps['edgeFlush']:
+					# actually 6 cases here, can need rotation below...
+					# currently not necessary/used, so not programmed..
+					rotList.append(0)
+				elif swapProps['doorlike']:
+					if (y-facebook[setNum][2][1] < 0):
+						rotList.append(8)
+					elif (x_diff > 0.3):
+						rotList.append(7)
+					elif (z_diff > 0.3):
+						rotList.append(0)
+					elif (z_diff < -0.3):
+						rotList.append(6)
+					else:
+						rotList.append(5)
+				else:
+					rotList.append(0)
+			elif self.track_param == "Mineways":
+				conf.log("checking: {} {}".format(x_diff,z_diff))
+				if swapProps['torchlike']: # needs fixing
+					conf.log("recognized it's a torchlike obj..")
+					if (x_diff>.1 and x_diff < 0.6):
+						rotList.append(1)
+						#print("rot 1?")
+					elif (z_diff>.1 and z_diff < 0.6):
+						rotList.append(2)
+						#print("rot 2?")
+					elif (x_diff<-.1 and x_diff > -0.6):
+						#print("rot 3?")
+						rotList.append(3)
+					elif (z_diff<-.1 and z_diff > -0.6):
+						rotList.append(4)
+						#print("rot 4?")
+					else:
+						rotList.append(0)
+						#print("rot 0?")
+				elif swapProps['edgeFloat']:
+					if (y-facebook[setNum][2][1] < 0):
+						rotList.append(8)
+					elif (x_diff > 0.3):
+						rotList.append(7)
+					elif (z_diff > 0.3):
+						rotList.append(0)
+					elif (z_diff < -0.3):
+						rotList.append(6)
+					else:
+						rotList.append(5)
+				elif swapProps['edgeFlush']:
+					# actually 6 cases here, can need rotation below...
+					# currently not necessary/used, so not programmed..
+					rotList.append(0)
+				elif swapProps['doorlike']:
+					if (y-facebook[setNum][2][1] < 0):
+						rotList.append(8)
+					elif (x_diff > 0.3):
+						rotList.append(7)
+					elif (z_diff > 0.3):
+						rotList.append(0)
+					elif (z_diff < -0.3):
+						rotList.append(6)
+					else:
+						rotList.append(5)
+				else:
+					rotList.append(0)
+			else:
+				rotList.append(0)
+		return dupList, rotList
+
+	def add_instances_with_transforms(self, context, swap, swapProps, dupList, rotList):
+		"""Creates all block instances for a single object.
+
+		Will add and apply rotations, add loc variances, and run random group
+		imports if any relevant
+		"""
+
+		conf.log("### > trans")
+		# for ob in context.selected_objects:
+		# 	if util.bv28():
+		# 		continue
+		# 	util.select_set(ob, False)
+		base = swapProps["object"]
+		grouped = swapProps["groupSwap"]
+		dupedObj = [] # duplicating, rotating and moving
+
+		for (set,rot) in zip(dupList,rotList):
+			### HIGH COMPUTATION/CRITICAL SECTION
+			# refresh the scene every once in awhile
+			self.counterObject+=1
+			self.runcount +=1
+			if (self.counterObject > self.countMax):
+				self.counterObject = 0
+				if not util.bv28():
+					bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+				elif hasattr(context, "view_layer"):
+					context.view_layer.update() # but does not redraw ui
+
+			loc = util.matmul(swap.matrix_world, mathutils.Vector(set))
+
+			# loc = swap.matrix_world*mathutils.Vector(set) #local to global
+			if grouped:
+				# definition for randimization, defined at top!
+				randGroup = util.randomizeMeshSawp(swapProps['importName'],3)
+				conf.log("Rand group: {}".format(randGroup))
+				new_ob = util.addGroupInstance(randGroup,loc)
+
+			else:
+				# TODO: Change to adding a single vertex, dupliverts
+				new_ob = util.obj_copy(base, context)
+				new_ob.location = mathutils.Vector(loc)
+				util.select_set(new_ob, True)  # needed?
+				dupedObj.append(new_ob)
+
+			# obj = new_ob # bpy.context.selected_objects[-1]
+			# do extra transformations now as necessary
+			new_ob.rotation_euler = swap.rotation_euler
+			# special case of un-applied, 90(+/- 0.01)-0-0 rotation on source (y-up conversion)
+			if (swap.rotation_euler[0]>= math.pi/2-.01 and swap.rotation_euler[0]<= math.pi/2+.01
+				and swap.rotation_euler[1]==0 and swap.rotation_euler[2]==0):
+				new_ob.rotation_euler[0] -= math.pi/2
+			new_ob.scale = swap.scale
+
+			# rotation/translation for walls, assumes last added object still selected
+			x,y,offset,rotValue,z = 0,0,0.28,0.436332,0.12
+
+			if rot == 1:
+				# torch rotation 1
+				x = -offset
+				new_ob.location += mathutils.Vector((x, y, z))
+				new_ob.rotation_euler[1]+=rotValue
+			elif rot == 2:
+				# torch rotation 2
+				y = offset
+				new_ob.location += mathutils.Vector((x, y, z))
+				new_ob.rotation_euler[0]+=rotValue
+			elif rot == 3:
+				# torch rotation 3
+				x = offset
+				new_ob.location += mathutils.Vector((x, y, z))
+				new_ob.rotation_euler[1]-=rotValue
+			elif rot == 4:
+				# torch rotation 4
+				y = -offset
+				new_ob.location += mathutils.Vector((x, y, z))
+				new_ob.rotation_euler[0]-=rotValue
+			elif rot == 5:
+				# edge block rotation 1
+				new_ob.rotation_euler[2]+= -math.pi/2
+			elif rot == 6:
+				# edge block rotation 2
+				new_ob.rotation_euler[2]+= math.pi
+			elif rot == 7:
+				# edge block rotation 3
+				new_ob.rotation_euler[2]+= math.pi/2
+			elif rot==8:
+				# edge block rotation 4 (ceiling, not 'keep same')
+				new_ob.rotation_euler[0]+= math.pi/2
+
+			# extra variance to break up regularity, e.g. for tall grass
+			# first, xy and z variance
+			if [True,1] == swapProps['variance']:
+				x = (random.random()-0.5)*0.5
+				y = (random.random()-0.5)*0.5
+				z = (random.random()/2-0.5)*0.6
+				new_ob.location += mathutils.Vector((x, y, z))
+			# now for just xy variance, base stays the same
+			elif [True,0] == swapProps['variance']: # for non-z variance
+				x = (random.random()-0.5)*0.5	 # values LOWER than *1.0 make it less variable
+				y = (random.random()-0.5)*0.5
+				new_ob.location += mathutils.Vector((x, y, 0))
+
+			# Clear selection before moving on with next iteration
+			for ob in context.selected_objects:
+				if util.bv28():
+					continue
+				util.select_set(ob, False)
+		return grouped, dupedObj
+
 
 	def offsetByHalf(self, obj):
 		if obj.type != 'MESH':
