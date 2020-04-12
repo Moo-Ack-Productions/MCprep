@@ -43,10 +43,10 @@ def get_mc_canonical_name(name):
 		res = util.load_mcprep_json()
 		if not res:
 			return general_name, None
-	if "blocks" not in conf.json_data \
-			or "block_mapping_jmc" not in conf.json_data["blocks"] \
-			or "block_mapping_mineways" not in conf.json_data["blocks"]:
-			# or "block_mapping_mc" not in conf.json_data["blocks"] \
+	if ("blocks" not in conf.json_data
+			or "block_mapping_mc" not in conf.json_data["blocks"]
+			or "block_mapping_jmc" not in conf.json_data["blocks"]
+			or "block_mapping_mineways" not in conf.json_data["blocks"]):
 		conf.log("Missing key values in json")
 		return general_name, None
 	if general_name in conf.json_data["blocks"]["block_mapping_mc"]:

@@ -251,14 +251,35 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			self.report({"ERROR"}, "Issue encountered while importing world")
 			return {'CANCELLED'}
 
-		if not util.bv28():
-			# conf.log("No need to split")
-			pass
-		elif context.object:
+		if util.bv28():
+			self.split_world_by_material(context)
+
+		return {'FINISHED'}
+
+	def obj_name_to_material(self, obj):
+		"""Update an objects name based on its first material"""
+		if not obj or not obj.active_material:
+			return
+		obj.name = util.nameGeneralize(obj.active_material.name)
+
+	def split_world_by_material(self, context):
+		"""2.8-only function, split combined object into parts by material"""
+
+		# Create the new world collection
+		prefs = util.get_user_preferences(context)
+		if prefs is not None and prefs.MCprep_exporter_type != '(choose)':
+			name = "{}_world".format(prefs.MCprep_exporter_type)
+		else:
+			name = "minecraft_world"
+		worldg = util.collections().new(name=name)
+		context.scene.collection.children.link(worldg) # add it to the outliner
+
+		if context.object:
 			conf.log("Splitting imported obj by material")
 			bpy.ops.mesh.separate(type='MATERIAL')
 			for obj in context.selected_objects:
 				self.obj_name_to_material(obj)
+				util.move_to_collection(obj, worldg)
 		elif context.selected_objects:
 			for obj in context.selected_objects:
 				if obj.type != 'MESH':
@@ -268,17 +289,9 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			# again to force renames based on material
 			for obj in context.selected_objects:
 				self.obj_name_to_material(obj)
+				util.move_to_collection(obj, worldg)
 		else:
 			conf.log("No object active found to split")
-
-
-		return {'FINISHED'}
-
-	def obj_name_to_material(self, obj):
-		"""Update an objects name based on its first material"""
-		if not obj or not obj.active_material:
-			return
-		obj.name = util.nameGeneralize(obj.active_material.name)
 
 
 class MCPREP_OT_prep_world(bpy.types.Operator):

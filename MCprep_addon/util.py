@@ -694,3 +694,9 @@ def scene_update(context=None):
 		context.scene.update()
 	elif hasattr(context, "view_layer"): # 2.8
 		context.view_layer.update()
+
+def move_to_collection(obj, collection):
+	"""Move out of all collections and into this specified one. 2.8 Only"""
+	for col in obj.users_collection:
+		col.objects.unlink(obj)
+	collection.objects.link(obj)
