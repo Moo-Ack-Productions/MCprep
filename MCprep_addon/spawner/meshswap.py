@@ -430,7 +430,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 	bl_label = "Mesh Swap"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	#used for only occasionally refreshing the 3D scene while mesh swapping
+	# used for only occasionally refreshing the 3D scene while mesh swapping
 	counterObject = 0  # used in count
 	countMax = 5  # count compared to this, frequency of refresh (number of objs)
 
@@ -438,7 +438,8 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 	meshswap_join = bpy.props.BoolProperty(
 		name="Join same blocks",
 		default=True,
-		description="Join together swapped blocks of the same type (unless swapped with a group)")
+		description=("Join together swapped blocks of the same type "
+			"(unless swapped with a group)"))
 	use_dupliverts = bpy.props.BoolProperty(
 		name="Use dupliverts (faster)",
 		default=True,
@@ -450,23 +451,16 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 	prep_materials = bpy.props.BoolProperty(
 		name="Prep materials",
 		default=False,
-		description="Automatically apply prep materials (with default settings) to blocks added in")
+		description=("Automatically apply prep materials (with default settings) "
+			"to blocks added in"))
 	append_layer = bpy.props.IntProperty(
 		name="Append layer",
 		default=20,
 		min=0,
 		max=20,
-		description="When groups are appended instead of linked, "+\
-				"the objects part of the group will be placed in this "+\
-				"layer, 0 means same as active layers")
-
-	meshswap_lamps = bpy.props.EnumProperty(
-		name="Lamps",
-		items= [('group', 'With groups', 'Repalce light emitting blocks group instances, containing 3D blocks and lamps'),
-				('material', 'By material', "Add lamps above light emitting blocks, withotu modifying original light-emitting blocks"),
-				('none', 'Skip lights', "Don't add any lights, skip meshswapping for light-emitting blocks")],
-		description="Set how lights are added (if any, based on selected materials)"
-		)
+		description=("When groups are appended instead of linked, "
+				"the objects part of the group will be placed in this "
+				"layer, 0 means same as active layers"))
 
 	filmic_values = bpy.props.BoolProperty(
 		name="Use filmic lamp values",
@@ -520,258 +514,35 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			col.label(text="If you selected a large number of blocks to meshswap,", icon="BLANK1")
 			col.label(text="consider using a smaller area closer to the camera", icon="BLANK1")
 
-	def checkExternal(self, context, name):
-		"""Called for each object in the loop as soon as possible."""
-
-		groupSwap = False
-		meshSwap = False # if object  is in both group and mesh swap, group will be used
-		edgeFlush = False # blocks perfectly on edges, require rotation
-		edgeFloat = False # floating off edge into air, require rotation ['vines','ladder','lilypad']
-		torchlike = False # ['torch','redstone_torch_on','redstone_torch_off']
-		removable = False # to be removed, hard coded.
-		doorlike = False # appears like a door.
-		# for varied positions from exactly center on the block, 1 for Z random too
-		# 1= x,y,z random; 0= only x,y random; 2=rotation random only (vertical)
-		#variance = [ ['tall_grass',1], ['double_plant_grass_bottom',1],
-		#			['flower_yellow',0], ['flower_red',0] ]
-		variance = [False,0] # needs to be in this structure
-		new_groups = [] # list of newly added groups in this process
-
-		addon_prefs = util.get_user_preferences(context)
-		meshSwapPath = context.scene.meshswap_path
-		rmable = []
-		if addon_prefs.MCprep_exporter_type == "jmc2obj":
-			rmable = ['double_plant_grass_top','torch_flame','cactus_top','cactus_bottom','book',
-						'enchant_table_side','enchant_table_bottom','door_iron_top','door_wood_top',
-						'brewing_stand','door_dark_oak_upper','door_acacia_upper','door_jungle_upper',
-						'door_birch_upper','door_spruce_upper','tnt_side','tnt_bottom',
-						'pumpkin_top_lit', 'pumpkin_side_lit', 'workbench_back', 'workbench_front']
-		elif addon_prefs.MCprep_exporter_type == "Mineways":
-			rmable = [] # Mineways removable objs
-		else:
-			# need to select one of the exporters!
-			return False # {'CANCELLED'}
-		# delete unnecessary ones first
-		if name in rmable:
-			removable = True
-			conf.log("Removable!")
-			return {'removable':removable}
-
-		# check the actual name against the library
-		name = generate.get_mc_canonical_name(name)[0]
-		cache = get_meshswap_cache(context)
-		if name in conf.json_data["blocks"]["canon_mapping_block"]:
-			# e.g. remaps entity/chest/normal back to chest
-			name_remap = conf.json_data["blocks"]["canon_mapping_block"][name]
-		else:
-			name_remap = None
-
-		if name in cache["groups"] or name in util.collections():
-			groupSwap = True
-		elif name in cache["objects"]:
-			meshSwap = True
-		elif not name_remap:
-			return False
-		elif name_remap in cache["groups"] or name_remap in util.collections():
-			groupSwap = True
-			name = name_remap
-		elif name_remap in cache["objects"]:
-			meshSwap = True
-			name = name_remap
-		else:
-			return False # if not present, continue
-
-		# now import
-		conf.log("about to link, group {} / mesh {}?".format(
-			groupSwap, meshSwap))
-		toLink = self.link_groups
-		for ob in context.selected_objects:
-			util.select_set(ob, False)
-		#import: guaranteed to have same name as "appendObj" for the first instant afterwards
-		grouped = False # used to check if to join or not
-		importedObj = None # need to initialize to something, though this obj not used
-		groupAppendLayer = self.append_layer
-
-		# for blender 2.8 compatibility
-		if hasattr(bpy.data, "groups"):
-			g_or_c = 'Group'
-		elif hasattr(bpy.data, "collections"):
-			g_or_c = 'Collection'
-
-		if groupSwap:
-			if name not in util.collections():
-				# if group not linked, put appended group data onto the GUI field layer
-				if hasattr(context.scene, "layers"): # blender 2.7x
-					activeLayers = list(context.scene.layers)
-				else:
-					activeLayers = None
-				if (not toLink) and (groupAppendLayer!=0):
-					x = [False]*20
-					x[groupAppendLayer-1] = True
-					if hasattr(context.scene, "layers"):
-						context.scene.layers = x
-
-				# Get prelist of groups/collections to check against afterwards
-				pre_colls = list(util.collections())
-
-				# special cases, make another list for this? number of variants can vary..
-				if name == "torch" or name == "Torch":
-					if name+".1" not in pre_colls:
-						util.bAppendLink(os.path.join(meshSwapPath, g_or_c), name+".1", toLink)
-					# bpy.ops.object.delete()
-					if name+".2" not in pre_colls:
-						util.bAppendLink(os.path.join(meshSwapPath, g_or_c), name+".2", toLink)
-					# bpy.ops.object.delete()
-				util.bAppendLink(os.path.join(meshSwapPath, g_or_c), name, toLink)
-
-				if util.bv28():
-					post_colls = list(util.collections())
-					new_groups += list(set(post_colls)-set(pre_colls))
-
-				grouped = True
-				# if activated a different layer, go back to the original ones
-				if hasattr(context.scene, "layers") and activeLayers:
-					context.scene.layers = activeLayers
-				else:
-					conf.log("TODO: assign meshswap 2.8 collections", vv_only=True)
-			grouped = True
-			# set properties
-			for item in util.collections()[name].items():
-				conf.log("GROUP PROPS:" + str(item))
-				try:
-					x = item[1].name #will NOT work if property UI
-				except:
-					x = item[0] # the name of the property, [1] is the value
-					if x=='variance':
-						variance = [True, item[1]]
-					elif x=='edgeFloat':
-						edgeFloat = True
-					elif x=='doorlike':
-						doorlike = True
-					elif x=='edgeFlush':
-						edgeFlush = True
-					elif x=='torchlike':
-						torchlike = True
-					elif x=='removable':
-						removable = True
-		else:
-			util.bAppendLink(os.path.join(meshSwapPath, 'Object'), name, False)
-			### NOTICE: IF THERE IS A DISCREPENCY BETWEEN ASSETS FILE AND WHAT IT SAYS SHOULD
-			### BE IN FILE, EG NAME OF MESH TO SWAP CHANGED,  INDEX ERROR IS THROWN HERE
-			### >> MAKE a more graceful error indication.
-			# filter out non-meshes in case of parent grouping or other pull-ins
-			# conf.log("DEBUG - post importing {}, selected objects: {}".format(
-			# 	name, list(bpy.context.selected_objects)), vv_only=True)
-
-			for ob in bpy.context.selected_objects:
-				# 2.79b specific hack to clear brought in empties with the mesh
-				# e.g. in case of animated deformation modifiers via object
-				if ob.type != 'MESH':
-					util.select_set(ob, False)
-			try:
-				importedObj = bpy.context.selected_objects[0]
-			except:
-				return False #in case nothing selected.. which happens even during selection?
-			importedObj["MCprep_noSwap"] = "True"
-			# now check properties
-			for item in importedObj.items():
-				try:
-					x = item[1].name #will NOT work if property UI
-				except:
-					x = item[0] # the name of the property, [1] is the value
-					if x=='variance':
-						variance = [True, item[1]]
-					elif x=='edgeFloat':
-						edgeFloat = True
-					elif x=='doorlike':
-						doorlike = True
-					elif x=='edgeFlush':
-						edgeFlush = True
-					elif x=='torchlike':
-						torchlike = True
-					elif x=='removable':
-						removable = True
-			for ob in context.selected_objects:
-				util.select_set(ob, False)
-		##### HERE set the other properties, e.g. variance and edgefloat, now that the obj exists
-		conf.log("groupSwap: {}, meshSwap: {}".format(groupSwap, meshSwap))
-		conf.log("edgeFloat: {}, variance: {}, torchlike: {}".format(
-			edgeFloat, variance, torchlike))
-		return {'importName':name,'object':importedObj,'meshSwap':meshSwap, 'groupSwap':groupSwap,'variance':variance,
-				'edgeFlush':edgeFlush,'edgeFloat':edgeFloat,'torchlike':torchlike,
-				'removable':removable,'doorlike':doorlike,
-				'new_groups':new_groups}
-
-	def offsetByHalf(self, obj):
-		if obj.type != 'MESH':
-			return
-		# bpy.ops.object.mode_set(mode='OBJECT')
-		conf.log("doing offset")
-		# bpy.ops.mesh.select_all(action='DESELECT')
-		active = bpy.context.object #preserve current active
-		util.set_active_object(bpy.context, obj)
-		bpy.ops.object.mode_set(mode='EDIT')
-		bpy.ops.mesh.select_all(action='SELECT')
-		bpy.ops.transform.translate(value=(0.5, 0.5, 0.5))
-		bpy.ops.object.mode_set(mode='OBJECT')
-		obj.location[0] -= .5
-		obj.location[1] -= .5
-		obj.location[2] -= .5
-		util.set_active_object(bpy.context, active)
-
 	track_function = "meshswap"
+	track_param = ""
 	@tracking.report_error
 	def execute(self, context):
-		runcount = 0 # counter.. if zero by end, raise error that no selected objects matched
-		## debug, restart check
 		addon_prefs = util.get_user_preferences(context)
-		direc = context.scene.meshswap_path
+		self.track_param = addon_prefs.MCprep_exporter_type
 
-		# check library file exists
+		direc = context.scene.meshswap_path
 		if not os.path.isfile(direc):
-			#extract actual path from the relative one if relative, e.g. //file.blend
 			direc = bpy.path.abspath(direc)
-			#bpy.ops.object.dialogue('INVOKE_DEFAULT') # DOES work! but less streamlined
+			# bpy.ops.object.dialogue('INVOKE_DEFAULT') # DOES work! but less streamlined
 			if not os.path.isfile(direc):
 				self.report({'ERROR'}, "Mesh swap blend file not found!") # better, actual "error"
 				return {'CANCELLED'}
 
-		# get some scene information
-		doOffset = (addon_prefs.MCprep_exporter_type == "Mineways")
-		# separate each material into a separate object
-		# could also recombine similar materials here, so happens just once.
-		selList = context.selected_objects
-		new_groups = [] # for later hiding of all source new groups
-		for obj in selList:
-			try:
-				bpy.ops.object.convert(target='MESH')
-			except:
-				pass
-			bpy.ops.mesh.separate(type='MATERIAL')
-		# now do type checking and fix any name discrepancies
+		# Assign vars used across operator
+		doOffset = (self.track_param == "Mineways")
+		runcount = 0 # counter; if zero by end, raise error nothing matched
+		objList = self.prep_obj_list(context)
 		selList = context.selected_objects # re-grab having made new objects
-		objList = []
-		removeList = []  # list of objects to remove at end
-		for obj in selList:
-			#ignore non mesh selected objects or objs labeled to not double swap
-			if obj.type != 'MESH' or ("MCprep_noSwap" in obj):
-				continue
-			if not obj.active_material:
-				continue
-			obj.data.name = obj.active_material.name
-			obj.name = obj.active_material.name
-			objList.append(obj)
-
-		# global scale, WIP
-		gScale = 1
-		conf.log("Using scale: {}".format(gScale))
-		conf.log(objList)
+		new_groups = [] # for new imported groups
+		removeList = [] # for objects that should be removed
 
 		# setup the progress bar
 		denom = len(objList)
+		conf.log("Meshswap to check over {} objects".format(denom))
 		bpy.context.window_manager.progress_begin(0, 100)
 
-		#primary loop, for each OBJECT needing swapping
+		# primary loop, for each OBJECT needing swapping
 		for iter_index, swap in enumerate(objList):
 			bpy.context.window_manager.progress_update(iter_index/denom)
 			swapGen = util.nameGeneralize(swap.name)
@@ -783,7 +554,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 
 			if swapProps.get('new_groups'):
 				new_groups += swapProps['new_groups']
-			#special cases, for "extra" mesh pieces we don't want around afterwards
+			# special cases, for "extra" mesh pieces we don't want around afterwards
 			if swapProps['removable']:
 				removeList.append(swap)
 				continue
@@ -793,24 +564,14 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			conf.log("Swapping '{x}', simplified name '{y}".format(
 					x=swap.name, y=swapGen))
 			# if mineways/necessary, offset mesh by a half. Do it on a per object basis.
-			if doOffset:
-				self.offsetByHalf(swap)
+			# if doOffset:
+			# 	self.offsetByHalf(swap)
 
 			for poly in swap.data.polygons:
 				poly.select = False
 
 			#loop through each face or "polygon" of mesh
-			facebook = [] # store the information of the obj's faces..
-			for poly in swap.data.polygons:  #range(0,len(polyList)):
-				gtmp = util.matmul(
-					swap.matrix_world, mathutils.Vector(poly.center))
-				g = [gtmp[0],gtmp[1],gtmp[2]]
-				n = poly.normal
-				tmp2 = poly.center
-				l = [tmp2[0],tmp2[1],tmp2[2]] #to make value unlinked to mesh
-				if 0.015 < poly.area and poly.area < 0.016:
-					continue # hack for not having too many torches show up, both jmc2obj and Mineways
-				facebook.append([n,g,l]) # g is global, l is local
+			facebook = self.get_face_list(swap)
 
 			for ob in context.selected_objects:
 				if util.bv28():
@@ -871,7 +632,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 					#print(facebook[setNum][2][2],z,z_diff)
 
 					# append rotation, exporter dependent
-					if addon_prefs.MCprep_exporter_type == "jmc2obj":
+					if self.track_param == "jmc2obj":
 						if swapProps['torchlike']: # needs fixing
 							if (x_diff>.1 and x_diff < 0.4):
 								rotList.append(1)
@@ -911,7 +672,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 								rotList.append(5)
 						else:
 							rotList.append(0)
-					elif addon_prefs.MCprep_exporter_type == "Mineways":
+					elif self.track_param == "Mineways":
 						conf.log("checking: {} {}".format(x_diff,z_diff))
 						if swapProps['torchlike']: # needs fixing
 							conf.log("recognized it's a torchlike obj..")
@@ -1069,7 +830,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 					dupedObj.pop(dupedObj.index(base))
 				util.obj_unlink_remove(base, True, context)
 
-			#join meshes together
+			# join meshes together
 			if not grouped and dupedObj and self.meshswap_join:
 				# ERROR HERE if don't do the len(dupedObj) thing.
 				util.set_active_object(context, dupedObj[0])
@@ -1148,6 +909,240 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		else:
 			self.report({'INFO'}, "Swapped {x} objects".format(x=runcount))
 			return {'FINISHED'}
+
+	def prep_obj_list(self, context):
+		"""Initial operator prep to get list of objects to check over"""
+		try:
+			bpy.ops.object.convert(target='MESH')
+		except:
+			pass
+		bpy.ops.mesh.separate(type='MATERIAL')
+
+		# now do type checking and fix any name discrepancies
+		objList = []
+		for obj in context.selected_objects:
+			# ignore non mesh selected objects or objs labeled to not double swap
+			if obj.type != 'MESH' or ("MCprep_noSwap" in obj):
+				continue
+			if not obj.active_material:
+				continue
+			# obj.data.name = obj.active_material.name
+			# obj.name = obj.active_material.name
+			objList.append(obj)
+		return objList
+
+	def get_face_list(self, swap):
+		"""Returns list of relevant faces and mapped coordinates"""
+		facebook = [] # store the information of the obj's faces..
+		for poly in swap.data.polygons:  #range(0,len(polyList)):
+			gtmp = util.matmul(
+				swap.matrix_world, mathutils.Vector(poly.center))
+			g = [gtmp[0],gtmp[1],gtmp[2]]
+			n = poly.normal
+			tmp2 = poly.center
+			l = [tmp2[0],tmp2[1],tmp2[2]] # to make value unlinked to mesh
+			if 0.015 < poly.area and poly.area < 0.016:
+				continue # hack for not having too many torches show up, both jmc2obj and Mineways
+			facebook.append([n,g,l]) # g is global, l is local
+		return facebook
+
+	def checkExternal(self, context, name):
+		"""Called for each object in the loop as soon as possible."""
+
+		groupSwap = False
+		meshSwap = False # if object  is in both group and mesh swap, group will be used
+		edgeFlush = False # blocks perfectly on edges, require rotation
+		edgeFloat = False # floating off edge into air, require rotation ['vines','ladder','lilypad']
+		torchlike = False # ['torch','redstone_torch_on','redstone_torch_off']
+		removable = False # to be removed, hard coded.
+		doorlike = False # appears like a door.
+		# for varied positions from exactly center on the block, 1 for Z random too
+		# 1= x,y,z random; 0= only x,y random; 2=rotation random only (vertical)
+		#variance = [ ['tall_grass',1], ['double_plant_grass_bottom',1],
+		#			['flower_yellow',0], ['flower_red',0] ]
+		variance = [False,0] # needs to be in this structure
+		new_groups = [] # list of newly added groups in this process
+
+		addon_prefs = util.get_user_preferences(context)
+		meshSwapPath = context.scene.meshswap_path
+		rmable = []
+		if self.track_param == "jmc2obj":
+			rmable = ['double_plant_grass_top','torch_flame','cactus_top','cactus_bottom','book',
+						'enchant_table_side','enchant_table_bottom','door_iron_top','door_wood_top',
+						'brewing_stand','door_dark_oak_upper','door_acacia_upper','door_jungle_upper',
+						'door_birch_upper','door_spruce_upper','tnt_side','tnt_bottom',
+						'pumpkin_top_lit', 'pumpkin_side_lit', 'workbench_back', 'workbench_front',
+						'furnace_top', 'furnace_side']
+		elif self.track_param == "Mineways":
+			rmable = ['oak_door_top', 'iron_door_top', 'spruce_door_top',
+				'birch_door_top', 'jungle_door_top', 'acacia_door_top', 'dark_oak_door_top',
+				'cactus_top'] # Mineways removable objs
+		else:
+			# need to select one of the exporters!
+			return False # {'CANCELLED'}
+		# delete unnecessary ones first
+		if name in rmable:
+			removable = True
+			conf.log("Removable!")
+			return {'removable':removable}
+
+		# check the actual name against the library
+		name = generate.get_mc_canonical_name(name)[0]
+		cache = get_meshswap_cache(context)
+		if name in conf.json_data["blocks"]["canon_mapping_block"]:
+			# e.g. remaps entity/chest/normal back to chest
+			name_remap = conf.json_data["blocks"]["canon_mapping_block"][name]
+		else:
+			name_remap = None
+
+		if name in cache["groups"] or name in util.collections():
+			groupSwap = True
+		elif name in cache["objects"]:
+			meshSwap = True
+		elif not name_remap:
+			return False
+		elif name_remap in cache["groups"] or name_remap in util.collections():
+			groupSwap = True
+			name = name_remap
+		elif name_remap in cache["objects"]:
+			meshSwap = True
+			name = name_remap
+		else:
+			return False # if not present, continue
+
+		# now import
+		conf.log("about to link, group {} / mesh {}?".format(
+			groupSwap, meshSwap))
+		toLink = self.link_groups
+		for ob in context.selected_objects:
+			util.select_set(ob, False)
+		#import: guaranteed to have same name as "appendObj" for the first instant afterwards
+		grouped = False # used to check if to join or not
+		importedObj = None # need to initialize to something, though this obj not used
+		groupAppendLayer = self.append_layer
+
+		# for blender 2.8 compatibility
+		if hasattr(bpy.data, "groups"):
+			g_or_c = 'Group'
+		elif hasattr(bpy.data, "collections"):
+			g_or_c = 'Collection'
+
+		if groupSwap:
+			if name not in util.collections():
+				# if group not linked, put appended group data onto the GUI field layer
+				if hasattr(context.scene, "layers"): # blender 2.7x
+					activeLayers = list(context.scene.layers)
+				else:
+					activeLayers = None
+				if (not toLink) and (groupAppendLayer!=0):
+					x = [False]*20
+					x[groupAppendLayer-1] = True
+					if hasattr(context.scene, "layers"):
+						context.scene.layers = x
+
+				# Get prelist of groups/collections to check against afterwards
+				pre_colls = list(util.collections())
+
+				# special cases, make another list for this? number of variants can vary..
+				if name == "torch" or name == "Torch":
+					if name+".1" not in pre_colls:
+						util.bAppendLink(os.path.join(meshSwapPath, g_or_c), name+".1", toLink)
+					if name+".2" not in pre_colls:
+						util.bAppendLink(os.path.join(meshSwapPath, g_or_c), name+".2", toLink)
+				util.bAppendLink(os.path.join(meshSwapPath, g_or_c), name, toLink)
+
+				if util.bv28():
+					post_colls = list(util.collections())
+					new_groups += list(set(post_colls)-set(pre_colls))
+
+				grouped = True
+				# if activated a different layer, go back to the original ones
+				if hasattr(context.scene, "layers") and activeLayers:
+					context.scene.layers = activeLayers
+				else:
+					conf.log("TODO: assign meshswap 2.8 collections", vv_only=True)
+			grouped = True
+			# set properties
+			for item in util.collections()[name].items():
+				conf.log("GROUP PROPS:" + str(item))
+				try:
+					x = item[1].name #will NOT work if property UI
+				except:
+					x = item[0] # the name of the property, [1] is the value
+					if x=='variance':
+						variance = [True, item[1]]
+					elif x=='edgeFloat':
+						edgeFloat = True
+					elif x=='doorlike':
+						doorlike = True
+					elif x=='edgeFlush':
+						edgeFlush = True
+					elif x=='torchlike':
+						torchlike = True
+					elif x=='removable':
+						removable = True
+		else:
+			util.bAppendLink(os.path.join(meshSwapPath, 'Object'), name, False)
+			### NOTICE: IF THERE IS A DISCREPENCY BETWEEN ASSETS FILE AND WHAT IT SAYS SHOULD
+			### BE IN FILE, EG NAME OF MESH TO SWAP CHANGED,  INDEX ERROR IS THROWN HERE
+			### >> MAKE a more graceful error indication.
+			# filter out non-meshes in case of parent grouping or other pull-ins
+			# conf.log("DEBUG - post importing {}, selected objects: {}".format(
+			# 	name, list(bpy.context.selected_objects)), vv_only=True)
+
+			for ob in bpy.context.selected_objects:
+				# 2.79b specific hack to clear brought in empties with the mesh
+				# e.g. in case of animated deformation modifiers via object
+				if ob.type != 'MESH':
+					util.select_set(ob, False)
+			try:
+				importedObj = bpy.context.selected_objects[0]
+			except:
+				return False #in case nothing selected.. which happens even during selection?
+			importedObj["MCprep_noSwap"] = "True"
+			# now check properties
+			for item in importedObj.items():
+				try:
+					x = item[1].name #will NOT work if property UI
+				except:
+					x = item[0] # the name of the property, [1] is the value
+					if x=='variance':
+						variance = [True, item[1]]
+					elif x=='edgeFloat':
+						edgeFloat = True
+					elif x=='doorlike':
+						doorlike = True
+					elif x=='edgeFlush':
+						edgeFlush = True
+					elif x=='torchlike':
+						torchlike = True
+					elif x=='removable':
+						removable = True
+			for ob in context.selected_objects:
+				util.select_set(ob, False)
+		##### HERE set the other properties, e.g. variance and edgefloat, now that the obj exists
+		conf.log("groupSwap: {}, meshSwap: {}".format(groupSwap, meshSwap))
+		conf.log("edgeFloat: {}, variance: {}, torchlike: {}".format(
+			edgeFloat, variance, torchlike))
+		return {'importName':name,'object':importedObj,'meshSwap':meshSwap, 'groupSwap':groupSwap,'variance':variance,
+				'edgeFlush':edgeFlush,'edgeFloat':edgeFloat,'torchlike':torchlike,
+				'removable':removable,'doorlike':doorlike,
+				'new_groups':new_groups}
+
+	def offsetByHalf(self, obj):
+		if obj.type != 'MESH':
+			return
+		conf.log("doing offset")
+		active = bpy.context.object #preserve current active
+		util.set_active_object(bpy.context, obj)
+		bpy.ops.object.mode_set(mode='EDIT')
+		bpy.ops.mesh.select_all(action='SELECT')
+		bpy.ops.transform.translate(value=(0.5, 0.5, 0.5))
+		bpy.ops.object.mode_set(mode='OBJECT')
+		obj.location[0] -= .5
+		obj.location[1] -= .5
+		obj.location[2] -= .5
+		util.set_active_object(bpy.context, active)
 
 
 class MCPREP_OT_fix_mineways_scale(bpy.types.Operator):
