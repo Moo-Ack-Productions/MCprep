@@ -66,6 +66,13 @@ def get_jmc2obj_mapping():
 		# else, join one level up (ie entity instead of block, etc)
 	return outlist
 
+def jmc2obj_extras():
+	"""Known additional mappings for jmc2obj"""
+	outlist = {
+		"vines":"vine",
+
+	}
+	return outlist
 
 # def jmc2mc(name, vanilla):
 # 	"""Function that attemtps to map jmc2obj texture name to canonical"""
@@ -413,6 +420,7 @@ def run_all(auto=False):
 	# now update the main blocks with the known mappings only
 	# already exact, but could do cross check for any current MC canonical missing
 	data["blocks"]["block_mapping_jmc"] = jmc
+	data["blocks"]["block_mapping_jmc"].update(jmc2obj_extras())
 
 	# data["blocks"]["block_mapping_jmc"] = {
 	# 	mat:jmc2mc(mat, vanilla) for mat in jmc

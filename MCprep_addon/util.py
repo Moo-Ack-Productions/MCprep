@@ -157,15 +157,16 @@ def bv28():
 	return BV_IS_28
 
 
-def onEdge(faceLoc):
+def face_on_edge(faceLoc):
 	"""Check if a face is on the boundary between two blocks (local coordinates)."""
-	strLoc = [ str(faceLoc[0]).split('.')[1][0],
-				str(faceLoc[1]).split('.')[1][0],
-				str(faceLoc[2]).split('.')[1][0] ]
-	if (strLoc[0] == '5' or strLoc[1] == '5' or strLoc[2] == '5'):
+	face_decimals = [loc - loc//1 for loc in faceLoc]
+	if face_decimals[0] > 0.4999 and face_decimals[0] < 0.501:
 		return True
-	else:
-		return False
+	elif face_decimals[1] > 0.499 and face_decimals[1] < 0.501:
+		return True
+	elif face_decimals[2] > 0.499 and face_decimals[2] < 0.501:
+		return True
+	return False
 
 
 def randomizeMeshSawp(swap,variations):
