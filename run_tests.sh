@@ -23,8 +23,14 @@ VERSIONS=(
 	"/Applications/blender 2.80/Blender.app/Contents/MacOS/Blender"
 	"/Applications/blender 2.79/Blender.app/Contents/MacOS/Blender"
 	"/Applications/blender 2.82/Blender.app/Contents/MacOS/Blender"
-	"/Applications/blender 2.72/Blender.app/Contents/MacOS/Blender"
+	#"/Applications/blender 2.72/Blender.app/Contents/MacOS/Blender"
 	)
+
+# first, do a soft reload of python files
+echo "Soft py file reload"
+cd MCprep_addon
+./reload.py -light
+cd ../
 
 # remove old test results
 rm test_results.tsv

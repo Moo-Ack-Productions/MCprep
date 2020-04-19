@@ -225,7 +225,8 @@ def mineways_extras():
 		"Glass_Pane":"glass_pane_top",
 		"Lily_Pad":"lily_pad",
 		"Iron_Door":"iron_door_bottom",
-		"Jack_o'Lantern":"pumpkin_face_on",
+		"Jack_o'Lantern":"jack_o_lantern",
+		"Pumpkin":"carved_pumpkin",
 		"Kelp":"kelp",
 		"Kelp__1":"",
 		"Ladder":"ladder",
@@ -273,9 +274,10 @@ def mineways_extras():
 		"Trapped_Chest":"",
 		"Torch":"torch",
 		"TNT":"tnt_top",
-		"Vines":"vines",
+		"Vines":"vine",
 		"Wheat":"wheat_stage7",
-		"Wooden_Door":"oak_door_bottom"
+		"Wooden_Door":"oak_door_bottom",
+		"Campfire":"campfire_log"
 	}
 	return outlist
 

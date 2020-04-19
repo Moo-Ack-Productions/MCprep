@@ -248,7 +248,7 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 				print("selected object not found") #in case nothing selected.. which happens even during selection?
 				self.report({'WARNING'}, "Imported object not found")
 				return {'CANCELLED'}
-			importedObj["MCprep_noSwap"] = "True"
+			importedObj["MCprep_noSwap"] = 1
 			importedObj.location = self.location
 			if self.prep_materials is True:
 				try:
@@ -278,7 +278,7 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 			elif self.snapping=="offset":
 				offset=0.5 # could be 0.5
 				ob.location = [round(x+offset)-offset for x in self.location]
-			ob["MCprep_noSwap"] = "True"
+			ob["MCprep_noSwap"] = 1
 
 			# cleanup
 			if self.make_real:
@@ -545,6 +545,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		selList = context.selected_objects # re-grab having made new objects
 		new_groups = [] # for new imported groups
 		removeList = [] # for objects that should be removed
+		new_objects = [] # all the newly added objects
 
 		# setup the progress bar
 		denom = len(objList)
@@ -584,13 +585,6 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 
 			conf.log("Swapping '{x}', simplified name '{y}".format(
 					x=swap.name, y=swapGen))
-			# if mineways/necessary, offset mesh by a half. Do it on a per object basis.
-			# if doOffset:
-			# 	self.offsetByHalf(swap)
-
-			# TODO; add this back?
-			# for poly in swap.data.polygons:
-			# 	poly.select = False
 
 			# loop through each face or "polygon" of mesh, throw out invalids
 			t1s[-1] = time.time()
@@ -602,8 +596,6 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 					util.select_set(obj, False)
 
 			# removing duplicates and checking orientation
-			#dupList = []	# where actual blocks are to be added
-			#rotList = []	# rotation of blocks
 			instance_configs = {} # structure of: "x-y-z":[[x,y,z], [xr, yr, zr]]
 			for face in facebook:
 				# updates instance_configs
@@ -613,17 +605,18 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			# Critical path process section!
 			t2s[-1] = time.time()
 			grouped, dupedObj = self.add_instances_with_transforms(
-				context, swap, swapProps, instance_configs) # dupList, rotList
+				context, swap, swapProps, instance_configs)
 			base = swapProps["object"]
-
 
 			if not grouped:
 				if base in dupedObj:
 					dupedObj.pop(dupedObj.index(base))
 				util.obj_unlink_remove(base, True, context)
 
-			# join meshes together
-			if not grouped and dupedObj and self.meshswap_join:
+			if grouped:
+				new_objects += dupedObj # list
+			elif not grouped and dupedObj and self.meshswap_join:
+				# join meshes together
 				# ERROR HERE if don't do the len(dupedObj) thing.
 				util.set_active_object(context, dupedObj[0])
 				for d in dupedObj:
@@ -641,8 +634,12 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				bpy.ops.object.join()
 				if context.selected_objects:
 					selList.append(context.selected_objects[0])
+					new_objects.append(context.selected_objects[0])
 				else:
 					conf.log("No selected objects after join")
+			else:
+				# no joining, so just directly append to new_objects
+				new_objects += dupedObj # a list
 
 			removeList.append(swap)
 
@@ -658,7 +655,6 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				except ReferenceError:
 					continue
 				selList.append(d)
-
 			t3s[-1] = time.time()
 
 		t4 = time.time()
@@ -666,31 +662,52 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		if self.runcount > 0:
 			for rm in removeList:
 				if rm in selList:
-					selList.pop(selList.index(rm)) # prevent later operations on deleted object
+					# prevent later operations on deleted object
+					selList.pop(selList.index(rm))
+				if rm in new_objects:
+					# prevent later operations on deleted object
+					new_objects.pop(new_objects.index(rm))
 				try:
 					util.obj_unlink_remove(rm, True, context)
 				except:
 					print("Failed to clear user/remove object: "+rm.name)
 
-		for d in selList:
+		print("SELLIST! ", selList)
+		for obj in selList:
 			# Risk if object was joined against another object that its data
 			# no longer exists, which can result in a failure e.g. for 2.72
 			# However, pre-work should have prevented interacting with already
 			# deleted object here, so the try/except is more for later blender
 			# versions to fail gracefully just in case
 			try:
-				if not hasattr(d, "users"): # can be crashing point pre 2.79(?)
+				if not hasattr(obj, "users"): # can be crashing point pre 2.79(?)
 					continue
 			except ReferenceError:
 					continue
-			util.select_set(d, True)
+			util.select_set(obj, True)
+			obj['MCprep_noSwap'] = 1 # adds property to avoid duplicated swaps
 
-		# attempt to hide the reference group in 2.8, but creates odd effects
-		# such as group instances not showing correctly in viewport (hidden)
-		# if util.bv28():
-			# for grp in new_groups:
-				# util.hide_viewport(grp, True)
-				# grp.hide_render = True
+		# Create nicer nested organization of meshswapped assets, and excluding
+		# this meshswap group to avoid showing in render. Also move newly
+		# spawned instances into a collection of its own (2.8 only)
+		if util.bv28():
+			initial_view_coll = context.view_layer.active_layer_collection
+
+			# first, move the newly added objects into a view layer
+			swaped_vl = util.get_or_create_viewlayer(context, "Meshswap Render")
+			for obj in new_objects:
+				util.move_to_collection(obj, swaped_vl.collection)
+
+			# Then, setup the exclude view layer
+			meshswap_exclude_vl = util.get_or_create_viewlayer(
+				context, "Meshswap Exclude")
+			meshswap_exclude_vl.exclude = True
+
+			for grp in new_groups:
+				if grp.name not in initial_view_coll.collection.children:
+					continue # not linked, likely a sub-group not added to scn
+				meshswap_exclude_vl.collection.children.link(grp)
+				initial_view_coll.collection.children.unlink(grp)
 
 		# end progress bar, end of primary section
 		bpy.context.window_manager.progress_end()
@@ -702,7 +719,6 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			face_process = sum(t2s) - sum(t1s)
 			instancing = sum(t3s) - sum(t2s)
 			cleanup = t5-t4
-
 			total = tprep+loop_prep+face_process+instancing+cleanup
 			print("Total time: {}s, init: {}, prep: {}, poly process: {}, instance:{}, cleanup: {}".format(
 				round(total, 1), round(tprep, 1), round(loop_prep, 1), round(face_process, 1),
@@ -734,9 +750,11 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				continue
 			if not obj.active_material:
 				continue
+			objList.append(obj)
 			# obj.data.name = obj.active_material.name
 			# obj.name = obj.active_material.name
-			objList.append(obj)
+			if obj.active_material:
+				obj.name = util.nameGeneralize(obj.active_material.name)
 		return objList
 
 	def get_face_list(self, swap, offset):
@@ -752,8 +770,6 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				swap.matrix_world, mathutils.Vector(poly.center))
 			# even without offset, list this to make values unlinked to mesh
 			g = [gtmp[0]+offset, gtmp[1]+offset, gtmp[2]+offset]
-			# n = util.matmul(
-			# 	swap.matrix_world, poly.normal) # trasnform to global
 			n = poly.normal # in local coordinates
 			tmp2 = poly.center
 			# even without offset, list this
@@ -790,11 +806,13 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 						'brewing_stand','door_dark_oak_upper','door_acacia_upper','door_jungle_upper',
 						'door_birch_upper','door_spruce_upper','tnt_side','tnt_bottom',
 						'pumpkin_top_lit', 'pumpkin_side_lit', 'workbench_back', 'workbench_front',
-						'furnace_top', 'furnace_side', 'sunflower_top', 'sunflower_front']
+						'furnace_top', 'furnace_side', 'sunflower_top', 'sunflower_front',
+						'campfire_log_lit', 'campfire_fire']
 		elif self.track_param == "Mineways":
 			rmable = ['oak_door_top', 'iron_door_top', 'spruce_door_top',
 				'birch_door_top', 'jungle_door_top', 'acacia_door_top', 'dark_oak_door_top',
-				'cactus_top', 'tall_grass_top', 'sunflower_top'] # Mineways removable objs
+				'cactus_top', 'tall_grass_top', 'sunflower_top', 'sunflower_back',
+				'campfire_log_lit', 'campfire_fire'] # Mineways removable objs
 		else:
 			# need to select one of the exporters!
 			return False # {'CANCELLED'}
@@ -877,8 +895,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				# if activated a different layer, go back to the original ones
 				if hasattr(context.scene, "layers") and activeLayers:
 					context.scene.layers = activeLayers
-				else:
-					conf.log("TODO: assign meshswap 2.8 collections", vv_only=True)
+				# 2.8 handled later with everything at once
 			grouped = True
 			# set properties
 			for item in util.collections()[name].items():
@@ -904,7 +921,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		else:
 			util.bAppendLink(os.path.join(meshSwapPath, 'Object'), name, False)
 			### NOTICE: IF THERE IS A DISCREPENCY BETWEEN ASSETS FILE AND WHAT IT SAYS SHOULD
-			### BE IN FILE, EG NAME OF MESH TO SWAP CHANGED,  INDEX ERROR IS THROWN HERE
+			### BE IN FILE, EG NAME OF MESH TO SWAP CHANGED, INDEX ERROR IS THROWN HERE
 			### >> MAKE a more graceful error indication.
 			# filter out non-meshes in case of parent grouping or other pull-ins
 			# conf.log("DEBUG - post importing {}, selected objects: {}".format(
@@ -919,11 +936,11 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				importedObj = bpy.context.selected_objects[0]
 			except:
 				return False #in case nothing selected.. which happens even during selection?
-			importedObj["MCprep_noSwap"] = "True"
+			importedObj["MCprep_noSwap"] = 1
 			# now check properties
 			for item in importedObj.items():
 				try:
-					x = item[1].name #will NOT work if property UI
+					x = item[1].name # will NOT work if property UI
 				except:
 					x = item[0] # the name of the property, [1] is the value
 					if x=='variance':
@@ -957,8 +974,6 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			instance_configs: pass by ref dict of instances to make, with rot and loc info
 		"""
 
-		# dupList = []
-		# rotList = []
 		offset = 0.5 if self.track_param == 'Mineways' else 0
 
 		# Transform so centers are half ints (jmc2obj default), from local coords
@@ -971,10 +986,9 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		# assets are setup (object origin will be in front of the hanging item)
 		outside_hanging = 1 if swapProps['edgeFloat'] else -1
 		if util.face_on_edge(face.l): #check if face is on unit block boundary (local coord!)
-			# TODO: transform normal to global coordinates; y and z might swap
-			a = face.n[0] * 0.1 * outside_hanging #x normal
-			b = face.n[1] * 0.1 * outside_hanging #y normal
-			c = face.n[2] * 0.1 * outside_hanging #z normal
+			a = face.n[0] * 0.1 * outside_hanging
+			b = face.n[1] * 0.1 * outside_hanging
+			c = face.n[2] * 0.1 * outside_hanging
 			x = round(face.l[0]+a)
 			y = round(face.l[1]+b)
 			z = round(face.l[2]+c)
@@ -995,7 +1009,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		conf.log("Instance: Snapped loc, face.local, face.nrm, hanging offset, if_edgeFloat:")
 		conf.log(str([loc, face.l, face.n, [a,b,c], outside_hanging]), vv_only=True)
 
-		### START HACK PATCH, FOR MINEWAYS double-tall blocks
+		### START HACK PATCH, FOR MINEWAYS (single-tex export) double-tall blocks
 		# prevent double high grass... which mineways names sunflowers.
 		hack_check = ["Sunflower","Iron_Door","Wooden_Door"]
 		if swapGen in hack_check and "{}-{}-{}".format(x,y-1,z) in instance_configs:
@@ -1018,11 +1032,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		# dupList.append([x,y,z])
 		# check difference from rounding, this gets us the rotation!
 		x_diff = x-face.l[0]
-		#print(face.l[0],x,x_diff)
 		z_diff = z-face.l[2]
-		#print(face.l[2],z,z_diff)
-
-		# TODO! we switched from .l to .g, need to swap the y vs z checks below
 
 		# append rotation, exporter dependent
 		if self.track_param == "jmc2obj":
@@ -1120,7 +1130,6 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		offset = -0.5 if self.track_param == 'Mineways' else 0
 		loc_unoffset = [pos+offset for pos in loc]
 		instance_configs[instance_key] = [loc_unoffset, rot_type]
-		#return dupList, rotList
 
 	def add_instances_with_transforms(self, context, swap, swapProps, instance_configs):
 		"""Creates all block instances for a single object.
@@ -1129,16 +1138,10 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		imports if any relevant.
 		"""
 
-		conf.log("### > trans")
-		# for ob in context.selected_objects:
-		# 	if util.bv28():
-		# 		continue
-		# 	util.select_set(ob, False)
 		base = swapProps["object"]
 		grouped = swapProps["groupSwap"]
 		dupedObj = [] # duplicating, rotating and moving
 
-		#for (set,rot) in zip(dupLiwst,rotList):
 		for instance_key in list(instance_configs):
 			loc_local, rot = instance_configs[instance_key]
 
@@ -1165,6 +1168,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 					new_ob.empty_draw_size = 0.25
 				else:
 					new_ob.empty_display_size = 0.25
+				dupedObj.append(new_ob)
 			else:
 				# TODO: Change to adding a single vertex, dupliverts
 				new_ob = util.obj_copy(base, context)

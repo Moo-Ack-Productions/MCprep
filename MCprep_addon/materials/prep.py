@@ -301,10 +301,6 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper):
 	use_filter_folder = True
 	fileselectparams = "use_filter_blender"
 	filepath = bpy.props.StringProperty(subtype='DIR_PATH')
-	# files = bpy.props.CollectionProperty(
-	# 	type=bpy.types.PropertyGroup,
-	# 	options={'HIDDEN', 'SKIP_SAVE'}
-	# 	)
 	filter_image = bpy.props.BoolProperty(
 		default=True,
 		options={'HIDDEN', 'SKIP_SAVE'}
@@ -315,8 +311,8 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper):
 		)
 	extra_passes = bpy.props.BoolProperty(
 		name = "Extra passes (if available)",
-		description = "If enabled, load other image passes like normal and spec"+\
-				" maps if available",
+		description = ("If enabled, load other image passes like normal and "
+				"spec maps if available"),
 		default = True,
 		)
 	animateTextures = bpy.props.BoolProperty(
@@ -327,6 +323,11 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper):
 		default = False,
 		options={'HIDDEN'}
 		)
+
+	@classmethod
+	def poll(cls, context):
+		addon_prefs = util.get_user_preferences(context)
+		return addon_prefs.MCprep_exporter_type != "(choose)"
 
 	def draw(self, context):
 		row = self.layout.row()
@@ -369,9 +370,10 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper):
 			self.report({'ERROR'}, "No materials found on selected objects")
 			return {'CANCELLED'}
 		exporter = generate.detect_form(mat_list)
-		if exporter=="mineways":
-			self.report({'ERROR'}, "Not yet supported for Mineways - coming soon!")
-			return {'CANCELLED'}
+		# TODO: add cehck for "mineways combined" and call out not supported
+		# if exporter=="mineways":
+		# 	self.report({'ERROR'}, "Not yet supported for Mineways - coming soon!")
+		# 	return {'CANCELLED'}
 		self.track_exporter = exporter
 
 		# set the scene's folder for the texturepack being swapped
@@ -380,7 +382,9 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper):
 		conf.log("Materials detected: " + str(len(mat_list)))
 		res = 0
 		for mat in mat_list:
+			self.preprocess_material(mat)
 			res += generate.set_texture_pack(mat, folder, self.extra_passes)
+			# checklist(canon, "desaturated") and is_image_grayscale(image_diff)
 			if self.animateTextures:
 				sequences.animate_single_material(
 					mat, context.scene.render.engine)
@@ -388,6 +392,15 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper):
 		self.report({'INFO'},"{} materials affected".format(res))
 		self.track_param = context.scene.render.engine
 		return {'FINISHED'}
+
+	def preprocess_material(self, material):
+		"""Preprocess materials for special edge cases"""
+
+		# in texture packs, this is actually just a transparent overaly -
+		# but in Mineways export, this is the flattened grass/drit block side
+		if material.name == "grass_block_side_overlay":
+			material.name = "grass_block_side"
+			conf.log("Renamed material: grass_block_side_overlay to grass_block_side")
 
 
 class MCPREP_OT_reset_texturepack_path(bpy.types.Operator):

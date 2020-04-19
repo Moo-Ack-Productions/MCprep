@@ -58,7 +58,8 @@ class mcprep_testing():
 			self.import_mineways_combined,
 			self.name_generalize,
 			self.meshswap_jmc2obj,
-			self.meshswap_mineways_separated
+			self.meshswap_mineways_separated,
+			self.detect_desaturated_images
 			]
 		self.run_only = None # name to give to only run this test
 
@@ -180,6 +181,16 @@ class mcprep_testing():
 
 		from MCprep import conf
 		conf.init()
+
+	def get_mcprep_path(self):
+		"""Returns the addon basepath installed in this blender instance"""
+		for base in bpy.utils.script_paths():
+			init = os.path.join(base, "addons", "MCprep_addon") # __init__.py folder
+			if os.path.isdir(init):
+				return init
+		return None
+
+
 
 	# -----------------------------------------------------------------------------
 	# Testing utilities, not tests themselves (ie assumed to work)
@@ -343,7 +354,7 @@ class mcprep_testing():
 		except Exception as e:
 			return "Unexpected error: "+str(e)
 		# how to tell if prepping actually occured? Should say 1 material prepped
-		print(self._get_last_infolog())
+		# print(self._get_last_infolog()) # error in 2.82+, not used anyways
 
 	def prep_materials_cycles(self):
 		"""Cycles-specific tests"""
@@ -723,6 +734,41 @@ class mcprep_testing():
 				errors.append(res)
 		if errors:
 			return "Meshswap failed: "+", ".join(errors)
+
+	def detect_desaturated_images(self):
+		"""Checks the desaturate images function works"""
+		# self._clear_scene() # not actually needed for this one
+
+		from MCprep.materials.generate import is_image_grayscale
+		base = self.get_mcprep_path()
+		print("Raw base", base)
+		base = os.path.join(base, "MCprep_resources",
+			"resourcepacks", "mcprep_default", "assets", "minecraft", "textures",
+			"block")
+		print("Remapped base: ", base)
+
+		# known images that ARE desaturated:
+		desaturated = [
+			"grass_block_top.png"
+		]
+
+		saturated = [
+			"grass_block_side.png",
+			"glowstone.png"
+		]
+
+		for tex in saturated:
+			img = bpy.data.images.load(os.path.join(base, tex))
+			if is_image_grayscale(img) is True:
+				raise Exception('Image {} detected as grayscale, should be saturated'.format(tex))
+		for tex in desaturated:
+			img = bpy.data.images.load(os.path.join(base, tex))
+			if is_image_grayscale(img) is False:
+				raise Exception('Image {} detected as saturated - should be grayscale'.format(tex))
+
+
+		# test that it is caching as expected.. by setting a false
+		# value for cache flag and seeing it's returning the property value
 
 
 class OCOL:

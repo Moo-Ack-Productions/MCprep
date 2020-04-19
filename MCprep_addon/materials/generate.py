@@ -175,8 +175,7 @@ def detect_form(materials):
 
 
 def checklist(matName, listName):
-	"""Helper function for expanding single wildcard within generalized
-	material names."""
+	"""Helper to expand single wildcard within generalized	material names"""
 
 	if not conf.json_data:
 		conf.log("No json_data for checklist to call from!")
@@ -186,16 +185,15 @@ def checklist(matName, listName):
 	alist = conf.json_data["blocks"][listName]
 	if matName in alist:
 		return True
-	else:
-		for name in alist:
-			if not '*' in name:
-				continue
-			x = name.split('*')
-			if x[0] != '' and x[0] in matName:
-				return True
-			elif x[1] != '' and x[1] in matName:
-				return True
-		return False
+	for name in alist:
+		if not '*' in name:
+			continue
+		x = name.split('*')
+		if x[0] != '' and x[0] in matName:
+			return True
+		elif x[1] != '' and x[1] in matName:
+			return True
+	return False
 
 
 def matprep_internal(mat, passes, use_reflections, only_solid):
@@ -351,17 +349,18 @@ def matprep_cycles(mat, passes, use_reflections, use_principled, only_solid):
 
 
 def set_texture_pack(material, folder, use_extra_passes):
-	"""Replace existing material's image with texture pack's."""
-	# run through and check for each if counterpart material exists
-	# run the swap (and auto load e.g. normals and specs if avail.)
-	mc_name, form = get_mc_canonical_name(material.name)
+	"""Replace existing material's image with texture pack's.
+
+	Run through and check for each if counterpart material exists, then
+	run the swap (and auto load e.g. normals and specs if avail.)
+	"""
+	mc_name, _ = get_mc_canonical_name(material.name)
 	image = find_from_texturepack(mc_name, folder)
-	if image==None:
+	if image is None:
 		return 0
 
 	image_data = util.loadTexture(image)
 	engine = bpy.context.scene.render.engine
-	saturate = mc_name in conf.json_data['blocks']['desaturated']
 	material["texture_swapped"] = True  # used to apply saturation
 
 	if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
@@ -395,7 +394,7 @@ def set_cycles_texture(image, material, extra_passes=False):
 	Args:
 		image: image datablock
 	"""
-	if material.node_tree == None:
+	if material.node_tree is None:
 		return False
 	# check if there is more data to see pass types
 	img_sets = {}
@@ -550,7 +549,7 @@ def set_internal_texture(image, material, extra_passes=False):
 		elif "saturate" in img_sets:
 			img_sets.pop("saturate")
 			print("Running saturate")
-			if canon not in conf.json_data['blocks']['desaturated']:
+			if not checklist(canon, "desaturated"):
 				continue
 			if tex and tex.name+"_saturate" in bpy.data.textures:
 				new_tex = bpy.data.textures[tex.name+"_saturate"]
@@ -738,6 +737,28 @@ def replace_missing_texture(image):
 
 	return 1  # updated image block
 
+
+def is_image_grayscale(image):
+	"""Returns true if image data is all grayscale, false otherwise"""
+	if not image or not image.pixels:
+		return None
+	if 'grayscale' in image: # cache
+		return image['grayscale']
+
+	# Strict way: find any pixels where rgb values are not the same, break
+	# zip(*(iter(image.pixels),) * image.channels)
+	pxl_count = len(image.pixels)/image.channels
+	for ind in range(int(pxl_count)): #zip(*(iter(image.pixels),) * image.channels):
+		ind = ind*image.channels
+		#if pxl[0]!=pxl[1] or pxl[1]!=pxl[2] or pxl[0]!=pxl[2]:
+		if (image.pixels[ind] != image.pixels[ind+1] or
+				image.pixels[ind+1] != image.pixels[ind+2] or
+				image.pixels[ind] != image.pixels[ind+2]):
+			image['grayscale'] = False
+			conf.log("Image grayscale: "+image.name, vv_only=True)
+			return False
+	image['grayscale'] = True # set cache
+	return True
 
 
 # -----------------------------------------------------------------------------
@@ -998,16 +1019,19 @@ def matgen_cycles_principled(mat, passes, use_reflections, only_solid):
 	nodeSaturateMix.blend_type = 'OVERLAY'
 	nodeSaturateMix.mute = True
 	nodeSaturateMix.hide = True
-	if checklist(canon, "desaturated"):
-		# Could potentially process image and determine if grayscale (mostly),
-		# but would be slow. For now, explicitly pass in if saturated or not
+	if not checklist(canon, "desaturated"):
+		pass
+	elif not is_image_grayscale(image_diff):
+		pass
+	else:
+		conf.log("Texture desaturated: "+canon, vv_only=True)
 		desat_color = conf.json_data['blocks']['desaturated'][canon]
 		if len(desat_color) < len(nodeSaturateMix.inputs[2].default_value):
 			desat_color.append(1.0)
 		nodeSaturateMix.inputs[2].default_value = desat_color
-		if "texture_swapped" in mat:
-			nodeSaturateMix.mute = False
-			nodeSaturateMix.hide = False
+		# if "texture_swapped" in mat:
+		nodeSaturateMix.mute = False
+		nodeSaturateMix.hide = False
 
 	# reapply animation data if any to generated nodes
 	apply_texture_animation_pass_settings(mat, animated_data)
@@ -1163,16 +1187,18 @@ def matgen_cycles_original(mat, passes, use_reflections, only_solid):
 	nodeSaturateMix.blend_type = 'OVERLAY'
 	nodeSaturateMix.mute = True
 	nodeSaturateMix.hide = True
-	if canon in conf.json_data['blocks']['desaturated']:
-		# Could potentially process image and determine if grayscale (mostly),
-		# but would be slow. For now, explicitly pass in if saturated or not
+	if not checklist(canon, "desaturated"):
+		pass
+	elif not is_image_grayscale(image_diff):
+		pass
+	else:
+		conf.log("Texture desaturated: "+canon, vv_only=True)
 		desat_color = conf.json_data['blocks']['desaturated'][canon]
 		if len(desat_color) < len(nodeSaturateMix.inputs[2].default_value):
 			desat_color.append(1.0)
 		nodeSaturateMix.inputs[2].default_value = desat_color
-		if "texture_swapped" in mat:
-			nodeSaturateMix.mute = False
-			nodeSaturateMix.hide = False
+		nodeSaturateMix.mute = False
+		nodeSaturateMix.hide = False
 
 	# reapply animation data if any to generated nodes
 	apply_texture_animation_pass_settings(mat, animated_data)

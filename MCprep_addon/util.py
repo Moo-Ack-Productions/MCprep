@@ -498,6 +498,38 @@ def uv_select(obj, action='TOGGLE'):
 			face.select = False
 
 
+def move_to_collection(obj, collection):
+	"""Move out of all collections and into this specified one. 2.8 only"""
+	for col in obj.users_collection:
+		col.objects.unlink(obj)
+	collection.objects.link(obj)
+
+
+def get_or_create_viewlayer(context, collection_name):
+	"""Returns or creates the view layer for a given name. 2.8 only.
+
+	Only searches within same viewlayer; not exact match but a non-case
+	sensitive contains-text of collection_name check. If the collection exists
+	elsewhere by name, ignore (could be used for something else) and generate
+	a new one; maye cause any existing collection to be renamed, but is still
+	left unaffected in whatever view layer it exists.
+	"""
+	master_vl = context.view_layer.layer_collection
+	response_vl = None
+	for child in master_vl.children:
+		if collection_name.lower() not in child.name.lower():
+			continue
+		response_vl = child
+		break
+	if response_vl is None:
+		new_coll = bpy.data.collections.new(collection_name)
+		context.scene.collection.children.link(new_coll)
+
+		# assumes added to scene's active view layer root via link above
+		response_vl = master_vl.children[new_coll.name]
+	return response_vl
+
+
 # -----------------------------------------------------------------------------
 # Cross blender 2.7 and 2.8 functions
 # -----------------------------------------------------------------------------
@@ -695,9 +727,3 @@ def scene_update(context=None):
 		context.scene.update()
 	elif hasattr(context, "view_layer"): # 2.8
 		context.view_layer.update()
-
-def move_to_collection(obj, collection):
-	"""Move out of all collections and into this specified one. 2.8 Only"""
-	for col in obj.users_collection:
-		col.objects.unlink(obj)
-	collection.objects.link(obj)
