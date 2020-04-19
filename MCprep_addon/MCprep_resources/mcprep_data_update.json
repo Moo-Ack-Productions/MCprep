@@ -2208,7 +2208,7 @@
 			"Grass__Fern": "fern",
 			"Grass__Tall_Grass": "grass",
 			"Iron_Door": "iron_door_bottom",
-			"Jack_o'Lantern": "pumpkin_face_on",
+			"Jack_o'Lantern": "jack_o_lantern",
 			"Kelp": "kelp",
 			"Kelp__1": "",
 			"Ladder": "ladder",
@@ -2232,6 +2232,7 @@
 			"Poppy__White_Tulip": "",
 			"Poppy__Wither_Rose": "",
 			"Powered_Rail": "powered_rail",
+			"Pumpkin": "carved_pumpkin",
 			"Rail": "rail",
 			"Redstone_Lamp_(active)": "redstone_lamp",
 			"Redstone_Lamp_(inactive)": "redstone_lamp_off",
@@ -2257,7 +2258,7 @@
 			"TNT": "tnt_top",
 			"Torch": "torch",
 			"Trapped_Chest": "",
-			"Vines": "vines",
+			"Vines": "vine",
 			"Wheat": "wheat_stage7",
 			"Wooden_Door": "oak_door_bottom",
 			"acacia_door_bottom": "acacia_door_bottom",
@@ -2944,120 +2945,120 @@
 			"fire_0": "fire"
 		},
 		"desaturated": {
-			"double_plant_fern_bottom": [
-				0.08,
-				0.58,
-				0.01
+			"acacia_leaves": [
+				0.286377,
+				0.566797,
+				0.154644
 			],
-			"double_plant_fern_top": [
-				0.08,
-				0.58,
-				0.01
+			"attached_melon_stem": [
+				0.286377,
+				0.566797,
+				0.154644
 			],
-			"double_plant_grass_bottom": [
-				0.08,
-				0.58,
-				0.01
+			"attached_pumpkin_stem": [
+				0.286377,
+				0.566797,
+				0.154644
 			],
-			"double_plant_grass_top": [
-				0.08,
-				0.58,
-				0.01
+			"birch_leaves": [
+				0.286377,
+				0.566797,
+				0.154644
+			],
+			"dark_oak_leaves": [
+				0.286377,
+				0.566797,
+				0.154644
 			],
 			"fern": [
-				0.08,
-				0.58,
-				0.01
+				0.286377,
+				0.566797,
+				0.154644
 			],
-			"grass_side_overlay": [
-				0.08,
-				0.58,
-				0.01
+			"grass": [
+				0.286377,
+				0.566797,
+				0.154644
 			],
-			"grass_top": [
-				0.08,
-				0.58,
-				0.01
+			"grass_block_side_overlay": [
+				0.286377,
+				0.566797,
+				0.154644
 			],
-			"leaves_acacia": [
-				0.08,
-				0.58,
-				0.01
+			"grass_block_top": [
+				0.286377,
+				0.566797,
+				0.154644
 			],
-			"leaves_big_oak": [
-				0.08,
-				0.58,
-				0.01
+			"jungle_leaves": [
+				0.286377,
+				0.566797,
+				0.154644
 			],
-			"leaves_birch": [
-				0.08,
-				0.58,
-				0.01
+			"large_fern_bottom": [
+				0.286377,
+				0.566797,
+				0.154644
 			],
-			"leaves_jungle": [
-				0.08,
-				0.58,
-				0.01
+			"large_fern_top": [
+				0.286377,
+				0.566797,
+				0.154644
 			],
-			"leaves_oak": [
-				0.08,
-				0.58,
-				0.01
+			"lily_pad": [
+				0.286377,
+				0.566797,
+				0.154644
 			],
-			"leaves_spruce": [
-				0.08,
-				0.58,
-				0.01
+			"melon_stem": [
+				0.286377,
+				0.566797,
+				0.154644
 			],
-			"melon_stem_connected": [
-				0.08,
-				0.58,
-				0.01
+			"oak_leaves": [
+				0.286377,
+				0.566797,
+				0.154644
 			],
-			"melon_stem_disconnected": [
-				0.08,
-				0.58,
-				0.01
-			],
-			"pumpkin_stem_connected": [
-				0.08,
-				0.58,
-				0.01
-			],
-			"pumpkin_stem_disconnected": [
-				0.08,
-				0.58,
-				0.01
+			"pumpkin_stem": [
+				0.286377,
+				0.566797,
+				0.154644
 			],
 			"redstone_dust_dot": [
-				0.08,
-				0.58,
-				0.01
+				0.286377,
+				0.566797,
+				0.154644
 			],
 			"redstone_dust_line0": [
-				0.08,
-				0.58,
-				0.01
+				0.286377,
+				0.566797,
+				0.154644
 			],
 			"redstone_dust_line1": [
-				0.08,
-				0.58,
-				0.01
+				0.286377,
+				0.566797,
+				0.154644
 			],
-			"tallgrass": [
-				0.08,
-				0.58,
-				0.01
+			"spruce_leaves": [
+				0.286377,
+				0.566797,
+				0.154644
+			],
+			"tall_grass_bottom": [
+				0.286377,
+				0.566797,
+				0.154644
+			],
+			"tall_grass_top": [
+				0.286377,
+				0.566797,
+				0.154644
 			],
 			"vine": [
-				0.08,
-				0.58,
-				0.01
-			],
-			"waterlily": [
-				0.08,
-				0.58,
-				0.01
+				0.286377,
+				0.566797,
+				0.154644
 			]
 		},
 		"emit": [
