@@ -31,6 +31,8 @@ import sys
 import io
 from contextlib import redirect_stdout
 import importlib
+import tempfile
+import shutil
 
 TEST_FILE = "test_results.tsv"
 
@@ -59,7 +61,9 @@ class mcprep_testing():
 			self.name_generalize,
 			self.meshswap_jmc2obj,
 			self.meshswap_mineways_separated,
-			self.detect_desaturated_images
+			self.detect_desaturated_images,
+			self.find_missing_images_cycles,
+			self.qa_meshswap_file,
 			]
 		self.run_only = None # name to give to only run this test
 
@@ -215,7 +219,7 @@ class mcprep_testing():
 		# mcmob_type='player/Simple Rig - Boxscape-TheDuckCow.blend:/:Simple Player'
 		# mcmob_type='player/Alex FancyFeet - TheDuckCow & VanguardEnni.blend:/:alex'
 		mcmob_type='hostile/mobs - Rymdnisse.blend:/:silverfish'
-		bpy.ops.mcprep.mob_spawner(mcmob_type=mcmob_type, skipUsage=True)
+		bpy.ops.mcprep.mob_spawner(mcmob_type=mcmob_type)
 
 	def _import_jmc2obj_full(self):
 		"""Import the full jmc2obj test set"""
@@ -237,14 +241,22 @@ class mcprep_testing():
 			"mineways_test_single_1_14_4.obj")
 		bpy.ops.mcprep.import_world_split(filepath=obj_path)
 
-	def _create_canon_mat(self):
+	def _create_canon_mat(self, canon=None):
 		"""Creates a material that should be recognized"""
-		mat = bpy.data.materials.new("dirt")
+		name = canon if canon else "dirt"
+		mat = bpy.data.materials.new(name)
 		mat.use_nodes = True
 		img_node = mat.node_tree.nodes.new(type="ShaderNodeTexImage")
-		img = bpy.data.images.new("dirt", 16, 16)
+		if canon:
+			base = self.get_mcprep_path()
+			filepath = os.path.join(base, "MCprep_resources",
+				"resourcepacks", "mcprep_default", "assets", "minecraft", "textures",
+				"block", canon+".png")
+			img = bpy.data.images.load(filepath)
+		else:
+			img = bpy.data.images.new(name, 16, 16)
 		img_node.image = img
-		return mat
+		return mat, img_node
 
 	# Seems that infolog doesn't update in background mode
 	def _get_last_infolog(self):
@@ -302,7 +314,7 @@ class mcprep_testing():
 		# 	animateTextures=False,
 		# 	autoFindMissingTextures=False,
 		# 	improveUiSettings=False,
-		# 	skipUsage=True)
+		# 	)
 		# if res != {'CANCELLED'}:
 		# 	return "Should have returned cancelled as no objects selected"
 		# elif "No objects selected" != self._get_last_infolog():
@@ -314,8 +326,7 @@ class mcprep_testing():
 			bpy.ops.mcprep.prep_materials(
 				animateTextures=False,
 				autoFindMissingTextures=False,
-				improveUiSettings=False,
-				#skipUsage=True
+				improveUiSettings=False
 				)
 		except RuntimeError as e:
 			if "Error: No objects selected" in str(e):
@@ -343,7 +354,7 @@ class mcprep_testing():
 		# TODO: Add test where material is added but without an image/nodes
 
 		# add object with canonical material name. Assume cycles
-		new_mat = self._create_canon_mat()
+		new_mat, _ = self._create_canon_mat()
 		obj.active_material = new_mat
 		status = 'fail'
 		try:
@@ -359,8 +370,143 @@ class mcprep_testing():
 	def prep_materials_cycles(self):
 		"""Cycles-specific tests"""
 
-	def find_missing(self):
-		"""Find missing materials"""
+	def find_missing_images_cycles(self):
+		"""Find missing images from selected materials, cycles.
+
+		Scenarios in which we find new textures
+		One: material is empty with no image block assigned at all, though has
+			 image node and material is a canonical name
+		Two: material has image block but the filepath is missing, find it
+		Three: image is there, or image is packed; ie assume is fine (don't change)
+		"""
+
+		# first, import a material that has no filepath
+		self._clear_scene()
+		mat, node = self._create_canon_mat("sugar_cane")
+		bpy.ops.mesh.primitive_plane_add()
+		bpy.context.object.active_material = mat
+
+		pre_path = node.image.filepath
+		bpy.ops.mcprep.replace_missing_textures(animateTextures=False)
+		post_path = node.image.filepath
+		canonical_path = post_path # save for later
+		if pre_path != post_path:
+			return "Pre/post path differed, should be the same"
+
+		# now save the texturefile somewhere
+		tmp_dir = tempfile.gettempdir()
+		tmp_image = os.path.join(tmp_dir, "sugar_cane.png")
+		shutil.copyfile(node.image.filepath, tmp_image) # leave original in tact
+
+		# Test that path is unchanged even when with a non canonical path
+		node.image.filepath = tmp_image
+		if node.image.filepath != tmp_image:
+			os.remove(tmp_image)
+			return "fialed to setup test, node path not = "+tmp_image
+		pre_path = node.image.filepath
+		bpy.ops.mcprep.replace_missing_textures(animateTextures=False)
+		post_path = node.image.filepath
+		if pre_path != post_path:
+			os.remove(tmp_image)
+			return "Pre/post path differed in tmp dir, when there should have been no change"
+
+		# test that an empty node within a canonically named material is fixed
+		pre_path = node.image.filepath
+		node.image = None # remove the image from block
+		if node.image:
+			os.remove(tmp_image)
+			return "failed to setup test, image block still assigned"
+		bpy.ops.mcprep.replace_missing_textures(animateTextures=False)
+		post_path = node.image.filepath
+		if not post_path:
+			os.remove(tmp_image)
+			return "No post path found, should have loaded file"
+		elif post_path == pre_path:
+			os.remove(tmp_image)
+			return "Should have loaded image as new datablock from canon location"
+		elif not os.path.isfile(post_path):
+			os.remove(tmp_image)
+			return "New path file does not exist"
+
+		# test an image with broken texturepath is fixed for cannon material name
+
+		# node.image.filepath = tmp_image # assert it's not the canonical path
+		# pre_path = node.image.filepath # the original path before renaming
+		# os.rename(tmp_image, tmp_image+"x")
+		# if os.path.isfile(bpy.path.abspath(node.image.filepath)) or pre_path != node.image.filepath:
+		# 	os.remove(pre_path)
+		# 	os.remove(tmp_image+"x")
+		# 	return "Failed to setup test, original file exists/img path updated"
+		# bpy.ops.mcprep.replace_missing_textures(animateTextures=False)
+		# post_path = node.image.filepath
+		# if pre_path == post_path:
+		# 	os.remove(tmp_image+"x")
+		# 	return "Should have updated missing image to canonical, still is "+post_path
+		# elif post_path != canonical_path:
+		# 	os.remove(tmp_image+"x")
+		# 	return "New path not canonical: "+post_path
+		# os.rename(tmp_image+"x", tmp_image)
+
+		# Example where we save and close the blend file, move the file,
+		# and re-open. First, load the scene
+		self._clear_scene()
+		mat, node = self._create_canon_mat("sugar_cane")
+		bpy.ops.mesh.primitive_plane_add()
+		bpy.context.object.active_material = mat
+		# Then, create the textures locally
+		bpy.ops.file.pack_all()
+		bpy.ops.file.unpack_all(method='USE_LOCAL')
+		unpacked_path = bpy.path.abspath(node.image.filepath)
+		# close and open, moving the file in the meantime
+		save_tmp_file = os.path.join(tmp_dir, "tmp_test.blend")
+		os.rename(unpacked_path, unpacked_path+"x")
+		bpy.ops.wm.save_mainfile(filepath=save_tmp_file)
+		bpy.ops.wm.open_mainfile(filepath=save_tmp_file)
+		# now run the operator
+		img = bpy.data.images['sugar_cane.png']
+		pre_path = img.filepath
+		if os.path.isfile(pre_path):
+			os.remove(unpacked_path+"x")
+			return "Failed to setup test for save/reopn move"
+		bpy.ops.mcprep.replace_missing_textures(animateTextures=False)
+		post_path = img.filepath
+		if post_path == pre_path:
+			os.remove(unpacked_path+"x")
+			return "Did not change path from "+pre_path
+		elif not os.path.isfile(post_path):
+			os.remove(unpacked_path+"x")
+			return "File for blend reloaded image does not exist: "+node.image.filepath
+		os.remove(unpacked_path+"x")
+
+		# address the example of sugar_cane.png.001 not being detected as canonical
+		# as a front-end name (not image file)
+		self._clear_scene()
+		mat, node = self._create_canon_mat("sugar_cane")
+		bpy.ops.mesh.primitive_plane_add()
+		bpy.context.object.active_material = mat
+
+		pre_path = node.image.filepath
+		node.image = None # remove the image from block
+		mat.name = "sugar_cane.png.001"
+		if node.image:
+			os.remove(tmp_image)
+			return "failed to setup test, image block still assigned"
+		bpy.ops.mcprep.replace_missing_textures(animateTextures=False)
+		if not node.image:
+			os.remove(tmp_image)
+			return "Failed to load new image within mat named .png.001"
+		post_path = node.image.filepath
+		if not post_path:
+			os.remove(tmp_image)
+			return "No image loaded for "+mat.name
+		elif not os.path.isfile(node.image.filepath):
+			return "File for loaded image does not exist: "+node.image.filepath
+
+		# Example running with animateTextures too
+
+		# check on image that is packed or not, or packed but no data
+		os.remove(tmp_image)
+
 
 	def openfolder(self):
 		if bpy.app.background is True:
@@ -478,7 +624,7 @@ class mcprep_testing():
 
 
 
-		bpy.ops.mcprep.spawn_with_skin(skipUsage=True)
+		bpy.ops.mcprep.spawn_with_skin()
 		# test changing skin to file when no existing images/textres
 		# test changing skin to file when existing material
 		# test changing skin to file for both above, cycles and internal
@@ -714,17 +860,17 @@ class mcprep_testing():
 			"grass",
 			"torch",
 			"fire_0",
+			"MWO_chest_top",
+			"MWO_double_chest_top_left",
 			# "lantern", not in test object
 			"cactus_side",
 			"vine", # singular
 			"enchanting_table_top",
-			"redstone_torch_on",
+			# "redstone_torch_on", no separate "on" for Mineways separated exports
 			"glowstone",
 			"redstone_torch",
 			"jack_o_lantern",
 			"sugar_cane",
-			"MWO_chest_top",
-			"MWO_double_chest_top_left" #
 		]
 
 		errors = []
@@ -769,6 +915,27 @@ class mcprep_testing():
 
 		# test that it is caching as expected.. by setting a false
 		# value for cache flag and seeing it's returning the property value
+
+	def qa_meshswap_file(self):
+		"""Open the meshswap file, assert there are no relative paths"""
+		blendfile = os.path.join("MCprep_addon", "MCprep_resources", "mcprep_meshSwap.blend")
+		bpy.ops.wm.open_mainfile(filepath=blendfile)
+		# do NOT save this file!
+
+		# bpy.ops.file.make_paths_relative() instead of this, do manually
+		not_relative = []
+		for img in bpy.data.images:
+			if not img.filepath:
+				continue
+			if img.filepath != bpy.path.relpath(img.filepath):
+				not_relative.append(os.path.basename(img.filepath))
+
+		if not_relative:
+			return "Found {} non relative img files in meshswap: {}".format(
+				len(not_relative), ", ".join(not_relative))
+
+		# detect any non canonical material names?? how to exclude?
+
 
 
 class OCOL:

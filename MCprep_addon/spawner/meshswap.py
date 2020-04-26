@@ -85,6 +85,22 @@ def getMeshswapList(context):
 			for itm in context.scene.mcprep_props.meshswap_list]
 
 
+def move_assets_to_excluded_layer(context, collections):
+	"""Utility to move source collections to excluded layer to not be rendered"""
+	initial_view_coll = context.view_layer.active_layer_collection
+
+	# Then, setup the exclude view layer
+	meshswap_exclude_vl = util.get_or_create_viewlayer(
+		context, "Meshswap Exclude")
+	meshswap_exclude_vl.exclude = True
+
+	for grp in collections:
+		if grp.name not in initial_view_coll.collection.children:
+			continue # not linked, likely a sub-group not added to scn
+		meshswap_exclude_vl.collection.children.link(grp)
+		initial_view_coll.collection.children.unlink(grp)
+
+
 def update_meshswap_path(self, context):
 	"""for UI list path callback"""
 	conf.log("Updating meshswap path", vv_only=True)
@@ -139,6 +155,7 @@ class face_struct():
 		self.n = normal_coord
 		self.g = global_coord
 		self.l = local_coord
+
 
 # -----------------------------------------------------------------------------
 # Mesh swap functions
@@ -280,9 +297,7 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 				ob.location = [round(x+offset)-offset for x in self.location]
 			ob["MCprep_noSwap"] = 1
 
-			# cleanup
 			if self.make_real:
-				# get objects before vs after, because
 				if util.bv28(): # make real doesn't select resulting output now
 					pre_objs = list(bpy.data.objects)
 					bpy.ops.object.duplicates_make_real()
@@ -292,10 +307,11 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 						util.select_set(obj, True)
 				else:
 					bpy.ops.object.duplicates_make_real()
-				# remove the empty added by making duplicates real.
+
 				if group is not None:
 					self.fix_armature_target(
 						context, context.selected_objects, group)
+				# remove the empty added by making duplicates real.
 				for ob in context.selected_objects:
 					if ob.type != "EMPTY":
 						continue
@@ -303,13 +319,9 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 						continue
 					util.obj_unlink_remove(ob, True, context)
 
-			# TODO: for 2.8, hide brought in asset collections without hiding
-			#   them in the individual instances in the viewport/render.
-			# Need alternative method. For now, MeshSwap will just pull in
-			# groups and have them visible in the scene in default location.
-			# if util.bv28() and group:
-				# util.hide_viewport(group, True) # hide newly added source grps
-				# group.hide_render = True # makes instances hidden on render
+			# Move source of group instance into excluded view layer
+			if util.bv28() and group:
+				move_assets_to_excluded_layer(context, [group])
 
 		self.track_param = self.block
 		return {'FINISHED'}
@@ -524,12 +536,12 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			col.label(text="consider using a smaller area closer to the camera", icon="BLANK1")
 
 	track_function = "meshswap"
-	track_param = ""
+	track_exporter = None
 	@tracking.report_error
 	def execute(self, context):
 		tprep = time.time()
 		addon_prefs = util.get_user_preferences(context)
-		self.track_param = addon_prefs.MCprep_exporter_type
+		self.track_exporter = addon_prefs.MCprep_exporter_type
 
 		direc = context.scene.meshswap_path
 		if not os.path.isfile(direc):
@@ -588,7 +600,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 
 			# loop through each face or "polygon" of mesh, throw out invalids
 			t1s[-1] = time.time()
-			offset = 0.5 if self.track_param == 'Mineways' else 0
+			offset = 0.5 if self.track_exporter == 'Mineways' else 0
 			facebook = self.get_face_list(swap, offset)
 
 			if not util.bv28():
@@ -691,23 +703,11 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		# this meshswap group to avoid showing in render. Also move newly
 		# spawned instances into a collection of its own (2.8 only)
 		if util.bv28():
-			initial_view_coll = context.view_layer.active_layer_collection
-
-			# first, move the newly added objects into a view layer
 			swaped_vl = util.get_or_create_viewlayer(context, "Meshswap Render")
 			for obj in new_objects:
 				util.move_to_collection(obj, swaped_vl.collection)
 
-			# Then, setup the exclude view layer
-			meshswap_exclude_vl = util.get_or_create_viewlayer(
-				context, "Meshswap Exclude")
-			meshswap_exclude_vl.exclude = True
-
-			for grp in new_groups:
-				if grp.name not in initial_view_coll.collection.children:
-					continue # not linked, likely a sub-group not added to scn
-				meshswap_exclude_vl.collection.children.link(grp)
-				initial_view_coll.collection.children.unlink(grp)
+			move_assets_to_excluded_layer(context, new_groups)
 
 		# end progress bar, end of primary section
 		bpy.context.window_manager.progress_end()
@@ -800,7 +800,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		addon_prefs = util.get_user_preferences(context)
 		meshSwapPath = context.scene.meshswap_path
 		rmable = []
-		if self.track_param == "jmc2obj":
+		if self.track_exporter == "jmc2obj":
 			rmable = ['double_plant_grass_top','torch_flame','cactus_top','cactus_bottom','book',
 						'enchant_table_side','enchant_table_bottom','door_iron_top','door_wood_top',
 						'brewing_stand','door_dark_oak_upper','door_acacia_upper','door_jungle_upper',
@@ -808,7 +808,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 						'pumpkin_top_lit', 'pumpkin_side_lit', 'workbench_back', 'workbench_front',
 						'furnace_top', 'furnace_side', 'sunflower_top', 'sunflower_front',
 						'campfire_log_lit', 'campfire_fire']
-		elif self.track_param == "Mineways":
+		elif self.track_exporter == "Mineways":
 			rmable = ['oak_door_top', 'iron_door_top', 'spruce_door_top',
 				'birch_door_top', 'jungle_door_top', 'acacia_door_top', 'dark_oak_door_top',
 				'cactus_top', 'tall_grass_top', 'sunflower_top', 'sunflower_back',
@@ -974,7 +974,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			instance_configs: pass by ref dict of instances to make, with rot and loc info
 		"""
 
-		offset = 0.5 if self.track_param == 'Mineways' else 0
+		offset = 0.5 if self.track_exporter == 'Mineways' else 0
 
 		# Transform so centers are half ints (jmc2obj default), from local coords
 		x = round(face.l[0])
@@ -1035,7 +1035,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		z_diff = z-face.l[2]
 
 		# append rotation, exporter dependent
-		if self.track_param == "jmc2obj":
+		if self.track_exporter == "jmc2obj":
 			if swapProps['torchlike']: # needs fixing
 				if (x_diff>.1 and x_diff < 0.4):
 					rot_type = 1
@@ -1076,7 +1076,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 					rot_type = 5
 			else:
 				rot_type = 0
-		elif self.track_param == "Mineways":
+		elif self.track_exporter == "Mineways":
 			conf.log("checking: {} {}".format(x_diff,z_diff))
 			if swapProps['torchlike']: # needs fixing
 				conf.log("recognized it's a torchlike obj..")
@@ -1127,7 +1127,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			rot_type = 0
 
 		# update the instance ref for this face
-		offset = -0.5 if self.track_param == 'Mineways' else 0
+		offset = -0.5 if self.track_exporter == 'Mineways' else 0
 		loc_unoffset = [pos+offset for pos in loc]
 		instance_configs[instance_key] = [loc_unoffset, rot_type]
 
