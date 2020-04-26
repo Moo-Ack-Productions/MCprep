@@ -718,7 +718,7 @@ def replace_missing_texture(image):
 
 	if image is None:
 		return False
-	if image_diff.source == 'SEQUENCE' and os.path.isfile(bpy.path.abspath(image.filepath)):
+	if image.source == 'SEQUENCE' and os.path.isfile(bpy.path.abspath(image.filepath)):
 		# technically the next statement should prevail, but this filecheck
 		# addresses animated textures who show up without any size/pixel data
 		# just after a reload (even though functional)

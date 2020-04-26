@@ -344,7 +344,7 @@ class MCPREP_OT_spawn_item(bpy.types.Operator):
 			scn_props = context.scene.mcprep_props
 			if not scn_props.item_list:
 				self.report({'ERROR'}, "No filepath input, and no items in list loaded")
-			return {'CANCELLED'}
+				return {'CANCELLED'}
 			self.filepath = scn_props.item_list[scn_props.item_list_index].path
 			self.track_param = "list"
 		elif sima.type == 'IMAGE_EDITOR' and sima.image:
