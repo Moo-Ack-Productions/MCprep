@@ -160,35 +160,36 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 			elif mat.library:
 				count_lib_skipped += 1
 				continue
+
 			passes = generate.get_textures(mat)
 			if not self.useExtraMaps:
 				for pass_name in passes:
 					if pass_name != "diffuse":
 						passes[pass_name] = None
+
 			if self.autoFindMissingTextures:
 				for pass_name in passes:
 					res = generate.replace_missing_texture(passes[pass_name])
 					if res>0:
 						mat["texture_swapped"] = True  # used to apply saturation
+
 			if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
 				res = generate.matprep_internal(mat, passes,
 					self.useReflections, self.makeSolid)
 				if res==0:
 					count+=1
-				if self.animateTextures:
-					sequences.animate_single_material(
-						mat, context.scene.render.engine)
 			elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 				res = generate.matprep_cycles(mat, passes, self.useReflections,
 					self.usePrincipledShader, self.makeSolid)
 				if res==0:
 					count+=1
-				if self.animateTextures:
-					sequences.animate_single_material(
-						mat, context.scene.render.engine)
 			else:
 				self.report({'ERROR'}, "Only Blender Internal, Cycles, or Eevee supported")
 				return {'CANCELLED'}
+
+			if self.animateTextures:
+				sequences.animate_single_material(
+					mat, context.scene.render.engine)
 
 		if self.combineMaterials is True:
 			bpy.ops.mcprep.combine_materials(selection_only=True, skipUsage=True)
@@ -205,8 +206,10 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 			self.report({"INFO"},"Modified "+str(count)+" materials")
 		else:
 			self.report({"ERROR"}, "Nothing modified, be sure you selected objects with existing materials!")
+
+		addon_prefs = util.get_user_preferences(context)
 		self.track_param = context.scene.render.engine
-		self.track_exporter = generate.detect_form(mat_list)
+		self.track_exporter = addon_prefs.MCprep_exporter_type
 		return {'FINISHED'}
 
 
@@ -347,6 +350,7 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper):
 	track_exporter = None
 	@tracking.report_error
 	def execute(self,context):
+		addon_prefs = util.get_user_preferences(context)
 
 		# check folder exist, but keep relative if relevant
 		folder = self.filepath
@@ -374,7 +378,7 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper):
 		# if exporter=="mineways":
 		# 	self.report({'ERROR'}, "Not yet supported for Mineways - coming soon!")
 		# 	return {'CANCELLED'}
-		self.track_exporter = exporter
+		self.track_exporter = addon_prefs.MCprep_exporter_type
 
 		# set the scene's folder for the texturepack being swapped
 		context.scene.mcprep_texturepack_path = folder
@@ -384,10 +388,10 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper):
 		for mat in mat_list:
 			self.preprocess_material(mat)
 			res += generate.set_texture_pack(mat, folder, self.extra_passes)
-			# checklist(canon, "desaturated") and is_image_grayscale(image_diff)
 			if self.animateTextures:
 				sequences.animate_single_material(
 					mat, context.scene.render.engine)
+			generate.set_saturation_material(mat) # may be a double call if was animated tex
 
 		self.report({'INFO'},"{} materials affected".format(res))
 		self.track_param = context.scene.render.engine
@@ -537,7 +541,7 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 					baseMat.name = genBase
 			else:
 				baseMat.name = genBase
-			if conf.vv:print("Final: ",baseMat)
+			conf.log(["Final: ",baseMat], vv_only=True)
 
 		postcount = len( ["x" for x in getMaterials(self, context) if x.users >0] )
 		self.report({"INFO"},
@@ -938,8 +942,13 @@ class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 		for mat in mat_list:
 			updated = False
 			passes = generate.get_textures(mat)
+			if not passes:
+				conf.log("No images found within material")
 			for pass_name in passes:
-				res = generate.replace_missing_texture(passes[pass_name])
+				if pass_name == 'diffuse' and passes[pass_name] is None:
+					res = self.load_from_texturepack(mat)
+				else:
+					res = generate.replace_missing_texture(passes[pass_name])
 				if res == 1:
 					updated = True
 			if updated:
@@ -956,8 +965,29 @@ class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 
 		self.report({'INFO'}, "Updated {} materials".format(count))
 		self.track_param = context.scene.render.engine
-		self.track_exporter = generate.detect_form(mat_list)
+		addon_prefs = util.get_user_preferences(context)
+		self.track_exporter = addon_prefs.MCprep_exporter_type
 		return {'FINISHED'}
+
+	def load_from_texturepack(self, mat):
+		"""If image datablock not found in passes, try to directly load and assign"""
+		canon, _ = generate.get_mc_canonical_name(mat.name)
+		image_path = generate.find_from_texturepack(canon)
+		if not image_path or not os.path.isfile(image_path):
+			conf.log("Find missing images: No source file found for "+mat.name)
+			return False
+
+		# even if images of same name already exist, load new block
+		conf.log("Find missing images: Creating new image datablock for "+mat.name)
+		image = bpy.data.images.load(image_path)
+
+		engine = bpy.context.scene.render.engine
+		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+			status = generate.set_cycles_texture(image, mat)
+		elif engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
+			status = generate.set_cycles_texture(image, mat)
+
+		return status # True or False
 
 
 # -----------------------------------------------------------------------------

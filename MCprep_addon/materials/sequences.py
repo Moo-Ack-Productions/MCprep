@@ -37,6 +37,7 @@ from .. import util
 # Supporting functions
 # -----------------------------------------------------------------------------
 
+
 def animate_single_material(mat, engine, export_location='original', clear_cache=False):
 	"""Animates texture for single material, including all passes.
 
@@ -105,12 +106,18 @@ def animate_single_material(mat, engine, export_location='original', clear_cache
 				continue
 			set_sequence_to_texnode(node, tile_path_dict[pass_name])
 			affected_materials += 1
+
+			# since image sequences make it tricky to read pixel data (shows empty)
+			# assign cache based on the undersatnding if known desaturated or not
+			node.image['grayscale'] = generate.checklist(canon, "desaturated")
 		elif engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
 			texture = generate.get_texlayer_for_pass(mat, pass_name)
 			if not texture:
 				continue
 			set_sequence_to_texnode(texture, tile_path_dict[pass_name])
 			affected_materials += 1
+
+	generate.set_saturation_material(mat)
 	return affectable, affected_materials>0, None
 
 
@@ -424,6 +431,11 @@ class MCPREP_OT_prep_animated_textures(bpy.types.Operator):
 		col.prop(self, "export_location")
 		col.prop(self, "clear_cache")
 
+	# mid run utility variables
+	affectable_materials = 0
+	affected_materials = 0
+	break_err = None
+
 	track_function = "animate_tex"
 	track_param = None
 	track_exporter = None
@@ -443,43 +455,46 @@ class MCPREP_OT_prep_animated_textures(bpy.types.Operator):
 			self.report({'ERROR'}, "No materials found on selected objects")
 			return {'CANCELLED'}
 		res = generate.detect_form(mats)
-		if res=="mineways":
-			self.report({'ERROR'}, "Not yet supported for Mineways - coming soon!")
-			return {'CANCELLED'}
 
-		affectable_materials = 0
-		affected_materials = 0
-		break_err = None
+		self.affectable_materials = 0
+		self.affected_materials = 0
+		self.break_err = None
 		for mat in mats:
-			affectable, affected, err = animate_single_material(
-				mat, context.scene.render.engine,
-				self.export_location, self.clear_cache)
-			if err:
-				break_err = err
+			self.process_single_material(context, mat)
+			if self.break_err:
 				break
-			if affectable:
-				affectable_materials += 1
-			if affected:
-				affected_materials += 1
 
-		if break_err:
-			print(break_err)
+		if self.break_err:
+			print(self.break_err)
 			self.report({"ERROR"},
-				"Halted: "+str(break_err))
+				"Halted: "+str(self.break_err))
 			return {'CANCELLED'}
-		elif affectable_materials == 0:
+		elif self.affectable_materials == 0:
 			self.report({"ERROR"},
 				"No animate-able textures found on selected objects")
 			return {'CANCELLED'}
-		elif affected_materials == 0:
+		elif self.affected_materials == 0:
 			self.report({"ERROR"},
 				"Animated materials found, but none applied.")
 			return {'CANCELLED'}
 		else:
 			self.report({'INFO'}, "Modified {} material(s)".format(
-				affected_materials))
+				self.affected_materials))
 			self.track_param = context.scene.render.engine
 			return {'FINISHED'}
+
+	def process_single_material(self, context, mat):
+		"""Run animate textures for single material, and fix UVs and saturation"""
+		affectable, affected, err = animate_single_material(
+			mat, context.scene.render.engine,
+			self.export_location, self.clear_cache)
+		if err:
+			self.break_err = err
+			return
+		if affectable:
+			self.affectable_materials += 1
+		if affected:
+			self.affected_materials += 1
 
 
 # -----------------------------------------------------------------------------

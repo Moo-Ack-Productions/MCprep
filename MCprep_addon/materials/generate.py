@@ -175,17 +175,15 @@ def detect_form(materials):
 
 
 def checklist(matName, listName):
-	"""Helper to expand single wildcard within generalized	material names"""
-
+	"""Helper to expand single wildcard within generalized material names"""
 	if not conf.json_data:
 		conf.log("No json_data for checklist to call from!")
 	if not "blocks" in conf.json_data or not listName in conf.json_data["blocks"]:
 		conf.log("conf.json_data is missing blocks or listName "+str(listName))
 		return False
-	alist = conf.json_data["blocks"][listName]
-	if matName in alist:
+	if matName in conf.json_data["blocks"][listName]:
 		return True
-	for name in alist:
+	for name in conf.json_data["blocks"][listName]:
 		if not '*' in name:
 			continue
 		x = name.split('*')
@@ -250,8 +248,7 @@ def matprep_internal(mat, passes, use_reflections, only_solid):
 		return 1
 
 	# strip out the .00#
-	matGen = util.nameGeneralize(mat.name)
-	canon, form = get_mc_canonical_name(matGen)
+	canon, _ = get_mc_canonical_name(util.nameGeneralize(mat.name))
 	mat.use_nodes = False
 
 	mat.use_transparent_shadows = True #all materials receive trans
@@ -280,45 +277,41 @@ def matprep_internal(mat, passes, use_reflections, only_solid):
 		mat.raytrace_mirror.use = False
 		mat.alpha = 0
 
-	if checklist(canon, "emit"):
-		mat.emit = 1
+	mat.emit = 1 if checklist(canon, "emit") else 0
+
+	# cycle through and see if the layer exists to enable/disable blend
+	if not checklist(canon, "desaturated"):
+		pass
 	else:
-		mat.emit = 0
+		diff_img = mat.texture_slots[diff_layer].texture.image
+		is_grayscale = is_image_grayscale(diff_img)
 
-	if canon in conf.json_data['blocks']['desaturated']:
-		# cycle through and see if the layer exists to enable/disable blend
-		if "texture_swapped" in mat:
-			if saturate_layer:
-				pass  # should be good
-			else:
-				# set_internal_texture(True)
-
-				# TODO: code is duplicative to below, consolidate later
-				if mat.name+"_saturate" in bpy.data.textures:
-					new_tex = bpy.data.textures[mat.name+"_saturate"]
-				else:
-					new_tex = bpy.data.textures.new(name=mat.name+"_saturate", type="BLEND")
-				if not saturate_layer:
-					if not first_unused:
-						first_unused = len(mat.texture_slots)-1 # force reuse last at worst
-					sl = mat.texture_slots.create(first_unused)
-				else:
-					sl = mat.texture_slots[saturate_layer]
-				sl.texture = new_tex
-				sl.texture["SATURATE"] = True
-				sl.use_map_normal = False
-				sl.use_map_color_diffuse = True
-				sl.use_map_specular = False
-				sl.use_map_alpha = False
-				sl.blend_type = 'OVERLAY'
-				sl.use = True
-				new_tex.use_color_ramp = True
-				for _ in range(len(new_tex.color_ramp.elements)-1):
-					new_tex.color_ramp.elements.remove(new_tex.color_ramp.elements[0])
-				desat_color = conf.json_data['blocks']['desaturated'][canon]
-				if len(desat_color) < len(new_tex.color_ramp.elements[0].color):
-					desat_color.append(1.0)
-				new_tex.color_ramp.elements[0].color = desat_color
+		# TODO: code is duplicative to below, consolidate later
+		if mat.name+"_saturate" in bpy.data.textures:
+			new_tex = bpy.data.textures[mat.name+"_saturate"]
+		else:
+			new_tex = bpy.data.textures.new(name=mat.name+"_saturate", type="BLEND")
+		if not saturate_layer:
+			if not first_unused:
+				first_unused = len(mat.texture_slots)-1 # force reuse last at worst
+			sl = mat.texture_slots.create(first_unused)
+		else:
+			sl = mat.texture_slots[saturate_layer]
+		sl.texture = new_tex
+		sl.texture["SATURATE"] = True
+		sl.use_map_normal = False
+		sl.use_map_color_diffuse = True
+		sl.use_map_specular = False
+		sl.use_map_alpha = False
+		sl.blend_type = 'MULTIPLY' # changed from OVERLAY
+		sl.use = is_grayscale # turns off if not grayscale
+		new_tex.use_color_ramp = True
+		for _ in range(len(new_tex.color_ramp.elements)-1):
+			new_tex.color_ramp.elements.remove(new_tex.color_ramp.elements[0])
+		desat_color = conf.json_data['blocks']['desaturated'][canon]
+		if len(desat_color) < len(new_tex.color_ramp.elements[0].color):
+			desat_color.append(1.0)
+		new_tex.color_ramp.elements[0].color = desat_color
 
 	return 0
 
@@ -361,7 +354,6 @@ def set_texture_pack(material, folder, use_extra_passes):
 
 	image_data = util.loadTexture(image)
 	engine = bpy.context.scene.render.engine
-	material["texture_swapped"] = True  # used to apply saturation
 
 	if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 		status = set_cycles_texture(image_data, material, True)
@@ -394,6 +386,7 @@ def set_cycles_texture(image, material, extra_passes=False):
 	Args:
 		image: image datablock
 	"""
+	conf.log("Setting cycles texture for img: {} mat: {}".format(image.name, material.name))
 	if material.node_tree is None:
 		return False
 	# check if there is more data to see pass types
@@ -402,11 +395,17 @@ def set_cycles_texture(image, material, extra_passes=False):
 		img_sets = find_additional_passes(image.filepath)
 	changed=False
 
+	is_grayscale = False
+
+	canon, _ = get_mc_canonical_name(util.nameGeneralize(material.name))
+	if checklist(canon, "desaturated"):
+		is_grayscale = is_image_grayscale(image)
+
 	for node in material.node_tree.nodes:
-		if "texture_swapped" in material and node.type == "MIX_RGB" and "SATURATE" in node:
-			node.mute = False
-			node.hide = False
-			conf.log("Unmuting mix_rgb to saturate texture")
+		if node.type == "MIX_RGB" and "SATURATE" in node:
+			node.mute = not is_grayscale
+			node.hide = not is_grayscale
+			conf.log(" mix_rgb to saturate texture")
 
 		# if node.type != "TEX_IMAGE": continue
 
@@ -462,12 +461,16 @@ def set_internal_texture(image, material, extra_passes=False):
 	# with normal, now is not)
 
 	# check if there is more data to see pass types
-	matGen = util.nameGeneralize(material.name)
-	canon, form = get_mc_canonical_name(matGen)
+	canon, _ = get_mc_canonical_name(util.nameGeneralize(material.name))
+
+	is_grayscale = False
+	if checklist(canon, "desaturated"):
+		is_grayscale = is_image_grayscale(image)
+
 	img_sets = {}
 	if extra_passes:
 		img_sets = find_additional_passes(image.filepath)
-	if "texture_swapped" in material:
+	if is_grayscale is True:
 		img_sets["saturate"] = True
 
 	base = None
@@ -488,7 +491,7 @@ def set_internal_texture(image, material, extra_passes=False):
 		break
 
 	# if no textures found, assert adding this one as the first
-	if tex==None:
+	if tex is None:
 		conf.log("Found no textures, asserting texture onto material")
 		name = material.name+"_tex"
 		if name not in bpy.data.textures:
@@ -625,7 +628,7 @@ def get_texlayer_for_pass(material, pass_name):
 def get_textures(material):
 	"""Extract the image datablocks for a given material (prefer cycles).
 
-	Returns {"diffuse":texture, "normal":None, ...}
+	Returns {"diffuse":texture.image, "normal":node.image "spec":None, ...}
 	"""
 	image_block = None
 	passes = {"diffuse":None, "specular":None, "normal":None,
@@ -713,11 +716,16 @@ def replace_missing_texture(image):
 	should handle accordingly
 	"""
 
-	if image == None:
-		# if conf.vv: print("\tImage block is none:" + str(image))
-		return 0
-	if image.size[0] != 0 and image.size[1] != 0:
-		return 0
+	if image is None:
+		return False
+	if image_diff.source == 'SEQUENCE' and os.path.isfile(bpy.path.abspath(image.filepath)):
+		# technically the next statement should prevail, but this filecheck
+		# addresses animated textures who show up without any size/pixel data
+		# just after a reload (even though functional)
+		return False
+	if image.size[0] != 0 and image.size[1] != 0 and image.packed_file is not None:
+		# if not packed, it could mean on next load/reload the datablock is missing
+		return False
 	conf.log("Missing datablock detected: "+image.name)
 
 	name = image.name
@@ -725,45 +733,108 @@ def replace_missing_texture(image):
 		name = name[:-4]  # cuts off e.g. .png
 	elif len(name)>5 and name[-5] == ".":
 		name = name[:-5]  # cuts off e.g. .jpeg
-	matGen = util.nameGeneralize(name)
-	canon, form = get_mc_canonical_name(matGen)
+	canon, _ = get_mc_canonical_name(name)
 	# TODO: detect for pass structure like normal and still look for right pass
 	image_path = find_from_texturepack(canon)
 	if not image_path:
-		return -1
+		return False
 	image.filepath = image_path
 	# image.reload() # not needed?
 	# pack?
 
-	return 1  # updated image block
+	return True  # updated image block
 
 
 def is_image_grayscale(image):
 	"""Returns true if image data is all grayscale, false otherwise"""
-	if not image or not image.pixels:
-		return None
+	conf.log("Checking image for grayscale "+image.name, vv_only=True)
 	if 'grayscale' in image: # cache
 		return image['grayscale']
+	if not image or not image.pixels:
+		conf.log("Not an image / no pixels", vv_only=True)
+		return None
 
-	# Strict way: find any pixels where rgb values are not the same, break
-	# zip(*(iter(image.pixels),) * image.channels)
+	# setup sampling to limit number of processed pixels
+	max_samples = 1000 #
 	pxl_count = len(image.pixels)/image.channels
-	for ind in range(int(pxl_count)): #zip(*(iter(image.pixels),) * image.channels):
+	interval = int(pxl_count/max_samples) if pxl_count>max_samples else 1
+
+	# Strict way: find any pixels where rgb values are not the same (non gray)
+	for ind in range(int(pxl_count))[::interval]:
 		ind = ind*image.channels
-		#if pxl[0]!=pxl[1] or pxl[1]!=pxl[2] or pxl[0]!=pxl[2]:
 		if (image.pixels[ind] != image.pixels[ind+1] or
 				image.pixels[ind+1] != image.pixels[ind+2] or
 				image.pixels[ind] != image.pixels[ind+2]):
 			image['grayscale'] = False
-			conf.log("Image grayscale: "+image.name, vv_only=True)
+			conf.log("Image not grayscale: "+image.name, vv_only=True)
 			return False
 	image['grayscale'] = True # set cache
+	conf.log("Image is grayscale: "+image.name, vv_only=True)
 	return True
+
+
+def set_saturation_material(mat):
+	"""Update material to be saturated or not"""
+	if not mat:
+		return
+
+	canon, _ = get_mc_canonical_name(mat.name)
+	if not checklist(canon, "desaturated"):
+		conf.log("debug: not eligible for saturation", vv_only=True)
+		return
+
+	conf.log("Running set_saturation on "+mat.name, vv_only=True)
+	diff_img = get_node_for_pass(mat, "diffuse").image
+
+	if not diff_img:
+		conf.log("debug: No diffuse", vv_only=True)
+		return
+
+	#conf.log(["Detected image?? ", canon, diff_img, diff_img.filepath, diff_img.size[0]])
+	saturate = is_image_grayscale(diff_img)
+
+	desat_color = conf.json_data['blocks']['desaturated'][canon]
+	engine = bpy.context.scene.render.engine
+
+	if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
+		# get the saturation textureslot, or create
+		sat_slot_ind = None
+		first_unused = None
+		for index in range(len(mat.texture_slots)):
+			slot = mat.texture_slots[index]
+			if not slot or not slot.texture:
+				if not first_unused:
+					first_unused = index
+				continue
+			elif "SATURATE" not in slot.texture:
+				continue
+			sat_slot_ind = index
+			break
+		if not sat_slot_ind:
+			return
+		mat.use_textures[sat_slot_ind] = bool(saturate)
+
+	elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+		sat_node = None
+		for node in mat.node_tree.nodes:
+			if "SATURATE" not in node:
+				continue
+			sat_node = node
+			break
+
+		if not sat_node:
+			return # requires regenerating material to add back
+		if len(desat_color)==3:
+			desat_color += [1]  # add in alpha
+		sat_node.inputs[2].default_value = desat_color
+		sat_node.mute = not bool(saturate)
+		sat_node.hide = not bool(saturate)
 
 
 # -----------------------------------------------------------------------------
 # Generating node groups
 # -----------------------------------------------------------------------------
+
 
 def copy_texture_animation_pass_settings(mat):
 	"""Get any animation settings for passes."""
@@ -843,9 +914,14 @@ def matgen_cycles_principled(mat, passes, use_reflections, only_solid):
 		print("Could not find diffuse image, halting generation: "+mat.name)
 		return
 	elif image_diff.size[0] == 0 or image_diff.size[1] == 0:
-		print("Source image missing for material: " + mat.name)
-		# Would have already checked for replacement textures by now, so skip
-		return
+		if image_diff.source != 'SEQUENCE':
+			# Common non animated case; this means the image is missing and would
+			# have already checked for replacement textures by now, so skip
+			return
+		if not os.path.isfile(bpy.path.abspath(image_diff.filepath)):
+			# can't check size or pixels as it often is not immediately avaialble
+			# so instea, check against firs frame of sequence to verify load
+			return
 
 	mat.use_nodes = True
 	animated_data = copy_texture_animation_pass_settings(mat)
@@ -1016,7 +1092,7 @@ def matgen_cycles_principled(mat, passes, use_reflections, only_solid):
 			# but, BLEND does NOT work well with Depth of Field or layering
 
 	nodeSaturateMix.inputs[0].default_value = 1.0
-	nodeSaturateMix.blend_type = 'OVERLAY'
+	nodeSaturateMix.blend_type = 'MULTIPLY' # changed from OVERLAY
 	nodeSaturateMix.mute = True
 	nodeSaturateMix.hide = True
 	if not checklist(canon, "desaturated"):
@@ -1029,7 +1105,6 @@ def matgen_cycles_principled(mat, passes, use_reflections, only_solid):
 		if len(desat_color) < len(nodeSaturateMix.inputs[2].default_value):
 			desat_color.append(1.0)
 		nodeSaturateMix.inputs[2].default_value = desat_color
-		# if "texture_swapped" in mat:
 		nodeSaturateMix.mute = False
 		nodeSaturateMix.hide = False
 
@@ -1183,8 +1258,34 @@ def matgen_cycles_original(mat, passes, use_reflections, only_solid):
 	except:
 		pass
 
+	if only_solid is True or checklist(canon, "solid"):
+		if hasattr(mat, "blend_method"):
+			mat.blend_method = 'OPAQUE' # eevee setting
+	else:
+		# non-solid (potentially, not necessarily though)
+		if hasattr(mat, "blend_method"):  # 2.8 eevee settings
+			# TODO: Work on finding the optimal decision here
+			# clip could be better in cases of true/false transparency
+			# could do work to detect this from the image directly..
+			# though would be slower
+
+			# noisy, but workable for partial trans; bad for materials with
+			# no partial trans (makes view-through all somewhat noisy)
+			# Note: placed with hasattr to reduce bugs, seemingly only on old
+			# 2.80 build
+			if hasattr(mat, "blend_method"):
+				mat.blend_method = 'HASHED'
+			if hasattr(mat, "shadow_method"):
+				mat.shadow_method = 'HASHED'
+
+			# best if there is no partial transparency
+			# material.blend_method = 'CLIP' for no partial transparency
+			# both work fine with depth of field.
+
+			# but, BLEND does NOT work well with Depth of Field or layering
+
 	nodeSaturateMix.inputs[0].default_value = 1.0
-	nodeSaturateMix.blend_type = 'OVERLAY'
+	nodeSaturateMix.blend_type = 'MULTIPLY' # changed from 'OVERLAY'
 	nodeSaturateMix.mute = True
 	nodeSaturateMix.hide = True
 	if not checklist(canon, "desaturated"):

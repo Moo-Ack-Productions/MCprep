@@ -236,6 +236,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		)
 
 	track_function = "import_split"
+	track_exporter = None
 	@tracking.report_error
 	def execute(self, context):
 		# for consistency with the built in one, only import the active path
@@ -254,6 +255,8 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		if util.bv28():
 			self.split_world_by_material(context)
 
+		addon_prefs = util.get_user_preferences(context)
+		self.track_exporter = addon_prefs.MCprep_exporter_type # soft detection
 		return {'FINISHED'}
 
 	def obj_name_to_material(self, obj):

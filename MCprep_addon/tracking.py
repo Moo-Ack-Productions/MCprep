@@ -914,6 +914,7 @@ def register(bl_info):
 		print(err)
 
 	language = None
+
 	if hasattr(bpy.app, "version") and bpy.app.version >= (2, 80):
 		if hasattr(bpy.context, "preferences"):
 			system = bpy.context.preferences.view
@@ -921,7 +922,10 @@ def register(bl_info):
 			system = bpy.context.user_preferences.view
 		else:
 			system = None
-		if system and system.use_international_fonts:
+
+		if not system:
+			pass
+		elif hasattr(system, "language"):
 			language = system.language
 	else:
 		system = bpy.context.user_preferences.system

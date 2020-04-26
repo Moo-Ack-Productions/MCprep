@@ -37,6 +37,8 @@ def nameGeneralize(name):
 	"""Get base name from datablock, accounts for duplicates and animated tex."""
 	if duplicatedDatablock(name) == True:
 		name = name[:-4] # removes .001
+	if name.endswith(".png"):
+		name = name[:-4]
 
 	# if name ends in _####, drop those numbers (for animated sequences)
 	# noting it is specifically 4 numbers
