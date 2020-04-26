@@ -1345,7 +1345,6 @@
 			"lapis_ore": "lapis_ore",
 			"large_fern_bottom": "large_fern_bottom",
 			"large_fern_top": "large_fern_top",
-			"lava": "particle/lava",
 			"lava_flow": "lava_flow",
 			"lava_still": "lava_still",
 			"lazy_panda": "entity/panda/lazy_panda",
@@ -2220,17 +2219,19 @@
 			"Large_Flowers__4": "",
 			"Large_Flowers__5": "",
 			"Lily_Pad": "lily_pad",
+			"MWO_chest_top": "entity/chest/normal",
+			"MWO_double_chest_top_left": "entity/chest/normal_double",
 			"Magma_Block": "magma",
-			"Poppy": "",
-			"Poppy__Allium": "",
-			"Poppy__Azure_Bluet": "",
-			"Poppy__Blue_Orchid": "",
-			"Poppy__Orange_Tulip": "",
-			"Poppy__Oxeye_Daisy": "",
-			"Poppy__Pink_Tulip": "",
-			"Poppy__Red_Tulip": "",
-			"Poppy__White_Tulip": "",
-			"Poppy__Wither_Rose": "",
+			"Poppy": "poppy",
+			"Poppy__Allium": "allium",
+			"Poppy__Azure_Bluet": "azure_bluet",
+			"Poppy__Blue_Orchid": "blue_orchid",
+			"Poppy__Orange_Tulip": "orange_tulip",
+			"Poppy__Oxeye_Daisy": "oxeye_daisy",
+			"Poppy__Pink_Tulip": "pink_tulip",
+			"Poppy__Red_Tulip": "red_tulip",
+			"Poppy__White_Tulip": "white_tulip",
+			"Poppy__Wither_Rose": "wither_rose",
 			"Powered_Rail": "powered_rail",
 			"Pumpkin": "carved_pumpkin",
 			"Rail": "rail",
@@ -2238,12 +2239,12 @@
 			"Redstone_Lamp_(inactive)": "redstone_lamp_off",
 			"Redstone_Torch_(active)": "redstone_torch",
 			"Redstone_Torch_(inactive)": "redstone_torch_off",
-			"Sapling": "",
-			"Sapling__Acacia_Sapling": "",
-			"Sapling__Birch_Sapling": "",
-			"Sapling__Dark_Oak_Sapling": "",
-			"Sapling__Jungle_Sapling": "",
-			"Sapling__Spruce_Sapling": "",
+			"Sapling": "oak_sapling",
+			"Sapling__Acacia_Sapling": "acacia_sapling",
+			"Sapling__Birch_Sapling": "birch_sapling",
+			"Sapling__Dark_Oak_Sapling": "dark_oak_sapling",
+			"Sapling__Jungle_Sapling": "jungle_sapling",
+			"Sapling__Spruce_Sapling": "spruce_sapling",
 			"Sea_Lantern": "sea_lantern",
 			"Sea_Pickle": "sea_pickle",
 			"Seagrass": "tall_seagrass_bottom",
@@ -2252,12 +2253,12 @@
 			"Stationary_Lava": "lava_still",
 			"Stationary_Water": "water_still",
 			"Stone_Bricks*": "",
-			"Stone_Cutter": "",
+			"Stone_Cutter": "stonecutter_top",
 			"Sugar_Cane": "sugar_cane",
-			"Sunflower": "",
+			"Sunflower": "sunflower_bottom",
 			"TNT": "tnt_top",
 			"Torch": "torch",
-			"Trapped_Chest": "",
+			"Trapped_Chest": "entity/chest/normal",
 			"Vines": "vine",
 			"Wheat": "wheat_stage7",
 			"Wooden_Door": "oak_door_bottom",
@@ -2272,6 +2273,8 @@
 			"activator_rail": "activator_rail",
 			"activator_rail_on": "activator_rail_on",
 			"allium": "allium",
+			"ancient_debris_side": "ancient_debris_side",
+			"ancient_debris_top": "ancient_debris_top",
 			"andesite": "andesite",
 			"anvil": "anvil",
 			"anvil_top": "anvil_top",
@@ -2288,6 +2291,8 @@
 			"barrel_top": "barrel_top",
 			"barrel_top_open": "barrel_top_open",
 			"barrier": "barrier",
+			"basalt_side": "basalt_side",
+			"basalt_top": "basalt_top",
 			"beacon": "beacon",
 			"bedrock": "bedrock",
 			"bee_nest_bottom": "bee_nest_bottom",
@@ -2322,6 +2327,8 @@
 			"black_stained_glass_pane_top": "black_stained_glass_pane_top",
 			"black_terracotta": "black_terracotta",
 			"black_wool": "black_wool",
+			"blackstone": "blackstone",
+			"blackstone_top": "blackstone_top",
 			"blast_furnace_front": "blast_furnace_front",
 			"blast_furnace_front_on": "blast_furnace_front_on",
 			"blast_furnace_side": "blast_furnace_side",
@@ -2386,6 +2393,8 @@
 			"chain_command_block_front": "chain_command_block_front",
 			"chain_command_block_side": "chain_command_block_side",
 			"chipped_anvil_top": "chipped_anvil_top",
+			"chiseled_nether_bricks": "chiseled_nether_bricks",
+			"chiseled_polished_blackstone": "chiseled_polished_blackstone",
 			"chiseled_quartz_block": "chiseled_quartz_block",
 			"chiseled_quartz_block_top": "chiseled_quartz_block_top",
 			"chiseled_red_sandstone": "chiseled_red_sandstone",
@@ -2416,10 +2425,24 @@
 			"composter_top": "composter_top",
 			"conduit": "conduit",
 			"cornflower": "cornflower",
+			"cracked_nether_bricks": "cracked_nether_bricks",
+			"cracked_polished_blackstone_bricks": "cracked_polished_blackstone_bricks",
 			"cracked_stone_bricks": "cracked_stone_bricks",
 			"crafting_table_front": "crafting_table_front",
 			"crafting_table_side": "crafting_table_side",
 			"crafting_table_top": "crafting_table_top",
+			"crimson_door_bottom": "crimson_door_bottom",
+			"crimson_door_top": "crimson_door_top",
+			"crimson_fungus": "crimson_fungus",
+			"crimson_nylium": "crimson_nylium",
+			"crimson_nylium_side": "crimson_nylium_side",
+			"crimson_planks": "crimson_planks",
+			"crimson_roots": "crimson_roots",
+			"crimson_roots_pot": "crimson_roots_pot",
+			"crimson_stem": "crimson_stem",
+			"crimson_stem_top": "crimson_stem_top",
+			"crimson_trapdoor": "crimson_trapdoor",
+			"crying_obsidian": "crying_obsidian",
 			"cut_red_sandstone": "cut_red_sandstone",
 			"cut_sandstone": "cut_sandstone",
 			"cyan_concrete": "cyan_concrete",
@@ -2504,6 +2527,7 @@
 			"furnace_front_on": "furnace_front_on",
 			"furnace_side": "furnace_side",
 			"furnace_top": "furnace_top",
+			"gilded_blackstone": "gilded_blackstone",
 			"glass": "glass",
 			"glass_pane_top": "glass_pane_top",
 			"glowstone": "glowstone",
@@ -2559,6 +2583,7 @@
 			"item_frame": "item_frame",
 			"jack_o_lantern": "jack_o_lantern",
 			"jigsaw_bottom": "jigsaw_bottom",
+			"jigsaw_lock": "jigsaw_lock",
 			"jigsaw_side": "jigsaw_side",
 			"jigsaw_top": "jigsaw_top",
 			"jukebox_side": "jukebox_side",
@@ -2614,6 +2639,8 @@
 			"lime_stained_glass_pane_top": "lime_stained_glass_pane_top",
 			"lime_terracotta": "lime_terracotta",
 			"lime_wool": "lime_wool",
+			"lodestone_side": "lodestone_side",
+			"lodestone_top": "lodestone_top",
 			"loom_bottom": "loom_bottom",
 			"loom_front": "loom_front",
 			"loom_side": "loom_side",
@@ -2673,12 +2700,15 @@
 			"mycelium_side": "mycelium_side",
 			"mycelium_top": "mycelium_top",
 			"nether_bricks": "nether_bricks",
+			"nether_gold_ore": "nether_gold_ore",
 			"nether_portal": "nether_portal",
 			"nether_quartz_ore": "nether_quartz_ore",
+			"nether_sprouts": "nether_sprouts",
 			"nether_wart_block": "nether_wart_block",
 			"nether_wart_stage0": "nether_wart_stage0",
 			"nether_wart_stage1": "nether_wart_stage1",
 			"nether_wart_stage2": "nether_wart_stage2",
+			"netherite_block": "netherite_block",
 			"netherrack": "netherrack",
 			"note_block": "note_block",
 			"oak_door_bottom": "oak_door_bottom",
@@ -2725,6 +2755,10 @@
 			"podzol_side": "podzol_side",
 			"podzol_top": "podzol_top",
 			"polished_andesite": "polished_andesite",
+			"polished_basalt_side": "polished_basalt_side",
+			"polished_basalt_top": "polished_basalt_top",
+			"polished_blackstone": "polished_blackstone",
+			"polished_blackstone_bricks": "polished_blackstone_bricks",
 			"polished_diorite": "polished_diorite",
 			"polished_granite": "polished_granite",
 			"poppy": "poppy",
@@ -2753,6 +2787,7 @@
 			"quartz_block_bottom": "quartz_block_bottom",
 			"quartz_block_side": "quartz_block_side",
 			"quartz_block_top": "quartz_block_top",
+			"quartz_bricks": "quartz_bricks",
 			"quartz_pillar": "quartz_pillar",
 			"quartz_pillar_top": "quartz_pillar_top",
 			"rail": "rail",
@@ -2789,6 +2824,14 @@
 			"repeating_command_block_conditional": "repeating_command_block_conditional",
 			"repeating_command_block_front": "repeating_command_block_front",
 			"repeating_command_block_side": "repeating_command_block_side",
+			"respawn_anchor_bottom": "respawn_anchor_bottom",
+			"respawn_anchor_side0": "respawn_anchor_side0",
+			"respawn_anchor_side1": "respawn_anchor_side1",
+			"respawn_anchor_side2": "respawn_anchor_side2",
+			"respawn_anchor_side3": "respawn_anchor_side3",
+			"respawn_anchor_side4": "respawn_anchor_side4",
+			"respawn_anchor_top": "respawn_anchor_top",
+			"respawn_anchor_top_off": "respawn_anchor_top_off",
 			"rose_bush_bottom": "rose_bush_bottom",
 			"rose_bush_top": "rose_bush_top",
 			"sand": "sand",
@@ -2801,6 +2844,7 @@
 			"sea_lantern": "sea_lantern",
 			"sea_pickle": "sea_pickle",
 			"seagrass": "seagrass",
+			"shroomlight": "shroomlight",
 			"shulker_bottom_black": "shulker_bottom_black",
 			"shulker_bottom_blue": "shulker_bottom_blue",
 			"shulker_bottom_brown": "shulker_bottom_brown",
@@ -2846,7 +2890,13 @@
 			"smooth_stone": "smooth_stone",
 			"smooth_stone_slab_side": "smooth_stone_slab_side",
 			"snow": "snow",
+			"soul_campfire_fire": "soul_campfire_fire",
+			"soul_campfire_log_lit": "soul_campfire_log_lit",
+			"soul_fire_0": "soul_fire_0",
+			"soul_fire_lantern": "soul_fire_lantern",
+			"soul_fire_torch": "soul_fire_torch",
 			"soul_sand": "soul_sand",
+			"soul_soil": "soul_soil",
 			"spawner": "spawner",
 			"sponge": "sponge",
 			"spruce_door_bottom": "spruce_door_bottom",
@@ -2869,6 +2919,8 @@
 			"stripped_acacia_log_top": "stripped_acacia_log_top",
 			"stripped_birch_log": "stripped_birch_log",
 			"stripped_birch_log_top": "stripped_birch_log_top",
+			"stripped_crimson_stem": "stripped_crimson_stem",
+			"stripped_crimson_stem_top": "stripped_crimson_stem_top",
 			"stripped_dark_oak_log": "stripped_dark_oak_log",
 			"stripped_dark_oak_log_top": "stripped_dark_oak_log_top",
 			"stripped_jungle_log": "stripped_jungle_log",
@@ -2877,6 +2929,8 @@
 			"stripped_oak_log_top": "stripped_oak_log_top",
 			"stripped_spruce_log": "stripped_spruce_log",
 			"stripped_spruce_log_top": "stripped_spruce_log_top",
+			"stripped_warped_stem": "stripped_warped_stem",
+			"stripped_warped_stem_top": "stripped_warped_stem_top",
 			"structure_block_corner": "structure_block_corner",
 			"structure_block_data": "structure_block_data",
 			"structure_block_load": "structure_block_load",
@@ -2894,6 +2948,8 @@
 			"tall_grass_top": "tall_grass_top",
 			"tall_seagrass_bottom": "tall_seagrass_bottom",
 			"tall_seagrass_top": "tall_seagrass_top",
+			"target_side": "target_side",
+			"target_top": "target_top",
 			"terracotta": "terracotta",
 			"tnt_bottom": "tnt_bottom",
 			"tnt_side": "tnt_side",
@@ -2907,10 +2963,26 @@
 			"turtle_egg": "turtle_egg",
 			"turtle_egg_slightly_cracked": "turtle_egg_slightly_cracked",
 			"turtle_egg_very_cracked": "turtle_egg_very_cracked",
+			"twisting_vines": "twisting_vines",
+			"twisting_vines_plant": "twisting_vines_plant",
 			"vine": "vine",
+			"warped_door_bottom": "warped_door_bottom",
+			"warped_door_top": "warped_door_top",
+			"warped_fungus": "warped_fungus",
+			"warped_nylium": "warped_nylium",
+			"warped_nylium_side": "warped_nylium_side",
+			"warped_planks": "warped_planks",
+			"warped_roots": "warped_roots",
+			"warped_roots_pot": "warped_roots_pot",
+			"warped_stem": "warped_stem",
+			"warped_stem_top": "warped_stem_top",
+			"warped_trapdoor": "warped_trapdoor",
+			"warped_wart_block": "warped_wart_block",
 			"water_flow": "water_flow",
 			"water_overlay": "water_overlay",
 			"water_still": "water_still",
+			"weeping_vines": "weeping_vines",
+			"weeping_vines_plant": "weeping_vines_plant",
 			"wet_sponge": "wet_sponge",
 			"wheat_stage0": "wheat_stage0",
 			"wheat_stage1": "wheat_stage1",
@@ -2946,84 +3018,84 @@
 		},
 		"desaturated": {
 			"acacia_leaves": [
-				0.286377,
-				0.566797,
-				0.154644
+				0.227161,
+				0.614651,
+				0.089036
 			],
 			"attached_melon_stem": [
-				0.286377,
-				0.566797,
-				0.154644
+				0.227161,
+				0.614651,
+				0.089036
 			],
 			"attached_pumpkin_stem": [
-				0.286377,
-				0.566797,
-				0.154644
+				0.227161,
+				0.614651,
+				0.089036
 			],
 			"birch_leaves": [
-				0.286377,
-				0.566797,
-				0.154644
+				0.227161,
+				0.614651,
+				0.089036
 			],
 			"dark_oak_leaves": [
-				0.286377,
-				0.566797,
-				0.154644
+				0.227161,
+				0.614651,
+				0.089036
 			],
 			"fern": [
-				0.286377,
-				0.566797,
-				0.154644
+				0.227161,
+				0.614651,
+				0.089036
 			],
 			"grass": [
-				0.286377,
-				0.566797,
-				0.154644
+				0.227161,
+				0.614651,
+				0.089036
 			],
 			"grass_block_side_overlay": [
-				0.286377,
-				0.566797,
-				0.154644
+				0.227161,
+				0.614651,
+				0.089036
 			],
 			"grass_block_top": [
-				0.286377,
-				0.566797,
-				0.154644
+				0.227161,
+				0.614651,
+				0.089036
 			],
 			"jungle_leaves": [
-				0.286377,
-				0.566797,
-				0.154644
+				0.227161,
+				0.614651,
+				0.089036
 			],
 			"large_fern_bottom": [
-				0.286377,
-				0.566797,
-				0.154644
+				0.227161,
+				0.614651,
+				0.089036
 			],
 			"large_fern_top": [
-				0.286377,
-				0.566797,
-				0.154644
+				0.227161,
+				0.614651,
+				0.089036
 			],
 			"lily_pad": [
-				0.286377,
-				0.566797,
-				0.154644
+				0.227161,
+				0.614651,
+				0.089036
 			],
 			"melon_stem": [
-				0.286377,
-				0.566797,
-				0.154644
+				0.227161,
+				0.614651,
+				0.089036
 			],
 			"oak_leaves": [
-				0.286377,
-				0.566797,
-				0.154644
+				0.227161,
+				0.614651,
+				0.089036
 			],
 			"pumpkin_stem": [
-				0.286377,
-				0.566797,
-				0.154644
+				0.227161,
+				0.614651,
+				0.089036
 			],
 			"redstone_dust_dot": [
 				0.286377,
@@ -3041,24 +3113,39 @@
 				0.154644
 			],
 			"spruce_leaves": [
-				0.286377,
-				0.566797,
-				0.154644
+				0.227161,
+				0.614651,
+				0.089036
 			],
 			"tall_grass_bottom": [
-				0.286377,
-				0.566797,
-				0.154644
+				0.227161,
+				0.614651,
+				0.089036
 			],
 			"tall_grass_top": [
-				0.286377,
-				0.566797,
-				0.154644
+				0.227161,
+				0.614651,
+				0.089036
 			],
 			"vine": [
-				0.286377,
-				0.566797,
-				0.154644
+				0.227161,
+				0.614651,
+				0.089036
+			],
+			"water_flow": [
+				0.067324,
+				0.135132,
+				2
+			],
+			"water_overlay": [
+				0.067324,
+				0.135132,
+				2
+			],
+			"water_still": [
+				0.067324,
+				0.135132,
+				2
 			]
 		},
 		"emit": [
@@ -3084,8 +3171,7 @@
 			"Sea_Lantern",
 			"Stationary_Lava",
 			"torch_flame",
-			"lava_flowing",
-			"lava"
+			"lava_flowing"
 		],
 		"metallic": [
 			"door_iron_lower",

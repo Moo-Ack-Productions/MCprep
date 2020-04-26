@@ -159,7 +159,7 @@ def get_mineways_list(vanilla):
 	for line in textblock.split('\n'):
 		if not ',' in line or not line.strip().startswith('{'):
 			continue
-		prename = line.split(',')[3]
+		prename = line.split(',')[4] # fourth item in {0,0,0,L"block"}
 		name = prename.split('"')[1] # go from  ' L"lectern_sides"'  to 'lectern_sides'
 		presubname = line.split(',')[4]
 		presubname = presubname.split('"')[1]
@@ -201,6 +201,9 @@ def mineways_extras():
 		"Carrots":"carrots_stage3",
 		"Campfire":"campfire_log",
 		"Chest":"entity/chest/normal",
+		"MWO_chest_top":"entity/chest/normal",
+		# "MWO_double_chest_top_right":"entity/chest/chest_double", ensures only placing once
+		"MWO_double_chest_top_left":"entity/chest/normal_double",
 		"Cobweb":"cobweb",
 		"Crafting_Table":"crafting_table_top",
 		"Crafting_Table__Cartography_Table":"cartography_table_top",
@@ -238,28 +241,28 @@ def mineways_extras():
 		"Large_Flowers__4":"",
 		"Large_Flowers__5":"",
 		"Magma_Block":"magma",
-		"Poppy":"",
-		"Poppy__Allium":"",
-		"Poppy__Azure_Bluet":"",
-		"Poppy__Blue_Orchid":"",
-		"Poppy__Orange_Tulip":"",
-		"Poppy__Oxeye_Daisy":"",
-		"Poppy__Pink_Tulip":"",
-		"Poppy__Red_Tulip":"",
-		"Poppy__White_Tulip":"",
-		"Poppy__Wither_Rose":"",
+		"Poppy":"poppy",
+		"Poppy__Allium":"allium",
+		"Poppy__Azure_Bluet":"azure_bluet",
+		"Poppy__Blue_Orchid":"blue_orchid",
+		"Poppy__Orange_Tulip":"orange_tulip",
+		"Poppy__Oxeye_Daisy":"oxeye_daisy",
+		"Poppy__Pink_Tulip":"pink_tulip",
+		"Poppy__Red_Tulip":"red_tulip",
+		"Poppy__White_Tulip":"white_tulip",
+		"Poppy__Wither_Rose":"wither_rose",
 		"Powered_Rail":"powered_rail",
 		"Rail":"rail",
 		"Redstone_Lamp_(active)":"redstone_lamp",
 		"Redstone_Lamp_(inactive)":"redstone_lamp_off",
 		"Redstone_Torch_(active)":"redstone_torch",
 		"Redstone_Torch_(inactive)":"redstone_torch_off",
-		"Sapling":"",
-		"Sapling__Acacia_Sapling":"",
-		"Sapling__Birch_Sapling":"",
-		"Sapling__Dark_Oak_Sapling":"",
-		"Sapling__Jungle_Sapling":"",
-		"Sapling__Spruce_Sapling":"",
+		"Sapling":"oak_sapling",
+		"Sapling__Acacia_Sapling":"acacia_sapling",
+		"Sapling__Birch_Sapling":"birch_sapling",
+		"Sapling__Dark_Oak_Sapling":"dark_oak_sapling",
+		"Sapling__Jungle_Sapling":"jungle_sapling",
+		"Sapling__Spruce_Sapling":"spruce_sapling",
 		"Spruce_Door":"spruce_door_bottom",
 		"Seagrass":"tall_seagrass_bottom",
 		"Sea_Pickle":"sea_pickle",
@@ -269,9 +272,9 @@ def mineways_extras():
 		"Stationary_Water":"water_still",
 		"Stained_Glass*":"",
 		"Stone_Bricks*":"",
-		"Stone_Cutter":"",
-		"Sunflower":"",
-		"Trapped_Chest":"",
+		"Stone_Cutter":"stonecutter_top", # should be a meshswap item evetually
+		"Sunflower":"sunflower_bottom",
+		"Trapped_Chest":"entity/chest/normal",
 		"Torch":"torch",
 		"TNT":"tnt_top",
 		"Vines":"vine",
@@ -343,6 +346,8 @@ def get_vanilla_list():
 		elif name.startswith(prefix+"item"):
 			continue # skip adding duplicative item mappings
 		elif name.startswith(prefix): # at least in textures folder
+			if 'lava' in name and 'particle' in name:
+				continue # hack to avoid clash with jmc2obj lava:lava_still
 			outlist[base] = name[len(prefix):-4]
 		else:
 			outlist[base] = None

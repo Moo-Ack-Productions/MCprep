@@ -23,6 +23,7 @@ VERSIONS=(
 	"/Applications/blender 2.80/Blender.app/Contents/MacOS/Blender"
 	"/Applications/blender 2.79/Blender.app/Contents/MacOS/Blender"
 	"/Applications/blender 2.82/Blender.app/Contents/MacOS/Blender"
+	"/Applications/blender 2.90alpha/Blender.app/Contents/MacOS/Blender"
 	#"/Applications/blender 2.72/Blender.app/Contents/MacOS/Blender"
 	)
 
