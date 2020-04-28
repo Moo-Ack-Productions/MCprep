@@ -3,6 +3,7 @@
 
 import json
 import os
+import sys
 import zipfile
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -59,6 +60,8 @@ def get_jmc2obj_mapping():
 		if src_tex.startswith('assets/minecraft/textures/block/'):
 			outlist[jmc_tex] = os.path.basename(src_tex)[:-4]
 		elif src_tex.startswith('assets/minecraft/textures/'):
+			if jmc_tex in outlist:
+				continue # don't duplicate for non blocks
 			outlist[jmc_tex] = src_tex[ln:-4]
 
 		# so, if it stars with "assets/minecraft/textures/block/",
@@ -195,7 +198,7 @@ def mineways_extras():
 		"Brewing_Stand":"brewing_stand_base", # maybe don't? since only for meshswap
 		"Bookshelf":"bookshelf",
 		"Bricks":"bricks",
-		"Cactus":"cactus_top",
+		"Cactus":"cactus_side",
 		"Command_Block":"chain_command_block",
 		"Chain_Command_Block":"chain_command_block",
 		"Carrots":"carrots_stage3",
@@ -284,6 +287,11 @@ def mineways_extras():
 	}
 	return outlist
 
+def split_underscore_mappings(mineways_dict):
+	"""Returns the list, adding new items like Sapling__Spruce_Sapling to Spruce_Sapling"""
+	return {itm.split("__")[-1]:mineways_dict[itm] for itm in mineways_dict
+		if "__" in itm}
+
 def mineways2mc(name, vanilla):
 	"""Function that attemtps to map Mineways texture name to canonical"""
 	if name in vanilla:
@@ -343,6 +351,8 @@ def get_vanilla_list():
 
 		if name.startswith(prefix+"block"):
 			outlist[base] = base
+		elif base in outlist:
+			continue # don't duplicate for non blocks textures
 		elif name.startswith(prefix+"item"):
 			continue # skip adding duplicative item mappings
 		elif name.startswith(prefix): # at least in textures folder
@@ -362,7 +372,8 @@ def vanilla_overrides(vanilla_map):
 	"""go through and create the mapping with special overrides"""
 	outlist = vanilla_map.copy()
 	overrides = {
-		"fire":"fire_0"
+		"fire":"fire_0",
+		"Campfire":"campfire_log"
 	}
 	outlist.update(overrides)
 	return outlist
@@ -434,6 +445,8 @@ def run_all(auto=False):
 	# 	if jmc2mc(mat, vanilla) is not None}
 	data["blocks"]["block_mapping_mineways"] = mineways
 	data["blocks"]["block_mapping_mineways"].update(mineways_extras())
+	data["blocks"]["block_mapping_mineways"].update(
+		split_underscore_mappings(data["blocks"]["block_mapping_mineways"]))
 
 	data["blocks"]["block_mapping_mc"] = vanilla_map
 	data["blocks"]["canon_mapping_block"] = get_cannon_block_mappping()
@@ -537,4 +550,7 @@ def run_all(auto=False):
 
 
 if __name__ == '__main__':
-	run_all()
+	if "-auto" in sys.argv:
+		run_all(auto=True)
+	else:
+		run_all()

@@ -723,9 +723,14 @@ def replace_missing_texture(image):
 		# addresses animated textures who show up without any size/pixel data
 		# just after a reload (even though functional)
 		return False
-	if image.size[0] != 0 and image.size[1] != 0 and image.packed_file is not None:
-		# if not packed, it could mean on next load/reload the datablock is missing
-		return False
+	if image.size[0] != 0 and image.size[1] != 0:
+		# Non zero means currently loaded, but could be lost on reload
+		if image.packed_file:
+			# only assume safe if packed...
+			return False
+		elif os.path.isfile(bpy.path.abspath(image.filepath)):
+			# ... or the filepath is present.
+			return False
 	conf.log("Missing datablock detected: "+image.name)
 
 	name = image.name

@@ -27,6 +27,9 @@ VERSIONS=(
 	#"/Applications/blender 2.72/Blender.app/Contents/MacOS/Blender"
 	)
 
+# update the mappings
+./mcprep_data_refresh.py -auto
+
 # first, do a soft reload of python files
 echo "Soft py file reload"
 cd MCprep_addon
@@ -50,3 +53,5 @@ do
 		exit
 	fi
 done
+
+open test_results.tsv

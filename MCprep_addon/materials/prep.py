@@ -957,7 +957,6 @@ class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 				if self.animateTextures:
 					sequences.animate_single_material(
 						mat, context.scene.render.engine)
-					conf.log("Animated texture")
 		if count == 0:
 			self.report({'INFO'},
 				"No missing image blocks detected in {} materials".format(
@@ -971,6 +970,7 @@ class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 
 	def load_from_texturepack(self, mat):
 		"""If image datablock not found in passes, try to directly load and assign"""
+		conf.log("Loading from texpack for "+mat.name, vv_only=True)
 		canon, _ = generate.get_mc_canonical_name(mat.name)
 		image_path = generate.find_from_texturepack(canon)
 		if not image_path or not os.path.isfile(image_path):

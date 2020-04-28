@@ -87,13 +87,11 @@ def handler_skins_enablehack(scene):
 
 @persistent
 def handler_skins_load(scene):
-	conf.log("Handler_skins_load running", True)
-
 	try:
-		conf.log("Reloading skins", True)
+		conf.log("Reloading skins", vv_only=True)
 		reloadSkinList(bpy.context)
 	except:
-		conf.log("Didn't run skin reloading callback")
+		conf.log("Didn't run skin reloading callback", vv_only=True)
 
 
 def loadSkinFile(self, context, filepath, new_material=False):

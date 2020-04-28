@@ -61,35 +61,29 @@ class mcprep_testing():
 			self.name_generalize,
 			self.meshswap_jmc2obj,
 			self.meshswap_mineways_separated,
+			self.meshswap_mineways_combined,
 			self.detect_desaturated_images,
 			self.find_missing_images_cycles,
 			self.qa_meshswap_file,
+			self.item_spawner,
+			self.world_tools,
 			]
 		self.run_only = None # name to give to only run this test
 
 		self.mcprep_json = {}
-		# 	0:["prep_materials", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
 		# 	1:["combine_materials", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
 		# 	2:["combine_images", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
 		# 	3:["scale_uv", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
 		# 	4:["isolate_alpha_uvs", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	5:["improve_ui", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	6:["skin_swapper", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	7:["applyskin", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	8:["applyusernameskin", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
 		# 	9:["fix_skin_eyes", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
 		# 	10:["add_skin", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
 		# 	11:["remove_skin", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
 		# 	12:["reload_skins", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	13:["spawn_with_skin", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
 		# 	14:["handler_skins_enablehack", {"type":"material","check":0,"res":""}, ""],
-		# 	15:["open_preferences", {"type":"mcprep_ui","check":0,"res":""}, "bpy.ops.mcprep"],
 		# 	16:["openfolder", {"type":"mcprep_ui","check":0,"res":""}, "bpy.ops.mcprep"],
 		# 	16:["meshswap_pathreset", {"type":"meshswap","check":0,"res":""}, "bpy.ops.mcprep"],
 		# 	16:["meshswap_spawner", {"type":"meshswap","check":0,"res":""}, "bpy.ops.mcprep"],
 		# 	16:["reload_meshswap", {"type":"meshswap","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	16:["meshswap", {"type":"meshswap","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	16:["meshswap", {"type":"meshswap","check":0,"res":""}, "bpy.ops.mcprep"],
 		# 	16:["fixmeshswapsize", {"type":"meshswap","check":0,"res":""}, "bpy.ops.object"],
 		# 	16:["reload_spawners", {"type":"spawner","check":0,"res":""}, "bpy.ops.mcprep"],
 		# 	16:["reload_mobs", {"type":"spawner","check":0,"res":""}, "bpy.ops.mcprep"],
@@ -129,21 +123,36 @@ class mcprep_testing():
 				ert = suffix_chars(self.test_status[tst]["res"], 70)
 				print("\t{}{}{}: {}".format(COL.UNDERLINE, tst, COL.ENDC, ert))
 
-		# save outputs to .tsv file
-		write_out = [
-			"{}\t{}\t{}\n".format(bpy.app.version, tst, suffix_chars(self.test_status[tst]["res"], 20))
-			for tst in failed_tests]
-		with open(TEST_FILE, 'a') as tsv:
-			if write_out:
-				for row in write_out:
-					tsv.write(row)
-			else:
+		# indicate if all tests passed for this blender version
+		if not failed_tests:
+			with open(TEST_FILE, 'a') as tsv:
 				tsv.write("{}\t{}\t-\n".format(bpy.app.version, "ALL PASSED"))
+
+	def write_placeholder(self, test_name):
+		"""Append placeholder, presuming if not changed then blender crashed"""
+		with open(TEST_FILE, 'a') as tsv:
+			tsv.write("{}\t{}\t-\n".format(
+				bpy.app.version, "CRASH during "+test_name))
+
+	def update_placeholder(self, test_name, test_failure):
+		"""Update text of (if error) or remove placeholder row of file"""
+		with open(TEST_FILE, 'r') as tsv:
+			contents = tsv.readlines()
+
+		if not test_failure: # None or ""
+			contents = contents[:-1]
+		else:
+			this_failure = "{}\t{}\t{}\n".format(
+				bpy.app.version, test_name, suffix_chars(test_failure, 20))
+			contents[-1] = this_failure
+		with open(TEST_FILE, 'w') as tsv:
+			for row in contents:
+				tsv.write(row)
 
 	def mcrprep_run_test(self, test_func):
 		"""Run a single MCprep test"""
 		print("\n{}Testing {}{}".format(COL.HEADER, test_func.__name__, COL.ENDC))
-
+		self.write_placeholder(test_func.__name__)
 		self._clear_scene()
 		try:
 			if self.suppress:
@@ -162,8 +171,10 @@ class mcprep_testing():
 		except Exception as e:
 			print("\t{}TEST FAILED{}".format(COL.FAIL, COL.ENDC))
 			print(traceback.format_exc()) # plus other info, e.g. line number/file?
-			self.test_status[test_func.__name__] = {"check":-1, "res": traceback.format_exc()}
+			res = traceback.format_exc()
+			self.test_status[test_func.__name__] = {"check":-1, "res": res}
 		# print("\tFinished test {}".format(test_func.__name__))
+		self.update_placeholder(test_func.__name__, res)
 
 	def setup_env_paths(self):
 		"""Adds the MCprep installed addon path to sys for easier importing."""
@@ -224,21 +235,21 @@ class mcprep_testing():
 	def _import_jmc2obj_full(self):
 		"""Import the full jmc2obj test set"""
 		testdir = os.path.dirname(__file__)
-		obj_path = os.path.join(testdir, "jmc2obj", "jmc2obj_test_1_14_4.obj")
+		obj_path = os.path.join(testdir, "jmc2obj", "jmc2obj_test_1_15_2.obj")
 		bpy.ops.mcprep.import_world_split(filepath=obj_path)
 
 	def _import_mineways_separated(self):
 		"""Import the full jmc2obj test set"""
 		testdir = os.path.dirname(__file__)
 		obj_path = os.path.join(testdir, "mineways", "separated_textures",
-			"mineways_test_texs_1_14_4.obj")
+			"mineways_test_separated_1_15_2.obj")
 		bpy.ops.mcprep.import_world_split(filepath=obj_path)
 
 	def _import_mineways_combined(self):
 		"""Import the full jmc2obj test set"""
 		testdir = os.path.dirname(__file__)
 		obj_path = os.path.join(testdir, "mineways", "combined_textures",
-			"mineways_test_single_1_14_4.obj")
+			"mineways_test_combined_1_15_2.obj")
 		bpy.ops.mcprep.import_world_split(filepath=obj_path)
 
 	def _create_canon_mat(self, canon=None):
@@ -294,16 +305,20 @@ class mcprep_testing():
 		# stdout = io.StringIO()
 		# with redirect_stdout(stdout):
 		try:
-			bpy.ops.preferences.addon_enable(module="MCprep_addon")
+			if hasattr(bpy.ops, "preferences") and "addon_enable" in dir(bpy.ops.preferences):
+				bpy.ops.preferences.addon_enable(module="MCprep_addon")
+			else:
+				bpy.ops.wm.addon_enable(module="MCprep_addon")
 		except:
 			pass
 
 		# see if we can safely toggle off and back on
-		print("Try disable:")
-		bpy.ops.preferences.addon_disable(module="MCprep_addon")
-		print("Try re-enable:")
-		bpy.ops.preferences.addon_enable(module="MCprep_addon")
-		return
+		if hasattr(bpy.ops, "preferences") and "addon_enable" in dir(bpy.ops.preferences):
+			bpy.ops.preferences.addon_disable(module="MCprep_addon")
+			bpy.ops.preferences.addon_enable(module="MCprep_addon")
+		else:
+			bpy.ops.wm.addon_disable(module="MCprep_addon")
+			bpy.ops.wm.addon_enable(module="MCprep_addon")
 
 	def prep_materials(self):
 		# run once when nothing is selected, no active object
@@ -408,7 +423,8 @@ class mcprep_testing():
 		post_path = node.image.filepath
 		if pre_path != post_path:
 			os.remove(tmp_image)
-			return "Pre/post path differed in tmp dir, when there should have been no change"
+			return "Pre/post path differed in tmp dir when there should have been no change: pre {} vs post {}".format(
+				pre_path, post_path)
 
 		# test that an empty node within a canonically named material is fixed
 		pre_path = node.image.filepath
@@ -594,8 +610,6 @@ class mcprep_testing():
 		# TODO: Add test for when there is a bogus filename, responds with
 		# Image file not found in err
 
-
-
 		# capture info or recent out?
 		# check that username was there before or not
 		bpy.ops.mcprep.applyusernameskin(
@@ -605,12 +619,10 @@ class mcprep_testing():
 
 		# check that timestamp of last edit of file was longer ago than above cmd
 
-
 		bpy.ops.mcprep.applyusernameskin(
 			username='TheDuckCow',
 			skip_redownload=True,
 			new_material=True)
-
 
 		# test deleting username skin and that file is indeed deleted
 		# and not in list anymore
@@ -621,8 +633,6 @@ class mcprep_testing():
 		# 	new_material=True)
 
 		# test that the file was added back
-
-
 
 		bpy.ops.mcprep.spawn_with_skin()
 		# test changing skin to file when no existing images/textres
@@ -642,7 +652,7 @@ class mcprep_testing():
 		if post_objects+1 > pre_objects:
 			print("Success, had {} objs, post import {}".format(
 				pre_objects, post_objects))
-			return ""
+			return
 		elif post_objects+1 == pre_objects:
 			return "Only one new object imported"
 		else:
@@ -656,7 +666,7 @@ class mcprep_testing():
 			bpy.ops.mcprep.import_world_split(filepath=obj_path)
 		except Exception as e:
 			print("Failed, as intended: "+str(e))
-			return ""
+			return
 		return "World import should have returned an error"
 
 	def import_materials_util(self, mapping_set):
@@ -838,14 +848,29 @@ class mcprep_testing():
 			"pumpkin_front_lit",
 			"sugarcane",
 			"chest",
-			"largechest"
+			"largechest",
+			"sunflower_bottom",
+			"sapling_birch",
+			"white_tulip",
+			"sapling_oak",
+			"sapling_acacia",
+			"sapling_jungle",
+			"blue_orchid",
+			"allium",
 		]
 
 		errors = []
 		for mat_name in test_materials:
-			res = self.meshswap_util(mat_name)
+			try:
+				res = self.meshswap_util(mat_name)
+			except Exception as err:
+				err = str(err)
+				if len(err)>15:
+					res = err[:15].replace("\n", "")
+				else:
+					res = err
 			if res:
-				errors.append(res)
+				errors.append(mat_name+":"+res)
 		if errors:
 			return "Meshswap failed: "+", ".join(errors)
 
@@ -871,15 +896,71 @@ class mcprep_testing():
 			"redstone_torch",
 			"jack_o_lantern",
 			"sugar_cane",
+			"jungle_sapling",
+			"dark_oak_sapling",
+			"oak_sapling",
+			"campfire_log",
+			"white_tulip",
+			"blue_orchid",
+			"allium",
 		]
 
 		errors = []
 		for mat_name in test_materials:
-			res = self.meshswap_util(mat_name)
+			try:
+				res = self.meshswap_util(mat_name)
+			except Exception as err:
+				err = str(err)
+				if len(err)>15:
+					res = err[:15].replace("\n", "")
+				else:
+					res = err
 			if res:
-				errors.append(res)
+				errors.append(mat_name+":"+res)
 		if errors:
 			return "Meshswap failed: "+", ".join(errors)
+
+	def meshswap_mineways_combined(self):
+		"""Tests jmc2obj meshswapping"""
+		self._clear_scene()
+		self._import_mineways_combined()
+		self._set_exporter('Mineways')
+
+		# known Mineways (separated) material names expected for meshswap
+		test_materials = [
+			"Sunflower",
+			"Torch",
+			"Redstone_Torch_(active)",
+			"Lantern",
+			"Dark_Oak_Sapling",
+			"Sapling", # should map to oak sapling
+			"Birch_Sapling",
+			"Cactus",
+			"White_Tulip",
+			"Vines",
+			"Ladder",
+			"Enchanting_Table",
+			"Campfire",
+			"Jungle_Sapling",
+			"Red_Tulip",
+			"Blue_Orchid",
+			"Allium",
+		]
+
+		errors = []
+		for mat_name in test_materials:
+			try:
+				res = self.meshswap_util(mat_name)
+			except Exception as err:
+				err = str(err)
+				if len(err)>15:
+					res = err[:15].replace("\n", "")
+				else:
+					res = err
+			if res:
+				errors.append(mat_name+":"+res)
+		if errors:
+			return "Meshswap combined failed: "+", ".join(errors)
 
 	def detect_desaturated_images(self):
 		"""Checks the desaturate images function works"""
@@ -897,7 +978,6 @@ class mcprep_testing():
 		desaturated = [
 			"grass_block_top.png"
 		]
-
 		saturated = [
 			"grass_block_side.png",
 			"glowstone.png"
@@ -911,7 +991,6 @@ class mcprep_testing():
 			img = bpy.data.images.load(os.path.join(base, tex))
 			if is_image_grayscale(img) is False:
 				raise Exception('Image {} detected as saturated - should be grayscale'.format(tex))
-
 
 		# test that it is caching as expected.. by setting a false
 		# value for cache flag and seeing it's returning the property value
@@ -936,6 +1015,131 @@ class mcprep_testing():
 
 		# detect any non canonical material names?? how to exclude?
 
+		# Affirm that no materials have a principled node, should be basic only
+
+	def item_spawner(self):
+		"""Test item spawning and reloading"""
+		self._clear_scene()
+		scn_props = bpy.context.scene.mcprep_props
+
+		pre_items = len(scn_props.item_list)
+		bpy.ops.mcprep.reload_items()
+		post_items = len(scn_props.item_list)
+
+		if pre_items != 0:
+			return "Should have opened new file with unloaded assets?"
+		elif post_items == 0:
+			return "No items loaded"
+		elif post_items < 50:
+			return "Too few items loaded, missing texturepack?"
+
+		# spawn with whatever default index
+		pre_objs = len(bpy.data.objects)
+		bpy.ops.mcprep.spawn_item()
+		post_objs = len(bpy.data.objects)
+
+		if post_objs == pre_objs:
+			return "No items spawned"
+		elif post_objs > pre_objs+1:
+			return "More than one item spawned"
+
+		# test core useage on a couple of out of the box textures
+
+		# test once with custom block
+		# bpy.ops.mcprep.spawn_item_file(filepath=)
+
+		# test with different thicknesses
+
+		# test after changing resource pack
+
+		# test that with an image of more than 1k pixels, it's truncated as expected
+
+		# test with different
+
+	def world_tools(self):
+		"""Test adding skies, prepping the world, etc"""
+		from MCprep.world_tools import get_time_object
+
+		# test with both engines (cycles+eevee, or cycles+internal)
+		self._clear_scene()
+		bpy.ops.mcprep.world()
+
+		pre_objs = len(bpy.data.objects)
+		bpy.ops.mcprep.add_mc_sky(
+			world_type='world_shader',
+			# initial_time='8',
+			add_clouds=True,
+			remove_existing_suns=True)
+		post_objs = len(bpy.data.objects)
+		if pre_objs >= post_objs:
+			return "Nothing added"
+		# find the sun, ensure it's pointed partially to the side
+		obj = get_time_object()
+		if not obj:
+			return "No detected MCprepHour controller (a)"
+
+		self._clear_scene()
+		pre_objs = len(bpy.data.objects)
+		bpy.ops.mcprep.add_mc_sky(
+			world_type='world_mesh',
+			# initial_time='12',
+			add_clouds=False,
+			remove_existing_suns=True)
+		post_objs = len(bpy.data.objects)
+		if pre_objs >= post_objs:
+			return "Nothing added"
+		# find the sun, ensure it's pointed straight down
+		obj = get_time_object()
+		if not obj:
+			return "No detected MCprepHour controller (b)"
+
+		self._clear_scene()
+		pre_objs = len(bpy.data.objects)
+		bpy.ops.mcprep.add_mc_sky(
+			world_type='world_only',
+			# initial_time='18',
+			add_clouds=False,
+			remove_existing_suns=True)
+		post_objs = len(bpy.data.objects)
+		if pre_objs >= post_objs:
+			return "Nothing added"
+		# find the sun, ensure it's pointed straight down
+		obj = get_time_object()
+		if not obj:
+			return "No detected MCprepHour controller (c)"
+
+		self._clear_scene()
+		pre_objs = len(bpy.data.objects)
+		bpy.ops.mcprep.add_mc_sky(
+			world_type='world_static_mesh',
+			# initial_time='0',
+			add_clouds=False,
+			remove_existing_suns=True)
+		post_objs = len(bpy.data.objects)
+		if pre_objs >= post_objs:
+			return "Nothing added"
+		# find the sun, ensure it's pointed straight down
+		obj = get_time_object()
+		if obj:
+			return "Found MCprepHour controller, shouldn't be one (d)"
+
+		self._clear_scene()
+		pre_objs = len(bpy.data.objects)
+		bpy.ops.mcprep.add_mc_sky(
+			world_type='world_static_only',
+			# initial_time='6',
+			add_clouds=False,
+			remove_existing_suns=True)
+		post_objs = len(bpy.data.objects)
+		if pre_objs >= post_objs:
+			return "Nothing added"
+		# find the sun, ensure it's pointed straight down
+		obj = get_time_object()
+		if obj:
+			return "Found MCprepHour controller, shouldn't be one (e)"
+
+		# test that it removes existing suns by first placing one, and then
+		# affirming it's gone
 
 
 class OCOL:
