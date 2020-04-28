@@ -620,20 +620,22 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				context, swap, swapProps, instance_configs)
 			base = swapProps["object"]
 
+			# Having completed adding instances, remove the 'base copy'
 			if not grouped:
 				if base in dupedObj:
 					dupedObj.pop(dupedObj.index(base))
+				if base in selList: # gaurd for stability, but shouldn't happen
+					selList.pop(selList.index(base))
 				util.obj_unlink_remove(base, True, context)
 
 			if grouped:
 				new_objects += dupedObj # list
-			elif not grouped and dupedObj and self.meshswap_join:
-				# join meshes together
-				# ERROR HERE if don't do the len(dupedObj) thing.
+			elif dupedObj and self.meshswap_join:
+				# join meshes together, carefully removing old selected objects
+				# from selection lists
 				util.set_active_object(context, dupedObj[0])
 				for d in dupedObj:
 					if d.type != 'MESH':
-						# conf.log("Skipping non-mesh:", d)
 						continue
 					util.select_set(d, True)
 				if context.mode != "OBJECT":
@@ -643,9 +645,10 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				for obtemp in context.selected_objects:
 					if obtemp in selList:
 						selList.pop(selList.index(obtemp))
+					if obtemp in dupedObj:
+						dupedObj.pop(dupedObj.index(obtemp))
 				bpy.ops.object.join()
 				if context.selected_objects:
-					selList.append(context.selected_objects[0])
 					new_objects.append(context.selected_objects[0])
 				else:
 					conf.log("No selected objects after join")
@@ -655,18 +658,22 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 
 			removeList.append(swap)
 
-			# Setup for later re-selection
-			for d in dupedObj:
-				if d in removeList:
+			# Setup for later re-selection and applying no-re-meshswap property
+			for obj in new_objects:
+				if obj in removeList:
 					continue
 				# Setup below is for cross compatibility, in 2.8 & 2.7
 				# where accessing a field on deleted object will raise error
+				# (but, we should have already excluded deleted objects anyways)
 				try:
-					if not hasattr(d, "users"):
+					if not hasattr(obj, "users"):
+						continue
+					if not obj.name: # accessing name itself could cause crash/error
 						continue
 				except ReferenceError:
 					continue
-				selList.append(d)
+				selList.append(obj)
+				obj['MCprep_noSwap'] = 1 # property to avoid duplicate future swap
 			t3s[-1] = time.time()
 
 		t4 = time.time()
@@ -684,7 +691,6 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				except:
 					print("Failed to clear user/remove object: "+rm.name)
 
-		print("SELLIST! ", selList)
 		for obj in selList:
 			# Risk if object was joined against another object that its data
 			# no longer exists, which can result in a failure e.g. for 2.72
@@ -697,7 +703,6 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			except ReferenceError:
 					continue
 			util.select_set(obj, True)
-			obj['MCprep_noSwap'] = 1 # adds property to avoid duplicated swaps
 
 		# Create nicer nested organization of meshswapped assets, and excluding
 		# this meshswap group to avoid showing in render. Also move newly
@@ -720,7 +725,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			instancing = sum(t3s) - sum(t2s)
 			cleanup = t5-t4
 			total = tprep+loop_prep+face_process+instancing+cleanup
-			print("Total time: {}s, init: {}, prep: {}, poly process: {}, instance:{}, cleanup: {}".format(
+			conf.log("Total time: {}s, init: {}, prep: {}, poly process: {}, instance:{}, cleanup: {}".format(
 				round(total, 1), round(tprep, 1), round(loop_prep, 1), round(face_process, 1),
 				round(instancing, 1), round(cleanup, 1)))
 
@@ -1152,7 +1157,8 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			if (self.counterObject > self.countMax):
 				self.counterObject = 0
 				if not util.bv28():
-					bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+					pass
+					#bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
 				elif hasattr(context, "view_layer"):
 					context.view_layer.update() # but does not redraw ui
 
