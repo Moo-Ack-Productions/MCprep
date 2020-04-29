@@ -104,7 +104,7 @@ class MCPREP_OT_install_jmc2obj(bpy.types.Operator):
 
 	def invoke(self, context, event):
 		wm = context.window_manager
-		return wm.invoke_popup(self, width=400*util.ui_scale(), height=200)
+		return wm.invoke_popup(self, width=400*util.ui_scale())
 
 	def draw(self, context):
 		self.layout.label(text="Valid program path not found!")
@@ -182,7 +182,7 @@ class MCPREP_OT_install_mineways(bpy.types.Operator):
 
 	def invoke(self, context, event):
 		wm = context.window_manager
-		return wm.invoke_popup(self, width=400*util.ui_scale(), height=200)
+		return wm.invoke_popup(self, width=400*util.ui_scale())
 
 	def draw(self, context):
 		self.layout.label(text="Valid program path not found!")
