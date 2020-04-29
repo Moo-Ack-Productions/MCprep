@@ -998,17 +998,28 @@ class mcprep_testing():
 	def qa_meshswap_file(self):
 		"""Open the meshswap file, assert there are no relative paths"""
 		blendfile = os.path.join("MCprep_addon", "MCprep_resources", "mcprep_meshSwap.blend")
+		basepath = os.path.join("MCprep_addon", "MCprep_resources")
+		basepath = os.path.abspath(basepath) # relative to the dev git folder
 		bpy.ops.wm.open_mainfile(filepath=blendfile)
 		# do NOT save this file!
 
 		# bpy.ops.file.make_paths_relative() instead of this, do manually
+		different_base = []
 		not_relative = []
 		for img in bpy.data.images:
 			if not img.filepath:
 				continue
+			abspath = os.path.abspath(bpy.path.abspath(img.filepath))
+			if not abspath.startswith(basepath):
+				different_base.append(os.path.basename(img.filepath))
 			if img.filepath != bpy.path.relpath(img.filepath):
 				not_relative.append(os.path.basename(img.filepath))
 
+		if len(different_base) > 50:
+			return "Wrong basepath for image filepath comparison!"
+		if different_base:
+			return "Found {} images with different basepath from the meshswap file: {}".format(
+				len(different_base), ", ".join(different_base))
 		if not_relative:
 			return "Found {} non relative img files in meshswap: {}".format(
 				len(not_relative), ", ".join(not_relative))
