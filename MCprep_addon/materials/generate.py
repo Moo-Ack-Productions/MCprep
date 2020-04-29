@@ -752,10 +752,12 @@ def replace_missing_texture(image):
 
 def is_image_grayscale(image):
 	"""Returns true if image data is all grayscale, false otherwise"""
+	if not image:
+		return None
 	conf.log("Checking image for grayscale "+image.name, vv_only=True)
 	if 'grayscale' in image: # cache
 		return image['grayscale']
-	if not image or not image.pixels:
+	if not image.pixels:
 		conf.log("Not an image / no pixels", vv_only=True)
 		return None
 
