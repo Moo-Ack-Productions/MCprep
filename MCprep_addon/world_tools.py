@@ -21,6 +21,7 @@ import random
 import traceback
 
 import bpy
+from bpy_extras.io_utils import ImportHelper
 
 from . import conf
 from . import util
@@ -117,8 +118,16 @@ class MCPREP_OT_install_jmc2obj(bpy.types.Operator):
 		col.label(text="Then, go to MCprep's user preferences and set the jmc2obj")
 		col.label(text=" path to jmc2obj_ver#.jar, for example")
 		row = self.layout.row(align=True)
-		row.operator("mcprep.open_preferences",
-			text="Open MCprep preferences", icon="PREFERENCES").tab = "settings"
+
+		if bpy.app.version < (2, 81):
+			# Due to crash-prone bug in 2.81 through 2.83 (beta), if this
+			# operator's draw popup is still present behind the newly opened
+			# preferences window, and the user then opens a filebrowser e.g.
+			# by pressing a folder icon, blender will instant-crash.
+			# Thus, don't offer to open preferences for these blender versions
+			row.operator("mcprep.open_preferences",
+				text="Open MCprep preferences", icon="PREFERENCES").tab = "settings"
+
 		row.operator("wm.url_open", text="Open tutorial").url =\
 				"https://theduckcow.com/dev/blender/mcprep/setup-world-exporters/"
 		return
@@ -147,13 +156,16 @@ class MCPREP_OT_open_mineways(bpy.types.Operator):
 	@tracking.report_error
 	def execute(self,context):
 		addon_prefs = util.get_user_preferences(context)
-		res = util.open_program(addon_prefs.open_mineways_path)
+		if os.path.isfile(addon_prefs.open_mineways_path):
+			res = util.open_program(addon_prefs.open_mineways_path)
+		else:
+			res = -1
 
-		if res ==-1:
+		if res == -1:
 			bpy.ops.mcprep.install_mineways('INVOKE_DEFAULT')
 			return {'CANCELLED'}
-		elif res !=0:
-			self.report({'ERROR'},str(res))
+		elif res != 0:
+			self.report({'ERROR'}, str(res))
 			return {'CANCELLED'}
 		else:
 			self.report({'INFO'},"Mineways should open soon")
@@ -184,8 +196,15 @@ class MCPREP_OT_install_mineways(bpy.types.Operator):
 		col.label(text="Then, go to MCprep's user preferences and set the")
 		col.label(text=" Mineways path to Mineways.exe or Mineways.app, for example")
 		row = self.layout.row(align=True)
-		row.operator("mcprep.open_preferences",
-			text="Open MCprep preferences", icon="PREFERENCES").tab = "settings"
+		if bpy.app.version < (2, 81):
+			# Due to crash-prone bug in 2.81 through 2.83 (beta), if this
+			# operator's draw popup is still present behind the newly opened
+			# preferences window, and the user then opens a filebrowser e.g.
+			# by pressing a folder icon, blender will instant-crash.
+			# Thus, don't offer to open preferences for these blender versions
+			row.operator("mcprep.open_preferences",
+				text="Open MCprep preferences", icon="PREFERENCES").tab = "settings"
+
 		row.operator("wm.url_open", text="Open tutorial").url =\
 				"https://theduckcow.com/dev/blender/mcprep/setup-world-exporters/"
 		return
@@ -200,6 +219,82 @@ class MCPREP_OT_install_mineways(bpy.types.Operator):
 # -----------------------------------------------------------------------------
 # Additional world tools
 # -----------------------------------------------------------------------------
+
+
+class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
+	"""Imports an obj file, and auto splits it by material"""
+	bl_idname = "mcprep.import_world_split"
+	bl_label = "Import World"
+
+	filter_glob = bpy.props.StringProperty(
+		default="*.obj;*.mtl",
+		options={'HIDDEN'})
+	fileselectparams = "use_filter_blender"
+	skipUsage = bpy.props.BoolProperty(
+		default = False,
+		options={'HIDDEN'}
+		)
+
+	track_function = "import_split"
+	track_exporter = None
+	@tracking.report_error
+	def execute(self, context):
+		# for consistency with the built in one, only import the active path
+		if not self.filepath:
+			self.report({"ERROR"}, "File not found, could not import obj")
+			return {'CANCELLED'}
+		if not os.path.isfile(self.filepath):
+			self.report({"ERROR"}, "File not found, could not import obj")
+			return {'CANCELLED'}
+
+		res = bpy.ops.import_scene.obj(filepath=self.filepath)
+		if res != {'FINISHED'}:
+			self.report({"ERROR"}, "Issue encountered while importing world")
+			return {'CANCELLED'}
+
+		if util.bv28():
+			self.split_world_by_material(context)
+
+		addon_prefs = util.get_user_preferences(context)
+		self.track_exporter = addon_prefs.MCprep_exporter_type # soft detection
+		return {'FINISHED'}
+
+	def obj_name_to_material(self, obj):
+		"""Update an objects name based on its first material"""
+		if not obj or not obj.active_material:
+			return
+		obj.name = util.nameGeneralize(obj.active_material.name)
+
+	def split_world_by_material(self, context):
+		"""2.8-only function, split combined object into parts by material"""
+
+		# Create the new world collection
+		prefs = util.get_user_preferences(context)
+		if prefs is not None and prefs.MCprep_exporter_type != '(choose)':
+			name = "{}_world".format(prefs.MCprep_exporter_type)
+		else:
+			name = "minecraft_world"
+		worldg = util.collections().new(name=name)
+		context.scene.collection.children.link(worldg) # add it to the outliner
+
+		if context.object:
+			conf.log("Splitting imported obj by material")
+			bpy.ops.mesh.separate(type='MATERIAL')
+			for obj in context.selected_objects:
+				self.obj_name_to_material(obj)
+				util.move_to_collection(obj, worldg)
+		elif context.selected_objects:
+			for obj in context.selected_objects:
+				if obj.type != 'MESH':
+					continue
+				util.set_active_object(context, obj)
+				bpy.ops.mesh.separate(type='MATERIAL')
+			# again to force renames based on material
+			for obj in context.selected_objects:
+				self.obj_name_to_material(obj)
+				util.move_to_collection(obj, worldg)
+		else:
+			conf.log("No object active found to split")
 
 
 class MCPREP_OT_prep_world(bpy.types.Operator):
@@ -311,7 +406,6 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 		# TODO: given the output change, consider make a bool toggle for this
 		bpy.context.scene.render.use_simplify = True
 
-
 	def prep_world_internal(self, context):
 		# check for any suns with the sky setting on;
 		if not context.scene.world:
@@ -347,9 +441,23 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 
 
 class MCPREP_OT_add_mc_world(bpy.types.Operator):
-	"""Add sun lamp and time of day (dynamic) driver, setup sky with sun and moon"""
+	"""Please used the new operator, mcprep.add_mc_sky"""
 	bl_idname = "mcprep.add_mc_world"
 	bl_label = "Create MC World"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	track_function = "world_time"
+	track_param = "Deprecated"
+	@tracking.report_error
+	def execute(self, context):
+		self.report({"ERROR"}, "Use the new operator, mcprep.add_mc_sky")
+		return {'CANCELLED'}
+
+
+class MCPREP_OT_add_mc_sky(bpy.types.Operator):
+	"""Add sun lamp and time of day (dynamic) driver, setup sky with sun and moon"""
+	bl_idname = "mcprep.add_mc_sky"
+	bl_label = "Create MC Sky"
 	bl_options = {'REGISTER', 'UNDO'}
 
 	def enum_options(self, context):
@@ -357,20 +465,20 @@ class MCPREP_OT_add_mc_world(bpy.types.Operator):
 		engine = bpy.context.scene.render.engine
 		enums = []
 		if bpy.app.version >= (2, 77) and engine in ("CYCLES", "BLENDER_EEVEE"):
-			enums.append(("world_shader", "Dynamic world + shader sun/moon", "Import dynamic world and shader-based sun and moon"))
-		enums.append(("world_mesh", "Dynamic world + mesh sun/moon", "Import dynamic world and mesh sun and moon"))
-		enums.append(("world_only", "Dynamic world only", "Import dynamic world, with no sun or moon"))
-		enums.append(("world_static_mesh", "Static world + mesh sun/moon", "Create static world with mesh sun and moon"))
-		enums.append(("world_static_only", "Static world only", "Create static world, with no sun or moon"))
+			enums.append(("world_shader", "Dynamic sky + shader sun/moon", "Import dynamic sky and shader-based sun and moon"))
+		enums.append(("world_mesh", "Dynamic sky + mesh sun/moon", "Import dynamic sky and mesh sun and moon"))
+		enums.append(("world_only", "Dynamic sky only", "Import dynamic sky, with no sun or moon"))
+		enums.append(("world_static_mesh", "Static sky + mesh sun/moon", "Create static sky with mesh sun and moon"))
+		enums.append(("world_static_only", "Static sky only", "Create static sky, with no sun or moon"))
 		return enums
 
 	world_type = bpy.props.EnumProperty(
-		name="World type",
-		description="Decide to improt dynamic (time/hour-controlled) vs static world (daytime only), and the type of sun/moon (if any) to use",
+		name="Sky type",
+		description="Decide to improt dynamic (time/hour-controlled) vs static sky (daytime only), and the type of sun/moon (if any) to use",
 		items=enum_options)
 	initial_time = bpy.props.EnumProperty(
 		name="Set time (dynamic only)",
-		description="Set initial time of day, only supported for dynamic world types",
+		description="Set initial time of day, only supported for dynamic sky types",
 		items = (
 			("8", "Morning", "Set initial time to 9am"),
 			("12", "Noon", "Set initial time to 12pm"),
@@ -400,7 +508,7 @@ class MCPREP_OT_add_mc_world(bpy.types.Operator):
 		row.prop(self, "add_clouds")
 		row.prop(self, "remove_existing_suns")
 		row = self.layout.row()
-		row.label(text="Note: Dynamic worlds use drivers, enable auto-run python scripts")
+		row.label(text="Note: Dynamic skies use drivers, enable auto-run python scripts")
 
 	track_function = "world_time"
 	track_param = None
@@ -417,7 +525,7 @@ class MCPREP_OT_add_mc_world(bpy.types.Operator):
 					continue
 				util.obj_unlink_remove(lamp, True)
 
-		engine = bpy.context.scene.render.engine
+		engine = context.scene.render.engine
 		wname = None
 		if engine == "BLENDER_EEVEE":
 			blend = "clouds_moon_sun_eevee.blend"
@@ -425,6 +533,7 @@ class MCPREP_OT_add_mc_world(bpy.types.Operator):
 		else:
 			blend = "clouds_moon_sun.blend"
 			wname = "MCprepWorldCycles"
+
 		blendfile = os.path.join(os.path.dirname(__file__),
 			"MCprep_resources", blend)
 
@@ -436,10 +545,14 @@ class MCPREP_OT_add_mc_world(bpy.types.Operator):
 			new_objs.append(new_sun)
 
 			if engine in ('BLENDER_RENDER', 'BLENDER_GAME'):
+				world = context.scene.world
+				if not world:
+					world = bpy.data.worlds.new("MCprep World")
+					context.scene.world = world
 				new_sun.data.shadow_method = 'RAY_SHADOW'
 				new_sun.data.shadow_soft_size = 0.5
-				context.scene.world.use_sky_blend = False
-				context.scene.world.horizon_color = (0.00938029, 0.0125943, 0.0140572)
+				world.use_sky_blend = False
+				world.horizon_color = (0.00938029, 0.0125943, 0.0140572)
 			bpy.ops.mcprep.world(skipUsage=True) # do rest of sky setup
 
 		elif engine=='CYCLES' or engine=='BLENDER_EEVEE':
@@ -458,8 +571,13 @@ class MCPREP_OT_add_mc_world(bpy.types.Operator):
 			new_objs.append(new_sun)
 			new_sun.data.shadow_method = 'RAY_SHADOW'
 			new_sun.data.shadow_soft_size = 0.5
-			context.scene.world.use_sky_blend = False
-			context.scene.world.horizon_color = (0.00938029, 0.0125943, 0.0140572)
+
+			world = context.scene.world
+			if not world:
+				world = bpy.data.worlds.new("MCprep World")
+				context.scene.world = world
+			world.use_sky_blend = False
+			world.horizon_color = (0.00938029, 0.0125943, 0.0140572)
 
 			# be sure to turn off all other sun lamps with atmosphere set
 			new_sun.data.sky.use_sky = True  # use sun orientation settings if BI
@@ -504,11 +622,12 @@ class MCPREP_OT_add_mc_world(bpy.types.Operator):
 			resource = blendfile +"/Object"
 			util.bAppendLink(resource, "clouds", False)
 			new_objs += list(context.selected_objects)
-			# if engine == "BLENDER_INTERNAL":
-			# 	mat = context.selected_objects[0].active_material
-			# 	mat.use_nodes = False
-			# 	mat.use_shadeless = False
-			# 	mat.translucency = 1
+			if engine in ('BLENDER_RENDER', 'BLENDER_GAME'):
+				materials = util.materialsFromObj(context.selected_objects)
+				for mat in materials:
+					mat.use_nodes = False
+					mat.use_shadeless = False
+					mat.translucency = 1
 
 		# ensure all new objects (lights, meshes, control objs) in same group
 		if "mcprep_world" in util.collections():
@@ -690,7 +809,9 @@ classes = (
 	MCPREP_OT_install_mineways,
 	MCPREP_OT_prep_world,
 	MCPREP_OT_add_mc_world,
+	MCPREP_OT_add_mc_sky,
 	MCPREP_OT_time_set,
+	MCPREP_OT_import_world_split
 )
 
 

@@ -1,0 +1,82 @@
+{
+"blocks":{
+	"reflective":["glass*","frosted_ice_*", "ice","ice_packed", "door_iron_upper",
+		"door_iron_lower","diamond_block","iron_block","gold_block",
+		"emerald_block","iron_trapdoor","iron_bars","Ice","Packed_Ice",
+		"water_flow", "water_overlay", "water_still",
+
+		"Block_of_Diamond","Block_of_Emerald","Block_of_Gold",
+		"Block_of_Iron","Glass","Glass_Pane","Stained_Glass*"
+	],
+	"water":["water_flow","water_overlay","water_still"],
+	"emit":["redstone_block","redstone_lamp_on","glowstone","lava_flow",
+		"lava_still","fire_layer_0","fire_layer_1","fire","fire_0","fire_1",
+		"sea_lantern","magma","beacon","lava","campfire_fire",
+
+		"Beacon","Fire","Glowstone","Redstone_Lamp_(active)","Sea_Lantern",
+		"Stationary_Lava",
+
+		"torch_flame", "lava_flowing"
+	],
+	"desaturated":{
+		"vine": [0.227161, 0.614651, 0.089036],
+		"grass": [0.227161, 0.614651, 0.089036],
+		"lily_pad": [0.227161, 0.614651, 0.089036],
+		"attached_melon_stem": [0.227161, 0.614651, 0.089036],
+		"melon_stem": [0.227161, 0.614651, 0.089036],
+		"attached_pumpkin_stem": [0.227161, 0.614651, 0.089036],
+		"pumpkin_stem": [0.227161, 0.614651, 0.089036],
+		"large_fern_top": [0.227161, 0.614651, 0.089036],
+		"large_fern_bottom": [0.227161, 0.614651, 0.089036],
+		"tall_grass_top": [0.227161, 0.614651, 0.089036],
+		"tall_grass_bottom": [0.227161, 0.614651, 0.089036],
+		"fern": [0.227161, 0.614651, 0.089036],
+		"grass_block_top": [0.227161, 0.614651, 0.089036],
+		"grass_block_side_overlay": [0.227161, 0.614651, 0.089036],
+		"acacia_leaves": [0.227161, 0.614651, 0.089036],
+		"dark_oak_leaves": [0.227161, 0.614651, 0.089036],
+		"birch_leaves": [0.227161, 0.614651, 0.089036],
+		"jungle_leaves": [0.227161, 0.614651, 0.089036],
+		"oak_leaves": [0.227161, 0.614651, 0.089036],
+		"spruce_leaves": [0.227161, 0.614651, 0.089036],
+
+		"redstone_dust_dot": [0.286377, 0.566797, 0.154644],
+		"redstone_dust_line0": [0.286377, 0.566797, 0.154644],
+		"redstone_dust_line1": [0.286377, 0.566797, 0.154644],
+
+		"water_still":[0.067324, 0.135132, 2],
+		"water_flow":[0.067324, 0.135132, 2],
+		"water_overlay":[0.067324, 0.135132, 2]
+	},
+	"animated_mineways_index":{
+		"Stationary_Lava":{
+			"lava_still":[3,9],
+			"lava_flow":[5,15]
+		},
+		"fire_0":[0,0],
+		"magma":[24,14]
+	},
+	"solid":["sand","dirt","grass_side","grass_top",
+			"dispenser_front_horizontal","furnace_top","redstone_block","gold_block",
+			"stone","iron_ore","coal_ore","wool_*","hardened_clay_stained_*",
+			"stone_brick","cobblestone","planks_*","log_*","farmland_wet",
+			"farmland_dry","cobblestone_mossy","nether_brick","gravel",
+			"*_ore","red_sand","dirt_podzol_top","stone_granite_smooth",
+			"stone_granite","stone_diorite","stone_diorite_smooth",
+			"stone_andesite","stone_andesite_smooth","brick","snow",
+			"hardened_clay","sandstone_side","sandstone_carved",
+			"sandstone_smooth","sandstone_top","red_sandstone_top",
+			"red_sandstone_normal","bedrock","dirt_mycelium_top",
+			"stone_brick_mossy","stone_brick_cracked","stone_brick_circle",
+			"stone_slab_side","stone_slab_top","netherrack","soulsand",
+			"*_block","endstone","Grass_Block","Dirt","Stone_Slab","Stone",
+			"Oak_Wood_Planks","Wooden_Slab","Sand","Carpet","Wool",
+			"Stained_Clay","Gravel","Sandstone","*_Fence","Wood",
+			"Acacia/Dark_Oak_Wood","Farmland","Brick","Snow","Bedrock",
+			"Netherrack","Soul_Sand","End_Stone", "clay", "endstone", "sponge",
+			"stonebrick", "sandstone_bottom","prismarine_bricks",
+			"prismarine_dark","prismarine_rough", "glowstone"],
+	"metallic":["door_iron_lower", "door_iron_upper","iron_bars","iron_block",
+			"iron_trapdoor", "diamond_block","emerald_block", "gold_block"]
+}
+}

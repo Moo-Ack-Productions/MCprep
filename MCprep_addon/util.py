@@ -36,21 +36,23 @@ from . import conf
 def nameGeneralize(name):
 	"""Get base name from datablock, accounts for duplicates and animated tex."""
 	if duplicatedDatablock(name) == True:
-		name = name[:-4] # removes .001 or .png
+		name = name[:-4] # removes .001
+	if name.endswith(".png"):
+		name = name[:-4]
 
 	# if name ends in _####, drop those numbers (for animated sequences)
-		"""Return the index of the image name, number of digits at filename end."""
-	ind = 0
+	# noting it is specifically 4 numbers
+	# could use regex, but some historical issues within including this lib
+	# in certain blender builds
 	nums = '0123456789'
-	for i in range(len(name)):
-		if not name[-i-1] in nums:
-			break
-		ind += 1
-	if ind > 0:
-		if name[-ind] in ["-", "_", " "]:
-			name = name[:-ind-1]
+	if len(name) < 5:
+		return name
+	any_nonnumbs = [1 if ltr in nums else 0 for ltr in name[-4:]]
+	if sum(any_nonnumbs)==4: # all leters are numbers
+		if name[-5] in ["-", "_", " "]:
+			name = name[:-5]
 		else:
-			name = name[:-ind]
+			name = name[:-4]
 	return name
 
 
@@ -59,7 +61,6 @@ def materialsFromObj(obj_list):
 
 	Loop over every object, adding each material if not already added
 	"""
-
 	mat_list = []
 	for obj in obj_list:
 		# also capture obj materials from dupliverts/instances on e.g. empties
@@ -158,15 +159,16 @@ def bv28():
 	return BV_IS_28
 
 
-def onEdge(faceLoc):
+def face_on_edge(faceLoc):
 	"""Check if a face is on the boundary between two blocks (local coordinates)."""
-	strLoc = [ str(faceLoc[0]).split('.')[1][0],
-				str(faceLoc[1]).split('.')[1][0],
-				str(faceLoc[2]).split('.')[1][0] ]
-	if (strLoc[0] == '5' or strLoc[1] == '5' or strLoc[2] == '5'):
+	face_decimals = [loc - loc//1 for loc in faceLoc]
+	if face_decimals[0] > 0.4999 and face_decimals[0] < 0.501:
 		return True
-	else:
-		return False
+	elif face_decimals[1] > 0.499 and face_decimals[1] < 0.501:
+		return True
+	elif face_decimals[2] > 0.499 and face_decimals[2] < 0.501:
+		return True
+	return False
 
 
 def randomizeMeshSawp(swap,variations):
@@ -194,7 +196,6 @@ def duplicatedDatablock(name):
 
 def loadTexture(texture):
 	"""Load texture once, reusing existing texture if present."""
-
 	base = nameGeneralize(bpy.path.basename(texture))
 	if base in bpy.data.images:
 		if bpy.path.abspath(bpy.data.images[base].filepath) == bpy.path.abspath(texture):
@@ -240,49 +241,60 @@ def link_selected_objects_to_scene():
 def open_program(executable):
 	# Open an external program from filepath/executbale
 	executable = bpy.path.abspath(executable)
+	conf.log("Open program request: "+executable)
 
 	# input could be .app file, which appears as if a folder
-	if not os.path.isfile(executable) :
+	if not os.path.isfile(executable):
+		conf.log("File not executable")
 		if not os.path.isdir(executable):
 			return -1
-		elif ".app" not in executable:
+		elif not executable.lower().endswith(".app"):
 			return -1
 
 	# try to open with wine, if available
 	osx_or_linux = platform.system() == "Darwin" or 'linux' in platform.system().lower()
 	if executable.lower().endswith('.exe') and osx_or_linux:
+		conf.log("Opening program via wine")
 		p = Popen(['which', 'wine'], stdin=PIPE, stdout=PIPE, stderr=PIPE)
 		stdout, err = p.communicate(b"")
-		if stdout and not err:
+		has_wine = stdout and not err
+
+		if has_wine:
 			# wine is installed; this will hang blender until mineways closes.
 			p = Popen(['wine', executable], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-			stdout, err = p.communicate(b"")
-			for line in iter(p.stdout.readline, ''):
-				# will print lines as they come, instead of just at end
-				print(stdout)
+			conf.log("Opening via wine + direct executable, will hang blender till closed")
 
-	try:  # first attempt to use blender's built-in method
+			# communicating with process makes it hang, so trust it works
+			# stdout, err = p.communicate(b"")
+			# for line in iter(p.stdout.readline, ''):
+			# 	# will print lines as they come, instead of just at end
+			# 	print(stdout)
+			return 0
+
+	try:  # attempt to use blender's built-in method
 		res = bpy.ops.wm.path_open(filepath=executable)
 		if res == {"FINISHED"}:
+			conf.log("Opened using built in path opener")
 			return 0
+		else:
+			conf.log("Did not get finished response: ", str(res))
 	except:
+		conf.log("failed to open using builtin mehtod")
 		pass
 
-	# for mac, if folder, check that it has .app otherwise throw -1
-	# (right now says will open even if just folder!!)
-
-	p = Popen(['open', executable], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-	stdout, err = p.communicate(b"")
-
-	if err != b"":
-		return "Error occured while trying to open Sync: "+str(err)
-
-	return 0
+	if platform.system() == "Darwin" and executable.lower().endswith(".app"):
+		# for mac, if folder, check that it has .app otherwise throw -1
+		# (right now says will open even if just folder!!)
+		conf.log("Attempting to open .app via system Open")
+		p = Popen(['open', executable], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+		stdout, err = p.communicate(b"")
+		if err != b"":
+			return "Error occured while trying to open executable: "+str(err)
+	return "Failed to open executable"
 
 
 def open_folder_crossplatform(folder):
 	"""Cross platform way to open folder in host operating system."""
-
 	folder = bpy.path.abspath(folder)
 	if not os.path.isdir(folder):
 		return False
@@ -299,17 +311,19 @@ def open_folder_crossplatform(folder):
 		subprocess.Popen('explorer "{x}"'.format(x=folder))
 		return True
 	except:
-		try:
-			# mac... works on Yosemite minimally
-			subprocess.call(["open", folder])
-			return True
-		except:
-			# linux
-			try:
-				subprocess.call(["xdg-open", folder])
-				return True
-			except:
-				return False
+		pass
+	try:
+		# mac... works on Yosemite minimally
+		subprocess.call(["open", folder])
+		return True
+	except:
+		pass
+	try:
+		# linux
+		subprocess.call(["xdg-open", folder])
+		return True
+	except:
+		return False
 
 
 def exec_path_expand(self, context):
@@ -336,6 +350,10 @@ def exec_path_expand(self, context):
 
 def addGroupInstance(group_name, loc, select=True):
 	"""Add object instance not working, so workaround function."""
+	# The built in method fails, bpy.ops.object.group_instance_add(...)
+	#UPDATE: I reported the bug, and they fixed it nearly instantly =D
+	# but it was recommended to do the below anyways.
+
 	scene = bpy.context.scene
 	ob = bpy.data.objects.new(group_name, None)
 	if bv28():
@@ -364,7 +382,8 @@ def load_mcprep_json():
 			"animated":[],
 			"block_mapping_mc":{},
 			"block_mapping_jmc":{},
-			"block_mapping_mineways":{}
+			"block_mapping_mineways":{},
+			"canon_mapping_block":{}
 		}
 	}
 	if not os.path.isfile(path):
@@ -380,6 +399,7 @@ def load_mcprep_json():
 			print("Failed to load json file:")
 			print('\t', err)
 			conf.json_data = default
+
 
 def ui_scale():
 	"""Returns scale of UI, for width drawing. Compatible down to blender 2.72"""
@@ -478,6 +498,38 @@ def uv_select(obj, action='TOGGLE'):
 			# if len(face.loop_indices) < 3:
 			# 	continue
 			face.select = False
+
+
+def move_to_collection(obj, collection):
+	"""Move out of all collections and into this specified one. 2.8 only"""
+	for col in obj.users_collection:
+		col.objects.unlink(obj)
+	collection.objects.link(obj)
+
+
+def get_or_create_viewlayer(context, collection_name):
+	"""Returns or creates the view layer for a given name. 2.8 only.
+
+	Only searches within same viewlayer; not exact match but a non-case
+	sensitive contains-text of collection_name check. If the collection exists
+	elsewhere by name, ignore (could be used for something else) and generate
+	a new one; maye cause any existing collection to be renamed, but is still
+	left unaffected in whatever view layer it exists.
+	"""
+	master_vl = context.view_layer.layer_collection
+	response_vl = None
+	for child in master_vl.children:
+		if collection_name.lower() not in child.name.lower():
+			continue
+		response_vl = child
+		break
+	if response_vl is None:
+		new_coll = bpy.data.collections.new(collection_name)
+		context.scene.collection.children.link(new_coll)
+
+		# assumes added to scene's active view layer root via link above
+		response_vl = master_vl.children[new_coll.name]
+	return response_vl
 
 
 # -----------------------------------------------------------------------------

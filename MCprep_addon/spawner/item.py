@@ -172,7 +172,7 @@ def spawn_item_from_filepath(context, path, max_pixels, thickness, threshold,
 		itm_obj.scale[1] = height/width
 	bpy.ops.object.transform_apply(scale=True)
 
-	# Deselect faces now, as seetting face.select = False doens't work even
+	# Deselect faces now, as setting face.select = False doens't work even
 	# though using face.select = True does work
 	bpy.ops.object.mode_set(mode='EDIT')
 	bpy.ops.mesh.select_mode(type='FACE')  # ideally capture initial state
@@ -325,6 +325,10 @@ class MCPREP_OT_spawn_item(bpy.types.Operator):
 	filepath = bpy.props.StringProperty(
 		default="",
 		options={'HIDDEN', 'SKIP_SAVE'})
+	skipUsage = bpy.props.BoolProperty(
+		default = False,
+		options = {'HIDDEN'}
+		)
 
 	@classmethod
 	def poll(cls, context):
@@ -338,6 +342,9 @@ class MCPREP_OT_spawn_item(bpy.types.Operator):
 		sima = context.space_data
 		if not self.filepath:
 			scn_props = context.scene.mcprep_props
+			if not scn_props.item_list:
+				self.report({'ERROR'}, "No filepath input, and no items in list loaded")
+				return {'CANCELLED'}
 			self.filepath = scn_props.item_list[scn_props.item_list_index].path
 			self.track_param = "list"
 		elif sima.type == 'IMAGE_EDITOR' and sima.image:
@@ -422,7 +429,7 @@ class MCPREP_OT_spawn_item_from_file(bpy.types.Operator, ImportHelper):
 	@tracking.report_error
 	def execute(self, context):
 		if not self.filepath:
-			self.report({"WARNING"}, "No image selected, canceling")
+			self.report({"WARNING"}, "No image selected, cancelling")
 			return {'CANCELLED'}
 
 		obj, status = spawn_item_from_filepath(context, self.filepath,

@@ -324,10 +324,8 @@ class Singleton_tracking(object):
 		else:
 			resp = {}
 		if self._verbose:
-			if self._dev:
-				print(self._addon+" dev response (requests lib): "+str(resp))
-			else:
-				print(self._addon+" response (requests lib): "+str(resp))
+			print("{} {} response (requests lib) {} at {}".format(
+				self._addon, "dev" if self._dev else "", resp, path))
 		return resp
 
 	def _raw_request_mod_http(self, method, path, payload):
@@ -358,7 +356,8 @@ class Singleton_tracking(object):
 		raw = connection.getresponse().read()
 		resp = json.loads(raw.decode())
 		if self._verbose:
-			print(self._addon +" response (http lib): "+str(resp))
+			print("{} {} response (http lib) {} at {}".format(
+				self._addon, "dev" if self._dev else "", resp, path))
 		return resp
 
 	def set_tracker_json(self):
@@ -591,6 +590,14 @@ class TRACK_OT_popup_report_error(bpy.types.Operator):
 		p.url = "https://theduckcow.com/dev/blender/mcprep/reporting-errors/"
 
 	def execute(self, context):
+		# if in headless mode, skip
+		if bpy.app.background:
+			conf.log("Skip Report logging, running headless")
+			conf.log("Would have reported:")
+			#conf.log(self.error_report)
+			raise Exception(self.error_report)
+			return {'CANCELLED'}
+
 		if not VALID_IMPORT:
 			self.report({"ERROR"}, "Invalid import, all reporting disabled.")
 			return {'CANCELLED'}
@@ -815,14 +822,11 @@ def report_error(function):
 			if Tracker._handling_error is False:
 				Tracker._handling_error = True
 				bpy.ops.mcprep.report_error('INVOKE_DEFAULT', error_report=err)
-
 			return {'CANCELLED'}
 
 		if res=={'CANCELLED'}:
 			return res  # cancelled, so skip running usage
 		elif hasattr(self, "skipUsage") and self.skipUsage is True:
-			# if Tracker.verbose:
-			# 	print("Skipping usage")
 			return res  # skip running usage
 
 		# Debounc multiple same requests
@@ -836,7 +840,9 @@ def report_error(function):
 			run_track = False
 
 		# If successful completion, run analytics function if relevant
-		if run_track:
+		if bpy.app.background and run_track:
+			print("Background mode, would have tracked usage: "+self.track_function)
+		elif run_track:
 			param = None
 			exporter = None
 			if hasattr(self, "track_param"):
@@ -908,6 +914,7 @@ def register(bl_info):
 		print(err)
 
 	language = None
+
 	if hasattr(bpy.app, "version") and bpy.app.version >= (2, 80):
 		if hasattr(bpy.context, "preferences"):
 			system = bpy.context.preferences.view
@@ -915,7 +922,10 @@ def register(bl_info):
 			system = bpy.context.user_preferences.view
 		else:
 			system = None
-		if system and system.use_international_fonts:
+
+		if not system:
+			pass
+		elif hasattr(system, "language"):
 			language = system.language
 	else:
 		system = bpy.context.user_preferences.system

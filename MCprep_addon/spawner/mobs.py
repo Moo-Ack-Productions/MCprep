@@ -227,6 +227,10 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 		description = "Prep materials of the added rig, will replace cycles node groups with default",
 		default = True
 		)
+	skipUsage = bpy.props.BoolProperty(
+		default = False,
+		options = {'HIDDEN'}
+		)
 
 	def draw(self, context):
 		"""Draw in redo last menu or F6"""
@@ -322,7 +326,8 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 
 		if self.auto_prep and not self.toLink and context.selected_objects:
 			try:
-				bpy.ops.mcprep.prep_materials(skipUsage=True)
+				bpy.ops.mcprep.prep_materials(
+					improveUiSettings=False, skipUsage=True)
 			except:
 				self.report({"WARNING"}, "Failed to prep materials on mob load")
 

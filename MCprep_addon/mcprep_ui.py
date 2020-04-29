@@ -488,8 +488,13 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			row.operator("mcprep.open_jmc2obj")
 
 		wpath = addon_prefs.world_obj_path
-		col.operator("import_scene.obj",
-			text="OBJ world import").filepath = wpath
+		if util.bv28():
+			# custom operator for splitting via mats after importing
+			col.operator("mcprep.import_world_split",
+				text="OBJ world import").filepath = wpath
+		else:
+			col.operator("import_scene.obj",
+				text="OBJ world import").filepath = wpath
 
 		split = layout.split()
 		col = split.column(align=True)
@@ -606,7 +611,7 @@ class MCPREP_PT_world_tools(bpy.types.Panel):
 
 		rw = layout.row()
 		col = rw.column(align=True)
-		col.operator("mcprep.add_mc_world")
+		col.operator("mcprep.add_mc_sky")
 		col.operator("mcprep.world")
 
 		layout.split()
@@ -649,6 +654,7 @@ class MCPREP_PT_skins(bpy.types.Panel):
 		scn_props = context.scene.mcprep_props
 		sind = context.scene.mcprep_skins_list_index
 		mob_ind = context.scene.mcprep_props.mob_list_index
+		skinname = None
 
 		row = layout.row()
 		row.label(text="Select skin")
@@ -667,38 +673,36 @@ class MCPREP_PT_skins(bpy.types.Panel):
 		# any other conditions for needing reloading?
 		if not conf.skin_list:
 			col = layout.column()
-			col.label(text="No skins loaded")
+			col.label(text="No skins found/loaded")
 			p = col.operator("mcprep.reload_skins",
 				text="Press to reload", icon="ERROR")
-			return
 		elif conf.skin_list and len(conf.skin_list) <= sind:
 			col = layout.column()
 			col.label(text="Reload skins")
 			p = col.operator("mcprep.reload_skins",
 				text="Press to reload", icon="ERROR")
-			return
-
-		col.template_list("MCPREP_UL_skins", "",
-				context.scene, "mcprep_skins_list",
-				context.scene, "mcprep_skins_list_index",
-				rows=rows)
-
-		col = layout.column(align=True)
-
-		row = col.row(align=True)
-		row.scale_y = 1.5
-		if conf.skin_list:
-			skinname = bpy.path.basename(
-					conf.skin_list[sind][0])
-			p = row.operator("mcprep.applyskin", text="Apply "+skinname)
-			p.filepath = conf.skin_list[sind][1]
 		else:
-			row.enabled = False
-			p = row.operator("mcprep.skin_swapper", text="No skins found")
-		row = col.row(align=True)
-		row.operator("mcprep.skin_swapper", text="Skin from file")
-		row = col.row(align=True)
-		row.operator("mcprep.applyusernameskin", text="Skin from username")
+			col.template_list("MCPREP_UL_skins", "",
+					context.scene, "mcprep_skins_list",
+					context.scene, "mcprep_skins_list_index",
+					rows=rows)
+
+			col = layout.column(align=True)
+
+			row = col.row(align=True)
+			row.scale_y = 1.5
+			if conf.skin_list:
+				skinname = bpy.path.basename(
+						conf.skin_list[sind][0])
+				p = row.operator("mcprep.applyskin", text="Apply "+skinname)
+				p.filepath = conf.skin_list[sind][1]
+			else:
+				row.enabled = False
+				p = row.operator("mcprep.skin_swapper", text="No skins found")
+			row = col.row(align=True)
+			row.operator("mcprep.skin_swapper", text="Skin from file")
+			row = col.row(align=True)
+			row.operator("mcprep.applyusernameskin", text="Skin from username")
 
 		split = layout.split()
 		col = split.column(align=True)
@@ -722,7 +726,7 @@ class MCPREP_PT_skins(bpy.types.Panel):
 			b_row.operator("mcprep.add_skin")
 			b_row.operator("mcprep.remove_skin")
 			b_row.operator("mcprep.reload_skins")
-			if context.mode == "OBJECT":
+			if context.mode == "OBJECT" and skinname:
 				row = b_row.row(align=True)
 				if not scn_props.mob_list:
 					row.enabled = False
@@ -743,10 +747,16 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 	bl_label = "Spawner"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
-	bl_context = "objectmode"
 	bl_category = "MCprep"
 
 	def draw(self, context):
+		if context.mode != "OBJECT":
+			col = self.layout.column(align=True)
+			col.label(text="Enter object mode", icon="ERROR")
+			col.label(text="to use spawner", icon="BLANK1")
+			col.operator("object.mode_set").mode="OBJECT"
+			col.label(text="")
+			return
 		row = self.layout.row(align=True)
 		row.prop(context.scene.mcprep_props,"spawn_mode", expand=True)
 		row.operator("mcprep.open_help", text="", icon="QUESTION"
@@ -837,11 +847,14 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 			b_col.operator("mcprep.openfolder", text="Open mob folder"
 				).folder = context.scene.mcprep_mob_path
 
-			icon_index = scn_props.mob_list[scn_props.mob_list_index].index
-			if "mob-{}".format(icon_index) in conf.preview_collections["mobs"]:
-				b_col.operator("mcprep.mob_install_icon", text="Change mob icon")
-			else:
+			if not scn_props.mob_list:
 				b_col.operator("mcprep.mob_install_icon")
+			else:
+				icon_index = scn_props.mob_list[scn_props.mob_list_index].index
+				if "mob-{}".format(icon_index) in conf.preview_collections["mobs"]:
+					b_col.operator("mcprep.mob_install_icon", text="Change mob icon")
+				else:
+					b_col.operator("mcprep.mob_install_icon")
 			b_col.operator("mcprep.mob_uninstall")
 			b_col.operator("mcprep.reload_mobs", text="Reload mobs")
 			b_col.label(text=mcmob_type)
