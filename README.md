@@ -170,7 +170,6 @@ Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow),
 | Zombie Pigman | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 
 
-
 | Friendly/Utility Rigs   |      Creator      |
 |----------|:-------------:|
 | Horse | [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) ([Rig link](http://www.blendswap.com/blends/view/73064)) |
@@ -180,6 +179,12 @@ Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow),
 | Snow Golem | [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html)) |
 | Villager | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Wolf | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) ([Rig link, outdated](http://www.blendswap.com/blends/view/79628)) |
+
+
+| Meshswap Blocks | Creator |
+|----------|:-------------:|
+| Campfire | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+| All others | [TheDuckCow](http://www.youtube.com/TheDuckCow) |
 
 
 If you use any of these rigs in your animation, give credit to the according creator or by directly referring back to this readme file which contains all the credits. *Models have been slightly modified to function best and consistently with the MCprep addon.*
@@ -224,6 +229,10 @@ Setting options:
 - **Step 4:** In this popup, the folder will default to the MCprep resource pack (ie default Vanilla Minecraft); navigate to an *extracted* zip folder of a valid resource pack. You can select any sub-folder, but to be safe, select the folder level such that the  the "pack.png" and "assets" sub-folder are visible as rows.
 - **Step 5:** Decide if you want to enable/disable pulling in extra passes (e.g. normal and specular, if they exist) and whether to animate textures upon swapping. Both of these tickboxes, on by default, are in the left-hand sidebar.
 
+Using Mineways? Use the following world export settings to use this feature:
+![Mineways exporter settings](/visuals/mineways-settings.png?raw=true)
+
+Note: Using tiles for expore creates individual files per block instead of one combined texture file. This is what allows swap texturepack to work.
 
 
 ### Meshswap:
@@ -232,12 +241,15 @@ Setting options:
 - **Step 1:** Select the objects that you wish to be meshSwapped. Swappable objects are determined *automatically* based on the contents of the blend file selected above. If an object is not found or swappable, it will just be skipped - no harm done by "over selecting" (so select all objects to make sure everything that can be swapped gets swapped!)
 - **Step 2:** Press Mesh Swap (there will be a small delay, meshswapping large areas such as fields of grass may take awhile).
 
-*Setup your jmc2obj and Mineways worlds in this fashion for best results.*
-![Exporter setups](/visuals/exporterSettings.png?raw=true)
+*Setup your Mineways worlds in this fashion for best results.*
 
-*Note jmc2obj is preferred because of how the obj materials are exported, Mineways has more limitations.*
+![Mineways exporter settings](/visuals/mineways-settings.png?raw=true)
 
-*Note 2: You can now also directly add meshswap blocks into the scene from the shift-A menu or the spawner:meshswap panel.*
+*Setup your jmc2obj worlds in this fashion for best results.*
+
+![jmc2obj exporter settings](/visuals/jmc2obj-settings.png?raw=true)
+
+*Note: You can now also directly add meshswap blocks into the scene from the shift-A menu or the spawner:meshswap panel.*
 
 To add your own objects to meshswap (or groupswap):
 
@@ -271,9 +283,11 @@ To add your own objects to meshswap (or groupswap):
   - This should only be slow the first time you animate textures, thereafter (with the same save-location selection) it will skip re-exporting and directly load the existing image sequence for each matching material.
   - You can view progress in the console (on Windows, go to top bar >Windows > Toggle console)
 
-*Animate textures can be found under the World Imports - Advanced panel.*
+*Animate textures can be found under the World Imports - Advanced panel; or tick the box on prep materials.*
 ![Animate textures button](/visuals/animateTextures.png?raw=true)
 
+Using Mineways? Use the following world export settings to use this feature (key: use tiles):
+![Mineways exporter settings](/visuals/mineways-settings.png?raw=true)
 
 
 ### Scale UV Faces:
@@ -298,8 +312,8 @@ To add your own objects to meshswap (or groupswap):
   - Threshold: From 0-1, consider the face as transparent if the average of the image pixels falling within the given face is below this threshold.
 
 
-### Create MC World:
-- **Purpose:** This operator, new as of MCprep v3.2.0, provides options to add both simple and advanced, shader-driven skies to your worlds. There are two primary types of skies you can add. Works for Eevee, Cycles, and Blender Internal (no shader-driven option for adding sky/moon for Blender Internal)
+### Create MC Sky:
+- **Purpose:** This operator provides options to add both simple and advanced, shader-driven skies to your worlds. There are two primary types of skies you can add. Works for Eevee, Cycles, and Blender Internal (no shader-driven option for adding sky/moon for Blender Internal)
 - Adds a basic day-sky texture. Works for both cycles and blender internal, and creates a better starting point than the default gray world background. No option yet for setting other times of day.
 - The optional settings:
   - **Dynamic World**: This is an advanced node shader setup designed for both Cycles and Eevee. It allows for driving the sky colors and brightness based on the time of day, as driven by a time property which will appear in the panel after adding a dynamic world. This allows you to create day, morning, night, and sunrise/sunset scenes with ease, and furthermore even lets you freely animate the time such that you can create your own timelapse sequences. Dynamic skies also import sun lamps, and either shader-based or mesh-based sun/moon. You can even somewhat easily hack the shader to insert HDRs in place of the procedural blended sky colors, and have the shader automatically and smoothly blend between these images. As you change the time, the sun and moon (if enabled) and physical sun lamp follow the time of day in sync. Variants of the Dynamic World include:
@@ -403,18 +417,9 @@ To add your own rigs to the Mob Spawner:
 
 Known Bugs
 ======
+- See all [known current bugs here](https://github.com/TheDuckCow/MCprep/issues?q=is%3Aissue+is%3Aopen+label%3Abug)
 - SOMETIMES UNDO (control/command z) MAY CRASH AFTER MESHSWAPPING, recommended to save before using to be safe but generally is fine.
-- Currently meshwap assumes that the block size is 1x1x1, note that by default Mineways has a block size 0.1x0.1x0.1. Please set this Mineways setting to 1m or 100cm on export.
 - Motion blur glitches on wind-swaying elements, e.g. grass: This is a bug with blender, where solidify plus the displacement modifiers and split edges modifiers can create bad motion blur effects. The easy fix is to remove split edges and let the grass be shaded smoothly instead.
-- **Both Mineways and jmc2obj oddities:**
-  - Redstone items like repeaters, dust, and so forth generally don't swap properly, and is a much more difficult problem to solve.
-  - Rails: for jmc2obj, all rails should at least be placed in the correct position, but not necessarily rotated correctly.
-  - Some materials such as fire are pre-setup with animated image sequences (yay!), but blender cannot pack image sequences into a blend file. If animated textures go missing (e.g. after moving a blend file around), reconnect them back to the according folder/file, such as /textures/fire/fire_0001.png. Note this should not be a problem if the default meshwap path/file is used, provided the addon is not uninstalled.
-  - Doors are not meshswapped into the correct location, manual fixing may be required.
-- **Mineways specific meshswap oddities:**
-  - Mineways, unlike jmc2obj, replaces the face of a solid block with the object attached to it. For example, ladders and redstone dust when meshswapped will leave a hole in the block they were attached to. There is essentially nothing I can do about that.
-  - In Mineways, many blocks simply cannot be meshswapped because of the way the exporter will group multiple objects (for example, all the flowers and double tall grass) into one material. For the time being, there is nothing I can do to resolve this.
-  - lilypads end up rotated and in block next to where they should be
 
 
 Future Plans
