@@ -225,6 +225,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 	"""Imports an obj file, and auto splits it by material"""
 	bl_idname = "mcprep.import_world_split"
 	bl_label = "Import World"
+	bl_options = {'REGISTER', 'UNDO'}
 
 	filter_glob = bpy.props.StringProperty(
 		default="*.obj;*.mtl",

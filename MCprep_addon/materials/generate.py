@@ -791,7 +791,10 @@ def set_saturation_material(mat):
 		return
 
 	conf.log("Running set_saturation on "+mat.name, vv_only=True)
-	diff_img = get_node_for_pass(mat, "diffuse").image
+	diff_pass = get_node_for_pass(mat, "diffuse")
+	if not diff_pass:
+		return
+	diff_img = diff_pass.image
 
 	if not diff_img:
 		conf.log("debug: No diffuse", vv_only=True)
