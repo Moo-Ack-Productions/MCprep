@@ -208,10 +208,6 @@ class McprepPreference(bpy.types.AddonPreferences):
 		description = "Default folder for opening world objs from programs like jmc2obj or Mineways",
 		subtype = 'DIR_PATH',
 		default = "//")
-	# mcprep_use_lib = bpy.props.BoolProperty(
-	# 	name = "Link meshswapped groups & materials",
-	# 	description = "Use library linking when meshswapping or material matching",
-	# 	default = False)
 	MCprep_groupAppendLayer = bpy.props.IntProperty(
 		name="Group Append Layer",
 		description="When groups are appended instead of linked, "+\
@@ -246,11 +242,11 @@ class McprepPreference(bpy.types.AddonPreferences):
 		subtype = 'FILE_PATH',
 		update=mineways_update,
 		default = "Mineways")
-	# open_mineways_path_mac = bpy.props.StringProperty(
-	# 	name = "Mineways path",
-	# 	description = "Path to the Mineways executable",
-	# 	subtype = 'FILE_PATH',
-	# 	default = "mineways.app")
+	save_folder = bpy.props.StringProperty(
+		name = "MC saves folder",
+		description = "Folder containing Minecraft world saves directories, for the direct import bridge",
+		subtype = 'FILE_PATH',
+		default = '')
 
 	# addon updater preferences
 
@@ -581,16 +577,16 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		addon_updater_ops.update_notice_box_ui(self, context)
 
 
-# class MCPREP_PT_bridge(bpy.types.Panel):
-# 	"""MCprep panel for directly importing and reloading minecraft saves"""
-# 	bl_label = "World Bridge"
-# 	bl_space_type = "VIEW_3D"
-# 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
-# 	bl_context = "objectmode"
-# 	bl_category = "MCprep"
+class MCPREP_PT_bridge(bpy.types.Panel):
+	"""MCprep panel for directly importing and reloading minecraft saves"""
+	bl_label = "World Bridge"
+	bl_space_type = "VIEW_3D"
+	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
+	bl_context = "objectmode"
+	bl_category = "MCprep"
 
-# 	def draw(self, context):
-# 		bridge.panel_draw(self, context)
+	def draw(self, context):
+		bridge.panel_draw(self, context)
 
 
 class MCPREP_PT_world_tools(bpy.types.Panel):
@@ -1046,6 +1042,7 @@ def mcprep_image_tools(self, context):
 
 
 class McprepProps(bpy.types.PropertyGroup):
+	"""Properties saved to an individual scene"""
 
 	# not available here
 	addon_prefs = util.get_user_preferences()
@@ -1063,17 +1060,6 @@ class McprepProps(bpy.types.PropertyGroup):
 		name = "show spawner settings",
 		description = "Show extra MCprep panel settings",
 		default = False)
-	combine_materials = bpy.props.BoolProperty(
-		name = "Combine materials",
-		description = "Consolidate duplciate materials & textures",
-		default = False
-		)
-	autoFindMissingTextures = bpy.props.BoolProperty(
-		name = "Auto-find missing images",
-		description = "If the texture for an existing material is missing, "+\
-			"try to load from the default texture pack instead",
-		default = True  # decide this behavior
-		)
 
 	# Rig settings
 	spawn_rig_category = bpy.props.EnumProperty(
@@ -1098,20 +1084,6 @@ class McprepProps(bpy.types.PropertyGroup):
 	meshswap_list_index = bpy.props.IntProperty(default=0)
 	item_list = bpy.props.CollectionProperty(type=spawn_util.ListItemAssets)
 	item_list_index = bpy.props.IntProperty(default=0)
-
-	# Mineways bridge/Minecraft direct settings
-	save_dir_default = '/Users/patrickcrawford/Library/Application Support/minecraft/saves/'
-	save_folder = bpy.props.StringProperty(
-		name = "Saves folder",
-		description = "Folder containing Minecraft world saves directories, for the direct import bridge",
-		subtype = 'FILE_PATH',
-		default = save_dir_default)
-	# bridge_world = bpy.props.EnumProperty(
-	# 	name = "World Save",
-	# 	description = "World to use for the direct import bridge",
-	# 	items = bridge.world_saves_enum,
-	# 	update = bridge.world_save_update
-	# )
 
 
 # -----------------------------------------------------------------------------

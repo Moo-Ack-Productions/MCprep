@@ -59,6 +59,24 @@ def get_time_object():
 	return time_obj_cache
 
 
+def detect_world_exporter(filepath):
+	"""Detect whether Mineways or jmc2obj was used, based on prefix info.
+
+	Primary heruistic: if detect Mineways header, assert Mineways, else
+	assume jmc2obj. All Mineways exports for a long time have prefix info
+	set in the obj file as comments.
+
+	Returns:
+		A valid string value for preferences ENUM MCprep_exporter_type
+	"""
+	with open(filepath, 'r') as obj_fd:
+		header = obj_fd.readline()
+	if 'mineways' in header.lower():
+		# form of: # Wavefront OBJ file made by Mineways version 5.10...
+		return 'Mineways'
+	return 'jmc2obj'
+
+
 # -----------------------------------------------------------------------------
 # open mineways/jmc2obj related
 # -----------------------------------------------------------------------------
@@ -248,10 +266,13 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			self.report({"ERROR"}, "File not found, could not import obj")
 			return {'CANCELLED'}
 
-		res = bpy.ops.import_scene.obj(filepath=self.filepath)
+		res = bpy.ops.import_scene.obj(filepath=self.filepath, use_split_groups=True)
 		if res != {'FINISHED'}:
 			self.report({"ERROR"}, "Issue encountered while importing world")
 			return {'CANCELLED'}
+
+		prefs = util.get_user_preferences(context)
+		prefs.MCprep_exporter_type = detect_world_exporter(self.filepath)
 
 		if util.bv28():
 			self.split_world_by_material(context)
@@ -277,6 +298,11 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			name = "minecraft_world"
 		worldg = util.collections().new(name=name)
 		context.scene.collection.children.link(worldg) # add it to the outliner
+
+		for obj in context.selected_objects:
+			# self.obj_name_to_material(obj)
+			util.move_to_collection(obj, worldg)
+		return
 
 		if context.object:
 			conf.log("Splitting imported obj by material")

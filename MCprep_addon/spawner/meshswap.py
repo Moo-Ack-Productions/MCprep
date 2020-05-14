@@ -824,7 +824,8 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			rmable = ['oak_door_top', 'iron_door_top', 'spruce_door_top',
 				'birch_door_top', 'jungle_door_top', 'acacia_door_top', 'dark_oak_door_top',
 				'cactus_top', 'tall_grass_top', 'sunflower_top', 'sunflower_back',
-				'campfire_log_lit', 'campfire_fire'] # Mineways removable objs
+				'campfire_log_lit', 'campfire_fire', 'enchanting_table_side', 'sunflower_front',
+				'tnt_side', 'tnt_bottom'] # Mineways removable objs
 		else:
 			# need to select one of the exporters!
 			return False # {'CANCELLED'}
