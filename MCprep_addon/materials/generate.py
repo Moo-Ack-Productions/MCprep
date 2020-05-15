@@ -1032,7 +1032,7 @@ def matgen_cycles_principled(mat, passes, use_reflections, only_solid):
 
 	# Normal update
 	if hasattr(nodeTexNorm, "color_space"): # 2.7 and earlier 2.8 versions
-		nodeTexNorm.nodeTexNorm = 'NONE'  # for better interpretation of normals
+		nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
 	elif nodeTexNorm.image and hasattr(nodeTexNorm.image, "colorspace_settings"):
 		nodeTexNorm.image.colorspace_settings.name = 'Non-Color'
 
@@ -1245,7 +1245,7 @@ def matgen_cycles_original(mat, passes, use_reflections, only_solid):
 
 	# Normal update
 	if hasattr(nodeTexNorm, "color_space"): # 2.7 and earlier 2.8 versions
-		nodeTexNorm.nodeTexNorm = 'NONE'  # for better interpretation of normals
+		nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
 	elif nodeTexNorm.image and hasattr(nodeTexNorm.image, "colorspace_settings"):
 		nodeTexNorm.image.colorspace_settings.name = 'Non-Color'
 
