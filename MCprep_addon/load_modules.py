@@ -39,8 +39,7 @@ if "bpy" in locals():
 	importlib.reload(addon_updater_ops)
 	importlib.reload(generate)
 
-	if conf.v:
-		print("Reload, verbose is enabled")
+	conf.log("Reload, verbose is enabled")
 
 else:
 	import bpy
@@ -97,10 +96,8 @@ def register(bl_info):
 	# addon updater code and configurations
 	addon_updater_ops.register(bl_info)
 
-	if conf.v:
-		print("MCprep: Verbose is enabled")
-	if conf.vv:
-		print("MCprep: Very Verbose is enabled")
+	conf.log("MCprep: Verbose is enabled")
+	conf.log("MCprep: Very Verbose is enabled", vv_only=True)
 
 
 def unregister(bl_info):

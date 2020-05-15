@@ -415,11 +415,15 @@ def set_cycles_texture(image, material, extra_passes=False):
 			node.image = image
 			node.mute = False
 			node.hide = False
-		elif "MCPREP_normal" in node:
+		elif "MCPREP_normal" in node and node.type == 'TEX_IMAGE':
 			if "normal" in img_sets:
-				if node.type == 'TEX_IMAGE':
-					new_img = util.loadTexture(img_sets["normal"])
-					node.image = new_img
+				new_img = util.loadTexture(img_sets["normal"])
+				node.image = new_img
+				# For later 2.8, fix images color space user
+				if hasattr(node, "color_space"): # 2.7 and earlier 2.8 versions
+					node.color_space = 'NONE'  # for better interpretation of specmaps
+				elif hasattr(new_img, "colorspace_settings"): # later 2.8 versions
+					new_img.colorspace_settings.name = 'Non-Color'
 				node.mute = False
 				node.hide = False
 			else:
@@ -430,18 +434,23 @@ def set_cycles_texture(image, material, extra_passes=False):
 				# normal_map = node.outputs[0].links[0].to_node
 				# principled = ...
 
-		elif "MCPREP_specular" in node:
+		elif "MCPREP_specular" in node and node.type == 'TEX_IMAGE':
 			if "specular" in img_sets:
 				new_img = util.loadTexture(img_sets["specular"])
 				node.image = new_img
 				node.mute = False
 				node.hide = False
+				# For later 2.8, fix images color space user
+				if hasattr(node, "color_space"): # 2.7 and earlier 2.8 versions
+					node.color_space = 'NONE'  # for better interpretation of specmaps
+				elif hasattr(new_img, "colorspace_settings"): # later 2.8 versions
+					new_img.colorspace_settings.name = 'Non-Color'
 			else:
 				node.mute = True
 				node.hide = True
 
 		elif node.type == "TEX_IMAGE":
-			# assume all unlabeled texture nodes should be the diffuse
+			# assume all unlabeled texture nodes should be the diffuse pass
 			node["MCPREP_diffuse"] = True  # annotate node for future reference
 			node.image = image
 			node.mute = False
@@ -752,10 +761,12 @@ def replace_missing_texture(image):
 
 def is_image_grayscale(image):
 	"""Returns true if image data is all grayscale, false otherwise"""
+	if not image:
+		return None
 	conf.log("Checking image for grayscale "+image.name, vv_only=True)
 	if 'grayscale' in image: # cache
 		return image['grayscale']
-	if not image or not image.pixels:
+	if not image.pixels:
 		conf.log("Not an image / no pixels", vv_only=True)
 		return None
 
@@ -789,7 +800,10 @@ def set_saturation_material(mat):
 		return
 
 	conf.log("Running set_saturation on "+mat.name, vv_only=True)
-	diff_img = get_node_for_pass(mat, "diffuse").image
+	diff_pass = get_node_for_pass(mat, "diffuse")
+	if not diff_pass:
+		return
+	diff_img = diff_pass.image
 
 	if not diff_img:
 		conf.log("debug: No diffuse", vv_only=True)
@@ -1009,13 +1023,18 @@ def matgen_cycles_principled(mat, passes, use_reflections, only_solid):
 	if hasattr(nodeTexDiff, "interpolation"): # 2.72+
 		nodeTexDiff.interpolation = 'Closest'
 		nodeTexSpec.interpolation = 'Closest'
+
+	# Spec update
 	if hasattr(nodeTexSpec, "color_space"): # 2.7 and earlier 2.8 versions
 		nodeTexSpec.color_space = 'NONE'  # for better interpretation of specmaps
-		nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
 	elif nodeTexSpec.image and hasattr(nodeTexSpec.image, "colorspace_settings"): # later 2.8 versions
 		nodeTexSpec.image.colorspace_settings.name = 'Non-Color'
-		if nodeTexNorm.image:
-			nodeTexNorm.image.colorspace_settings.name = 'Non-Color'
+
+	# Normal update
+	if hasattr(nodeTexNorm, "color_space"): # 2.7 and earlier 2.8 versions
+		nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
+	elif nodeTexNorm.image and hasattr(nodeTexNorm.image, "colorspace_settings"):
+		nodeTexNorm.image.colorspace_settings.name = 'Non-Color'
 
 	# apply additional settings
 	if hasattr(mat, "cycles"):
@@ -1214,16 +1233,21 @@ def matgen_cycles_original(mat, passes, use_reflections, only_solid):
 		nodeNormal.mute = True
 	# nodeTexDisp.image = image_disp
 
-	if hasattr(nodeTexDiff, "interpolation"): # only avail 2.72+
+	if hasattr(nodeTexDiff, "interpolation"): # 2.72+
 		nodeTexDiff.interpolation = 'Closest'
-		nodeTexSpec.interpolation = 'Closest' # should this be closest or not?
+		nodeTexSpec.interpolation = 'Closest'
+
+	# Spec update
 	if hasattr(nodeTexSpec, "color_space"): # 2.7 and earlier 2.8 versions
 		nodeTexSpec.color_space = 'NONE'  # for better interpretation of specmaps
-		nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
-	elif nodeTexSpec.image and hasattr(nodeTexSpec.image, "colorspace_settings"): # 2.7 and earlier 2.8 versions
+	elif nodeTexSpec.image and hasattr(nodeTexSpec.image, "colorspace_settings"): # later 2.8 versions
 		nodeTexSpec.image.colorspace_settings.name = 'Non-Color'
-		if nodeTexNorm.iamge:
-			nodeTexNorm.iamge.colorspace_settings.name = 'Non-Color'
+
+	# Normal update
+	if hasattr(nodeTexNorm, "color_space"): # 2.7 and earlier 2.8 versions
+		nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
+	elif nodeTexNorm.image and hasattr(nodeTexNorm.image, "colorspace_settings"):
+		nodeTexNorm.image.colorspace_settings.name = 'Non-Color'
 
 	#set other default values, e.g. the mixes
 	nodeMix2.inputs[0].default_value = 0 # factor mix with glossy

@@ -240,16 +240,6 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 			group = util.collections()[block]
 			# if blender 2.8, see if collection part of the MCprepLib coll.
 			use_cache = True
-			sel_count = 0
-			for obj in group.objects:
-				try:
-					util.select_set(obj, True)
-				except RuntimeError:
-					# likely particles like for the torch, not added to scene
-					conf.log("Skip {} select, not in view layer".format(obj.name))
-					continue
-			if sel_count == 0: # added with try/except above, to catch reports since non replicated
-				raise Exception("No objects selected for cache: "+block)
 		else:
 			util.bAppendLink(os.path.join(meshSwapPath,method), block, toLink)
 
@@ -298,7 +288,10 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 			ob["MCprep_noSwap"] = 1
 
 			if self.make_real:
-				if util.bv28(): # make real doesn't select resulting output now
+				if util.bv28():
+					# make real doesn't select resulting output now (true for
+					# earlier versions of 2.8, not true in 2.82 at least where
+					# selects everything BUT the source of original instance
 					pre_objs = list(bpy.data.objects)
 					bpy.ops.object.duplicates_make_real()
 					post_objs = list(bpy.data.objects)
@@ -311,13 +304,27 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 				if group is not None:
 					self.fix_armature_target(
 						context, context.selected_objects, group)
+
 				# remove the empty added by making duplicates real.
-				for ob in context.selected_objects:
-					if ob.type != "EMPTY":
-						continue
-					elif ob.parent or ob.children:
-						continue
+				if ob in bpy.data.objects[:] and ob.type == "EMPTY":
 					util.obj_unlink_remove(ob, True, context)
+				else:
+					for ob in context.selected_objects:
+						if ob.type != "EMPTY":
+							continue
+						elif ob.parent or ob.children:
+							continue
+						util.obj_unlink_remove(ob, True, context)
+				# TODO: Consider actually keeping the empty, and parenting the
+				# spawned items to this empty (not the defautl behavior)
+			else:
+				# change the draw size
+				if hasattr(ob, "empty_draw_size"):
+					ob.empty_draw_size = 0.25
+				else:
+					ob.empty_display_size = 0.25
+				# mark as active object
+				util.set_active_object(context, ob)
 
 			# Move source of group instance into excluded view layer
 			if util.bv28() and group:
@@ -812,12 +819,13 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 						'door_birch_upper','door_spruce_upper','tnt_side','tnt_bottom',
 						'pumpkin_top_lit', 'pumpkin_side_lit', 'workbench_back', 'workbench_front',
 						'furnace_top', 'furnace_side', 'sunflower_top', 'sunflower_front',
-						'campfire_log_lit', 'campfire_fire']
+						'campfire_log_lit', 'campfire_fire', 'sunflower_back']
 		elif self.track_exporter == "Mineways":
 			rmable = ['oak_door_top', 'iron_door_top', 'spruce_door_top',
 				'birch_door_top', 'jungle_door_top', 'acacia_door_top', 'dark_oak_door_top',
 				'cactus_top', 'tall_grass_top', 'sunflower_top', 'sunflower_back',
-				'campfire_log_lit', 'campfire_fire'] # Mineways removable objs
+				'campfire_log_lit', 'campfire_fire', 'enchanting_table_side', 'sunflower_front',
+				'tnt_side', 'tnt_bottom'] # Mineways removable objs
 		else:
 			# need to select one of the exporters!
 			return False # {'CANCELLED'}
