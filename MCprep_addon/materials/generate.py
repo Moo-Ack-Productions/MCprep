@@ -304,7 +304,7 @@ def matprep_internal(mat, passes, use_reflections, only_solid):
 		sl.use_map_specular = False
 		sl.use_map_alpha = False
 		sl.blend_type = 'MULTIPLY' # changed from OVERLAY
-		sl.use = is_grayscale # turns off if not grayscale
+		sl.use = bool(is_grayscale) # turns off if not grayscale
 		new_tex.use_color_ramp = True
 		for _ in range(len(new_tex.color_ramp.elements)-1):
 			new_tex.color_ramp.elements.remove(new_tex.color_ramp.elements[0])

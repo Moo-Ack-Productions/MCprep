@@ -698,7 +698,8 @@ def background_update_callback(update_ready):
 		return
 	if updater_run_install_popup_handler not in \
 				bpy.app.handlers.scene_update_post and \
-				ran_autocheck_install_popup==False:
+				ran_autocheck_install_popup==False and \
+				hasattr(bpy.app.handlers, "scene_update_post"):
 		bpy.app.handlers.scene_update_post.append(
 				updater_run_install_popup_handler)
 		ran_autocheck_install_popup = True
