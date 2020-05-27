@@ -221,6 +221,11 @@ class McprepPreference(bpy.types.AddonPreferences):
 				('jmc2obj', 'jmc2obj', 'Select if exporter used was jmc2obj'),
 				('Mineways', 'Mineways', 'Select if exporter used was Mineways')],
 		name = "Exporter")
+	MCprep_pack_type = bpy.props.EnumProperty(
+		items = [('Specular', 'Specular', 'Select if the pack format is Specular'),
+				('SEUS', 'SEUS', 'Select if the pack format is SEUS'),
+				('labPBR', 'labPBR', 'Select if the pack format is labPBR')],
+		name = "Pack Type")
 	preferences_tab = bpy.props.EnumProperty(
 		items = [('settings', 'Settings', 'Change MCprep settings'),
 				('tutorials', 'Tutorials', 'View MCprep tutorials & other help'),
@@ -495,6 +500,8 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		split = layout.split()
 		col = split.column(align=True)
 		col.label(text="MCprep tools")
+		row = col.row(align=True)
+		row.prop(addon_prefs,"MCprep_pack_type", expand=True)
 		col.operator("mcprep.prep_materials", text="Prep Materials")
 		p = col.operator("mcprep.swap_texture_pack")
 		p.filepath = context.scene.mcprep_texturepack_path
