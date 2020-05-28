@@ -316,7 +316,7 @@ def matprep_internal(mat, passes, use_reflections, only_solid):
 	return 0
 
 
-def matprep_cycles(mat, passes, use_reflections, use_principled, only_solid):
+def matprep_cycles(mat, passes, use_reflections, use_principled, only_solid, pack_format):
 	"""Determine how to prep or generate the cycles materials.
 
 	Args:
@@ -325,6 +325,7 @@ def matprep_cycles(mat, passes, use_reflections, use_principled, only_solid):
 		use_reflections: whether to turn reflections on
 		use_principled: if available and cycles, use principled node
 		saturate: if a desaturated texture (by canonical resource), add color
+		format: which format of PBR, string ("Specular", "SEUS", or "labPBR")
 	"""
 	if util.bv28():
 		# ensure nodes are enabled esp. after importing from BI scenes
@@ -332,12 +333,13 @@ def matprep_cycles(mat, passes, use_reflections, use_principled, only_solid):
 
 	matGen = util.nameGeneralize(mat.name)
 	canon, form = get_mc_canonical_name(matGen)
-	if checklist(canon, "emit"):
-		res = matgen_cycles_emit(mat, passes)
-	elif use_principled and hasattr(bpy.types, 'ShaderNodeBsdfPrincipled'):
-		res = matgen_cycles_principled(mat, passes, use_reflections, only_solid)
+	use_emission = checklist(canon, "emit")
+
+	# Choose between principled or not, and tells the generator which PBR format to use
+	if use_principled and hasattr(bpy.types, 'ShaderNodeBsdfPrincipled'):
+		res = matgen_cycles_principled(mat, passes, use_reflections, use_emission, only_solid, pack_format)
 	else:
-		res = matgen_cycles_original(mat, passes, use_reflections, only_solid)
+		res = matgen_cycles_original(mat, passes, use_reflections, use_emission, only_solid)
 	return res
 
 
@@ -1063,30 +1065,101 @@ def matgen_cycles_principled(mat, passes, use_reflections, only_solid):
 		# principled.inputs[5].default_value = 1.0  # spec
 		principled.inputs[7].default_value = 0.0  # roughness
 
-		# addToAlpha.inputs[1].default_value = -0.1 # increase transparency
+def matgen_cycles_principled(mat, passes, use_reflections, use_emission, only_solid, pack_format):
+	"""Generate principled cycles material"""
 
-		# add HSV node for more user control
-		waterHSV = nodes.new('ShaderNodeHueSaturation')
-		waterHSV.location = (-200, -150)
-		links.new(nodeSaturateMix.outputs["Color"], waterHSV.inputs[4])
-		links.new(waterHSV.outputs["Color"], principled.inputs[0])
+	matGen = util.nameGeneralize(mat.name)
+	canon, form = get_mc_canonical_name(matGen)
 
-	if use_reflections and checklist(canon, "metallic"):
-		principled.inputs[4].default_value = 1  # set metallic
-		if principled.inputs[7].default_value < 0.2:  # roughness
-			principled.inputs[7].default_value = 0.2
+	image_diff = passes["diffuse"]
+	image_norm = passes["normal"]
+	image_spec = passes["specular"]
+
+	# Special materials must not have emission or solid
+	if checklist(canon, "water") is True or checklist(canon, "glass"):
+		use_emission = False
+		only_solid = False
+
+	if not image_diff:
+		print("Could not find diffuse image, halting generation: "+mat.name)
+		return
+	elif image_diff.size[0] == 0 or image_diff.size[1] == 0:
+		if image_diff.source != 'SEQUENCE':
+			# Common non animated case; this means the image is missing and would
+			# have already checked for replacement textures by now, so skip
+			return
+		if not os.path.isfile(bpy.path.abspath(image_diff.filepath)):
+			# can't check size or pixels as it often is not immediately avaialble
+			# so instea, check against firs frame of sequence to verify load
+			return
+
+	mat.use_nodes = True
+	animated_data = copy_texture_animation_pass_settings(mat)
+	nodes = mat.node_tree.nodes
+	links = mat.node_tree.links
+	nodes.clear()
+
+	principled = nodes.new('ShaderNodeBsdfPrincipled')
+	nodeEmit = nodes.new('ShaderNodeEmission')
+	nodeMixEmit = nodes.new('ShaderNodeMixShader')
+	nodeTrans = nodes.new('ShaderNodeBsdfTransparent')
+	nodeMixTrans = nodes.new('ShaderNodeMixShader')
+	nodeOut = nodes.new('ShaderNodeOutputMaterial')
+
+	# set location
+	nodeEmit.location = (120, 140)
+	nodeTrans.location = (420, 140)
+	nodeMixEmit.location = (420, 0)
+	nodeMixTrans.location = (620, 0)
+	nodeOut.location = (820, 0)
+	principled.location = (120, 0)
+
+	# Sets default transparency value
+	nodeMixTrans.inputs[0].default_value = 1
+
+	# Sets default emission values
+	if use_emission:
+		nodeMixEmit.inputs[0].default_value = 1
 	else:
-		principled.inputs[4].default_value = 0  # set dielectric
+		nodeMixEmit.inputs[0].default_value = 0
+	nodeEmit.inputs[1].default_value = 64
 
+	# Sets default reflective values
+	if use_reflections and checklist(canon, "reflective"):
+		principled.inputs["Roughness"].default_value = 0
+	else:
+		principled.inputs["Roughness"].default_value = 0.7
+
+	# Sets default metallic values
+	if use_reflections and checklist(canon, "metallic"):
+		principled.inputs["Metallic"].default_value = 1
+		if principled.inputs["Roughness"].default_value < 0.2:
+			principled.inputs["Roughness"].default_value = 0.2
+	else:
+		principled.inputs["Metallic"].default_value = 0
+
+	# Connect nodes
+	links.new(principled.outputs[0], nodeMixEmit.inputs[1])
+	links.new(nodeEmit.outputs[0], nodeMixEmit.inputs[2])
+	links.new(nodeTrans.outputs[0], nodeMixTrans.inputs[1])
+	links.new(nodeMixEmit.outputs[0], nodeMixTrans.inputs[2])
+	links.new(nodeMixTrans.outputs[0], nodeOut.inputs[0])
+
+	nodeInputs = [[principled.inputs["Base Color"], nodeEmit.inputs["Color"]], [nodeMixTrans.inputs["Fac"]], [nodeMixEmit.inputs[0]], [principled.inputs["Roughness"]], [principled.inputs["Metallic"]], [principled.inputs["Specular"]], [principled.inputs["Normal"]]]
+
+	# generate texture format and connect
+	if pack_format == "Specular":
+		texgen_specular(mat, passes, nodeInputs)
+	elif pack_format == "SEUS":
+		texgen_seus(mat, passes, nodeInputs)
+	elif pack_format == "labPBR":
+		texgen_labpbr(mat, passes, nodeInputs)
 
 	if only_solid is True or checklist(canon, "solid"):
-		# nodeMix1.inputs[0].default_value = 1 # no transparency
 		nodes.remove(nodeTrans)
-		nodes.remove(nodeMix1)
-		if addToAlpha:
-			nodes.remove(addToAlpha)
-		# nodeDiff.location[1] += 150
-		links.new(principled.outputs["BSDF"],nodeOut.inputs[0])
+		nodes.remove(nodeMixTrans)
+		nodeOut.location = (620, 0)
+		links.new(nodeMixEmit.outputs[0], nodeOut.inputs[0])
 
 		# faster, and appropriate for non-transparent (and refelctive?) materials
 		principled.distribution = 'GGX'
@@ -1114,23 +1187,61 @@ def matgen_cycles_principled(mat, passes, use_reflections, only_solid):
 			# both work fine with depth of field.
 
 			# but, BLEND does NOT work well with Depth of Field or layering
-
-	nodeSaturateMix.inputs[0].default_value = 1.0
-	nodeSaturateMix.blend_type = 'MULTIPLY' # changed from OVERLAY
-	nodeSaturateMix.mute = True
-	nodeSaturateMix.hide = True
-	if not checklist(canon, "desaturated"):
-		pass
-	elif not is_image_grayscale(image_diff):
-		pass
+	if use_emission:
+		nodeMixEmit.inputs[0].default_value = 1
 	else:
-		conf.log("Texture desaturated: "+canon, vv_only=True)
-		desat_color = conf.json_data['blocks']['desaturated'][canon]
-		if len(desat_color) < len(nodeSaturateMix.inputs[2].default_value):
-			desat_color.append(1.0)
-		nodeSaturateMix.inputs[2].default_value = desat_color
-		nodeSaturateMix.mute = False
-		nodeSaturateMix.hide = False
+		nodes.remove(nodeEmit)
+		nodes.remove(nodeMixEmit)
+		if only_solid is True or checklist(canon, "solid"):
+			nodeOut.location = (420, 0)
+			links.new(principled.outputs[0], nodeOut.inputs[0])
+		else:
+			nodeTrans.location = (120, 140)
+			nodeMixTrans.location = (420, 0)
+			nodeOut.location = (620, 0)
+			links.new(principled.outputs[0], nodeMixTrans.inputs[2])
+		
+	if checklist(canon, "water") is True:
+		nodeGlass = nodes.new('ShaderNodeBsdfGlass')
+		nodeMixGlass = nodes.new('ShaderNodeMixShader')
+
+		nodeGlass.location = (120, 140)
+		nodeTrans.location = (420, 140)
+		nodeMixTrans.location = (620, 0)
+		nodeMixGlass.location = (420, 0)
+		nodeOut.location = (820, 0)
+		
+		nodeMixGlass.inputs[0].default_value = 0.8
+		nodeGlass.inputs[1].default_value = 0.2
+		nodeGlass.inputs[2].default_value = 1.333
+
+		links.new(nodeMixGlass.outputs[0], nodeMixTrans.inputs[2])
+		links.new(nodeTrans.outputs[0], nodeMixTrans.inputs[1])
+		links.new(nodeGlass.outputs["BSDF"], nodeMixGlass.inputs[1])
+		links.new(principled.outputs["BSDF"], nodeMixGlass.inputs[2])
+
+
+	# Special Glass
+	if mat.name.startswith("glass") is True:
+		nodeGlass = nodes.new('ShaderNodeBsdfGlass')
+		nodeBrightContrast = nodes.new('ShaderNodeBrightContrast')
+
+		nodeGlass.location = (120, 140)
+		nodeTrans.location = (420, 140)
+		nodeMixTrans.location = (620, 0)
+		nodeOut.location = (820, 0)
+		nodeBrightContrast.location = (420, 0)
+		
+		nodeGlass.inputs[1].default_value = 0
+		nodeGlass.inputs[2].default_value = 1.5
+		nodeBrightContrast.inputs[1].default_value = 0
+		nodeBrightContrast.inputs[2].default_value = 1
+
+		links.new(nodeTrans.outputs[0], nodeMixTrans.inputs[1])
+		links.new(nodeGlass.outputs["BSDF"], nodeMixTrans.inputs[1])
+		links.new(principled.outputs["BSDF"], nodeMixTrans.inputs[2])
+		links.new(mat.node_tree.nodes["Diffuse Tex"].outputs[1], nodeBrightContrast.inputs[0])
+		links.new(nodeBrightContrast.outputs[0], nodeMixTrans.inputs[0])
 
 	# reapply animation data if any to generated nodes
 	apply_texture_animation_pass_settings(mat, animated_data)

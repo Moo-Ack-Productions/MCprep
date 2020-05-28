@@ -179,8 +179,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 				if res==0:
 					count+=1
 			elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
-				res = generate.matprep_cycles(mat, passes, self.useReflections,
-					self.usePrincipledShader, self.makeSolid)
+				res = generate.matprep_cycles(mat, passes, self.useReflections, self.usePrincipledShader, self.makeSolid, util.get_user_preferences(context).MCprep_pack_type)
 				if res==0:
 					count+=1
 			else:
