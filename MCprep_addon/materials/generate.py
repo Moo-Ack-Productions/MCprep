@@ -1043,7 +1043,142 @@ def texgen_specular(mat, passes, nodeInputs):
 	nodeTexDiff.image = image_diff
 
 def texgen_seus(mat, passes, nodeInputs):
-	print("Work in progress! The SEUS shader is not ready yet, check back later.")
+	
+	matGen = util.nameGeneralize(mat.name)
+	canon, form = get_mc_canonical_name(matGen)
+
+	# Define links and nodes
+	nodes = mat.node_tree.nodes
+	links = mat.node_tree.links
+
+	# Define the diffuse, normal, and specular nodes
+	image_diff = passes["diffuse"]
+	image_norm = passes["normal"]
+	image_spec = passes["specular"]
+
+	# Creates the neccecary nodes
+	nodeTexDiff = nodes.new('ShaderNodeTexImage')
+	nodeTexNorm = nodes.new('ShaderNodeTexImage')
+	nodeTexSpec = nodes.new('ShaderNodeTexImage')
+	nodeSpecInv = nodes.new('ShaderNodeInvert')
+	nodeSeperate = nodes.new('ShaderNodeSeparateRGB')
+	nodeSaturateMix = nodes.new('ShaderNodeMixRGB')
+	nodeNormal = nodes.new('ShaderNodeNormalMap')
+	nodeNormalInv = nodes.new('ShaderNodeRGBCurve')
+
+	# Names and labels the neccecary nodes
+	nodeTexDiff.name = "Diffuse Tex"
+	nodeTexDiff.label = "Diffuse Tex"
+	nodeTexNorm.name = "Normal Tex"
+	nodeTexNorm.label = "Normal Tex"
+	nodeTexSpec.name = "Specular Tex"
+	nodeTexSpec.label = "Specular Tex"
+	nodeSaturateMix.name = "Add Color"
+	nodeSaturateMix.label = "Add Color"
+	nodeSpecInv.label = "Smooth Inverse"
+	nodeNormalInv.label = "Normal Inverse"
+
+	# Sets values
+	nodeNormalInv.mapping.curves[1].points[0].location = (0, 1)
+	nodeNormalInv.mapping.curves[1].points[1].location = (1, 0)
+
+	# Positions the nodes
+	nodeTexDiff.location = (-380, 140)
+	nodeSaturateMix.location = (-80, 140)
+	nodeTexSpec.location = (-580 , -180)
+	nodeSeperate.location = (-280 , -280)
+	nodeSpecInv.location = (-80, -280)
+	nodeTexNorm.location = (-680, -500)
+	nodeNormal.location = (-80, -500)
+	nodeNormalInv.location = (-380, -500)
+
+	# Links the nodes to the reroute nodes.
+	links.new(nodeTexDiff.outputs["Color"], nodeSaturateMix.inputs["Color1"])
+	links.new(nodeTexNorm.outputs["Color"], nodeNormalInv.inputs["Color"])
+	links.new(nodeNormalInv.outputs["Color"], nodeNormal.inputs["Color"])
+	links.new(nodeTexSpec.outputs["Color"], nodeSeperate.inputs[0])
+	links.new(nodeSeperate.outputs[0], nodeSpecInv.inputs["Color"])
+	
+	
+	
+
+	for i in nodeInputs[0]:
+		links.new(nodeSaturateMix.outputs["Color"], i)
+	for i in nodeInputs[1]:
+		links.new(nodeTexDiff.outputs["Alpha"], i)
+	for i in nodeInputs[2]:
+		links.new(nodeSeperate.outputs[2], i)
+	for i in nodeInputs[3]:
+		links.new(nodeSpecInv.outputs["Color"], i)
+	for i in nodeInputs[4]:
+		links.new(nodeSeperate.outputs[1], i)
+	for i in nodeInputs[6]:
+		links.new(nodeNormal.outputs["Normal"], i)
+
+	
+	# Mutes neccacary nodes if no specular map
+	if image_spec:
+		nodeTexSpec.image = image_spec
+		nodeTexSpec.mute = False
+		nodeSeperate.mute = False
+	else:
+		nodeTexSpec.mute = True
+		nodeSeperate.mute = True
+
+	# Mutes neccacary nodes if no normal map
+	if image_norm:
+		nodeTexNorm.image = image_norm
+		nodeTexNorm.mute = False
+		nodeNormalInv.mute = False
+		nodeNormal.mute = False
+	else:
+		nodeTexNorm.mute = True
+		nodeNormalInv.mute = True
+		nodeNormal.mute = True
+
+	# Sets to closest instead of linear interpolation
+	if hasattr(nodeTexDiff, "interpolation"): # 2.72+
+		nodeTexDiff.interpolation = 'Closest'
+		nodeTexSpec.interpolation = 'Closest'
+
+	# Spec update
+	if hasattr(nodeTexSpec, "color_space"): # 2.7 and earlier 2.8 versions
+		nodeTexSpec.color_space = 'NONE'  # for better interpretation of specmaps
+	elif nodeTexSpec.image and hasattr(nodeTexSpec.image, "colorspace_settings"): # later 2.8 versions
+		nodeTexSpec.image.colorspace_settings.name = 'Non-Color'
+
+	# Normal update
+	if hasattr(nodeTexNorm, "color_space"): # 2.7 and earlier 2.8 versions
+		nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
+	elif nodeTexNorm.image and hasattr(nodeTexNorm.image, "colorspace_settings"):
+		nodeTexNorm.image.colorspace_settings.name = 'Non-Color'
+
+	# Graystyle Blending
+	nodeSaturateMix.inputs[0].default_value = 1.0
+	nodeSaturateMix.blend_type = 'MULTIPLY' # changed from OVERLAY
+	nodeSaturateMix.mute = True
+	nodeSaturateMix.hide = True
+	if not checklist(canon, "desaturated"):
+		pass
+	elif not is_image_grayscale(image_diff):
+		pass
+	else:
+		conf.log("Texture desaturated: "+canon, vv_only=True)
+		desat_color = conf.json_data['blocks']['desaturated'][canon]
+		if len(desat_color) < len(nodeSaturateMix.inputs[2].default_value):
+			desat_color.append(1.0)
+		nodeSaturateMix.inputs[2].default_value = desat_color
+		nodeSaturateMix.mute = False
+		nodeSaturateMix.hide = False
+
+	# annotate special nodes for finding later, and load images if available
+	nodeTexDiff["MCPREP_diffuse"] = True
+	nodeTexSpec["MCPREP_specular"] = True
+	nodeTexNorm["MCPREP_normal"] = True
+	nodeNormal["MCPREP_normal"] = True # to also be also muted if no normal tex
+	nodeSaturateMix["SATURATE"] = True
+	# nodeTexDisp["MCPREP_disp"] = True
+	nodeTexDiff.image = image_diff
 
 def texgen_labpbr(mat, passes, nodeInputs):
 	print("Work in progress! The labPBR shader is not ready yet, check back later.")
