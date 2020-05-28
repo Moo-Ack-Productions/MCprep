@@ -918,50 +918,30 @@ def apply_texture_animation_pass_settings(mat, animated_data):
 		anim_node.image_user.use_auto_refresh = True
 		anim_node.image_user.use_cyclic = True
 
-
-def matgen_cycles_principled(mat, passes, use_reflections, only_solid):
-	"""Generate principled cycles material, defaults to using transparency."""
+def texgen_specular(mat, passes, nodeInputs):
 
 	matGen = util.nameGeneralize(mat.name)
 	canon, form = get_mc_canonical_name(matGen)
 
-	# get the texture, but will fail if NoneType
+	# Define links and nodes
+	nodes = mat.node_tree.nodes
+	links = mat.node_tree.links
+
+	# Define the diffuse, normal, and specular nodes
 	image_diff = passes["diffuse"]
 	image_norm = passes["normal"]
 	image_spec = passes["specular"]
-	image_disp = None # not used
 
-	if not image_diff:
-		print("Could not find diffuse image, halting generation: "+mat.name)
-		return
-	elif image_diff.size[0] == 0 or image_diff.size[1] == 0:
-		if image_diff.source != 'SEQUENCE':
-			# Common non animated case; this means the image is missing and would
-			# have already checked for replacement textures by now, so skip
-			return
-		if not os.path.isfile(bpy.path.abspath(image_diff.filepath)):
-			# can't check size or pixels as it often is not immediately avaialble
-			# so instea, check against firs frame of sequence to verify load
-			return
-
-	mat.use_nodes = True
-	animated_data = copy_texture_animation_pass_settings(mat)
-	nodes = mat.node_tree.nodes
-	links = mat.node_tree.links
-	nodes.clear()
-
-	principled = nodes.new('ShaderNodeBsdfPrincipled')
-	nodeTrans = nodes.new('ShaderNodeBsdfTransparent')
-	nodeMix1 = nodes.new('ShaderNodeMixShader')
+	# Creates the neccecary nodes
 	nodeTexDiff = nodes.new('ShaderNodeTexImage')
 	nodeTexNorm = nodes.new('ShaderNodeTexImage')
 	nodeTexSpec = nodes.new('ShaderNodeTexImage')
 	nodeSpecInv = nodes.new('ShaderNodeInvert')
 	nodeSaturateMix = nodes.new('ShaderNodeMixRGB')
 	nodeNormal = nodes.new('ShaderNodeNormalMap')
-	nodeOut = nodes.new('ShaderNodeOutputMaterial')
+	nodeNormalInv = nodes.new('ShaderNodeRGBCurve')
 
-	# set names
+	# Names and labels the neccecary nodes
 	nodeTexDiff.name = "Diffuse Tex"
 	nodeTexDiff.label = "Diffuse Tex"
 	nodeTexNorm.name = "Normal Tex"
@@ -971,57 +951,54 @@ def matgen_cycles_principled(mat, passes, use_reflections, only_solid):
 	nodeSaturateMix.name = "Add Color"
 	nodeSaturateMix.label = "Add Color"
 	nodeSpecInv.label = "Spec Inverse"
+	nodeNormalInv.label = "Normal Inverse"
 
-	# set location and connect
-	nodeTexDiff.location = (-400,0)
-	nodeTexNorm.location = (-600,-275)
-	nodeSaturateMix.location = (-200,0)
-	nodeTexSpec.location = (-600,0)
-	nodeSpecInv.location = (-400,-275)
-	nodeNormal.location = (-400,-425)
-	principled.location = (0,0)
-	nodeTrans.location = (0,100)
-	nodeMix1.location = (300,0)
-	nodeOut.location = (500,0)
-	if util.bv28():
-		nodeTexDiff.location[0] -= 100
-		nodeTexNorm.location[0] -= 200
-		nodeTexSpec.location[0] -= 200
+	# Sets values
+	nodeNormalInv.mapping.curves[1].points[0].location = (0, 1)
+	nodeNormalInv.mapping.curves[1].points[1].location = (1, 0)
 
-	# default links
-	links.new(nodeTexDiff.outputs["Color"],nodeSaturateMix.inputs[1])
-	links.new(nodeSaturateMix.outputs["Color"],principled.inputs[0])
-	# links.new(nodeTexSpec.outputs["Color"],principled.inputs[5]) # Works better w/ packs
-	links.new(nodeTexSpec.outputs["Color"],nodeSpecInv.inputs[1]) # "proper" way
-	links.new(nodeSpecInv.outputs["Color"],principled.inputs[7]) # "proper" way
-	links.new(nodeTexNorm.outputs["Color"],nodeNormal.inputs[1])
-	links.new(nodeNormal.outputs["Normal"], principled.inputs["Normal"])
+	# Positions the nodes
+	nodeTexDiff.location = (-380, 140)
+	nodeSaturateMix.location = (-80, 140)
+	nodeTexSpec.location = (-380 , -180)
+	nodeSpecInv.location = (-80, -280)
+	nodeTexNorm.location = (-680, -500)
+	nodeNormal.location = (-80, -500)
+	nodeNormalInv.location = (-380, -500)
 
-	# TODO: Use alpha socket of princpled node for newer blender versions
-	links.new(nodeTexDiff.outputs["Alpha"],nodeMix1.inputs[0])
-	links.new(nodeTrans.outputs["BSDF"],nodeMix1.inputs[1])
-	links.new(principled.outputs["BSDF"],nodeMix1.inputs[2])
+	# Links the nodes to the reroute nodes.
+	links.new(nodeTexDiff.outputs["Color"], nodeSaturateMix.inputs["Color1"])
+	links.new(nodeTexNorm.outputs["Color"], nodeNormalInv.inputs["Color"])
+	links.new(nodeNormalInv.outputs["Color"], nodeNormal.inputs["Color"])
+	links.new(nodeTexSpec.outputs["Color"], nodeSpecInv.inputs[1])
 
-	links.new(nodeMix1.outputs["Shader"],nodeOut.inputs[0])
+	for i in nodeInputs[0]:
+		links.new(nodeSaturateMix.outputs["Color"], i)
+	for i in nodeInputs[1]:
+		links.new(nodeTexDiff.outputs["Alpha"], i)
+	for i in nodeInputs[3]:
+		links.new(nodeSpecInv.outputs["Color"], i)
+	for i in nodeInputs[5]:
+		links.new(nodeTexSpec.outputs["Color"], i)
+	for i in nodeInputs[6]:
+		links.new(nodeNormal.outputs["Normal"], i)
 
-	# annotate special nodes for finding later, and load images if available
-	nodeTexDiff["MCPREP_diffuse"] = True
-	nodeTexSpec["MCPREP_specular"] = True
-	nodeTexNorm["MCPREP_normal"] = True
-	nodeNormal["MCPREP_normal"] = True # to also be also muted if no normal tex
-	nodeSaturateMix["SATURATE"] = True
-	# nodeTexDisp["MCPREP_disp"] = True
-	nodeTexDiff.image = image_diff
+	
+	# Mutes neccacary nodes if no specular map
 	if image_spec:
 		nodeTexSpec.image = image_spec
 	else:
 		nodeTexSpec.mute = True
+
+	# Mutes neccacary nodes if no normal map
 	if image_norm:
 		nodeTexNorm.image = image_norm
 	else:
 		nodeTexNorm.mute = True
+		nodeNormalInv.mute = True
 		nodeNormal.mute = True
 
+	# Sets to closest instead of linear interpolation
 	if hasattr(nodeTexDiff, "interpolation"): # 2.72+
 		nodeTexDiff.interpolation = 'Closest'
 		nodeTexSpec.interpolation = 'Closest'
@@ -1038,32 +1015,38 @@ def matgen_cycles_principled(mat, passes, use_reflections, only_solid):
 	elif nodeTexNorm.image and hasattr(nodeTexNorm.image, "colorspace_settings"):
 		nodeTexNorm.image.colorspace_settings.name = 'Non-Color'
 
-	# apply additional settings
-	if hasattr(mat, "cycles"):
-		mat.cycles.sample_as_light = False
-	addToAlpha = None
-	if use_reflections and checklist(canon, "reflective"):
-		principled.inputs[5].default_value = 0.5  # spec
-		principled.inputs[7].default_value = 0.0  # roughness, used to be 0.05
-
-		# Add to alpha math channel here to increase reflections even in
-		# pure alpha-transparent spots, e.g. for glass
-		addToAlpha = nodes.new('ShaderNodeMath')
-		addToAlpha.location = (0, 200)
-		# nodeSaturateMix.location = (-200,-200)
-		addToAlpha.use_clamp = True
-		addToAlpha.operation = 'ADD'
-		addToAlpha.inputs[1].default_value = 0.2
-		links.new(nodeTexDiff.outputs["Alpha"],addToAlpha.inputs[0])
-		links.new(addToAlpha.outputs["Value"],nodeMix1.inputs[0])
+	# Graystyle Blending
+	nodeSaturateMix.inputs[0].default_value = 1.0
+	nodeSaturateMix.blend_type = 'MULTIPLY' # changed from OVERLAY
+	nodeSaturateMix.mute = True
+	nodeSaturateMix.hide = True
+	if not checklist(canon, "desaturated"):
+		pass
+	elif not is_image_grayscale(image_diff):
+		pass
 	else:
-		principled.inputs[5].default_value = 0.5  # set specular
-		principled.inputs[7].default_value = 0.7  # set roughness
+		conf.log("Texture desaturated: "+canon, vv_only=True)
+		desat_color = conf.json_data['blocks']['desaturated'][canon]
+		if len(desat_color) < len(nodeSaturateMix.inputs[2].default_value):
+			desat_color.append(1.0)
+		nodeSaturateMix.inputs[2].default_value = desat_color
+		nodeSaturateMix.mute = False
+		nodeSaturateMix.hide = False
 
-	waterHSV = None
-	if checklist(canon, "water"):
-		# principled.inputs[5].default_value = 1.0  # spec
-		principled.inputs[7].default_value = 0.0  # roughness
+	# annotate special nodes for finding later, and load images if available
+	nodeTexDiff["MCPREP_diffuse"] = True
+	nodeTexSpec["MCPREP_specular"] = True
+	nodeTexNorm["MCPREP_normal"] = True
+	nodeNormal["MCPREP_normal"] = True # to also be also muted if no normal tex
+	nodeSaturateMix["SATURATE"] = True
+	# nodeTexDisp["MCPREP_disp"] = True
+	nodeTexDiff.image = image_diff
+
+def texgen_seus(mat, passes, nodeInputs):
+	print("Work in progress! The SEUS shader is not ready yet, check back later.")
+
+def texgen_labpbr(mat, passes, nodeInputs):
+	print("Work in progress! The labPBR shader is not ready yet, check back later.")
 
 def matgen_cycles_principled(mat, passes, use_reflections, use_emission, only_solid, pack_format):
 	"""Generate principled cycles material"""
