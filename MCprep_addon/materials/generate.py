@@ -120,7 +120,8 @@ def find_from_texturepack(blockname, resource_folder=None):
 		if not os.path.isdir(path):
 			continue
 		for ext in extensions:
-			if os.path.isfile(os.path.join(path, blockname+ext)):
+			check_path = os.path.join(path, blockname+ext)
+			if os.path.isfile(check_path):
 				res = os.path.join(path, blockname+ext)
 				return res
 	# Mineways fallback
@@ -763,6 +764,16 @@ def replace_missing_texture(image):
 
 def is_image_grayscale(image):
 	"""Returns true if image data is all grayscale, false otherwise"""
+
+	def rgb_to_saturation(r, g, b):
+		"""Converter 0-1 rgb values back to 0-1 saturation value"""
+		mx = max(r, g, b)
+		if mx == 0:
+			return 0
+		mn = min(r, g, b)
+		df = mx-mn
+		return (df/mx)
+
 	if not image:
 		return None
 	conf.log("Checking image for grayscale "+image.name, vv_only=True)
@@ -773,19 +784,34 @@ def is_image_grayscale(image):
 		return None
 
 	# setup sampling to limit number of processed pixels
-	max_samples = 1000 #
+	max_samples = 1000
 	pxl_count = len(image.pixels)/image.channels
 	interval = int(pxl_count/max_samples) if pxl_count>max_samples else 1
 
-	# Strict way: find any pixels where rgb values are not the same (non gray)
+	# Pixel by pixel saturation checks, with some wiggle room thresholds
+	thresh = 0.1 # treat saturated if any more than 10%
+
+	# max pixels above thresh to return as saturated,
+	# 15% is chosen as ~double the % of "yellow" pixels in vanilla jungle leaves
+	max_thresh = 0.15*pxl_count
+
+	# running count to check against
+	pixels_saturated = 0
+
+	# check all pixels until
 	for ind in range(int(pxl_count))[::interval]:
-		ind = ind*image.channels
-		if (image.pixels[ind] != image.pixels[ind+1] or
-				image.pixels[ind+1] != image.pixels[ind+2] or
-				image.pixels[ind] != image.pixels[ind+2]):
+		ind = ind*image.channels # could be rgb or rgba
+		if image.channels > 3 and image.pixels[ind+3] == 0:
+			continue # skip alpha pixels during check
+		if rgb_to_saturation(image.pixels[ind],
+							image.pixels[ind+1],
+							image.pixels[ind+2]) > thresh:
+			pixels_saturated += 1
+		if pixels_saturated >= max_thresh:
 			image['grayscale'] = False
 			conf.log("Image not grayscale: "+image.name, vv_only=True)
 			return False
+
 	image['grayscale'] = True # set cache
 	conf.log("Image is grayscale: "+image.name, vv_only=True)
 	return True
