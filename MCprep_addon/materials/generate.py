@@ -326,7 +326,7 @@ def matprep_cycles(mat, passes, use_reflections, use_principled, only_solid, pac
 		use_reflections: whether to turn reflections on
 		use_principled: if available and cycles, use principled node
 		saturate: if a desaturated texture (by canonical resource), add color
-		format: which format of PBR, string ("Specular", "SEUS", or "labPBR")
+		format: which format of PBR, string ("Specular" or "SEUS")
 	"""
 	if util.bv28():
 		# ensure nodes are enabled esp. after importing from BI scenes
@@ -1206,9 +1206,6 @@ def texgen_seus(mat, passes, nodeInputs):
 	# nodeTexDisp["MCPREP_disp"] = True
 	nodeTexDiff.image = image_diff
 
-def texgen_labpbr(mat, passes, nodeInputs):
-	print("Work in progress! The labPBR shader is not ready yet, check back later.")
-
 def matgen_cycles_principled(mat, passes, use_reflections, use_emission, only_solid, pack_format):
 	"""Generate principled cycles material"""
 
@@ -1296,8 +1293,6 @@ def matgen_cycles_principled(mat, passes, use_reflections, use_emission, only_so
 		texgen_specular(mat, passes, nodeInputs)
 	elif pack_format == "SEUS":
 		texgen_seus(mat, passes, nodeInputs)
-	elif pack_format == "labPBR":
-		texgen_labpbr(mat, passes, nodeInputs)
 
 	if only_solid is True or checklist(canon, "solid"):
 		nodes.remove(nodeTrans)

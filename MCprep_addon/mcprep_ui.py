@@ -223,8 +223,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 		name = "Exporter")
 	MCprep_pack_type = bpy.props.EnumProperty(
 		items = [('Specular', 'Specular', 'Select if the pack format is Specular'),
-				('SEUS', 'SEUS', 'Select if the pack format is SEUS'),
-				('labPBR', 'labPBR', 'Select if the pack format is labPBR')],
+				('SEUS', 'SEUS', 'Select if the pack format is SEUS')],
 		name = "Pack Type")
 	preferences_tab = bpy.props.EnumProperty(
 		items = [('settings', 'Settings', 'Change MCprep settings'),
