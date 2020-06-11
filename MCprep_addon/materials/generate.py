@@ -44,8 +44,8 @@ def get_mc_canonical_name(name):
 		if not res:
 			return general_name, None
 	if ("blocks" not in conf.json_data
-			or "block_mapping_mc" not in conf.json_data["blocks"]
-			or "block_mapping_jmc" not in conf.json_data["blocks"]
+		or "block_mapping_mc" not in conf.json_data["blocks"]
+		or "block_mapping_jmc" not in conf.json_data["blocks"]
 			or "block_mapping_mineways" not in conf.json_data["blocks"]):
 		conf.log("Missing key values in json")
 		return general_name, None
@@ -131,7 +131,7 @@ def find_from_texturepack(blockname, resource_folder=None):
 	for suffix in ["-Alpha", "-RGB", "-RGBA"]:
 		if blockname.endswith(suffix):
 			res = os.path.join(resource_folder, "mineways_assets",
-								"mineways"+suffix+".png")
+							   "mineways"+suffix+".png")
 			if os.path.isfile(res):
 				return res
 
@@ -327,12 +327,12 @@ def matprep_cycles(mat, passes, use_reflections, use_principled, only_solid, pac
 	"""Determine how to prep or generate the cycles materials.
 
 	Args:
-		mat: the existing material
-		passes: dictionary struc of all found pass names
-		use_reflections: whether to turn reflections on
-		use_principled: if available and cycles, use principled node
-		saturate: if a desaturated texture (by canonical resource), add color
-		format: which format of PBR, string ("Specular" or "SEUS")
+	mat: the existing material
+	passes: dictionary struc of all found pass names
+	use_reflections: whether to turn reflections on
+	use_principled: if available and cycles, use principled node
+	saturate: if a desaturated texture (by canonical resource), add color
+	format: which format of PBR, string ("Specular" or "SEUS")
 	"""
 	if util.bv28():
 		# ensure nodes are enabled esp. after importing from BI scenes
@@ -343,12 +343,14 @@ def matprep_cycles(mat, passes, use_reflections, use_principled, only_solid, pac
 	use_emission = checklist(canon, "emit")
 
 	# Choose between principled or not, and tells the generator which PBR format to use
-	if use_principled and hasattr(bpy.types, 'ShaderNodeBsdfPrincipled'):
-		res = matgen_cycles_principled(
-			mat, passes, use_reflections, use_emission, only_solid, pack_format)
+	if checklist(canon, "water"):
+		res = matgen_special_water(mat, passes)
 	else:
-		res = matgen_cycles_original(
-			mat, passes, use_reflections, use_emission, only_solid)
+		if use_principled and hasattr(bpy.types, 'ShaderNodeBsdfPrincipled'):
+			res = matgen_cycles_principled(mat, passes, use_reflections, use_emission, only_solid, pack_format)
+		else:
+			res = matgen_cycles_original(mat, passes, use_reflections, use_emission, only_solid, pack_format)
+
 	return res
 
 
@@ -397,7 +399,7 @@ def set_cycles_texture(image, material, extra_passes=False):
 	"""
 	Used by skin swap and assiging missing textures or tex swapping.
 	Args:
-		image: image datablock
+	image: image datablock
 	"""
 	conf.log("Setting cycles texture for img: {} mat: {}".format(
 		image.name, material.name))
@@ -722,9 +724,9 @@ def find_additional_passes(image_file):
 	# find lowercase base name matching with valid extentions
 	filtered_files = [f for f in os.listdir(img_dir)
 					  if os.path.isfile(os.path.join(img_dir, f)) and
-					f.lower().startswith(base_name.lower()) and
-					os.path.splitext(f)[-1].lower() in exts
-					]
+					  f.lower().startswith(base_name.lower()) and
+					  os.path.splitext(f)[-1].lower() in exts
+					  ]
 	for filtered in filtered_files:
 		for npass in normal:
 			if os.path.splitext(filtered)[0].lower().endswith(npass):
@@ -821,8 +823,8 @@ def is_image_grayscale(image):
 		if image.channels > 3 and image.pixels[ind+3] == 0:
 			continue  # skip alpha pixels during check
 		if rgb_to_saturation(image.pixels[ind],
-							image.pixels[ind+1],
-							image.pixels[ind+2]) > thresh:
+							 image.pixels[ind+1],
+							 image.pixels[ind+2]) > thresh:
 			pixels_saturated += 1
 		if pixels_saturated >= max_thresh:
 			image['grayscale'] = False
@@ -854,7 +856,7 @@ def set_saturation_material(mat):
 		conf.log("debug: No diffuse", vv_only=True)
 		return
 
-	#conf.log(["Detected image?? ", canon, diff_img, diff_img.filepath, diff_img.size[0]])
+	# conf.log(["Detected image?? ", canon, diff_img, diff_img.filepath, diff_img.size[0]])
 	saturate = is_image_grayscale(diff_img)
 
 	desat_color = conf.json_data['blocks']['desaturated'][canon]
@@ -960,6 +962,7 @@ def apply_texture_animation_pass_settings(mat, animated_data):
 		anim_node.image_user.frame_offset = animated_data[itm]["frame_offset"]
 		anim_node.image_user.use_auto_refresh = True
 		anim_node.image_user.use_cyclic = True
+
 
 def texgen_specular(mat, passes, nodeInputs):
 
@@ -1088,7 +1091,7 @@ def texgen_specular(mat, passes, nodeInputs):
 
 
 def texgen_seus(mat, passes, nodeInputs):
-	
+
 	matGen = util.nameGeneralize(mat.name)
 	canon, form = get_mc_canonical_name(matGen)
 
@@ -1143,7 +1146,7 @@ def texgen_seus(mat, passes, nodeInputs):
 	links.new(nodeNormalInv.outputs["Color"], nodeNormal.inputs["Color"])
 	links.new(nodeTexSpec.outputs["Color"], nodeSeperate.inputs[0])
 	links.new(nodeSeperate.outputs[0], nodeSpecInv.inputs["Color"])
-	
+
 	for i in nodeInputs[0]:
 		links.new(nodeSaturateMix.outputs["Color"], i)
 	for i in nodeInputs[1]:
@@ -1349,25 +1352,6 @@ def matgen_cycles_principled(mat, passes, use_reflections, use_emission, only_so
 			# but, BLEND does NOT work well with Depth of Field or layering
 	if use_emission:
 		nodeMixEmit.inputs[0].default_value = 1
-		
-	if checklist(canon, "water") is True:
-		nodeGlass = nodes.new('ShaderNodeBsdfGlass')
-		nodeMixGlass = nodes.new('ShaderNodeMixShader')
-
-		nodeGlass.location = (120, 140)
-		nodeTrans.location = (420, 140)
-		nodeMixTrans.location = (620, 0)
-		nodeMixGlass.location = (420, 0)
-		nodeOut.location = (820, 0)
-		
-		nodeMixGlass.inputs[0].default_value = 0.8
-		nodeGlass.inputs[1].default_value = 0.2
-		nodeGlass.inputs[2].default_value = 1.333
-
-		links.new(nodeMixGlass.outputs[0], nodeMixTrans.inputs[2])
-		links.new(nodeTrans.outputs[0], nodeMixTrans.inputs[1])
-		links.new(nodeGlass.outputs["BSDF"], nodeMixGlass.inputs[1])
-		links.new(principled.outputs["BSDF"], nodeMixGlass.inputs[2])
 
 	# Special Glass
 	if mat.name.startswith("glass") is True:
@@ -1379,7 +1363,7 @@ def matgen_cycles_principled(mat, passes, use_reflections, use_emission, only_so
 		nodeMixTrans.location = (620, 0)
 		nodeOut.location = (820, 0)
 		nodeBrightContrast.location = (420, 0)
-		
+
 		nodeGlass.inputs[1].default_value = 0
 		nodeGlass.inputs[2].default_value = 1.5
 		nodeBrightContrast.inputs[1].default_value = 0
@@ -1595,3 +1579,137 @@ def matgen_cycles_original(mat, passes, use_reflections, only_solid):
 	apply_texture_animation_pass_settings(mat, animated_data)
 
 	return 0
+
+
+def matgen_special_water(mat, passes):
+	"""Generate principled cycles material"""
+
+	matGen = util.nameGeneralize(mat.name)
+	canon, form = get_mc_canonical_name(matGen)
+
+	# get the texture, but will fail if NoneType
+	image_diff = passes["diffuse"]
+	image_norm = passes["normal"]
+	image_spec = passes["specular"]
+	image_disp = None  # not used
+
+	if not image_diff:
+		print("Could not find diffuse image, halting generation: "+mat.name)
+		return
+	elif image_diff.size[0] == 0 or image_diff.size[1] == 0:
+		if image_diff.source != 'SEQUENCE':
+			# Common non animated case; this means the image is missing and would
+			# have already checked for replacement textures by now, so skip
+			return
+		if not os.path.isfile(bpy.path.abspath(image_diff.filepath)):
+			# can't check size or pixels as it often is not immediately avaialble
+			# so instea, check against firs frame of sequence to verify load
+			return
+
+	mat.use_nodes = True
+	animated_data = copy_texture_animation_pass_settings(mat)
+	nodes = mat.node_tree.nodes
+	links = mat.node_tree.links
+	nodes.clear()
+
+	nodeTexDiff = nodes.new('ShaderNodeTexImage')
+	nodeTexNorm = nodes.new('ShaderNodeTexImage')
+	nodeNormal = nodes.new('ShaderNodeNormalMap')
+	nodeNormalInv = nodes.new('ShaderNodeRGBCurve')
+	nodeBrightContrast = nodes.new('ShaderNodeBrightContrast')
+	nodeMixRGB = nodes.new('ShaderNodeMixRGB')
+	nodeGlass = nodes.new('ShaderNodeBsdfGlass')
+	nodeTrans = nodes.new('ShaderNodeBsdfTransparent')
+	nodeMixTrans = nodes.new('ShaderNodeMixShader')
+	nodeOut = nodes.new('ShaderNodeOutputMaterial')
+
+	# set location
+	nodeBrightContrast.location = (120, 140)
+	nodeMixRGB.location = (320, 140)
+	nodeGlass.location = (520, 140)
+	nodeTrans.location = (520, 340)
+	nodeMixTrans.location = (720, 140)
+	nodeOut.location = (920, 140)
+
+	nodeTexDiff.name = "Diffuse Tex"
+	nodeTexDiff.label = "Diffuse Tex"
+	nodeTexNorm.name = "Normal Tex"
+	nodeTexNorm.label = "Normal Tex"
+	nodeNormalInv.label = "Normal Inverse"
+
+	# Sets default values
+	nodeNormalInv.mapping.curves[1].points[0].location = (0, 1)
+	nodeNormalInv.mapping.curves[1].points[1].location = (1, 0)
+	nodeMixTrans.inputs[0].default_value = 0.8
+	nodeBrightContrast.inputs[1].default_value = 12
+	nodeBrightContrast.inputs[2].default_value = 24
+	nodeMixRGB.blend_type = "MULTIPLY"
+	nodeMixRGB.inputs[0].default_value = 1
+	nodeMixRGB.inputs[2].default_value = (0.001821, 0.141263, 0.552011, 1)
+	nodeGlass.inputs[1].default_value = 0.1
+	nodeGlass.inputs[2].default_value = 1.333
+
+	# Connect nodes
+	links.new(nodeTexDiff.outputs[0], nodeBrightContrast.inputs[0])
+	links.new(nodeBrightContrast.outputs[0], nodeMixRGB.inputs[1])
+	links.new(nodeMixRGB.outputs[0], nodeGlass.inputs[0])
+	links.new(nodeGlass.outputs[0], nodeMixTrans.inputs[2])
+	links.new(nodeTrans.outputs[0], nodeMixTrans.inputs[1])
+	links.new(nodeMixTrans.outputs[0], nodeOut.inputs[0])
+	links.new(nodeTexNorm.outputs[0], nodeNormalInv.inputs[0])
+	links.new(nodeNormalInv.outputs[0], nodeNormal.inputs[0])
+	links.new(nodeNormal.outputs[0], nodeGlass.inputs[3])
+
+	# Sets to closest instead of linear interpolation
+	if hasattr(nodeTexDiff, "interpolation"):  # 2.72+
+		nodeTexDiff.interpolation = 'Closest'
+
+	# Normal update
+	if hasattr(nodeTexNorm, "color_space"):  # 2.7 and earlier 2.8 versions
+		nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
+	elif nodeTexNorm.image and hasattr(nodeTexNorm.image, "colorspace_settings"):
+		nodeTexNorm.image.colorspace_settings.name = 'Non-Color'
+
+	if image_norm:
+		nodeTexNorm.image = image_norm
+		nodeTexNorm.mute = False
+		nodeNormalInv.mute = False
+		nodeNormal.mute = False
+	else:
+		nodeTexNorm.mute = True
+		nodeNormalInv.mute = True
+		nodeNormal.mute = True
+
+	# non-solid (potentially, not necessarily though)
+	if hasattr(mat, "blend_method"):  # 2.8 eevee settings
+		# TODO: Work on finding the optimal decision here
+		# clip could be better in cases of true/false transparency
+		# could do work to detect this from the image directly..
+		# though would be slower
+
+		# noisy, but workable for partial trans; bad for materials with
+		# no partial trans (makes view-through all somewhat noisy)
+		# Note: placed with hasattr to reduce bugs, seemingly only on old
+		# 2.80 build
+		if hasattr(mat, "blend_method"):
+			mat.blend_method = 'HASHED'
+		if hasattr(mat, "shadow_method"):
+			mat.shadow_method = 'HASHED'
+
+		# best if there is no partial transparency
+		# material.blend_method = 'CLIP' for no partial transparency
+		# both work fine with depth of field.
+
+		# but, BLEND does NOT work well with Depth of Field or layering
+
+	# reapply animation data if any to generated nodes
+	apply_texture_animation_pass_settings(mat, animated_data)
+
+	# annotate special nodes for finding later, and load images if available
+	nodeTexDiff["MCPREP_diffuse"] = True
+	nodeTexNorm["MCPREP_normal"] = True
+	nodeNormal["MCPREP_normal"] = True # to also be also muted if no normal tex
+	# nodeTexDisp["MCPREP_disp"] = True
+	nodeTexDiff.image = image_diff
+
+	return 0  # return 0 once implemented
