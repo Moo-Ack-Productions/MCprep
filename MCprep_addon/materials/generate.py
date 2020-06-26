@@ -343,8 +343,10 @@ def matprep_cycles(mat, passes, use_reflections, use_principled, only_solid, pac
 	use_emission = checklist(canon, "emit")
 
 	# Choose between principled or not, and tells the generator which PBR format to use
-	if checklist(canon, "water"):
+	if use_reflections and checklist(canon, "water"):
 		res = matgen_special_water(mat, passes)
+	elif use_reflections and checklist(canon, "reflective"):
+		res = matgen_special_glass(mat, passes)
 	else:
 		if use_principled and hasattr(bpy.types, 'ShaderNodeBsdfPrincipled'):
 			res = matgen_cycles_principled(mat, passes, use_reflections, use_emission, only_solid, pack_format)
@@ -1353,29 +1355,6 @@ def matgen_cycles_principled(mat, passes, use_reflections, use_emission, only_so
 	if use_emission:
 		nodeMixEmit.inputs[0].default_value = 1
 
-	# Special Glass
-	if mat.name.startswith("glass") is True:
-		nodeGlass = nodes.new('ShaderNodeBsdfGlass')
-		nodeBrightContrast = nodes.new('ShaderNodeBrightContrast')
-
-		nodeGlass.location = (120, 140)
-		nodeTrans.location = (420, 140)
-		nodeMixTrans.location = (620, 0)
-		nodeOut.location = (820, 0)
-		nodeBrightContrast.location = (420, 0)
-
-		nodeGlass.inputs[1].default_value = 0
-		nodeGlass.inputs[2].default_value = 1.5
-		nodeBrightContrast.inputs[1].default_value = 0
-		nodeBrightContrast.inputs[2].default_value = 1
-
-		links.new(nodeTrans.outputs[0], nodeMixTrans.inputs[1])
-		links.new(nodeGlass.outputs["BSDF"], nodeMixTrans.inputs[1])
-		links.new(principled.outputs["BSDF"], nodeMixTrans.inputs[2])
-		links.new(
-			mat.node_tree.nodes["Diffuse Tex"].outputs[1], nodeBrightContrast.inputs[0])
-		links.new(nodeBrightContrast.outputs[0], nodeMixTrans.inputs[0])
-
 	# reapply animation data if any to generated nodes
 	apply_texture_animation_pass_settings(mat, animated_data)
 
@@ -1582,7 +1561,7 @@ def matgen_cycles_original(mat, passes, use_reflections, only_solid):
 
 
 def matgen_special_water(mat, passes):
-	"""Generate principled cycles material"""
+	"""Generate special water material"""
 
 	matGen = util.nameGeneralize(mat.name)
 	canon, form = get_mc_canonical_name(matGen)
@@ -1659,6 +1638,140 @@ def matgen_special_water(mat, passes):
 	links.new(nodeTexNorm.outputs[0], nodeNormalInv.inputs[0])
 	links.new(nodeNormalInv.outputs[0], nodeNormal.inputs[0])
 	links.new(nodeNormal.outputs[0], nodeGlass.inputs[3])
+
+	# Sets to closest instead of linear interpolation
+	if hasattr(nodeTexDiff, "interpolation"):  # 2.72+
+		nodeTexDiff.interpolation = 'Closest'
+
+	# Normal update
+	if hasattr(nodeTexNorm, "color_space"):  # 2.7 and earlier 2.8 versions
+		nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
+	elif nodeTexNorm.image and hasattr(nodeTexNorm.image, "colorspace_settings"):
+		nodeTexNorm.image.colorspace_settings.name = 'Non-Color'
+
+	if image_norm:
+		nodeTexNorm.image = image_norm
+		nodeTexNorm.mute = False
+		nodeNormalInv.mute = False
+		nodeNormal.mute = False
+	else:
+		nodeTexNorm.mute = True
+		nodeNormalInv.mute = True
+		nodeNormal.mute = True
+
+	# non-solid (potentially, not necessarily though)
+	if hasattr(mat, "blend_method"):  # 2.8 eevee settings
+		# TODO: Work on finding the optimal decision here
+		# clip could be better in cases of true/false transparency
+		# could do work to detect this from the image directly..
+		# though would be slower
+
+		# noisy, but workable for partial trans; bad for materials with
+		# no partial trans (makes view-through all somewhat noisy)
+		# Note: placed with hasattr to reduce bugs, seemingly only on old
+		# 2.80 build
+		if hasattr(mat, "blend_method"):
+			mat.blend_method = 'HASHED'
+		if hasattr(mat, "shadow_method"):
+			mat.shadow_method = 'HASHED'
+
+		# best if there is no partial transparency
+		# material.blend_method = 'CLIP' for no partial transparency
+		# both work fine with depth of field.
+
+		# but, BLEND does NOT work well with Depth of Field or layering
+
+	# reapply animation data if any to generated nodes
+	apply_texture_animation_pass_settings(mat, animated_data)
+
+	# annotate special nodes for finding later, and load images if available
+	nodeTexDiff["MCPREP_diffuse"] = True
+	nodeTexNorm["MCPREP_normal"] = True
+	nodeNormal["MCPREP_normal"] = True # to also be also muted if no normal tex
+	# nodeTexDisp["MCPREP_disp"] = True
+	nodeTexDiff.image = image_diff
+
+	return 0  # return 0 once implemented
+
+def matgen_special_glass(mat, passes):
+	"""Generate special glass material"""
+
+	matGen = util.nameGeneralize(mat.name)
+	canon, form = get_mc_canonical_name(matGen)
+
+	# get the texture, but will fail if NoneType
+	image_diff = passes["diffuse"]
+	image_norm = passes["normal"]
+	image_spec = passes["specular"]
+	image_disp = None  # not used
+
+	if not image_diff:
+		print("Could not find diffuse image, halting generation: "+mat.name)
+		return
+	elif image_diff.size[0] == 0 or image_diff.size[1] == 0:
+		if image_diff.source != 'SEQUENCE':
+			# Common non animated case; this means the image is missing and would
+			# have already checked for replacement textures by now, so skip
+			return
+		if not os.path.isfile(bpy.path.abspath(image_diff.filepath)):
+			# can't check size or pixels as it often is not immediately avaialble
+			# so instea, check against firs frame of sequence to verify load
+			return
+
+	mat.use_nodes = True
+	animated_data = copy_texture_animation_pass_settings(mat)
+	nodes = mat.node_tree.nodes
+	links = mat.node_tree.links
+	nodes.clear()
+
+	nodeDiff = nodes.new('ShaderNodeBsdfDiffuse')
+	nodeMixTrans = nodes.new('ShaderNodeMixShader')
+	nodeOut = nodes.new('ShaderNodeOutputMaterial')
+	nodeTexDiff = nodes.new('ShaderNodeTexImage')
+	nodeTexNorm = nodes.new('ShaderNodeTexImage')
+	nodeNormal = nodes.new('ShaderNodeNormalMap')
+	nodeNormalInv = nodes.new('ShaderNodeRGBCurve')
+	nodeGlass = nodes.new('ShaderNodeBsdfGlass')
+	nodeBrightContrast = nodes.new('ShaderNodeBrightContrast')
+
+	# Names and labels the neccecary nodes
+	nodeTexDiff.name = "Diffuse Tex"
+	nodeTexDiff.label = "Diffuse Tex"
+	nodeTexNorm.name = "Normal Tex"
+	nodeTexNorm.label = "Normal Tex"
+	nodeNormalInv.label = "Normal Inverse"
+
+	# Positions the nodes
+	nodeTexDiff.location = (-380, 140)
+	nodeTexNorm.location = (-680, -500)
+	nodeNormal.location = (-80, -500)
+	nodeNormalInv.location = (-380, -500)
+	nodeOut.location = (820, 0)
+	nodeDiff.location = (120, 0)
+	nodeGlass.location = (120, 140)
+	nodeMixTrans.location = (620, 0)
+	nodeOut.location = (820, 0)
+	nodeBrightContrast.location = (420, 0)
+
+	# Sets default transparency value
+	nodeMixTrans.inputs[0].default_value = 1
+	nodeGlass.inputs[1].default_value = 0
+	nodeGlass.inputs[2].default_value = 1.5
+	nodeBrightContrast.inputs[1].default_value = 0
+	nodeBrightContrast.inputs[2].default_value = 1
+
+	# Connect nodes
+	links.new(nodeGlass.outputs["BSDF"], nodeMixTrans.inputs[1])
+	links.new(nodeDiff.outputs["BSDF"], nodeMixTrans.inputs[2])
+	links.new(nodeTexDiff.outputs["Alpha"], nodeBrightContrast.inputs["Color"])
+	links.new(nodeBrightContrast.outputs[0], nodeMixTrans.inputs[0])
+	
+	links.new(nodeDiff.outputs[0], nodeMixTrans.inputs[2])
+	links.new(nodeMixTrans.outputs[0], nodeOut.inputs[0])
+	links.new(nodeTexDiff.outputs["Color"], nodeDiff.inputs[0])
+	links.new(nodeTexNorm.outputs["Color"], nodeNormalInv.inputs["Color"])
+	links.new(nodeNormalInv.outputs["Color"], nodeNormal.inputs["Color"])
+	links.new(nodeNormal.outputs[0], nodeDiff.inputs[2])
 
 	# Sets to closest instead of linear interpolation
 	if hasattr(nodeTexDiff, "interpolation"):  # 2.72+
