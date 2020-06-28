@@ -707,8 +707,7 @@ def get_textures(material):
 def find_additional_passes(image_file):
 	"""Find relevant passes like normal and spec in same folder as image."""
 	abs_img_file = bpy.path.abspath(image_file)
-	if conf.vv:
-		print("\tFind additional passes for: "+image_file)
+	conf.log("\tFind additional passes for: "+image_file, vv_only=True)
 	if not os.path.isfile(abs_img_file):
 		return {}
 
@@ -717,28 +716,45 @@ def find_additional_passes(image_file):
 	base_name = os.path.splitext(img_base)[0]  # remove extension
 
 	# valid extentsions and ending names for pass types
-	exts = [".png", ".jpg", ".jpeg", ".tiff"]
-	normal = [" n", "_n", "-n", "normal", "norm", "nrm", "normals"]
-	spec = [" s", "_s", "-s", "specular", "spec"]
-	disp = [" d", "_d", "-d", "displace", "disp", "bump", " b", "_b", "-b"]
-	res = {"diffuse": image_file}
+	exts = [".png",".jpg",".jpeg",".tiff"]
+	normal = [" n","_n","-n"," normal","_norm","_nrm"," normals"]
+	spec = [" s","_s","-s"," specular","_spec"]
+	disp = [" d","_d","-d"," displace","_disp"," bump"," b","_b","-b"]
+	res = {"diffuse":image_file}
 
 	# find lowercase base name matching with valid extentions
-	filtered_files = [f for f in os.listdir(img_dir)
-					  if os.path.isfile(os.path.join(img_dir, f)) and
-					  f.lower().startswith(base_name.lower()) and
-					  os.path.splitext(f)[-1].lower() in exts
-					  ]
+	filtered_files = []
+	for f in os.listdir(img_dir):
+		if not f.lower().startswith(base_name.lower()):
+			continue
+		if not os.path.isfile(os.path.join(img_dir,f)):
+			continue
+		if os.path.splitext(f)[-1].lower() not in exts:
+			continue
+		filtered_files.append(f)
+
+	# now do narrow matching based on each extention name type
 	for filtered in filtered_files:
+		this_base = os.path.splitext(filtered)[0]
 		for npass in normal:
-			if os.path.splitext(filtered)[0].lower().endswith(npass):
-				res["normal"] = os.path.join(img_dir, filtered)
+			if this_base.lower() == (base_name+npass).lower():
+				res["normal"]=os.path.join(img_dir, filtered)
 		for spass in spec:
-			if os.path.splitext(filtered)[0].lower().endswith(spass):
-				res["specular"] = os.path.join(img_dir, filtered)
+			if this_base.lower() == (base_name+spass).lower():
+				res["specular"]=os.path.join(img_dir, filtered)
 		for dpass in disp:
-			if os.path.splitext(filtered)[0].lower().endswith(dpass):
-				res["displace"] = os.path.join(img_dir, filtered)
+			if this_base.lower() == (base_name+dpass).lower():
+				res["displace"]=os.path.join(img_dir, filtered)
+
+		# for npass in normal:
+		# 	if os.path.splitext(filtered)[0].lower().endswith(npass):
+		# 		res["normal"]=os.path.join(img_dir,filtered)
+		# for spass in spec:
+		# 	if os.path.splitext(filtered)[0].lower().endswith(spass):
+		# 		res["specular"]=os.path.join(img_dir,filtered)
+		# for dpass in disp:
+		# 	if os.path.splitext(filtered)[0].lower().endswith(dpass):
+		# 		res["displace"]=os.path.join(img_dir,filtered)
 	return res
 
 
