@@ -65,6 +65,7 @@ class mcprep_testing():
 			self.meshswap_mineways_separated,
 			self.meshswap_mineways_combined,
 			self.detect_desaturated_images,
+			self.detect_extra_passes,
 			self.find_missing_images_cycles,
 			self.qa_meshswap_file,
 			self.item_spawner,
@@ -73,26 +74,6 @@ class mcprep_testing():
 		self.run_only = None # name to give to only run this test
 
 		self.mcprep_json = {}
-		# 	1:["combine_materials", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	2:["combine_images", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	3:["scale_uv", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	4:["isolate_alpha_uvs", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	9:["fix_skin_eyes", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	10:["add_skin", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	11:["remove_skin", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	12:["reload_skins", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	14:["handler_skins_enablehack", {"type":"material","check":0,"res":""}, ""],
-		# 	16:["openfolder", {"type":"mcprep_ui","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	16:["meshswap_pathreset", {"type":"meshswap","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	16:["meshswap_spawner", {"type":"meshswap","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	16:["reload_meshswap", {"type":"meshswap","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	16:["fixmeshswapsize", {"type":"meshswap","check":0,"res":""}, "bpy.ops.object"],
-		# 	16:["reload_spawners", {"type":"spawner","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	16:["reload_mobs", {"type":"spawner","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	16:["mob_spawner_direct", {"type":"spawner","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	16:["mob_spawner", {"type":"spawner","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	16:["mob_install_menu", {"type":"spawner","check":0,"res":""}, "bpy.ops.mcprep"],
-		# }
 
 	def run_all_tests(self):
 		"""For use in command line mode, run all tests and checks"""
@@ -1063,6 +1044,82 @@ class mcprep_testing():
 
 		# test that it is caching as expected.. by setting a false
 		# value for cache flag and seeing it's returning the property value
+
+	def detect_extra_passes(self):
+		"""Ensure only the correct pbr file matches are found for input file"""
+
+		from MCprep.materials.generate import find_additional_passes
+
+		tmp_dir = tempfile.gettempdir()
+
+		# physically generate these empty files, then delete
+		tmp_files = [
+			"oak_log_top.png",
+			"oak_log_top-s.png",
+			"oak_log_top_n.png",
+			"oak_log.jpg",
+			"oak_log_s.jpg",
+			"oak_log_n.jpeg",
+			"oak_log_disp.jpeg",
+			"stonecutter_saw.tiff",
+			"stonecutter_saw n.tiff"
+		]
+
+		for tmp in tmp_files:
+			fname = os.path.join(tmp_dir, tmp)
+			with open(fname, 'a'):
+				os.utime(fname)
+
+		def cleanup():
+			"""Failsafe delete files before raising error within test method"""
+			for tmp in tmp_files:
+				try:
+					os.remove(os.path.join(tmp_dir, tmp))
+				except:
+					pass
+
+		# assert setup was successful
+		for tmp in tmp_files:
+			if os.path.isfile(os.path.join(tmp_dir, tmp)):
+				continue
+			cleanup()
+			raise Exception("Failed to generate test empty files")
+
+		# the test cases; input is diffuse, output is the whole dict
+		cases = [
+			{
+				"diffuse": os.path.join(tmp_dir, "oak_log_top.png"),
+				"specular": os.path.join(tmp_dir, "oak_log_top-s.png"),
+				"normal": os.path.join(tmp_dir, "oak_log_top_n.png"),
+			},{
+				"diffuse": os.path.join(tmp_dir, "oak_log.jpg"),
+				"specular": os.path.join(tmp_dir, "oak_log_s.jpg"),
+				"normal": os.path.join(tmp_dir, "oak_log_n.jpeg"),
+				"displace": os.path.join(tmp_dir, "oak_log_disp.jpeg"),
+			},{
+				"diffuse": os.path.join(tmp_dir, "stonecutter_saw.tiff"),
+				"normal": os.path.join(tmp_dir, "stonecutter_saw n.tiff"),
+			}
+		]
+
+		for test in cases:
+			res = find_additional_passes(test["diffuse"])
+			if res != test:
+				cleanup()
+				# for debug readability, basepath everything
+				for itm in res:
+					res[itm] = os.path.basename(res[itm])
+				for itm in test:
+					test[itm] = os.path.basename(test[itm])
+				raise Exception("Mismatch for set {}: got {} but expected {}".format(
+					test["diffuse"], res, test))
+
+		# test other cases intended to fail
+		res = find_additional_passes(os.path.join(tmp_dir, "not_a_file.png"))
+		if res != {}:
+			cleanup()
+			raise Exception("Fake file should not have any return")
+
 
 	def qa_meshswap_file(self):
 		"""Open the meshswap file, assert there are no relative paths"""
