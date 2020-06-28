@@ -723,15 +723,6 @@ def find_additional_passes(image_file):
 			if this_base.lower() == (base_name+dpass).lower():
 				res["displace"]=os.path.join(img_dir, filtered)
 
-		# for npass in normal:
-		# 	if os.path.splitext(filtered)[0].lower().endswith(npass):
-		# 		res["normal"]=os.path.join(img_dir,filtered)
-		# for spass in spec:
-		# 	if os.path.splitext(filtered)[0].lower().endswith(spass):
-		# 		res["specular"]=os.path.join(img_dir,filtered)
-		# for dpass in disp:
-		# 	if os.path.splitext(filtered)[0].lower().endswith(dpass):
-		# 		res["displace"]=os.path.join(img_dir,filtered)
 	return res
 
 

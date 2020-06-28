@@ -56,10 +56,8 @@ def get_meshswap_cache(context, clear=False):
 		with bpy.data.libraries.load(meshswap_path) as (data_from, data_to):
 			if hasattr(data_from, "groups"): # blender 2.7
 				get_attr = "groups"
-				prefix = "Group/"
 			else: # 2.8
 				get_attr = "collections"
-				prefix = "Collection/"
 			grp_list = list(getattr(data_from, get_attr))
 			# canons = [generate.get_mc_canonical_name(grp) for grp in grp_list]
 			meshswap_cache["groups"] = grp_list
