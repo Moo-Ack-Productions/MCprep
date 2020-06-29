@@ -566,6 +566,8 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			subrow = b_col.row(align=True)
 			subrow.prop(context.scene, "meshswap_path", text="")
 			subrow.operator("mcprep.meshswap_path_reset", icon=LOAD_FACTORY, text="")
+			if not context.scene.meshswap_path.lower().endswith('.blend'):
+				b_col.label(text="MeshSwap file must be .blend", icon="ERROR")
 			if not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
 				b_col.label(text="MeshSwap file not found", icon="ERROR")
 
@@ -868,6 +870,14 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 					scn_props, "meshswap_list_index",
 					rows=4)
 			# col.label(text=datapass.split("/")[0])
+		elif not context.scene.meshswap_path.lower().endswith('.blend'):
+			box = col.box()
+			b_row = box.row()
+			b_row.label(text="Meshswap file must be a .blend")
+			b_row = box.row()
+			b_row.scale_y = 2
+			b_row.operator("mcprep.meshswap_path_reset", icon=LOAD_FACTORY,
+				text="Reset meshswap path")
 		elif not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
 			box = col.box()
 			b_row = box.row()
@@ -916,7 +926,9 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 			subrow = b_col.row(align=True)
 			subrow.prop(context.scene, "meshswap_path", text="")
 			subrow.operator("mcprep.meshswap_path_reset", icon=LOAD_FACTORY, text="")
-			if not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
+			if not context.scene.meshswap_path.lower().endswith('.blend'):
+				b_col.label(text="MeshSwap file must be a .blend", icon="ERROR")
+			elif not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
 				b_col.label(text="MeshSwap file not found", icon="ERROR")
 			b_row = box.row()
 			b_col = b_row.column(align=True)
