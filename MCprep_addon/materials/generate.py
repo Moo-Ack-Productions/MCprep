@@ -310,8 +310,8 @@ def matprep_internal(mat, passes, use_reflections, only_solid):
 		sl.use_map_color_diffuse = True
 		sl.use_map_specular = False
 		sl.use_map_alpha = False
-		sl.blend_type = 'MULTIPLY'  # changed from OVERLAY
-		sl.use = bool(is_grayscale)  # turns off if not grayscale
+		sl.blend_type = 'MULTIPLY' # changed from OVERLAY
+		sl.use = bool(is_grayscale) # turns off if not grayscale (or None)
 		new_tex.use_color_ramp = True
 		for _ in range(len(new_tex.color_ramp.elements)-1):
 			new_tex.color_ramp.elements.remove(new_tex.color_ramp.elements[0])
@@ -746,15 +746,6 @@ def find_additional_passes(image_file):
 			if this_base.lower() == (base_name+dpass).lower():
 				res["displace"]=os.path.join(img_dir, filtered)
 
-		# for npass in normal:
-		# 	if os.path.splitext(filtered)[0].lower().endswith(npass):
-		# 		res["normal"]=os.path.join(img_dir,filtered)
-		# for spass in spec:
-		# 	if os.path.splitext(filtered)[0].lower().endswith(spass):
-		# 		res["specular"]=os.path.join(img_dir,filtered)
-		# for dpass in disp:
-		# 	if os.path.splitext(filtered)[0].lower().endswith(dpass):
-		# 		res["displace"]=os.path.join(img_dir,filtered)
 	return res
 
 
