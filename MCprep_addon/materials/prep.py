@@ -96,8 +96,8 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 		)
 	packFormat = bpy.props.EnumProperty(
 		name="Pack Format",
-		description="",
-		items=[("specular", "Specular", "test"), ("seus", "SEUS", "test")],
+		description="Change the pack format when using a PBR resource pack.",
+		items=[("specular", "Specular", "Sets the pack format to Specular."), ("seus", "SEUS", "Sets the pack format to SEUS.")],
 		default="specular"
 	)
 	skipUsage = bpy.props.BoolProperty(
@@ -114,6 +114,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 		col = row.column()
 		engine = context.scene.render.engine
 		if engine=='CYCLES' or engine=='BLENDER_EEVEE':
+			col.prop(self, "packFormat")
 			col.prop(self, "usePrincipledShader")
 		col.prop(self, "useReflections")
 		col.prop(self, "makeSolid")
@@ -185,7 +186,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 					count+=1
 			elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 				res = generate.matprep_cycles(mat, passes, self.useReflections,
-					self.usePrincipledShader, self.makeSolid)
+					self.usePrincipledShader, self.makeSolid, self.packFormat)
 				if res==0:
 					count+=1
 			else:
