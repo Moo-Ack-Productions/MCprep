@@ -958,7 +958,7 @@ def apply_texture_animation_pass_settings(mat, animated_data):
 		anim_node.image_user.use_cyclic = True
 
 
-def texgen_specular(mat, passes, nodeInputs):
+def texgen_specular(mat, passes, nodeInputs, use_reflections):
 
 	matGen = util.nameGeneralize(mat.name)
 	canon, form = get_mc_canonical_name(matGen)
@@ -1018,7 +1018,7 @@ def texgen_specular(mat, passes, nodeInputs):
 		links.new(nodeSaturateMix.outputs["Color"], i)
 	for i in nodeInputs[1]:
 		links.new(nodeTexDiff.outputs["Alpha"], i)
-	if image_spec:
+	if image_spec and use_reflections:
 		for i in nodeInputs[3]:
 			links.new(nodeSpecInv.outputs["Color"], i)
 		for i in nodeInputs[5]:
@@ -1087,7 +1087,7 @@ def texgen_specular(mat, passes, nodeInputs):
 	nodeTexDiff.image = image_diff
 
 
-def texgen_seus(mat, passes, nodeInputs):
+def texgen_seus(mat, passes, nodeInputs, use_reflections):
 
 	matGen = util.nameGeneralize(mat.name)
 	canon, form = get_mc_canonical_name(matGen)
@@ -1152,7 +1152,7 @@ def texgen_seus(mat, passes, nodeInputs):
 		links.new(nodeSaturateMix.outputs["Color"], i)
 	for i in nodeInputs[1]:
 		links.new(nodeTexDiff.outputs["Alpha"], i)
-	if image_spec:
+	if image_spec and use_reflections:
 		for i in nodeInputs[2]:
 			links.new(nodeSeperate.outputs["B"], i)
 		for i in nodeInputs[4]:
@@ -1318,9 +1318,9 @@ def matgen_cycles_principled(mat, passes, use_reflections, use_emission, only_so
 	# generate texture format and connect
 
 	if pack_format == "specular":
-		texgen_specular(mat, passes, nodeInputs)
+		texgen_specular(mat, passes, nodeInputs, use_reflections)
 	elif pack_format == "seus":
-		texgen_seus(mat, passes, nodeInputs)
+		texgen_seus(mat, passes, nodeInputs, use_reflections)
 
 	if only_solid is True or checklist(canon, "solid"):
 		nodes.remove(nodeTrans)
