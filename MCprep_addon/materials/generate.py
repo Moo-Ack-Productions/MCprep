@@ -321,12 +321,12 @@ def matprep_cycles(mat, passes, use_reflections, use_principled, only_solid, pac
 	"""Determine how to prep or generate the cycles materials.
 
 	Args:
-	mat: the existing material
-	passes: dictionary struc of all found pass names
-	use_reflections: whether to turn reflections on
-	use_principled: if available and cycles, use principled node
-	saturate: if a desaturated texture (by canonical resource), add color
-	format: which format of PBR, string ("Specular" or "SEUS")
+		mat: the existing material
+		passes: dictionary struc of all found pass names
+		use_reflections: whether to turn reflections on
+		use_principled: if available and cycles, use principled node
+		saturate: if a desaturated texture (by canonical resource), add color
+		format: which format of PBR, string ("Specular" or "SEUS")
 	"""
 	if util.bv28():
 		# ensure nodes are enabled esp. after importing from BI scenes
@@ -341,11 +341,10 @@ def matprep_cycles(mat, passes, use_reflections, use_principled, only_solid, pac
 		res = matgen_special_water(mat, passes)
 	elif use_reflections and checklist(canon, "glass"):
 		res = matgen_special_glass(mat, passes)
+	elif use_principled and hasattr(bpy.types, 'ShaderNodeBsdfPrincipled'):
+		res = matgen_cycles_principled(mat, passes, use_reflections, use_emission, only_solid, pack_format)
 	else:
-		if use_principled and hasattr(bpy.types, 'ShaderNodeBsdfPrincipled'):
-			res = matgen_cycles_principled(mat, passes, use_reflections, use_emission, only_solid, pack_format)
-		else:
-			res = matgen_cycles_original(mat, passes, use_reflections, use_emission, only_solid, pack_format)
+		res = matgen_cycles_original(mat, passes, use_reflections, use_emission, only_solid, pack_format)
 
 	return res
 
@@ -1514,14 +1513,20 @@ def matgen_cycles_original(mat, passes, use_reflections, use_emission, only_soli
 	links.new(nodeMixEmit.outputs["Shader"], nodeMixTrans.inputs[2])
 	links.new(nodeMixTrans.outputs["Shader"], nodeOut.inputs["Surface"])
 	
-	nodeInputs = [[nodeMixRGBMetallic.inputs["Color1"], nodeMathMetallic.inputs[0], nodeDiff.inputs["Color"], nodeEmit.inputs["Color"], nodeEmitCam.inputs["Color"]], [nodeMixTrans.inputs["Fac"]], [nodeMixEmit.inputs[0]], [nodeGlossDiff.inputs["Roughness"], nodeGlossMetallic.inputs["Roughness"], nodeMathPower.inputs[0]], [nodeMixMetallic.inputs["Fac"]], [nodeMathPowerDiff.inputs[0]], [nodeDiff.inputs["Normal"], nodeGlossMetallic.inputs["Normal"], nodeFresnelMetallic.inputs["Normal"], nodeGlossDiff.inputs["Normal"], nodeBump.inputs["Normal"]]]
-	'''
-	generate texture format and connect
-	'''
+	nodeInputs = [
+		[nodeMixRGBMetallic.inputs["Color1"], nodeMathMetallic.inputs[0],nodeDiff.inputs["Color"], nodeEmit.inputs["Color"], nodeEmitCam.inputs["Color"]],
+		[nodeMixTrans.inputs["Fac"]],
+		[nodeMixEmit.inputs[0]],
+		[nodeGlossDiff.inputs["Roughness"], nodeGlossMetallic.inputs["Roughness"], nodeMathPower.inputs[0]],
+		[nodeMixMetallic.inputs["Fac"]],
+		[nodeMathPowerDiff.inputs[0]],
+		[nodeDiff.inputs["Normal"], nodeGlossMetallic.inputs["Normal"], nodeFresnelMetallic.inputs["Normal"], nodeGlossDiff.inputs["Normal"], nodeBump.inputs["Normal"]]]
+
+	# generate texture format and connect
 	if pack_format == "specular":
-		texgen_specular(mat, passes, nodeInputs)
+		texgen_specular(mat, passes, nodeInputs, use_reflections)
 	elif pack_format == "seus":
-		texgen_seus(mat, passes, nodeInputs)
+		texgen_seus(mat, passes, nodeInputs, use_reflections)
 	
 	if only_solid is True or checklist(canon, "solid"):
 		nodes.remove(nodeTrans)
@@ -1602,15 +1607,20 @@ def matgen_special_water(mat, passes):
 	nodeNormal = nodes.new('ShaderNodeNormalMap')
 	nodeNormalInv = nodes.new('ShaderNodeRGBCurve')
 	nodeBrightContrast = nodes.new('ShaderNodeBrightContrast')
-	nodeMixRGB = nodes.new('ShaderNodeMixRGB')
+	nodeSaturateMix = nodes.new('ShaderNodeMixRGB')
 	nodeGlass = nodes.new('ShaderNodeBsdfGlass')
 	nodeTrans = nodes.new('ShaderNodeBsdfTransparent')
 	nodeMixTrans = nodes.new('ShaderNodeMixShader')
 	nodeOut = nodes.new('ShaderNodeOutputMaterial')
 
 	# set location
+	nodeTexDiff.location = (-180, 140)
+	nodeTexNorm.location = (-290, -180)
+	nodeSaturateMix.location = (-80, 140)
+	nodeNormal.location = (310, -180)
+	nodeNormalInv.location = (10, -180)
 	nodeBrightContrast.location = (120, 140)
-	nodeMixRGB.location = (320, 140)
+	nodeSaturateMix.location = (320, 140)
 	nodeGlass.location = (520, 140)
 	nodeTrans.location = (520, 340)
 	nodeMixTrans.location = (720, 140)
@@ -1628,16 +1638,13 @@ def matgen_special_water(mat, passes):
 	nodeMixTrans.inputs[0].default_value = 0.8
 	nodeBrightContrast.inputs[1].default_value = 12
 	nodeBrightContrast.inputs[2].default_value = 24
-	nodeMixRGB.blend_type = "MULTIPLY"
-	nodeMixRGB.inputs[0].default_value = 1
-	nodeMixRGB.inputs[2].default_value = (0.001821, 0.141263, 0.552011, 1)
 	nodeGlass.inputs[1].default_value = 0.1
 	nodeGlass.inputs[2].default_value = 1.333
 
 	# Connect nodes
 	links.new(nodeTexDiff.outputs[0], nodeBrightContrast.inputs[0])
-	links.new(nodeBrightContrast.outputs[0], nodeMixRGB.inputs[1])
-	links.new(nodeMixRGB.outputs[0], nodeGlass.inputs[0])
+	links.new(nodeBrightContrast.outputs[0], nodeSaturateMix.inputs[1])
+	links.new(nodeSaturateMix.outputs[0], nodeGlass.inputs[0])
 	links.new(nodeGlass.outputs[0], nodeMixTrans.inputs[2])
 	links.new(nodeTrans.outputs[0], nodeMixTrans.inputs[1])
 	links.new(nodeMixTrans.outputs[0], nodeOut.inputs[0])
@@ -1689,6 +1696,24 @@ def matgen_special_water(mat, passes):
 
 	# reapply animation data if any to generated nodes
 	apply_texture_animation_pass_settings(mat, animated_data)
+
+	# Graystyle Blending
+	nodeSaturateMix.inputs[0].default_value = 1.0
+	nodeSaturateMix.blend_type = 'MULTIPLY'  # changed from OVERLAY
+	nodeSaturateMix.mute = True
+	nodeSaturateMix.hide = True
+	if not checklist(canon, "desaturated"):
+		pass
+	elif not is_image_grayscale(image_diff):
+		pass
+	else:
+		conf.log("Texture desaturated: "+canon, vv_only=True)
+		desat_color = conf.json_data['blocks']['desaturated'][canon]
+		if len(desat_color) < len(nodeSaturateMix.inputs[2].default_value):
+			desat_color.append(1.0)
+		nodeSaturateMix.inputs[2].default_value = desat_color
+		nodeSaturateMix.mute = False
+		nodeSaturateMix.hide = False
 
 	# annotate special nodes for finding later, and load images if available
 	nodeTexDiff["MCPREP_diffuse"] = True
@@ -1749,12 +1774,12 @@ def matgen_special_glass(mat, passes):
 
 	# Positions the nodes
 	nodeTexDiff.location = (-380, 140)
-	nodeTexNorm.location = (-680, -500)
-	nodeNormal.location = (-80, -500)
-	nodeNormalInv.location = (-380, -500)
+	nodeTexNorm.location = (-680, -180)
+	nodeNormal.location = (-80, -180)
+	nodeNormalInv.location = (-380, -180)
 	nodeOut.location = (820, 0)
 	nodeDiff.location = (120, 0)
-	nodeGlass.location = (120, 140)
+	nodeGlass.location = (120, 240)
 	nodeMixTrans.location = (620, 0)
 	nodeOut.location = (820, 0)
 	nodeBrightContrast.location = (420, 0)
