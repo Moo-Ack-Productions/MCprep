@@ -218,6 +218,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 		self.track_exporter = addon_prefs.MCprep_exporter_type
 		return {'FINISHED'}
 
+executePrepMats = MCPREP_OT_prep_materials.execute
 
 class MCPREP_OT_materials_help(bpy.types.Operator):
 	"""Follow up popup to assist the user who may not have gotten expected change"""
@@ -464,68 +465,7 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper):
 			generate.set_saturation_material(mat) # may be a double call if was animated tex
 
 		if self.prepMaterials:
-			# check if linked material exists
-			engine = context.scene.render.engine
-			count = 0
-			count_lib_skipped = 0
-
-			for mat in mat_list:
-				if not mat:
-					conf.log("During prep, found null material:"+str(mat), vv_only=True)
-					continue
-				elif mat.library:
-					count_lib_skipped += 1
-					continue
-
-				passes = generate.get_textures(mat)
-				if not self.useExtraMaps:
-					for pass_name in passes:
-						if pass_name != "diffuse":
-							passes[pass_name] = None
-
-				if self.autoFindMissingTextures:
-					for pass_name in passes:
-						res = generate.replace_missing_texture(passes[pass_name])
-						if res>0:
-							mat["texture_swapped"] = True  # used to apply saturation
-
-				if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
-					res = generate.matprep_internal(mat, passes,
-						self.useReflections, self.makeSolid)
-					if res==0:
-						count+=1
-				elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
-					res = generate.matprep_cycles(mat, passes, self.useReflections,
-						self.usePrincipledShader, self.makeSolid, self.packFormat)
-					if res==0:
-						count+=1
-				else:
-					self.report({'ERROR'}, "Only Blender Internal, Cycles, or Eevee supported")
-					return {'CANCELLED'}
-
-				if self.animateTextures:
-					sequences.animate_single_material(
-						mat, context.scene.render.engine)
-
-			if self.combineMaterials is True:
-				bpy.ops.mcprep.combine_materials(selection_only=True, skipUsage=True)
-			if self.improveUiSettings:
-				bpy.ops.mcprep.improve_ui()
-
-			if self.skipUsage is True:
-				pass # don't report if a meta-call
-			elif count_lib_skipped > 0:
-				self.report({"INFO"},
-					"Modified {} materials, skipped {} linked ones.".format(
-						count, count_lib_skipped))
-			elif count >0:
-				self.report({"INFO"},"Modified "+str(count)+" materials")
-			else:
-				self.report({"ERROR"}, "Nothing modified, be sure you selected objects with existing materials!")
-
-			addon_prefs = util.get_user_preferences(context)
-			self.track_param = context.scene.render.engine
-			self.track_exporter = addon_prefs.MCprep_exporter_type
+			executePrepMats(self, context)
 
 		self.report({'INFO'},"{} materials affected".format(res))
 		self.track_param = context.scene.render.engine
