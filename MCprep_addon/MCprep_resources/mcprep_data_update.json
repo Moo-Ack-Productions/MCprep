@@ -3339,6 +3339,12 @@
 			"Glass_Pane",
 			"Stained_Glass*"
 		],
+		"glass": [
+			"glass*",
+			"Glass",
+			"Glass_Pane",
+			"Stained_Glass*"
+		],
 		"solid": [
 			"sand",
 			"dirt",

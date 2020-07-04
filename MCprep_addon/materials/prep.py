@@ -94,7 +94,12 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 		description = "Make all materials solid only, for shadows and rendering",
 		default = False
 		)
-
+	packFormat = bpy.props.EnumProperty(
+		name="Pack Format",
+		description="Change the pack format when using a PBR resource pack.",
+		items=[("specular", "Specular", "Sets the pack format to Specular."), ("seus", "SEUS", "Sets the pack format to SEUS.")],
+		default="specular"
+	)
 	skipUsage = bpy.props.BoolProperty(
 		default = False,
 		options = {'HIDDEN'}
@@ -109,6 +114,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 		col = row.column()
 		engine = context.scene.render.engine
 		if engine=='CYCLES' or engine=='BLENDER_EEVEE':
+			col.prop(self, "packFormat")
 			col.prop(self, "usePrincipledShader")
 		col.prop(self, "useReflections")
 		col.prop(self, "makeSolid")
@@ -180,7 +186,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 					count+=1
 			elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 				res = generate.matprep_cycles(mat, passes, self.useReflections,
-					self.usePrincipledShader, self.makeSolid)
+					self.usePrincipledShader, self.makeSolid, self.packFormat)
 				if res==0:
 					count+=1
 			else:
@@ -212,6 +218,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 		self.track_exporter = addon_prefs.MCprep_exporter_type
 		return {'FINISHED'}
 
+executePrepMats = MCPREP_OT_prep_materials.execute
 
 class MCPREP_OT_materials_help(bpy.types.Operator):
 	"""Follow up popup to assist the user who may not have gotten expected change"""
@@ -322,11 +329,66 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper):
 			name = "Animate textures (first time may be slow)",
 			description = "Convert tiled images into image sequence for material.",
 			default = True)
+	prepMaterials = bpy.props.BoolProperty(
+			name = "Prep materials",
+			description = "Runs prep materials after texture swap to regenerate materials.",
+			default=False)
 	skipUsage = bpy.props.BoolProperty(
 		default = False,
 		options={'HIDDEN'}
 		)
 
+	autoFindMissingTextures = bpy.props.BoolProperty(
+		name = "Find missing images",
+		description = "If the texture for an existing material is missing, try "+\
+				"to load from the default texture pack instead",
+		default = True
+		)
+	combineMaterials = bpy.props.BoolProperty(
+		name = "Combine materials",
+		description = "Consolidate duplciate materials & textures",
+		default = False
+		)
+	improveUiSettings = bpy.props.BoolProperty(
+		name = "Improve UI",
+		description = "Automatically improve relevant UI settings",
+		default = True)
+	usePrincipledShader = bpy.props.BoolProperty(
+		name = "Use Principled Shader (if available)",
+		description = "If available and using cycles, build materials using the "+\
+				"principled shader",
+		default = True
+		)
+	useReflections = bpy.props.BoolProperty(
+		name = "Use reflections",
+		description = "Allow appropriate materials to be rendered reflective",
+		default = True
+		)
+	useExtraMaps = bpy.props.BoolProperty(
+		name = "Use extra maps",
+		description = "Generate materials using normal/spec maps if they are "+\
+					"available, requires special texture packs",
+		default = True
+		)
+	normalIntensity = bpy.props.FloatProperty(
+		name = "Normal map intensity",
+		description = "Set normal map intensity, if normal maps are found in "+\
+				"the active texture pack and using normal/spec passes",
+		default = 1.0,
+		max=1,
+		min=0
+		)
+	makeSolid = bpy.props.BoolProperty(
+		name = "Make all materials solid",
+		description = "Make all materials solid only, for shadows and rendering",
+		default = False
+		)
+	packFormat = bpy.props.EnumProperty(
+		name="Pack Format",
+		description="Change the pack format when using a PBR resource pack.",
+		items=[("specular", "Specular", "Sets the pack format to Specular."), ("seus", "SEUS", "Sets the pack format to SEUS.")],
+		default="specular"
+	)
 	@classmethod
 	def poll(cls, context):
 		addon_prefs = util.get_user_preferences(context)
@@ -344,6 +406,15 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper):
 		subcol.label(text="settings below:")
 		col.prop(self, "extra_passes")
 		col.prop(self, "animateTextures")
+		col.prop(self, "prepMaterials")
+		if self.prepMaterials:
+			col.prop(self, "packFormat")
+			col.prop(self, "usePrincipledShader")
+			col.prop(self, "useReflections")
+			col.prop(self, "autoFindMissingTextures")
+			col.prop(self, "useExtraMaps")
+			col.prop(self, "improveUiSettings")
+			col.prop(self, "combineMaterials")
 
 	track_function = "texture_pack"
 	track_param = None
@@ -392,6 +463,9 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper):
 				sequences.animate_single_material(
 					mat, context.scene.render.engine)
 			generate.set_saturation_material(mat) # may be a double call if was animated tex
+
+		if self.prepMaterials:
+			executePrepMats(self, context)
 
 		self.report({'INFO'},"{} materials affected".format(res))
 		self.track_param = context.scene.render.engine

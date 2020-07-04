@@ -9,6 +9,7 @@
 		"Block_of_Iron","Glass","Glass_Pane","Stained_Glass*"
 	],
 	"water":["water_flow","water_overlay","water_still"],
+	"glass": ["glass*","Glass","Glass_Pane","Stained_Glass*"],
 	"emit":["redstone_block","redstone_lamp_on","glowstone","lava_flow",
 		"lava_still","fire_layer_0","fire_layer_1","fire","fire_0","fire_1",
 		"sea_lantern","magma","beacon","lava","campfire_fire",
