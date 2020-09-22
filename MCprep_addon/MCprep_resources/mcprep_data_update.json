@@ -181,7 +181,11 @@
 			"cauldron_top": "cauldron_top",
 			"chain_command_block": "chain_command_block_back",
 			"chest": "entity/chest/normal",
+			"chest_left": "entity/chest/normal_left",
+			"chest_right": "entity/chest/normal_right",
 			"chest_trapped": "entity/chest/trapped",
+			"chest_trapped_left": "entity/chest/trapped_left",
+			"chest_trapped_right": "entity/chest/trapped_right",
 			"chipped_anvil_top": "chipped_anvil_top",
 			"chorus_flower": "chorus_flower",
 			"chorus_flower_dead": "chorus_flower_dead",
@@ -1463,7 +1467,7 @@
 			"mushroom_stem": "mushroom_stem",
 			"mycelium_side": "mycelium_side",
 			"mycelium_top": "mycelium_top",
-			"nausea": "mob_effect/nausea",
+			"nausea": "misc/nausea",
 			"nautilus": "particle/nautilus",
 			"nether": "gui/advancements/backgrounds/nether",
 			"nether_bricks": "nether_bricks",
@@ -1545,6 +1549,7 @@
 			"pig": "entity/pig/pig",
 			"pig_saddle": "entity/pig/pig_saddle",
 			"piglin": "entity/piglin/piglin",
+			"piglin_brute": "entity/piglin/piglin_brute",
 			"piglin_leather_layer_1": "models/armor/piglin_leather_layer_1",
 			"piglin_leather_layer_1_overlay": "models/armor/piglin_leather_layer_1_overlay",
 			"pigscene": "painting/pigscene",
@@ -3303,6 +3308,12 @@
 			"torch_flame",
 			"lava_flowing"
 		],
+		"glass": [
+			"glass*",
+			"Glass",
+			"Glass_Pane",
+			"Stained_Glass*"
+		],
 		"metallic": [
 			"door_iron_lower",
 			"door_iron_upper",
@@ -3335,12 +3346,6 @@
 			"Block_of_Emerald",
 			"Block_of_Gold",
 			"Block_of_Iron",
-			"Glass",
-			"Glass_Pane",
-			"Stained_Glass*"
-		],
-		"glass": [
-			"glass*",
 			"Glass",
 			"Glass_Pane",
 			"Stained_Glass*"
