@@ -265,6 +265,9 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		if not os.path.isfile(self.filepath):
 			self.report({"ERROR"}, "File not found, could not import obj")
 			return {'CANCELLED'}
+		if self.filepath.lower().endswith(".mtl"):
+			self.report({"ERROR"}, "Select the .obj file, NOT the .mtl!")
+			return {'CANCELLED'}
 
 		res = bpy.ops.import_scene.obj(filepath=self.filepath, use_split_groups=True)
 		if res != {'FINISHED'}:

@@ -52,10 +52,10 @@ if "sequences" in locals():
 else:
 	from .materials import sequences
 
-# if "sync" in locals():
-# 	importlib.reload(sync)
-# else:
-# 	from .materials import sync
+if "sync" in locals():
+	importlib.reload(sync)
+else:
+	from .materials import sync
 
 if "spawn_util" in locals():
 	importlib.reload(spawn_util)
@@ -124,7 +124,7 @@ module_list = (
 	prep,
 	skin,
 	sequences,
-	# sync,
+	sync,
 	spawn_util,
 	meshswap,
 	mobs,

@@ -520,6 +520,8 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 			grp_added.user_clear()
 		else:
 			for obj in grp_added.objects:
+				if obj not in context.view_layer.objects[:]:
+					continue
 				util.select_set(obj, True)
 
 		# try:
@@ -541,7 +543,7 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 			try:
 				bpy.ops.object.mode_set(mode='POSE')
 			except Exception as e:
-				self.report({'ERROR'},"Failed to enter pose mode, see logs")
+				self.report({'ERROR'},"Failed to enter pose mode: "+str(e))
 				print("Failed to enter pose mode, see logs")
 				print("Exception: ",str(e))
 				print(bpy.context.object)

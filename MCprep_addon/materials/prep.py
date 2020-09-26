@@ -24,7 +24,6 @@ import math
 from bpy_extras.io_utils import ImportHelper
 import shutil
 import urllib.request
-from bpy.app.handlers import persistent
 
 # addon imports
 from .. import conf
@@ -94,6 +93,11 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 		description = "Make all materials solid only, for shadows and rendering",
 		default = False
 		)
+	syncMaterials = bpy.props.BoolProperty(
+		name = "Sync materials",
+		description = "Synchronize materials with those in the active pack's materials.blend file",
+		default = True
+		)
 	packFormat = bpy.props.EnumProperty(
 		name="Pack Format",
 		description="Change the pack format when using a PBR resource pack.",
@@ -122,8 +126,9 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 		col.prop(self, "autoFindMissingTextures")
 
 		row = self.layout.row()
-		col = row.column()
-		col.prop(self, "useExtraMaps")
+		row.prop(self, "useExtraMaps")
+		row.prop(self, "syncMaterials")
+
 		# col = row.column()
 		# col.prop(self, "normalIntensity", slider=True)
 
@@ -197,6 +202,9 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 				sequences.animate_single_material(
 					mat, context.scene.render.engine)
 
+		if self.syncMaterials is True:
+			bpy.ops.mcprep.sync_materials(
+				selected=True, link=False, replace_materials=False, skipUsage=True)
 		if self.combineMaterials is True:
 			bpy.ops.mcprep.combine_materials(selection_only=True, skipUsage=True)
 		if self.improveUiSettings:
@@ -218,7 +226,6 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 		self.track_exporter = addon_prefs.MCprep_exporter_type
 		return {'FINISHED'}
 
-executePrepMats = MCPREP_OT_prep_materials.execute
 
 class MCPREP_OT_materials_help(bpy.types.Operator):
 	"""Follow up popup to assist the user who may not have gotten expected change"""
@@ -383,6 +390,11 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper):
 		description = "Make all materials solid only, for shadows and rendering",
 		default = False
 		)
+	syncMaterials = bpy.props.BoolProperty(
+		name = "Sync materials",
+		description = "Synchronize materials with those in the active pack's materials.blend file",
+		default = True
+		)
 	packFormat = bpy.props.EnumProperty(
 		name="Pack Format",
 		description="Change the pack format when using a PBR resource pack.",
@@ -413,6 +425,7 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper):
 			col.prop(self, "useReflections")
 			col.prop(self, "autoFindMissingTextures")
 			col.prop(self, "useExtraMaps")
+			col.prop(self, "syncMaterials")
 			col.prop(self, "improveUiSettings")
 			col.prop(self, "combineMaterials")
 
@@ -465,7 +478,7 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper):
 			generate.set_saturation_material(mat) # may be a double call if was animated tex
 
 		if self.prepMaterials:
-			executePrepMats(self, context)
+			MCPREP_OT_prep_materials.execute(self, context)
 
 		self.report({'INFO'},"{} materials affected".format(res))
 		self.track_param = context.scene.render.engine

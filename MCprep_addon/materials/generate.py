@@ -31,6 +31,7 @@ from .. import util
 def update_mcprep_texturepack_path(self, context):
 	"""Triggered if the scene-level resource pack path is updated."""
 	bpy.ops.mcprep.reload_items()
+	conf.material_sync_cache = None
 
 
 def get_mc_canonical_name(name):
@@ -1353,7 +1354,7 @@ def matgen_cycles_principled(mat, passes, use_reflections, use_emission, only_so
 			# both work fine with depth of field.
 
 			# but, BLEND does NOT work well with Depth of Field or layering
-	
+
 	if use_emission:
 		nodeMixEmit.inputs[0].default_value = 1
 	else:
@@ -1446,7 +1447,7 @@ def matgen_cycles_original(mat, passes, use_reflections, use_emission, only_soli
 	nodeMixTrans.location = (1940, 0)
 	nodeOut.location = (2140, 0)
 
-	
+
 	# Sets default transparency value
 	nodeMixTrans.inputs["Fac"].default_value = 1
 	nodeMathMultiplyDiff.inputs[1].default_value = 0.1
@@ -1461,7 +1462,7 @@ def matgen_cycles_original(mat, passes, use_reflections, use_emission, only_soli
 	nodeMathPower.inputs[1].default_value = 2
 	nodeMathMetallic.inputs[1].default_value = 4
 	nodeMixRGBDiff.inputs["Color2"].default_value = [1, 1, 1, 1]
-	
+
 	# Sets default reflective values
 	if use_reflections and checklist(canon, "reflective"):
 		nodeGlossMetallic.inputs["Roughness"].default_value = 0
@@ -1471,18 +1472,18 @@ def matgen_cycles_original(mat, passes, use_reflections, use_emission, only_soli
 		nodeGlossMetallic.inputs["Roughness"].default_value = 0.7
 		nodeMathPower.inputs[0].default_value = 0.7
 		nodeGlossDiff.inputs["Roughness"].default_value = 0.7
-	
+
 	# Sets default metallic values
 	if use_reflections and checklist(canon, "metallic"):
 		nodeMixMetallic.inputs["Fac"].default_value = 1
-		
+
 		if nodeGlossMetallic.inputs["Roughness"].default_value < 0.2:
 			nodeGlossMetallic.inputs["Roughness"].default_value = 0.2
 		if nodeMathPower.inputs[0].default_value < 0.2:
 			nodeMathPower.inputs[0].default_value = 0.2
 		if nodeGlossDiff.inputs["Roughness"].default_value < 0.2:
 			nodeGlossDiff.inputs["Roughness"].default_value = 0.2
-	
+
 	else:
 		nodeMixMetallic.inputs["Fac"].default_value = 0
 
@@ -1512,7 +1513,7 @@ def matgen_cycles_original(mat, passes, use_reflections, use_emission, only_soli
 	links.new(nodeEmitCam.outputs["Emission"], nodeMixCam.inputs[2])
 	links.new(nodeMixEmit.outputs["Shader"], nodeMixTrans.inputs[2])
 	links.new(nodeMixTrans.outputs["Shader"], nodeOut.inputs["Surface"])
-	
+
 	nodeInputs = [
 		[nodeMixRGBMetallic.inputs["Color1"], nodeMathMetallic.inputs[0],nodeDiff.inputs["Color"], nodeEmit.inputs["Color"], nodeEmitCam.inputs["Color"]],
 		[nodeMixTrans.inputs["Fac"]],
@@ -1527,7 +1528,7 @@ def matgen_cycles_original(mat, passes, use_reflections, use_emission, only_soli
 		texgen_specular(mat, passes, nodeInputs, use_reflections)
 	elif pack_format == "seus":
 		texgen_seus(mat, passes, nodeInputs, use_reflections)
-	
+
 	if only_solid is True or checklist(canon, "solid"):
 		nodes.remove(nodeTrans)
 		nodes.remove(nodeMixTrans)
@@ -1558,7 +1559,7 @@ def matgen_cycles_original(mat, passes, use_reflections, use_emission, only_soli
 			# both work fine with depth of field.
 
 			# but, BLEND does NOT work well with Depth of Field or layering
-	
+
 	if use_emission:
 		nodeMixEmit.inputs[0].default_value = 1
 	else:
@@ -1566,7 +1567,7 @@ def matgen_cycles_original(mat, passes, use_reflections, use_emission, only_soli
 
 	# reapply animation data if any to generated nodes
 	apply_texture_animation_pass_settings(mat, animated_data)
-	
+
 
 	return 0 # return 0 once implemented
 
@@ -1796,7 +1797,7 @@ def matgen_special_glass(mat, passes):
 	links.new(nodeDiff.outputs["BSDF"], nodeMixTrans.inputs[2])
 	links.new(nodeTexDiff.outputs["Alpha"], nodeBrightContrast.inputs["Color"])
 	links.new(nodeBrightContrast.outputs[0], nodeMixTrans.inputs[0])
-	
+
 	links.new(nodeDiff.outputs[0], nodeMixTrans.inputs[2])
 	links.new(nodeMixTrans.outputs[0], nodeOut.inputs[0])
 	links.new(nodeTexDiff.outputs["Color"], nodeDiff.inputs[0])

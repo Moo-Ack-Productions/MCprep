@@ -70,6 +70,8 @@ class mcprep_testing():
 			self.qa_meshswap_file,
 			self.item_spawner,
 			self.world_tools,
+			self.sync_materials,
+			self.sync_materials_link,
 			]
 		self.run_only = None # name to give to only run this test
 
@@ -1277,6 +1279,112 @@ class mcprep_testing():
 
 		# test that it removes existing suns by first placing one, and then
 		# affirming it's gone
+
+	def sync_materials(self):
+		"""Test syncing materials works"""
+		self._clear_scene()
+
+		# test empty case
+		res = bpy.ops.mcprep.sync_materials(
+			link=False,
+			replace_materials=False,
+			skipUsage=True) # track here false to avoid error
+		if res != {'CANCELLED'}:
+			return "Should return cancel in empty scene"
+
+		# test that the base test material is included as shipped
+		bpy.ops.mesh.primitive_plane_add()
+		obj = bpy.context.object
+		if bpy.app.version >= (2, 80):
+			obj.select_set(True)
+		else:
+			obj.select = True
+
+		new_mat = bpy.data.materials.new("mcprep_test")
+		obj.active_material = new_mat
+		new_mat.diffuse_color = (0, 1, 0, 1)
+
+		init_mats = bpy.data.materials[:]
+		init_len = len(bpy.data.materials)
+		res = bpy.ops.mcprep.sync_materials(
+			link=False,
+			replace_materials=False)
+		if res != {'FINISHED'}:
+			return "Should return finished with test file"
+
+		# check there is another material now
+		imported = set(bpy.data.materials[:]) - set(init_mats)
+		post_len = len(bpy.data.materials)
+		if not list(imported):
+			return "No new materials found"
+		elif len(list(imported))>1:
+			return "More than one material generated"
+		elif list(imported)[0].library:
+			return "Material linked should not be a library"
+		elif post_len - 1 != init_len:
+			return "Should have imported specifically one material"
+
+		new_mat.name = "mcprep_test"
+		init_len = len(bpy.data.materials)
+		res = bpy.ops.mcprep.sync_materials(
+			link=False,
+			replace_materials=True)
+		if res != {'FINISHED'}:
+			return "Should return finished with test file (replace)"
+		if len(bpy.data.materials) != init_len:
+			return "Number of materials should not have changed with replace"
+
+		# Now test it works with name generalization, stripping .###
+		new_mat.name = "mcprep_test.005"
+		init_mats = bpy.data.materials[:]
+		init_len = len(bpy.data.materials)
+		res = bpy.ops.mcprep.sync_materials(
+			link=False,
+			replace_materials=False)
+		if res != {'FINISHED'}:
+			return "Should return finished with test file"
+
+		# check there is another material now
+		imported = set(bpy.data.materials[:]) - set(init_mats)
+		post_len = len(bpy.data.materials)
+		if not list(imported):
+			return "No new materials found"
+		elif len(list(imported))>1:
+			return "More than one material generated"
+		elif list(imported)[0].library:
+			return "Material linked should not be a library"
+		elif post_len - 1 != init_len:
+			return "Should have imported specifically one material"
+
+	def sync_materials_link(self):
+		"""Test syncing materials works"""
+		self._clear_scene()
+
+		# test that the base test material is included as shipped
+		bpy.ops.mesh.primitive_plane_add()
+		obj = bpy.context.object
+		if bpy.app.version >= (2, 80):
+			obj.select_set(True)
+		else:
+			obj.select = True
+
+		new_mat = bpy.data.materials.new("mcprep_test")
+		obj.active_material = new_mat
+		new_mat.diffuse_color = (0, 1, 0, 1)
+
+		new_mat.name = "mcprep_test"
+		init_mats = bpy.data.materials[:]
+		res = bpy.ops.mcprep.sync_materials(
+			link=True,
+			replace_materials=False)
+		if res != {'FINISHED'}:
+			return "Should return finished with test file (link)"
+		imported = set(bpy.data.materials[:]) - set(init_mats)
+		imported = list(imported)
+		if not imported:
+			return "No new material found after linking"
+		if not list(imported)[0].library:
+			return "Material linked is not a library"
 
 
 class OCOL:

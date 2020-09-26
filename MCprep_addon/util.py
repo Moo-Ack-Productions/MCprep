@@ -84,6 +84,11 @@ def bAppendLink(directory, name, toLink, active_layer=True):
 
 	Note that for 2.8 compatibility, the directory passed in should
 	already be correctly identified (eg Group or Collection)
+
+	Arguments:
+		directory: xyz.blend/Type, where Type is: Collection, Group, Material...
+		name: asset name
+		toLink: bool
 	"""
 
 	conf.log("Appending " + directory + " : " + name, vv_only=True)
