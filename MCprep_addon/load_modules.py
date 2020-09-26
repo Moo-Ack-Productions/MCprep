@@ -37,6 +37,11 @@ if "util_operators" in locals():
 else:
 	from . import util_operators
 
+if "manage_data" in locals():
+	importlib.reload(manage_data)
+else:
+	from .materials import manage_data
+
 if "prep" in locals():
 	importlib.reload(prep)
 else:
@@ -126,6 +131,7 @@ else:
 # Only include those with a register function, which is not all
 module_list = (
 	util_operators,
+	manage_data,
 	prep,
 	skin,
 	sequences,
