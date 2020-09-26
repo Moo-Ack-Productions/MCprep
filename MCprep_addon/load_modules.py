@@ -42,20 +42,25 @@ if "prep" in locals():
 else:
 	from .materials import prep
 
-if "skin" in locals():
-	importlib.reload(skin)
-else:
-	from .materials import skin
-
 if "sequences" in locals():
 	importlib.reload(sequences)
 else:
 	from .materials import sequences
 
+if "skin" in locals():
+	importlib.reload(skin)
+else:
+	from .materials import skin
+
 if "sync" in locals():
 	importlib.reload(sync)
 else:
 	from .materials import sync
+
+if "uv_tools" in locals():
+	importlib.reload(uv_tools)
+else:
+	from .materials import uv_tools
 
 if "spawn_util" in locals():
 	importlib.reload(spawn_util)
@@ -125,6 +130,7 @@ module_list = (
 	skin,
 	sequences,
 	sync,
+	uv_tools,
 	spawn_util,
 	meshswap,
 	mobs,

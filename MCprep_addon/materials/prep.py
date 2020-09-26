@@ -36,17 +36,16 @@ from .. import util
 # -----------------------------------------------------------------------------
 # Material class functions
 # -----------------------------------------------------------------------------
+class McprepMaterialProps():
+	"""Class to inheret reused MCprep settings.
 
-
-class MCPREP_OT_prep_materials(bpy.types.Operator):
-	"""Fixes materials and textures on selected objects for Minecraft rendering"""
-	bl_idname = "mcprep.prep_materials"
-	bl_label = "MCprep Materials"
-	bl_options = {'REGISTER', 'UNDO'}
-
+	Benefit is to also enforce the same options, required where exec funcitons
+	pass through from one operator to the other (e.g. prep mats on swap packs)
+	"""
 	animateTextures = bpy.props.BoolProperty(
 		name = "Animate textures (may be slow first time)",
-		description = "Swap still images for the animated sequenced found in the active or default texture pack.",
+		description = ("Swap still images for the animated sequenced found in "
+			"the active or default texture pack."),
 		default = False)
 	autoFindMissingTextures = bpy.props.BoolProperty(
 		name = "Find missing images",
@@ -65,8 +64,8 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 		default = True)
 	usePrincipledShader = bpy.props.BoolProperty(
 		name = "Use Principled Shader (if available)",
-		description = "If available and using cycles, build materials using the "+\
-				"principled shader",
+		description = ("If available and using cycles, build materials using the "
+				"principled shader"),
 		default = True
 		)
 	useReflections = bpy.props.BoolProperty(
@@ -76,14 +75,14 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 		)
 	useExtraMaps = bpy.props.BoolProperty(
 		name = "Use extra maps",
-		description = "Generate materials using normal/spec maps if they are "+\
-					"available, requires special texture packs",
+		description = ("load other image passes like normal and "
+				"spec maps if available"),
 		default = True
 		)
 	normalIntensity = bpy.props.FloatProperty(
 		name = "Normal map intensity",
-		description = "Set normal map intensity, if normal maps are found in "+\
-				"the active texture pack and using normal/spec passes",
+		description = ("Set normal map intensity, if normal maps are found in "
+				"the active texture pack and using normal/spec passes"),
 		default = 1.0,
 		max=1,
 		min=0
@@ -95,15 +94,26 @@ class MCPREP_OT_prep_materials(bpy.types.Operator):
 		)
 	syncMaterials = bpy.props.BoolProperty(
 		name = "Sync materials",
-		description = "Synchronize materials with those in the active pack's materials.blend file",
+		description = ("Synchronize materials with those in the active "
+			"pack's materials.blend file"),
 		default = True
 		)
 	packFormat = bpy.props.EnumProperty(
 		name="Pack Format",
 		description="Change the pack format when using a PBR resource pack.",
-		items=[("specular", "Specular", "Sets the pack format to Specular."), ("seus", "SEUS", "Sets the pack format to SEUS.")],
+		items=[
+			("specular", "Specular", "Sets the pack format to Specular."),
+			("seus", "SEUS", "Sets the pack format to SEUS.")],
 		default="specular"
 	)
+
+
+class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
+	"""Fixes materials and textures on selected objects for Minecraft rendering"""
+	bl_idname = "mcprep.prep_materials"
+	bl_label = "MCprep Materials"
+	bl_options = {'REGISTER', 'UNDO'}
+
 	skipUsage = bpy.props.BoolProperty(
 		default = False,
 		options = {'HIDDEN'}
@@ -296,21 +306,15 @@ class MCPREP_OT_materials_help(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper):
+class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper, McprepMaterialProps):
 	"""Swap current textures for that of a texture pack folder"""
 	bl_idname = "mcprep.swap_texture_pack"
 	bl_label = "Swap Texture Pack"
-	bl_description = "Change the texture pack for all materials of selected objects, "+\
-				"select a folder path for an unzipped resource pack or texture folder"
+	bl_description = ("Change the texture pack for all materials of selected objects, "
+		"select a folder path for an unzipped resource pack or texture folder")
 	bl_options = {'REGISTER', 'UNDO'}
 
-	# filename_ext = ".zip"
-	# filter_glob = bpy.props.StringProperty(
-	# 		default="*",
-	# 		options={'HIDDEN'},
-	# 		)
-	# fileselectparams = "use_filter_blender"
-	# files = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
+
 	filter_glob = bpy.props.StringProperty(
 		default="",
 		options = {'HIDDEN'}
@@ -326,16 +330,6 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper):
 		default=True,
 		options={'HIDDEN', 'SKIP_SAVE'}
 		)
-	extra_passes = bpy.props.BoolProperty(
-		name = "Extra passes (if available)",
-		description = ("If enabled, load other image passes like normal and "
-				"spec maps if available"),
-		default = True,
-		)
-	animateTextures = bpy.props.BoolProperty(
-			name = "Animate textures (first time may be slow)",
-			description = "Convert tiled images into image sequence for material.",
-			default = True)
 	prepMaterials = bpy.props.BoolProperty(
 			name = "Prep materials",
 			description = "Runs prep materials after texture swap to regenerate materials.",
@@ -345,62 +339,6 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper):
 		options={'HIDDEN'}
 		)
 
-	autoFindMissingTextures = bpy.props.BoolProperty(
-		name = "Find missing images",
-		description = "If the texture for an existing material is missing, try "+\
-				"to load from the default texture pack instead",
-		default = True
-		)
-	combineMaterials = bpy.props.BoolProperty(
-		name = "Combine materials",
-		description = "Consolidate duplciate materials & textures",
-		default = False
-		)
-	improveUiSettings = bpy.props.BoolProperty(
-		name = "Improve UI",
-		description = "Automatically improve relevant UI settings",
-		default = True)
-	usePrincipledShader = bpy.props.BoolProperty(
-		name = "Use Principled Shader (if available)",
-		description = "If available and using cycles, build materials using the "+\
-				"principled shader",
-		default = True
-		)
-	useReflections = bpy.props.BoolProperty(
-		name = "Use reflections",
-		description = "Allow appropriate materials to be rendered reflective",
-		default = True
-		)
-	useExtraMaps = bpy.props.BoolProperty(
-		name = "Use extra maps",
-		description = "Generate materials using normal/spec maps if they are "+\
-					"available, requires special texture packs",
-		default = True
-		)
-	normalIntensity = bpy.props.FloatProperty(
-		name = "Normal map intensity",
-		description = "Set normal map intensity, if normal maps are found in "+\
-				"the active texture pack and using normal/spec passes",
-		default = 1.0,
-		max=1,
-		min=0
-		)
-	makeSolid = bpy.props.BoolProperty(
-		name = "Make all materials solid",
-		description = "Make all materials solid only, for shadows and rendering",
-		default = False
-		)
-	syncMaterials = bpy.props.BoolProperty(
-		name = "Sync materials",
-		description = "Synchronize materials with those in the active pack's materials.blend file",
-		default = True
-		)
-	packFormat = bpy.props.EnumProperty(
-		name="Pack Format",
-		description="Change the pack format when using a PBR resource pack.",
-		items=[("specular", "Specular", "Sets the pack format to Specular."), ("seus", "SEUS", "Sets the pack format to SEUS.")],
-		default="specular"
-	)
 	@classmethod
 	def poll(cls, context):
 		addon_prefs = util.get_user_preferences(context)
@@ -416,7 +354,7 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper):
 		subcol.label(text="press 'Swap Texture Pack'")
 		subcol.label(text="after confirming these")
 		subcol.label(text="settings below:")
-		col.prop(self, "extra_passes")
+		col.prop(self, "useExtraMaps")
 		col.prop(self, "animateTextures")
 		col.prop(self, "prepMaterials")
 		if self.prepMaterials:
@@ -424,7 +362,6 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper):
 			col.prop(self, "usePrincipledShader")
 			col.prop(self, "useReflections")
 			col.prop(self, "autoFindMissingTextures")
-			col.prop(self, "useExtraMaps")
 			col.prop(self, "syncMaterials")
 			col.prop(self, "improveUiSettings")
 			col.prop(self, "combineMaterials")
@@ -471,7 +408,7 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper):
 		res = 0
 		for mat in mat_list:
 			self.preprocess_material(mat)
-			res += generate.set_texture_pack(mat, folder, self.extra_passes)
+			res += generate.set_texture_pack(mat, folder, self.useExtraMaps)
 			if self.animateTextures:
 				sequences.animate_single_material(
 					mat, context.scene.render.engine)
@@ -741,256 +678,6 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class MCPREP_OT_scale_uv(bpy.types.Operator):
-	bl_idname = "mcprep.scale_uv"
-	bl_label = "Scale UV Faces"
-	bl_description = "Scale all selected UV faces. See F6 or redo-last panel to adjust factor"
-	bl_options = {'REGISTER', 'UNDO'}
-
-	scale = bpy.props.FloatProperty(default=0.75, name="Scale")
-	selected_only = bpy.props.BoolProperty(default=True, name="Seleced only")
-	skipUsage = bpy.props.BoolProperty(
-		default = False,
-		options = {'HIDDEN'}
-		)
-
-	@classmethod
-	def poll(cls, context):
-		return context.mode == 'EDIT_MESH' or (
-			context.mode == 'OBJECT' and context.object)
-
-	track_function = "scale_uv"
-	@tracking.report_error
-	def execute(self, context):
-
-		# INITIAL WIP
-		"""
-		# WIP
-		ob = context.active_object
-		# copied from elsewhere
-		uvs = ob.data.uv_layers[0].data
-		matchingVertIndex = list(chain.from_iterable(polyIndices))
-		# example, matching list of uv coord and 3dVert coord:
-		uvs_XY = [i.uv for i in Object.data.uv_layers[0].data]
-		vertXYZ= [v.co for v in Object.data.vertices]
-		matchingVertIndex = list(chain.from_iterable([p.vertices for p in Object.data.polygons]))
-		# and now, the coord to pair with uv coord:
-		matchingVertsCoord = [vertsXYZ[i] for i in matchingVertIndex]
-		"""
-		if not context.object:
-			self.report({'ERROR'}, "No active object found")
-			return {'CANCELLED'}
-		elif context.object.type != 'MESH':
-			self.report({'ERROR'}, "Active object must be a mesh")
-			return {'CANCELLED'}
-		elif not context.object.data.polygons:
-			self.report({'WARNING'}, "Active object has no faces")
-			return {'CANCELLED'}
-
-		if not context.object.data.uv_layers.active:#uv==None:
-			self.report({'ERROR'}, "No active UV map found")
-			return {'CANCELLED'}
-
-		mode_initial = context.mode
-		bpy.ops.object.mode_set(mode="OBJECT")
-		ret = self.scale_uv_faces(context.object, self.scale)
-		if mode_initial != 'OBJECT':
-			bpy.ops.object.mode_set(mode="EDIT")
-
-		if ret is not None:
-			self.report({'ERROR'}, ret)
-			conf.log("Error, "+ret)
-			return {'CANCELLED'}
-
-		return {'FINISHED'}
-
-	def scale_uv_faces(self, ob, factor):
-		"""Scale all UV face centers of an object by a given factor."""
-
-		factor *= -1
-		factor += 1
-		modified = False
-
-		uv = ob.data.uv_layers.active
-		# initial_UV = [(d.uv[0], d.uv[1])
-		# 				for d in ob.data.uv_layers.active.data]
-
-		for f in ob.data.polygons:
-			if not f.select and self.selected_only is True:
-				continue  # if not selected, won't show up in UV editor
-
-			# initialize for avergae center on polygon
-			x=y=n=0  # x,y,number of verts in loop for average purpose
-			for i in f.loop_indices:
-				# a loop could be an edge or face
-				l = ob.data.loops[i] # This polygon/edge
-				v = ob.data.vertices[l.vertex_index]  # The vertex data that loop entry refers to
-				# isolate to specific UV already used
-				if not uv.data[l.index].select and self.selected_only is True:
-					continue
-				x+=uv.data[l.index].uv[0]
-				y+=uv.data[l.index].uv[1]
-				n+=1
-			for i in f.loop_indices:
-				if not uv.data[l.index].select and self.selected_only is True:
-					continue
-				l = ob.data.loops[i]
-				uv.data[l.index].uv[0] = uv.data[l.index].uv[0]*(1-factor)+x/n*(factor)
-				uv.data[l.index].uv[1] = uv.data[l.index].uv[1]*(1-factor)+y/n*(factor)
-				modified = True
-		if not modified:
-			return "No UV faces selected"
-
-		return None
-
-
-class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
-	bl_idname = "mcprep.select_alpha_faces"
-	bl_label = "Select alpha faces"
-	bl_description = "Select or delete transparent UV faces of a mesh"
-	bl_options = {'REGISTER', 'UNDO'}
-
-	delete = bpy.props.BoolProperty(
-		name="Delete faces",
-		description="Delete detected transparent mesh faces",
-		default = False
-		)
-	threshold = bpy.props.FloatProperty(
-		name="Threshold",
-		description="How transparent pixels need to be to select",
-		default = 0.2,
-		min=0.0,
-		max=1.0
-		)
-	skipUsage = bpy.props.BoolProperty(
-		default = False,
-		options = {'HIDDEN'}
-		)
-
-	@classmethod
-	def poll(cls, context):
-		return context.mode == 'EDIT_MESH'
-
-	track_function = "alpha_faces"
-	@tracking.report_error
-	def execute(self, context):
-
-		ob = context.object
-		if ob is None:
-			self.report({"ERROR"}, "No active object found")
-			return {"CANCELLED"}
-		elif ob.type != 'MESH':
-			self.report({"ERROR"}, "Active object must be a mesh")
-			return {"CANCELLED"}
-		elif not ob.data.polygons:
-			self.report({"WARNING"}, "Active object has no faces")
-			return {"CANCELLED"}
-		elif not ob.material_slots:
-			self.report({"ERROR"}, "Active object has no materials to check image for.")
-			return {"CANCELLED"}
-		if ob.data.uv_layers.active is None:
-			self.report({"ERROR"}, "No active UV map found")
-
-		# if doing multiple objects, iterate over loop of this function
-		bpy.ops.mesh.select_mode(type='FACE')
-
-		# UV data only available in object mode, have to switch there and back
-		bpy.ops.object.mode_set(mode="OBJECT")
-		ret = self.select_alpha(ob, self.threshold)
-		bpy.ops.object.mode_set(mode="EDIT")
-		if ret:
-			self.report({"ERROR"}, ret)
-			return {"CANCELLED"}
-
-		if not ret and self.delete:
-			conf.log("Delet faces")
-			bpy.ops.mesh.delete(type='FACE')
-
-		return {"FINISHED"}
-
-	def select_alpha(self, ob, threshold):
-		"""Core function to select alpha faces based on active material/image."""
-		if not ob.material_slots:
-			conf.log("No materials, skipping.")
-			return "No materials"
-
-		# pre-cache the materials and their respective images for comparing
-		textures = []
-		for index in range(len(ob.material_slots)):
-			mat = ob.material_slots[index].material
-			if not mat:
-				textures.append(None)
-				continue
-			image = generate.get_textures(mat)["diffuse"]
-			if not image:
-				textures.append(None)
-				continue
-			elif image.channels != 4:
-				textures.append(None) # no alpha channel anyways
-				conf.log("No alpha channel for: "+image.name)
-				continue
-			textures.append(image)
-		data = [None for tex in textures]
-
-		uv = ob.data.uv_layers.active
-		for f in ob.data.polygons:
-			if len(f.loop_indices) < 3:
-				continue # don't select edges or vertices
-			fnd = f.material_index
-			image = textures[fnd]
-			if not image:
-				conf.log("Could not get image from face's material")
-				return "Could not get image from face's material"
-
-			# lazy load alpha part of image to memory, hold for whole operator
-			if not data[fnd]:
-				data[fnd] = list(image.pixels)[3::4]
-
-			# relate the polygon to the UV layer to the image coordinates
-			shape = []
-			for i in f.loop_indices:
-				loop = ob.data.loops[i]
-				x = uv.data[loop.index].uv[0]%1 # TODO: fix this wraparound hack
-				y = uv.data[loop.index].uv[1]%1
-				shape.append((x,y))
-
-			# print("The shape coords:")
-			# print(shape)
-			# could just do "the closest" pixel... but better is weighted area
-			if not shape:
-				continue
-
-			xlist, ylist = tuple([list(tup) for tup in zip(*shape)])
-			# not sure if I actually want to +0.5 to the values to get middle..
-			xmin = round(min(xlist)*image.size[0])-0.5
-			xmax = round(max(xlist)*image.size[0])-0.5
-			ymin = round(min(ylist)*image.size[1])-0.5
-			ymax = round(max(ylist)*image.size[1])-0.5
-			conf.log(["\tSet size:",xmin,xmax,ymin,ymax], vv_only=True)
-
-			# assuming faces are roughly rectangular, sum pixels a face covers
-			asum = 0
-			acount = 0
-			for row in range(image.size[1]):
-				if row < ymin or row > ymax:
-					continue
-				for col in range(image.size[0]):
-					if col >= xmin and col <= xmax:
-						asum += data[fnd][image.size[1]*row + col]
-						acount += 1
-
-			if acount == 0:
-				acount = 1
-			ratio = float(asum)/float(acount)
-			if ratio < float(threshold):
-				print("\t{} - Below threshold, select".format(ratio))
-				f.select = True
-			else:
-				print("\t{} - above thresh, NO select".format(ratio))
-				f.select = False
-		return
-
-
 class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 	"""Replace any missing textures with matching images in the active texture pack"""
 	bl_idname = "mcprep.replace_missing_textures"
@@ -1089,13 +776,12 @@ classes = (
 	MCPREP_OT_reset_texturepack_path,
 	MCPREP_OT_combine_materials,
 	MCPREP_OT_combine_images,
-	MCPREP_OT_scale_uv,
-	MCPREP_OT_select_alpha_faces,
 	MCPREP_OT_replace_missing_textures
 )
 
 
 def register():
+	util.make_annotations(McprepMaterialProps)
 	for cls in classes:
 		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
