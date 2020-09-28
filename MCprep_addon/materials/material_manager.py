@@ -28,6 +28,78 @@ from .. import tracking
 from .. import util
 
 # -----------------------------------------------------------------------------
+# UI and utility functions
+# -----------------------------------------------------------------------------
+
+def reload_materials(context):
+	"""Reload the material UI list"""
+	mcprep_props = context.scene.mcprep_props
+	resource_folder = context.scene.mcprep_texturepack_path
+
+	mcprep_props = context.scene.mcprep_props
+	resource_folder = context.scene.mcprep_texturepack_path
+	extensions = [".png",".jpg",".jpeg"]
+
+	mcprep_props.material_list.clear()
+	if conf.use_icons and conf.preview_collections["items"]:
+		try:
+			bpy.utils.previews.remove(conf.preview_collections["items"])
+		except:
+			conf.log("MCPREP: Failed to remove icon set, items")
+
+	if not os.path.isdir(resource_folder):
+		conf.log("Error, resource folder does not exist")
+		return
+	elif os.path.isdir(os.path.join(resource_folder,"textures")):
+		resource_folder = os.path.join(resource_folder,"textures")
+	elif os.path.isdir(os.path.join(resource_folder,"minecraft","textures")):
+		resource_folder = os.path.join(resource_folder,"minecraft","textures")
+	elif os.path.isdir(os.path.join(resource_folder,"assets","minecraft","textures")):
+		resource_folder = os.path.join(resource_folder,"assets","minecraft","textures")
+
+	search_paths = [
+		resource_folder,
+		os.path.join(resource_folder,"blocks"),
+		os.path.join(resource_folder,"block")]
+	files = []
+
+	for path in search_paths:
+		if not os.path.isdir(path):
+			continue
+		files += [os.path.join(path, image_file)
+					for image_file in os.listdir(path)
+					if os.path.isfile(os.path.join(path, image_file))
+					and os.path.splitext(image_file.lower())[-1] in extensions]
+	for i, image_file in enumerate(sorted(files)):
+		basename = os.path.splitext(os.path.basename(image_file))[0]
+		canon, _ = generate.get_mc_canonical_name(basename) # basename.replace("_", " ")
+		asset = mcprep_props.material_list.add()
+		asset.name = canon
+		asset.description = "Generate {} ({})".format(canon, basename)
+		asset.path = image_file
+		asset.index = i
+
+		# if available, load the custom icon too
+		if not conf.use_icons or conf.preview_collections["items"] == "":
+			continue
+		conf.preview_collections["items"].load(
+			"item-{}".format(i), image_file, 'IMAGE')
+
+	if mcprep_props.material_list_index >= len(mcprep_props.material_list):
+		mcprep_props.material_list_index = len(mcprep_props.material_list) - 1
+
+
+class ListMaterials(bpy.types.PropertyGroup):
+	"""For UI drawing of item assets and holding data"""
+	# inherited: name
+	description = bpy.props.StringProperty()
+	path = bpy.props.StringProperty(subtype='FILE_PATH')
+	index = bpy.props.IntProperty(min=0, default=0)  # for icon drawing
+
+
+
+
+# -----------------------------------------------------------------------------
 # Material data management operators
 # -----------------------------------------------------------------------------
 
@@ -36,6 +108,7 @@ class MCPREP_OT_reset_texturepack_path(bpy.types.Operator):
 	bl_idname = "mcprep.reset_texture_path"
 	bl_label = "Reset texture pack path"
 	bl_description = "Resets the texture pack folder to the MCprep default saved in preferences"
+	bl_options = {'REGISTER', 'UNDO'}
 
 	@tracking.report_error
 	def execute(self, context):
@@ -44,10 +117,23 @@ class MCPREP_OT_reset_texturepack_path(bpy.types.Operator):
 		return {'FINISHED'}
 
 
+class MCPREP_OT_reload_materials(bpy.types.Operator):
+	bl_idname = "mcprep.reload_materials"
+	bl_label = "Reload materials"
+	bl_description = "Reload the material library"
+
+	@tracking.report_error
+	def execute(self, context):
+		reload_materials(context)
+		return {'FINISHED'}
+
+
+
 class MCPREP_OT_combine_materials(bpy.types.Operator):
 	bl_idname = "mcprep.combine_materials"
 	bl_label = "Combine materials"
 	bl_description = "Consolidate the same materials together e.g. mat.001 and mat.002"
+	bl_options = {'REGISTER', 'UNDO'}
 
 	# arg to auto-force remove old? versus just keep as 0-users
 	selection_only = bpy.props.BoolProperty(
@@ -354,7 +440,7 @@ class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 
 		# even if images of same name already exist, load new block
 		conf.log("Find missing images: Creating new image datablock for "+mat.name)
-		image = bpy.data.images.load(image_path)
+		image = bpy.data.images.load(image_path, check_existing=False)
 
 		engine = bpy.context.scene.render.engine
 		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
@@ -371,7 +457,9 @@ class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 
 
 classes = (
+	ListMaterials,
 	MCPREP_OT_reset_texturepack_path,
+	MCPREP_OT_reload_materials,
 	MCPREP_OT_combine_materials,
 	MCPREP_OT_combine_images,
 	MCPREP_OT_replace_missing_textures

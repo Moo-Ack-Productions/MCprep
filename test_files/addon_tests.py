@@ -72,6 +72,7 @@ class mcprep_testing():
 			self.world_tools,
 			self.sync_materials,
 			self.sync_materials_link,
+			self.load_material
 			]
 		self.run_only = None # name to give to only run this test
 
@@ -1385,6 +1386,22 @@ class mcprep_testing():
 			return "No new material found after linking"
 		if not list(imported)[0].library:
 			return "Material linked is not a library"
+
+	def load_material(self):
+		"""Test the load material operators and related resets"""
+		self._clear_scene()
+		bpy.ops.mcprep.reload_materials()
+
+		# add object
+		bpy.ops.object.primitive_cube_add()
+		bpy.ops.mcprep.load_material()
+
+		# validate that the loaded material has a name matching current list
+		mat = bpy.context.object.active_material
+		scn_props = bpy.context.scene.mcprep_props
+		mat_item = scn_props.material_list[scn_props.material_list_index]
+		if mat_item.name not in mat.name:
+			return "Material name not loaded "+mat.name
 
 
 class OCOL:

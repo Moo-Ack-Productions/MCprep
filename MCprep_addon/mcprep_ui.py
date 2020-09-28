@@ -32,6 +32,7 @@ from . import addon_updater_ops
 from . import tracking
 from .materials.skin import update_skin_path
 from .materials.generate import update_mcprep_texturepack_path
+from .materials import material_manager
 # from .import_bridge import bridge
 
 # blender 2.7 vs 2.8 icon selections
@@ -184,7 +185,8 @@ class McprepPreference(bpy.types.AddonPreferences):
 
 	meshswap_path = bpy.props.StringProperty(
 		name = "Meshswap path",
-		description = "Default path to the meshswap asset file, for meshswapable objects and groups",
+		description = ("Default path to the meshswap asset file, for "
+			"meshswapable objects and groups"),
 		subtype = 'FILE_PATH',
 		default = scriptdir + "/MCprep_resources/mcprep_meshSwap.blend")
 	mob_path = bpy.props.StringProperty(
@@ -194,8 +196,8 @@ class McprepPreference(bpy.types.AddonPreferences):
 		default = scriptdir + "/MCprep_resources/rigs/")
 	custom_texturepack_path = bpy.props.StringProperty(
 		name = "Texture pack path",
-		description = "Path to a folder containing resources and textures to use"+\
-			"with material prepping",
+		description = ("Path to a folder containing resources and textures to use "
+			"with material prepping"),
 		subtype = 'DIR_PATH',
 		default = scriptdir + "/MCprep_resources/resourcepacks/mcprep_default/")
 	skin_path = bpy.props.StringProperty(
@@ -205,14 +207,15 @@ class McprepPreference(bpy.types.AddonPreferences):
 		default = scriptdir + "/MCprep_resources/skins/")
 	world_obj_path = bpy.props.StringProperty(
 		name = "World Folder",
-		description = "Default folder for opening world objs from programs like jmc2obj or Mineways",
+		description = ("Default folder for opening world objs from programs "
+			"like jmc2obj or Mineways"),
 		subtype = 'DIR_PATH',
 		default = "//")
 	MCprep_groupAppendLayer = bpy.props.IntProperty(
 		name="Group Append Layer",
-		description="When groups are appended instead of linked, "+\
-				"the objects part of the group will be placed in this "+\
-				"layer, 0 means same as active layer",
+		description=("When groups are appended instead of linked, "
+				"the objects part of the group will be placed in this "
+				"layer, 0 means same as active layer"),
 		min=0,
 		max=20,
 		default=20)
@@ -224,7 +227,8 @@ class McprepPreference(bpy.types.AddonPreferences):
 	preferences_tab = bpy.props.EnumProperty(
 		items = [('settings', 'Settings', 'Change MCprep settings'),
 				('tutorials', 'Tutorials', 'View MCprep tutorials & other help'),
-				('tracker_updater', 'Tracking/Updater', 'Change tracking and updating settings')],
+				('tracker_updater', 'Tracking/Updater',
+					'Change tracking and updating settings')],
 		name = "Exporter")
 	verbose = bpy.props.BoolProperty(
 		name = "Verbose logging",
@@ -244,7 +248,8 @@ class McprepPreference(bpy.types.AddonPreferences):
 		default = "Mineways")
 	save_folder = bpy.props.StringProperty(
 		name = "MC saves folder",
-		description = "Folder containing Minecraft world saves directories, for the direct import bridge",
+		description = ("Folder containing Minecraft world saves directories, "
+			"for the direct import bridge"),
 		subtype = 'FILE_PATH',
 		default = '')
 
@@ -605,8 +610,8 @@ class MCPREP_PT_world_tools(bpy.types.Panel):
 		col = rw.column()
 		row = col.row(align=True)
 		row.label(text="World settings and lighting") # world time
-		row.operator("mcprep.open_help", text="", icon="QUESTION", emboss=False).url = \
-			"https://theduckcow.com/dev/blender/mcprep/world-tools/"
+		row.operator("mcprep.open_help", text="", icon="QUESTION", emboss=False
+			).url = "https://theduckcow.com/dev/blender/mcprep/world-tools/"
 
 		rw = layout.row()
 		col = rw.column(align=True)
@@ -657,8 +662,8 @@ class MCPREP_PT_skins(bpy.types.Panel):
 
 		row = layout.row()
 		row.label(text="Select skin")
-		row.operator("mcprep.open_help", text="", icon="QUESTION", emboss=False).url = \
-			"https://theduckcow.com/dev/blender/mcprep/skin-swapping/"
+		row.operator("mcprep.open_help", text="", icon="QUESTION", emboss=False
+			).url = "https://theduckcow.com/dev/blender/mcprep/skin-swapping/"
 
 		# set size of UIlist
 		row = layout.row()
@@ -810,7 +815,6 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 		else:
 			name = ""
 			mcmob_type = ""
-		# col.label(text=scn_props.mob_list[scn_props.mob_list_index].name)  # datapass.split(":/:")[0])
 		col = layout.column(align=True)
 		row = col.row(align=True)
 		row.scale_y = 1.5
@@ -995,6 +999,67 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 			b_col.operator("mcprep.reload_items")
 
 
+class MCPREP_PT_materials(bpy.types.Panel):
+	"""MCprep panel for materials"""
+	bl_label = "MCprep materials"
+	bl_space_type = "PROPERTIES"
+	bl_region_type = 'WINDOW'
+	bl_context = "material"
+
+	def draw(self, context):
+		"""Code for drawing the material generator"""
+		scn_props = context.scene.mcprep_props
+
+		layout = self.layout
+		split = layout.split()
+		col = split.column(align=True)
+
+		if scn_props.material_list:
+			col.template_list("MCPREP_UL_item", "",
+						scn_props, "material_list",
+						scn_props, "material_list_index",
+						rows=4)
+			col = layout.column(align=True)
+			row = col.row(align=True)
+			row.scale_y = 1.5
+			name = scn_props.material_list[scn_props.material_list_index].name
+			row.operator("mcprep.load_material", text="Load: "+name)
+		else:
+			box = col.box()
+			b_row = box.row()
+			b_row.label(text="No materials loaded")
+			b_row = box.row()
+			b_row.scale_y = 2
+			b_row.operator("mcprep.reload_materials", icon="ERROR")
+
+			col = layout.column(align=True)
+			col.enabled = False
+			row = col.row(align=True)
+			row.scale_y = 1.5
+			row.operator("mcprep.load_material", text="Load material")
+
+
+class MCPREP_PT_materials_subsettings(bpy.types.Panel):
+	"""MCprep panel for advanced material settings and functions"""
+	bl_label = "Advanced"
+	bl_parent_id = "MCPREP_PT_materials"
+	bl_space_type = "PROPERTIES"
+	bl_region_type = 'WINDOW'
+	bl_context = "material"
+
+	def draw(self, context):
+		b_row = self.layout.row()
+		b_col = b_row.column(align=False)
+		b_col.label(text="Resource pack")
+		subrow = b_col.row(align=True)
+		subrow.prop(context.scene, "mcprep_texturepack_path", text="")
+		subrow.operator("mcprep.reset_texture_path",
+			icon=LOAD_FACTORY, text="")
+		b_row = self.layout.row()
+		b_col = b_row.column(align=True)
+		b_col.operator("mcprep.reload_materials")
+
+
 # -----------------------------------------------------------------------------
 #	Above for UI
 #	Below for registration stuff
@@ -1097,6 +1162,8 @@ class McprepProps(bpy.types.PropertyGroup):
 	meshswap_list_index = bpy.props.IntProperty(default=0)
 	item_list = bpy.props.CollectionProperty(type=spawn_util.ListItemAssets)
 	item_list_index = bpy.props.IntProperty(default=0)
+	material_list = bpy.props.CollectionProperty(type=material_manager.ListMaterials)
+	material_list_index = bpy.props.IntProperty(default=0)
 
 
 # -----------------------------------------------------------------------------
@@ -1115,7 +1182,9 @@ classes = (
 	# MCPREP_PT_bridge,
 	MCPREP_PT_world_tools,
 	MCPREP_PT_skins,
-	MCPREP_PT_spawn
+	MCPREP_PT_spawn,
+	MCPREP_PT_materials,
+	MCPREP_PT_materials_subsettings,
 )
 
 
@@ -1150,8 +1219,8 @@ def register():
 	bpy.types.Scene.mcprep_texturepack_path = bpy.props.StringProperty(
 		name = "Path to texture pack",
 		subtype = 'DIR_PATH',
-		description = "Path to a folder containing resources and textures to use"+\
-			"with material prepping",
+		description = ("Path to a folder containing resources and textures to use "
+			"with material prepping"),
 		update=update_mcprep_texturepack_path,
 		default=addon_prefs.custom_texturepack_path
 		)

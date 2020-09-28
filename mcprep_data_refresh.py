@@ -167,6 +167,11 @@ def get_mineways_list(vanilla):
 		name = prename.split('"')[1] # go from  ' L"lectern_sides"'  to 'lectern_sides'
 		presubname = line.split(',')[4]
 		presubname = presubname.split('"')[1]
+
+		# special, bespoke names like MWO_double_chest_top_left should be ignored
+		if presubname.lower().startswith("mwo_") or presubname.lower().startswith("mw_"):
+			continue
+
 		if presubname:
 			# print("YES!: ", presubname)
 			name_sub = name+"_"+presubname
@@ -235,7 +240,7 @@ def mineways_extras():
 		"Jack_o'Lantern":"jack_o_lantern",
 		"Pumpkin":"carved_pumpkin",
 		"Kelp":"kelp",
-		"Kelp__1":"",
+		# "Kelp__1":"",
 		"Ladder":"ladder",
 		"Lantern":"lantern",
 		"Large_Flowers":"sunflower", # decide block
@@ -274,8 +279,8 @@ def mineways_extras():
 		"Sugar_Cane":"sugar_cane",
 		"Stationary_Lava":"lava_still",
 		"Stationary_Water":"water_still",
-		"Stained_Glass*":"",
-		"Stone_Bricks*":"",
+		# "Stained_Glass*":"",
+		# "Stone_Bricks*":"",
 		"Stone_Cutter":"stonecutter_top", # should be a meshswap item evetually
 		"Sunflower":"sunflower_bottom",
 		"Trapped_Chest":"entity/chest/normal",

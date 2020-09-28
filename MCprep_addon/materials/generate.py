@@ -31,13 +31,16 @@ from .. import util
 def update_mcprep_texturepack_path(self, context):
 	"""Triggered if the scene-level resource pack path is updated."""
 	bpy.ops.mcprep.reload_items()
+	bpy.ops.mcprep.reload_materials()
 	conf.material_sync_cache = None
 
 
 def get_mc_canonical_name(name):
 	"""Convert a material name to standard MC name.
 
-	Returns: canonical name, and form (mc, jmc, or mineways)
+	Returns:
+		canonical name
+		form (mc, jmc, or mineways)
 	"""
 	general_name = util.nameGeneralize(name)
 	if not conf.json_data:
@@ -328,6 +331,9 @@ def matprep_cycles(mat, passes, use_reflections, use_principled, only_solid, pac
 		use_principled: if available and cycles, use principled node
 		saturate: if a desaturated texture (by canonical resource), add color
 		format: which format of PBR, string ("Specular" or "SEUS")
+
+	Returns:
+		int: 0 only if successful, otherwise None or other
 	"""
 	if util.bv28():
 		# ensure nodes are enabled esp. after importing from BI scenes
@@ -393,7 +399,9 @@ def set_cycles_texture(image, material, extra_passes=False):
 	"""
 	Used by skin swap and assiging missing textures or tex swapping.
 	Args:
-		image: image datablock
+		image: already loaded image datablock
+		material: existing material datablock
+		extra_passes: whether to include or hard exclude non diffuse passes
 	"""
 	conf.log("Setting cycles texture for img: {} mat: {}".format(image.name, material.name))
 	if material.node_tree is None:

@@ -415,7 +415,19 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper, McprepMateri
 			generate.set_saturation_material(mat) # may be a double call if was animated tex
 
 		if self.prepMaterials:
-			MCPREP_OT_prep_materials.execute(self, context)
+			bpy.ops.mcprep.prep_materials(
+				animateTextures = self.animateTextures,
+				autoFindMissingTextures = self.autoFindMissingTextures,
+				combineMaterials = self.combineMaterials,
+				improveUiSettings = self.improveUiSettings,
+				usePrincipledShader = self.usePrincipledShader,
+				useReflections = self.useReflections,
+				useExtraMaps = self.useExtraMaps,
+				normalIntensity = self.normalIntensity,
+				makeSolid = self.makeSolid,
+				syncMaterials = self.syncMaterials,
+				packFormat = self.packFormat,
+				skipUsage = True)
 
 		self.report({'INFO'},"{} materials affected".format(res))
 		self.track_param = context.scene.render.engine
@@ -431,9 +443,9 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper, McprepMateri
 			conf.log("Renamed material: grass_block_side_overlay to grass_block_side")
 
 
-class MCPREP_OT_generate_material(bpy.types.Operator, McprepMaterialProps):
+class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 	"""Swap current textures for that of a texture pack folder"""
-	bl_idname = "mcprep.generate_material"
+	bl_idname = "mcprep.load_material"
 	bl_label = "Generate material"
 	bl_description = ("Generate and apply the selected material based on active "
 		"resource pack")
@@ -446,10 +458,10 @@ class MCPREP_OT_generate_material(bpy.types.Operator, McprepMaterialProps):
 
 	@classmethod
 	def poll(cls, context):
-		# TODO: update to base on resource pack loaded
-		return True
+		return context.object and context.scene.mcprep_props.material_list
 
 	def invoke(self, context, event):
+		# invoke_popup
 		return context.window_manager.invoke_props_dialog(self, width=300*util.ui_scale())
 
 	def draw(self, context):
@@ -459,8 +471,94 @@ class MCPREP_OT_generate_material(bpy.types.Operator, McprepMaterialProps):
 	track_param = None
 	@tracking.report_error
 	def execute(self,context):
-		self.report({"ERROR"}, "Not implemented yet!")
-		return {'CANCELLED'}
+		scn_props = context.scene.mcprep_props
+		mat_item = scn_props.material_list[scn_props.material_list_index]
+		mat, err = self.generate_base_material(
+			context, mat_item.name, mat_item.path)
+		if mat is None and err:
+			self.report({"ERROR"}, err)
+			return {'CANCELLED'}
+		elif mat is None:
+			self.report({"ERROR"}, "Failed generate base material")
+			return {'CANCELLED'}
+
+		context.object.active_material = mat
+
+		# Don't want to generally run prep, as this would affect everything
+		# selected, as opposed to affecting just the new material
+		# bpy.ops.mcprep.prep_materials()
+		# Instead, run the update steps below copied from the MCprep inner loop
+		res, err = self.update_material(context, mat)
+		if res is False and err:
+			self.report({"ERROR"}, err)
+			return {'CANCELLED'}
+		elif res is False:
+			self.report({"ERROR"}, "Failed to prep generated material")
+			return {'CANCELLED'}
+
+		self.track_param = context.scene.render.engine
+		return {'FINISHED'}
+
+	def generate_base_material(self, context, name, path):
+		"""Generate a base material from name and active resource pack"""
+		image = bpy.data.images.load(path, check_existing=False)
+		mat = bpy.data.materials.new(name=name)
+
+		engine = context.scene.render.engine
+		if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
+			generate.set_internal_texture(image, mat, self.useExtraMaps)
+		elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+			# need to create at least one texture node first, then the rest works
+			mat.use_nodes = True
+			node = mat.node_tree.nodes.new('ShaderNodeTexImage')
+			node.image = image
+			print("Added blank texture node")
+
+			# now use standard method to update textures
+			generate.set_cycles_texture(image, mat, self.useExtraMaps)
+		else:
+			return None, "Only Blender Internal, Cycles, or Eevee supported"
+
+		return mat, None
+
+	def update_material(self, context, mat):
+		"""Update the initially created material"""
+		if not mat:
+			conf.log("During prep, found null material:"+str(mat), vv_only=True)
+			return
+		elif mat.library:
+			return
+
+		engine = context.scene.render.engine
+		passes = generate.get_textures(mat)
+		if not self.useExtraMaps:
+			for pass_name in passes:
+				if pass_name != "diffuse":
+					passes[pass_name] = None
+
+		if self.autoFindMissingTextures:
+			for pass_name in passes:
+				res = generate.replace_missing_texture(passes[pass_name])
+				if res>0:
+					mat["texture_swapped"] = True  # used to apply saturation
+
+		if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
+			res = generate.matprep_internal(mat, passes,
+				self.useReflections, self.makeSolid)
+		elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+			res = generate.matprep_cycles(mat, passes, self.useReflections,
+				self.usePrincipledShader, self.makeSolid, self.packFormat)
+		else:
+			return False, "Only Blender Internal, Cycles, or Eevee supported"
+
+		success = res==0
+
+		print("Debug 5", success)
+		if self.animateTextures:
+			sequences.animate_single_material(
+				mat, context.scene.render.engine)
+
+		return success, None
 
 
 # -----------------------------------------------------------------------------
@@ -472,7 +570,7 @@ classes = (
 	MCPREP_OT_prep_materials,
 	MCPREP_OT_materials_help,
 	MCPREP_OT_swap_texture_pack,
-	MCPREP_OT_generate_material,
+	MCPREP_OT_load_material,
 )
 
 
