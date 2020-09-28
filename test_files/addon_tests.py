@@ -727,10 +727,8 @@ class mcprep_testing():
 		print("No resource images found for mapped items: ({})".format(
 			len(mats_no_packimage)))
 		print("These would appear to have cannon mappings, but then fail on lookup")
-		for itm in mats_no_packimage:
-			print("\t"+itm)
 		if len(mats_no_packimage)>5: # known number up front, e.g. chests, stone_slab_side, stone_slab_top
-			return "Missing images for blocks specified in mcprep_data.json"
+			return "Missing images for blocks specified in mcprep_data.json: "+",".join(mats_no_packimage)
 
 		# also test that there are not raw image names not in mapping list
 		# but that otherwise could be added to the mapping list as file exists
@@ -1135,6 +1133,7 @@ class mcprep_testing():
 		# bpy.ops.file.make_paths_relative() instead of this, do manually
 		different_base = []
 		not_relative = []
+		missing = []
 		for img in bpy.data.images:
 			if not img.filepath:
 				continue
@@ -1143,6 +1142,8 @@ class mcprep_testing():
 				different_base.append(os.path.basename(img.filepath))
 			if img.filepath != bpy.path.relpath(img.filepath):
 				not_relative.append(os.path.basename(img.filepath))
+			if not os.path.isfile(abspath):
+				missing.append(img.name)
 
 		if len(different_base) > 50:
 			return "Wrong basepath for image filepath comparison!"
@@ -1152,6 +1153,9 @@ class mcprep_testing():
 		if not_relative:
 			return "Found {} non relative img files in meshswap: {}".format(
 				len(not_relative), ", ".join(not_relative))
+		if missing:
+			return "Found {} img with missing source files: {}".format(
+				len(missing), ", ".join(missing))
 
 		# detect any non canonical material names?? how to exclude?
 
@@ -1303,7 +1307,6 @@ class mcprep_testing():
 
 		new_mat = bpy.data.materials.new("mcprep_test")
 		obj.active_material = new_mat
-		new_mat.diffuse_color = (0, 1, 0, 1)
 
 		init_mats = bpy.data.materials[:]
 		init_len = len(bpy.data.materials)
@@ -1371,7 +1374,6 @@ class mcprep_testing():
 
 		new_mat = bpy.data.materials.new("mcprep_test")
 		obj.active_material = new_mat
-		new_mat.diffuse_color = (0, 1, 0, 1)
 
 		new_mat.name = "mcprep_test"
 		init_mats = bpy.data.materials[:]
@@ -1393,7 +1395,8 @@ class mcprep_testing():
 		bpy.ops.mcprep.reload_materials()
 
 		# add object
-		bpy.ops.object.primitive_cube_add()
+		bpy.ops.mesh.primitive_cube_add()
+
 		bpy.ops.mcprep.load_material()
 
 		# validate that the loaded material has a name matching current list

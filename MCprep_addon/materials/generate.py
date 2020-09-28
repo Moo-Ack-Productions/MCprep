@@ -59,8 +59,14 @@ def get_mc_canonical_name(name):
 	elif general_name in conf.json_data["blocks"]["block_mapping_jmc"]:
 		canon = conf.json_data["blocks"]["block_mapping_jmc"][general_name]
 		form = "jmc2obj"
+	elif general_name.lower() in conf.json_data["blocks"]["block_mapping_jmc"]:
+		canon = conf.json_data["blocks"]["block_mapping_jmc"][general_name.lower()]
+		form = "jmc2obj"
 	elif general_name in conf.json_data["blocks"]["block_mapping_mineways"]:
 		canon = conf.json_data["blocks"]["block_mapping_mineways"][general_name]
+		form = "mineways"
+	elif general_name.lower() in conf.json_data["blocks"]["block_mapping_mineways"]:
+		canon = conf.json_data["blocks"]["block_mapping_mineways"][general_name.lower()]
 		form = "mineways"
 	else:
 		conf.log("Canonical name not matched: "+general_name, True)
