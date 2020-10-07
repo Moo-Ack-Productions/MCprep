@@ -38,23 +38,13 @@ def init():
 	# Used to print out extra information, set false with distribution
 	# -----------------------------------------------
 	global dev
-	dev = False
+	dev = True
 
 	global v
 	v = True # $VERBOSE, UI setting
 
 	global vv
 	vv = dev # $VERYVERBOSE
-
-
-	# -----------------------------------------------
-	# To display smart warnings and fixes
-	# -----------------------------------------------
-
-	global mcprep_warnings
-	mcprep_warnings = []
-	# examples: is your scene scaled at /10 for mineways?
-
 
 	# -----------------------------------------------
 	# JSON attributes
@@ -106,11 +96,23 @@ def init():
 	# -----------------------------------------------
 	# For cross-addon lists
 	# -----------------------------------------------
+
 	global skin_list
 	skin_list = [] # each is: [ basename, path ]
 
 	global rig_categories
 	rig_categories = [] # simple list of directory names
+
+
+	# -----------------------------------------------
+	# Matieral sync cahce, to avoid repeat lib reads
+	# -----------------------------------------------
+
+	# list of material names, each is a string. None by default to indicate
+	# that no reading has occurred. If lib not found, will update to [].
+	# If ever changing the resource pack, should also reset to None.
+	global material_sync_cache
+	material_sync_cache = None
 
 
 # -----------------------------------------------------------------------------

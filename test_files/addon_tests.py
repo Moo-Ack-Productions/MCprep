@@ -65,34 +65,18 @@ class mcprep_testing():
 			self.meshswap_mineways_separated,
 			self.meshswap_mineways_combined,
 			self.detect_desaturated_images,
+			self.detect_extra_passes,
 			self.find_missing_images_cycles,
 			self.qa_meshswap_file,
 			self.item_spawner,
+			self.sync_materials,
+			self.sync_materials_link,
+			self.load_material,
 			self.world_tools,
 			]
 		self.run_only = None # name to give to only run this test
 
 		self.mcprep_json = {}
-		# 	1:["combine_materials", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	2:["combine_images", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	3:["scale_uv", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	4:["isolate_alpha_uvs", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	9:["fix_skin_eyes", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	10:["add_skin", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	11:["remove_skin", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	12:["reload_skins", {"type":"material","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	14:["handler_skins_enablehack", {"type":"material","check":0,"res":""}, ""],
-		# 	16:["openfolder", {"type":"mcprep_ui","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	16:["meshswap_pathreset", {"type":"meshswap","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	16:["meshswap_spawner", {"type":"meshswap","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	16:["reload_meshswap", {"type":"meshswap","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	16:["fixmeshswapsize", {"type":"meshswap","check":0,"res":""}, "bpy.ops.object"],
-		# 	16:["reload_spawners", {"type":"spawner","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	16:["reload_mobs", {"type":"spawner","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	16:["mob_spawner_direct", {"type":"spawner","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	16:["mob_spawner", {"type":"spawner","check":0,"res":""}, "bpy.ops.mcprep"],
-		# 	16:["mob_install_menu", {"type":"spawner","check":0,"res":""}, "bpy.ops.mcprep"],
-		# }
 
 	def run_all_tests(self):
 		"""For use in command line mode, run all tests and checks"""
@@ -743,10 +727,8 @@ class mcprep_testing():
 		print("No resource images found for mapped items: ({})".format(
 			len(mats_no_packimage)))
 		print("These would appear to have cannon mappings, but then fail on lookup")
-		for itm in mats_no_packimage:
-			print("\t"+itm)
 		if len(mats_no_packimage)>5: # known number up front, e.g. chests, stone_slab_side, stone_slab_top
-			return "Missing images for blocks specified in mcprep_data.json"
+			return "Missing images for blocks specified in mcprep_data.json: "+",".join(mats_no_packimage)
 
 		# also test that there are not raw image names not in mapping list
 		# but that otherwise could be added to the mapping list as file exists
@@ -1064,6 +1046,82 @@ class mcprep_testing():
 		# test that it is caching as expected.. by setting a false
 		# value for cache flag and seeing it's returning the property value
 
+	def detect_extra_passes(self):
+		"""Ensure only the correct pbr file matches are found for input file"""
+
+		from MCprep.materials.generate import find_additional_passes
+
+		tmp_dir = tempfile.gettempdir()
+
+		# physically generate these empty files, then delete
+		tmp_files = [
+			"oak_log_top.png",
+			"oak_log_top-s.png",
+			"oak_log_top_n.png",
+			"oak_log.jpg",
+			"oak_log_s.jpg",
+			"oak_log_n.jpeg",
+			"oak_log_disp.jpeg",
+			"stonecutter_saw.tiff",
+			"stonecutter_saw n.tiff"
+		]
+
+		for tmp in tmp_files:
+			fname = os.path.join(tmp_dir, tmp)
+			with open(fname, 'a'):
+				os.utime(fname)
+
+		def cleanup():
+			"""Failsafe delete files before raising error within test method"""
+			for tmp in tmp_files:
+				try:
+					os.remove(os.path.join(tmp_dir, tmp))
+				except:
+					pass
+
+		# assert setup was successful
+		for tmp in tmp_files:
+			if os.path.isfile(os.path.join(tmp_dir, tmp)):
+				continue
+			cleanup()
+			raise Exception("Failed to generate test empty files")
+
+		# the test cases; input is diffuse, output is the whole dict
+		cases = [
+			{
+				"diffuse": os.path.join(tmp_dir, "oak_log_top.png"),
+				"specular": os.path.join(tmp_dir, "oak_log_top-s.png"),
+				"normal": os.path.join(tmp_dir, "oak_log_top_n.png"),
+			},{
+				"diffuse": os.path.join(tmp_dir, "oak_log.jpg"),
+				"specular": os.path.join(tmp_dir, "oak_log_s.jpg"),
+				"normal": os.path.join(tmp_dir, "oak_log_n.jpeg"),
+				"displace": os.path.join(tmp_dir, "oak_log_disp.jpeg"),
+			},{
+				"diffuse": os.path.join(tmp_dir, "stonecutter_saw.tiff"),
+				"normal": os.path.join(tmp_dir, "stonecutter_saw n.tiff"),
+			}
+		]
+
+		for test in cases:
+			res = find_additional_passes(test["diffuse"])
+			if res != test:
+				cleanup()
+				# for debug readability, basepath everything
+				for itm in res:
+					res[itm] = os.path.basename(res[itm])
+				for itm in test:
+					test[itm] = os.path.basename(test[itm])
+				raise Exception("Mismatch for set {}: got {} but expected {}".format(
+					test["diffuse"], res, test))
+
+		# test other cases intended to fail
+		res = find_additional_passes(os.path.join(tmp_dir, "not_a_file.png"))
+		if res != {}:
+			cleanup()
+			raise Exception("Fake file should not have any return")
+
+
 	def qa_meshswap_file(self):
 		"""Open the meshswap file, assert there are no relative paths"""
 		blendfile = os.path.join("MCprep_addon", "MCprep_resources", "mcprep_meshSwap.blend")
@@ -1075,6 +1133,7 @@ class mcprep_testing():
 		# bpy.ops.file.make_paths_relative() instead of this, do manually
 		different_base = []
 		not_relative = []
+		missing = []
 		for img in bpy.data.images:
 			if not img.filepath:
 				continue
@@ -1083,6 +1142,8 @@ class mcprep_testing():
 				different_base.append(os.path.basename(img.filepath))
 			if img.filepath != bpy.path.relpath(img.filepath):
 				not_relative.append(os.path.basename(img.filepath))
+			if not os.path.isfile(abspath):
+				missing.append(img.name)
 
 		if len(different_base) > 50:
 			return "Wrong basepath for image filepath comparison!"
@@ -1092,6 +1153,9 @@ class mcprep_testing():
 		if not_relative:
 			return "Found {} non relative img files in meshswap: {}".format(
 				len(not_relative), ", ".join(not_relative))
+		if missing:
+			return "Found {} img with missing source files: {}".format(
+				len(missing), ", ".join(missing))
 
 		# detect any non canonical material names?? how to exclude?
 
@@ -1220,6 +1284,127 @@ class mcprep_testing():
 
 		# test that it removes existing suns by first placing one, and then
 		# affirming it's gone
+
+	def sync_materials(self):
+		"""Test syncing materials works"""
+		self._clear_scene()
+
+		# test empty case
+		res = bpy.ops.mcprep.sync_materials(
+			link=False,
+			replace_materials=False,
+			skipUsage=True) # track here false to avoid error
+		if res != {'CANCELLED'}:
+			return "Should return cancel in empty scene"
+
+		# test that the base test material is included as shipped
+		bpy.ops.mesh.primitive_plane_add()
+		obj = bpy.context.object
+		if bpy.app.version >= (2, 80):
+			obj.select_set(True)
+		else:
+			obj.select = True
+
+		new_mat = bpy.data.materials.new("mcprep_test")
+		obj.active_material = new_mat
+
+		init_mats = bpy.data.materials[:]
+		init_len = len(bpy.data.materials)
+		res = bpy.ops.mcprep.sync_materials(
+			link=False,
+			replace_materials=False)
+		if res != {'FINISHED'}:
+			return "Should return finished with test file"
+
+		# check there is another material now
+		imported = set(bpy.data.materials[:]) - set(init_mats)
+		post_len = len(bpy.data.materials)
+		if not list(imported):
+			return "No new materials found"
+		elif len(list(imported))>1:
+			return "More than one material generated"
+		elif list(imported)[0].library:
+			return "Material linked should not be a library"
+		elif post_len - 1 != init_len:
+			return "Should have imported specifically one material"
+
+		new_mat.name = "mcprep_test"
+		init_len = len(bpy.data.materials)
+		res = bpy.ops.mcprep.sync_materials(
+			link=False,
+			replace_materials=True)
+		if res != {'FINISHED'}:
+			return "Should return finished with test file (replace)"
+		if len(bpy.data.materials) != init_len:
+			return "Number of materials should not have changed with replace"
+
+		# Now test it works with name generalization, stripping .###
+		new_mat.name = "mcprep_test.005"
+		init_mats = bpy.data.materials[:]
+		init_len = len(bpy.data.materials)
+		res = bpy.ops.mcprep.sync_materials(
+			link=False,
+			replace_materials=False)
+		if res != {'FINISHED'}:
+			return "Should return finished with test file"
+
+		# check there is another material now
+		imported = set(bpy.data.materials[:]) - set(init_mats)
+		post_len = len(bpy.data.materials)
+		if not list(imported):
+			return "No new materials found"
+		elif len(list(imported))>1:
+			return "More than one material generated"
+		elif list(imported)[0].library:
+			return "Material linked should not be a library"
+		elif post_len - 1 != init_len:
+			return "Should have imported specifically one material"
+
+	def sync_materials_link(self):
+		"""Test syncing materials works"""
+		self._clear_scene()
+
+		# test that the base test material is included as shipped
+		bpy.ops.mesh.primitive_plane_add()
+		obj = bpy.context.object
+		if bpy.app.version >= (2, 80):
+			obj.select_set(True)
+		else:
+			obj.select = True
+
+		new_mat = bpy.data.materials.new("mcprep_test")
+		obj.active_material = new_mat
+
+		new_mat.name = "mcprep_test"
+		init_mats = bpy.data.materials[:]
+		res = bpy.ops.mcprep.sync_materials(
+			link=True,
+			replace_materials=False)
+		if res != {'FINISHED'}:
+			return "Should return finished with test file (link)"
+		imported = set(bpy.data.materials[:]) - set(init_mats)
+		imported = list(imported)
+		if not imported:
+			return "No new material found after linking"
+		if not list(imported)[0].library:
+			return "Material linked is not a library"
+
+	def load_material(self):
+		"""Test the load material operators and related resets"""
+		self._clear_scene()
+		bpy.ops.mcprep.reload_materials()
+
+		# add object
+		bpy.ops.mesh.primitive_cube_add()
+
+		bpy.ops.mcprep.load_material()
+
+		# validate that the loaded material has a name matching current list
+		mat = bpy.context.object.active_material
+		scn_props = bpy.context.scene.mcprep_props
+		mat_item = scn_props.material_list[scn_props.material_list_index]
+		if mat_item.name not in mat.name:
+			return "Material name not loaded "+mat.name
 
 
 class OCOL:

@@ -583,6 +583,9 @@ class MCPREP_OT_remove_skin(bpy.types.Operator):
 	@tracking.report_error
 	def execute(self,context):
 
+		if not conf.skin_list:
+			self.report({"ERROR"},"No skins loaded in memory, try reloading")
+			return {'CANCELLED'}
 		if context.scene.mcprep_skins_list_index >= len(conf.skin_list):
 			self.report({"ERROR"},"Indexing error")
 			return {'CANCELLED'}

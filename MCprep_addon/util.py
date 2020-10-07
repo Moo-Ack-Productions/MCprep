@@ -84,6 +84,11 @@ def bAppendLink(directory, name, toLink, active_layer=True):
 
 	Note that for 2.8 compatibility, the directory passed in should
 	already be correctly identified (eg Group or Collection)
+
+	Arguments:
+		directory: xyz.blend/Type, where Type is: Collection, Group, Material...
+		name: asset name
+		toLink: bool
 	"""
 
 	conf.log("Appending " + directory + " : " + name, vv_only=True)
@@ -657,10 +662,10 @@ def set_cuser_location(loc, context=None):
 	"""Returns the location vector of the 3D cursor"""
 	if not context:
 		context = bpy.context
-	if hasattr(context.scene, "cursor_location"):
+	if hasattr(context.scene, "cursor_location"): # 2.7
 		context.scene.cursor_location = loc
 	else:
-		context.space_data.cursor_location = loc
+		context.scene.cursor.location = loc
 
 
 def instance_collection(obj):

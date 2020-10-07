@@ -3,10 +3,11 @@
 
 import json
 import os
+import shutil
 import sys
-import zipfile
 import urllib.request
 import xml.etree.ElementTree as ET
+import zipfile
 
 MINEWAYS_URL = "https://raw.githubusercontent.com/erich666/Mineways/master/Win/tiles.h"
 
@@ -166,6 +167,11 @@ def get_mineways_list(vanilla):
 		name = prename.split('"')[1] # go from  ' L"lectern_sides"'  to 'lectern_sides'
 		presubname = line.split(',')[4]
 		presubname = presubname.split('"')[1]
+
+		# special, bespoke names like MWO_double_chest_top_left should be ignored
+		if presubname.lower().startswith("mwo_") or presubname.lower().startswith("mw_"):
+			continue
+
 		if presubname:
 			# print("YES!: ", presubname)
 			name_sub = name+"_"+presubname
@@ -234,7 +240,7 @@ def mineways_extras():
 		"Jack_o'Lantern":"jack_o_lantern",
 		"Pumpkin":"carved_pumpkin",
 		"Kelp":"kelp",
-		"Kelp__1":"",
+		# "Kelp__1":"",
 		"Ladder":"ladder",
 		"Lantern":"lantern",
 		"Large_Flowers":"sunflower", # decide block
@@ -273,8 +279,8 @@ def mineways_extras():
 		"Sugar_Cane":"sugar_cane",
 		"Stationary_Lava":"lava_still",
 		"Stationary_Water":"water_still",
-		"Stained_Glass*":"",
-		"Stone_Bricks*":"",
+		# "Stained_Glass*":"",
+		# "Stone_Bricks*":"",
 		"Stone_Cutter":"stonecutter_top", # should be a meshswap item evetually
 		"Sunflower":"sunflower_bottom",
 		"Trapped_Chest":"entity/chest/normal",
@@ -299,7 +305,7 @@ def mineways2mc(name, vanilla):
 	return None
 
 
-def get_vanilla_list():
+def get_vanilla_list(copy_file=False):
 	"""Get the list of material names from vanilla Minecraft (local install)"""
 	outlist = {}
 
@@ -340,14 +346,42 @@ def get_vanilla_list():
 	if not jarfile:
 		raise Exception("Could not get most recent jar version")
 
+	mcprep_resources = os.path.join("MCprep_addon", "MCprep_resources",
+		"resourcepacks", "mcprep_default")
+	prefix = 'assets/minecraft/textures/'
+	mcp_subfolders = ["block", "entity", "environment", "item", "mob_effect",
+		"models", "painting", "particle"]
+	if copy_file:
+		for sub in mcp_subfolders:
+			checkpath = os.path.join(mcprep_resources, prefix, sub)
+			if os.path.isdir(checkpath):
+				print("Removing MCprep resources folder: "+sub)
+				shutil.rmtree(checkpath)
+			else:
+				print("Error! Could not find "+checkpath)
+		print("Removed MCprep resource folders, will copy over replacements")
+
 	print("Got jar version: {}".format(os.path.basename(jarfile)))
 	archive = zipfile.ZipFile(jarfile, 'r')
-	prefix = 'assets/minecraft/textures/'
 
 	for name in archive.namelist():
-		if not name.endswith('.png'):
+		if not (name.endswith('.png') or name.endswith('.mcmeta')):
 			continue
 		base = os.path.basename(name)[:-4]
+		sub_mcp = name.startswith(prefix) and name.split(prefix)[1].split(os.sep)[0] in mcp_subfolders
+
+		if copy_file is True and sub_mcp is True:
+			# TODO: Further ensure subfolder is one of mcp_subfolders
+			# copy file to MCprep resource directory
+			new_path = os.path.join(mcprep_resources, name)
+			os.makedirs(os.path.dirname(new_path), exist_ok=True)
+			with archive.open(name) as zf, open(new_path, 'wb') as f:
+				shutil.copyfileobj(zf, f)
+			print("\tCopied "+name)
+
+		# limit to textures only hereafter
+		if not name.endswith('.png'):
+			continue
 
 		if name.startswith(prefix+"block"):
 			outlist[base] = base
@@ -420,8 +454,13 @@ def run_all(auto=False):
 	# ie reflection, emission, etc
 	base_override = read_base_mapping()
 
+	if auto:
+		xin = "n"
+	else:
+		xin = input("Copy latest vanilla textures to MCprep? (y): ")
+
 	# consider also passing in pref to get specific version, for old names
-	vanilla = get_vanilla_list()
+	vanilla = get_vanilla_list(xin=="y")
 	vanilla_map = vanilla_overrides(vanilla) # don't need to return as pass ref?
 
 	# load material lists from online blobs

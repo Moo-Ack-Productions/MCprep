@@ -428,6 +428,11 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 			gl = coll.dupli_offset
 		elif hasattr(act, "instance_offset"):
 			gl = coll.instance_offset
+		else:
+			# fallback to ensure gl defined as showed up in user errors,
+			# but not clear how this happens
+			print("WARNING: Assigned fallback gl of (0,0,0)")
+			gl = (0,0,0)
 		# cl = util.get_cuser_location(context)
 
 		if self.relocation == "Offset":
@@ -500,6 +505,7 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 			gl = grp_added.instance_offset
 		else:
 			conf.log("Warning, could not set offset for group; null type?")
+			gl = (0,0,0)
 		cl = util.get_cuser_location(context)
 
 		# For some reason, adding group objects on its own doesn't work
@@ -520,6 +526,8 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 			grp_added.user_clear()
 		else:
 			for obj in grp_added.objects:
+				if obj not in context.view_layer.objects[:]:
+					continue
 				util.select_set(obj, True)
 
 		# try:
@@ -541,7 +549,7 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 			try:
 				bpy.ops.object.mode_set(mode='POSE')
 			except Exception as e:
-				self.report({'ERROR'},"Failed to enter pose mode, see logs")
+				self.report({'ERROR'},"Failed to enter pose mode: "+str(e))
 				print("Failed to enter pose mode, see logs")
 				print("Exception: ",str(e))
 				print(bpy.context.object)

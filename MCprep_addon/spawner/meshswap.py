@@ -42,7 +42,7 @@ meshswap_cache_path = None
 def get_meshswap_cache(context, clear=False):
 	"""Load groups/objects from meshswap lib if not cached, return key vars."""
 	global meshswap_cache
-	global meshswap_cache_path
+	global meshswap_cache_path # used to auto-clear path if bpy prop changed
 
 	meshswap_path = context.scene.meshswap_path
 	if not meshswap_cache_path:
@@ -51,28 +51,31 @@ def get_meshswap_cache(context, clear=False):
 	if meshswap_cache_path != meshswap_path:
 		clear = True
 
-	if not meshswap_cache or clear is True:
-		meshswap_cache = {"groups":[], "objects":[]}
-		with bpy.data.libraries.load(meshswap_path) as (data_from, data_to):
-			if hasattr(data_from, "groups"): # blender 2.7
-				get_attr = "groups"
-				prefix = "Group/"
-			else: # 2.8
-				get_attr = "collections"
-				prefix = "Collection/"
-			grp_list = list(getattr(data_from, get_attr))
-			# canons = [generate.get_mc_canonical_name(grp) for grp in grp_list]
-			meshswap_cache["groups"] = grp_list
-			for obj in list(data_from.objects):
-				if obj in meshswap_cache["groups"]:
-					# conf.log("Skipping meshwap obj already in cache: "+str(obj))
-					continue
-				# ignore list? e.g. Point.001,
-				# canon = generate.get_mc_canonical_name(obj)
-				meshswap_cache["objects"].append(obj)
+	if meshswap_cache and clear is not True:
 		return meshswap_cache
-	else:
+
+	meshswap_cache = {"groups":[], "objects":[]}
+	if not os.path.isfile(meshswap_path):
+		conf.log("Meshswap path not found")
 		return meshswap_cache
+	if not meshswap_path.lower().endswith('.blend'):
+		conf.log("Meshswap path must be a .blend file")
+		return meshswap_cache
+
+	with bpy.data.libraries.load(meshswap_path) as (data_from, _):
+		if hasattr(data_from, "groups"): # blender 2.7
+			get_attr = "groups"
+		else: # 2.8
+			get_attr = "collections"
+		grp_list = list(getattr(data_from, get_attr))
+		meshswap_cache["groups"] = grp_list
+		for obj in list(data_from.objects):
+			if obj in meshswap_cache["groups"]:
+				# conf.log("Skipping meshwap obj already in cache: "+str(obj))
+				continue
+			# ignore list? e.g. Point.001,
+			meshswap_cache["objects"].append(obj)
+	return meshswap_cache
 
 
 def getMeshswapList(context):
@@ -104,6 +107,8 @@ def move_assets_to_excluded_layer(context, collections):
 def update_meshswap_path(self, context):
 	"""for UI list path callback"""
 	conf.log("Updating meshswap path", vv_only=True)
+	if not context.scene.meshswap_path.lower().endswith('.blend'):
+		print("Meshswap file is not a .blend, and should be")
 	if not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
 		print("Meshswap blend file does not exist")
 	updateMeshswapList(context)
@@ -210,7 +215,7 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 		description="Automatically snap to whole block locations")
 	make_real = bpy.props.BoolProperty(
 		name="Make real",
-		default=True,
+		default=False,
 		description="Automatically make groups real after placement")
 
 	# toLink = bpy.props.BoolProperty(
@@ -430,8 +435,12 @@ class MCPREP_OT_reload_meshswap(bpy.types.Operator):
 
 	@tracking.report_error
 	def execute(self, context):
-		if not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
+		if not context.scene.meshswap_path.lower().endswith('.blend'):
+			self.report({'WARNING'}, "Meshswap file must be a .blend, try resetting")
+		elif not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
 			self.report({'WARNING'}, "Meshswap blend file does not exist")
+
+		# still reload even with above issues, cache/UI should be cleared
 		get_meshswap_cache(context, clear=True)
 		updateMeshswapList(context)
 		return {'FINISHED'}
@@ -490,10 +499,10 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				"the objects part of the group will be placed in this "
 				"layer, 0 means same as active layers"))
 
-	filmic_values = bpy.props.BoolProperty(
-		name="Use filmic lamp values",
-		default=False,
-		description="Set added lamp values with appropriate filmic rendering values")
+	# filmic_values = bpy.props.BoolProperty(
+	# 	name="Use filmic lamp values",
+	# 	default=False,
+	# 	description="Set added lamp values with appropriate filmic rendering values")
 
 
 	@classmethod
@@ -551,11 +560,15 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		self.track_exporter = addon_prefs.MCprep_exporter_type
 
 		direc = context.scene.meshswap_path
+		if not direc.lower().endswith('.blend'):
+			self.report({'ERROR'}, "Meshswap file must be a .blend!")
+			return {'CANCELLED'}
+
 		if not os.path.isfile(direc):
 			direc = bpy.path.abspath(direc)
 			# bpy.ops.object.dialogue('INVOKE_DEFAULT') # DOES work! but less streamlined
 			if not os.path.isfile(direc):
-				self.report({'ERROR'}, "Mesh swap blend file not found!") # better, actual "error"
+				self.report({'ERROR'}, "Meshswap blend file not found!") # better, actual "error"
 				return {'CANCELLED'}
 
 		# Assign vars used across operator
@@ -1281,16 +1294,24 @@ class MCPREP_OT_fix_mineways_scale(bpy.types.Operator):
 	@tracking.report_error
 	def execute(self, context):
 		conf.log("Attempting to fix Mineways scaling for meshswap")
+
 		# get cursor loc first? shouldn't matter which mode/location though
-		tmp = bpy.context.space_data.pivot_point
 		tmp_loc = util.get_cuser_location(context)
-		bpy.context.space_data.pivot_point = 'CURSOR'
+		if hasattr(context.space_data, "pivot_point"):
+			tmp = context.space_data.pivot_point
+			bpy.context.space_data.pivot_point = 'CURSOR'
+		else:
+			tmp = context.scene.tool_settings.transform_pivot_point
+			context.scene.tool_settings.transform_pivot_point = 'CURSOR'
 		util.set_cuser_location((0,0,0), context)
 
 		bpy.ops.transform.resize(value=(10, 10, 10))
 		bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-		# bpy.ops.transform.resize(value=(.1, .1, .1))
-		bpy.context.space_data.pivot_point = tmp
+
+		if hasattr(context.space_data, "pivot_point"):
+			bpy.context.space_data.pivot_point = tmp
+		else:
+			context.scene.tool_settings.transform_pivot_point = tmp
 		util.set_cuser_location(tmp_loc, context)
 		return {'FINISHED'}
 
