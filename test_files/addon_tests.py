@@ -69,10 +69,10 @@ class mcprep_testing():
 			self.find_missing_images_cycles,
 			self.qa_meshswap_file,
 			self.item_spawner,
-			self.world_tools,
 			self.sync_materials,
 			self.sync_materials_link,
-			self.load_material
+			self.load_material,
+			self.world_tools,
 			]
 		self.run_only = None # name to give to only run this test
 
