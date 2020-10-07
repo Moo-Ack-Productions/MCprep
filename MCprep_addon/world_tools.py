@@ -269,6 +269,10 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			self.report({"ERROR"}, "Select the .obj file, NOT the .mtl!")
 			return {'CANCELLED'}
 
+		if not "obj" in dir(bpy.ops.import_scene):
+			self.report({"INFO"}, "FYI: had to enable OBJ imports in user preferences")
+			bpy.ops.preferences.addon_enable(module="io_scene_obj")
+
 		res = bpy.ops.import_scene.obj(filepath=self.filepath, use_split_groups=True)
 		if res != {'FINISHED'}:
 			self.report({"ERROR"}, "Issue encountered while importing world")
@@ -681,6 +685,8 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 		obj.rotation_euler[0] = 0.481711
 		obj.rotation_euler[1] = 0.303687
 		obj.rotation_euler[1] = 0.527089
+		obj.data.energy = 1.0
+		# obj.data.color
 		util.obj_link_scene(obj, context)
 		util.scene_update(context)
 		if hasattr(obj, "use_contact_shadow"):

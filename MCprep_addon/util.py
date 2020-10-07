@@ -662,10 +662,10 @@ def set_cuser_location(loc, context=None):
 	"""Returns the location vector of the 3D cursor"""
 	if not context:
 		context = bpy.context
-	if hasattr(context.scene, "cursor_location"):
+	if hasattr(context.scene, "cursor_location"): # 2.7
 		context.scene.cursor_location = loc
 	else:
-		context.space_data.cursor_location = loc
+		context.scene.cursor.location = loc
 
 
 def instance_collection(obj):

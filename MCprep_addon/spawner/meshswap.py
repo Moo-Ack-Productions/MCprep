@@ -1294,16 +1294,25 @@ class MCPREP_OT_fix_mineways_scale(bpy.types.Operator):
 	@tracking.report_error
 	def execute(self, context):
 		conf.log("Attempting to fix Mineways scaling for meshswap")
+
 		# get cursor loc first? shouldn't matter which mode/location though
-		tmp = bpy.context.space_data.pivot_point
 		tmp_loc = util.get_cuser_location(context)
-		bpy.context.space_data.pivot_point = 'CURSOR'
+		if hasattr(context.space_data, "pivot_point"):
+			tmp = context.space_data.pivot_point
+			bpy.context.space_data.pivot_point = 'CURSOR'
+		else:
+			tmp = context.scene.tool_settings.transform_pivot_point
+			context.scene.tool_settings.transform_pivot_point = 'CURSOR'
 		util.set_cuser_location((0,0,0), context)
 
-		bpy.ops.transform.resize(value=(10, 10, 10))
+		bpy.ops.transform.resize(value=(10, 10, 10), center_override=(0, 0, 0))
 		bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
 		# bpy.ops.transform.resize(value=(.1, .1, .1))
-		bpy.context.space_data.pivot_point = tmp
+
+		if hasattr(context.space_data, "pivot_point"):
+			bpy.context.space_data.pivot_point = tmp
+		else:
+			context.scene.tool_settings.transform_pivot_point = tmp
 		util.set_cuser_location(tmp_loc, context)
 		return {'FINISHED'}
 

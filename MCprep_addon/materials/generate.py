@@ -47,6 +47,13 @@ def get_mc_canonical_name(name):
 		res = util.load_mcprep_json()
 		if not res:
 			return general_name, None
+
+	# Special case to allow material names, e.g. in meshswap, to end in .emit
+	# while still mapping to canonical names, to pick up features like animated
+	# textures.
+	if ".emit" in general_name:
+		general_name = general_name.replace(".emit", "")
+
 	if ("blocks" not in conf.json_data
 			or "block_mapping_mc" not in conf.json_data["blocks"]
 			or "block_mapping_jmc" not in conf.json_data["blocks"]
@@ -288,7 +295,10 @@ def matprep_internal(mat, passes, use_reflections, only_solid):
 		mat.raytrace_mirror.use = False
 		mat.alpha = 0
 
-	mat.emit = 1 if checklist(canon, "emit") else 0
+	if checklist(canon, "emit") or "emit" in mat.name.lower():
+		mat.emit = 1
+	else:
+		mat.emit = 0
 
 	# cycle through and see if the layer exists to enable/disable blend
 	if not checklist(canon, "desaturated"):
@@ -347,18 +357,19 @@ def matprep_cycles(mat, passes, use_reflections, use_principled, only_solid, pac
 
 	matGen = util.nameGeneralize(mat.name)
 	canon, form = get_mc_canonical_name(matGen)
-	use_emission = checklist(canon, "emit")
+	use_emission = checklist(canon, "emit") or "emit" in mat.name.lower()
 
 	# Choose between principled or not, and tells the generator which PBR format to use
-	if use_reflections and checklist(canon, "water"):
-		res = matgen_special_water(mat, passes)
-	elif use_reflections and checklist(canon, "glass"):
-		res = matgen_special_glass(mat, passes)
-	elif use_principled and hasattr(bpy.types, 'ShaderNodeBsdfPrincipled'):
+
+	# TODO: Update different options for water before enabling this
+	# if use_reflections and checklist(canon, "water"):
+	# 	res = matgen_special_water(mat, passes)
+	# if use_reflections and checklist(canon, "glass"):
+	# 	res = matgen_special_glass(mat, passes)
+	if use_principled and hasattr(bpy.types, 'ShaderNodeBsdfPrincipled'):
 		res = matgen_cycles_principled(mat, passes, use_reflections, use_emission, only_solid, pack_format)
 	else:
 		res = matgen_cycles_original(mat, passes, use_reflections, use_emission, only_solid, pack_format)
-
 	return res
 
 
