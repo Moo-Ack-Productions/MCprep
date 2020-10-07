@@ -1305,9 +1305,8 @@ class MCPREP_OT_fix_mineways_scale(bpy.types.Operator):
 			context.scene.tool_settings.transform_pivot_point = 'CURSOR'
 		util.set_cuser_location((0,0,0), context)
 
-		bpy.ops.transform.resize(value=(10, 10, 10), center_override=(0, 0, 0))
+		bpy.ops.transform.resize(value=(10, 10, 10))
 		bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-		# bpy.ops.transform.resize(value=(.1, .1, .1))
 
 		if hasattr(context.space_data, "pivot_point"):
 			bpy.context.space_data.pivot_point = tmp
