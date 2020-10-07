@@ -27,17 +27,16 @@ from . import sequences
 from .. import tracking
 from .. import util
 
+
 # -----------------------------------------------------------------------------
 # UI and utility functions
 # -----------------------------------------------------------------------------
 
+
 def reload_materials(context):
 	"""Reload the material UI list"""
 	mcprep_props = context.scene.mcprep_props
-	resource_folder = context.scene.mcprep_texturepack_path
-
-	mcprep_props = context.scene.mcprep_props
-	resource_folder = context.scene.mcprep_texturepack_path
+	resource_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
 	extensions = [".png",".jpg",".jpeg"]
 
 	mcprep_props.material_list.clear()
@@ -72,6 +71,8 @@ def reload_materials(context):
 					and os.path.splitext(image_file.lower())[-1] in extensions]
 	for i, image_file in enumerate(sorted(files)):
 		basename = os.path.splitext(os.path.basename(image_file))[0]
+		if basename.endswith("_s") or basename.endswith("_n"):
+			continue # ignore the pbr passes
 		canon, _ = generate.get_mc_canonical_name(basename) # basename.replace("_", " ")
 		asset = mcprep_props.material_list.add()
 		asset.name = canon
@@ -95,8 +96,6 @@ class ListMaterials(bpy.types.PropertyGroup):
 	description = bpy.props.StringProperty()
 	path = bpy.props.StringProperty(subtype='FILE_PATH')
 	index = bpy.props.IntProperty(min=0, default=0)  # for icon drawing
-
-
 
 
 # -----------------------------------------------------------------------------
@@ -126,7 +125,6 @@ class MCPREP_OT_reload_materials(bpy.types.Operator):
 	def execute(self, context):
 		reload_materials(context)
 		return {'FINISHED'}
-
 
 
 class MCPREP_OT_combine_materials(bpy.types.Operator):
@@ -194,7 +192,6 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 			else:
 				conf.log("Skipping, already added material", True)
 
-
 		# pre 2.78 solution, deep loop
 		if bpy.app.version < (2, 78):
 			for ob in bpy.data.objects:
@@ -224,7 +221,6 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 			conf.log([name_cat[base]," ## ",baseMat], vv_only=True)
 
 			for matname in name_cat[base][1:]:
-
 				# skip if fake user set
 				if bpy.data.materials[matname].use_fake_user == True:
 					continue
@@ -254,9 +250,8 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 				baseMat.name = genBase
 			conf.log(["Final: ",baseMat], vv_only=True)
 
-		postcount = len( ["x" for x in getMaterials(self, context) if x.users >0] )
-		self.report({"INFO"},
-				"Consolidated {x} materials down to {y}".format(
+		postcount = len(["x" for x in getMaterials(self, context) if x.users >0])
+		self.report({"INFO"}, "Consolidated {x} materials down to {y}".format(
 				x=precount,
 				y=postcount))
 
@@ -311,7 +306,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 			elif im.name not in name_cat[base]:
 				name_cat[base].append(im.name)
 			else:
-				if conf.vv:print("Skipping, already added image")
+				conf.log("Skipping, already added image", vv_only=True)
 
 		# pre 2.78 solution, deep loop
 		if bpy.app.version < (2,78):
@@ -319,7 +314,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 				for sl in ob.material_slots:
 					if sl is None or sl.material is None or sl.material not in data:
 						continue # selection only
-					sl.material = data[name_cat[ util.nameGeneralize(sl.material.name) ][0]]
+					sl.material = data[name_cat[util.nameGeneralize(sl.material.name)][0]]
 			# doesn't remove old textures, but gets it to zero users
 
 			postcount = len( ["x" for x in bpy.data.materials if x.users >0] )
@@ -356,9 +351,8 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 			else:
 				baseImg.name = util.nameGeneralize(baseImg.name)
 
-		postcount = len( ["x" for x in bpy.data.images if x.users >0] )
-		self.report({"INFO"},
-				"Consolidated {x} images down to {y}".format(
+		postcount = len(["x" for x in bpy.data.images if x.users >0])
+		self.report({"INFO"}, "Consolidated {x} images down to {y}".format(
 				x=precount,
 				y=postcount))
 

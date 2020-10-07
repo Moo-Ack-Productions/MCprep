@@ -93,7 +93,7 @@ def find_from_texturepack(blockname, resource_folder=None):
 	"""
 	if not resource_folder:
 		# default to internal pack
-		resource_folder = bpy.context.scene.mcprep_texturepack_path
+		resource_folder = bpy.path.abspath(bpy.context.scene.mcprep_texturepack_path)
 
 	if not os.path.isdir(resource_folder):
 		conf.log("Error, resource folder does not exist")

@@ -39,7 +39,7 @@ def clear_sync_cache(scene):
 
 def get_sync_blend(context):
 	"""Return the sync blend file path that might exist, based on active pack"""
-	resource_pack = context.scene.mcprep_texturepack_path
+	resource_pack = bpy.path.abspath(context.scene.mcprep_texturepack_path)
 	return os.path.join(resource_pack, "materials.blend")
 
 

@@ -39,7 +39,7 @@ def reload_items(context):
 	"""Reload the items UI list for spawning"""
 
 	mcprep_props = context.scene.mcprep_props
-	resource_folder = context.scene.mcprep_texturepack_path
+	resource_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
 	extensions = [".png",".jpg",".jpeg"]
 
 	mcprep_props.item_list.clear()

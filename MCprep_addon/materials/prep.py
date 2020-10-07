@@ -314,7 +314,6 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper, McprepMateri
 		"select a folder path for an unzipped resource pack or texture folder")
 	bl_options = {'REGISTER', 'UNDO'}
 
-
 	filter_glob = bpy.props.StringProperty(
 		default="",
 		options = {'HIDDEN'}
@@ -444,7 +443,7 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper, McprepMateri
 
 
 class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
-	"""Swap current textures for that of a texture pack folder"""
+	"""Load the select material from the active resource pack and prep it"""
 	bl_idname = "mcprep.load_material"
 	bl_label = "Generate material"
 	bl_description = ("Generate and apply the selected material based on active "
@@ -461,7 +460,6 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 		return context.object and context.scene.mcprep_props.material_list
 
 	def invoke(self, context, event):
-		# invoke_popup
 		return context.window_manager.invoke_props_dialog(self, width=300*util.ui_scale())
 
 	def draw(self, context):
@@ -510,8 +508,16 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 		elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 			# need to create at least one texture node first, then the rest works
 			mat.use_nodes = True
-			node = mat.node_tree.nodes.new('ShaderNodeTexImage')
-			node.image = image
+			node_diff = mat.node_tree.nodes.new('ShaderNodeTexImage')
+			node_diff.image = image
+			node_diff["MCPREP_diffuse"] = True
+
+			# Initialize extra passes as well
+			node_spec = mat.node_tree.nodes.new('ShaderNodeTexImage')
+			node_spec["MCPREP_specular"] = True
+			node_nrm = mat.node_tree.nodes.new('ShaderNodeTexImage')
+			node_nrm["MCPREP_normal"] = True
+
 			print("Added blank texture node")
 
 			# now use standard method to update textures
@@ -531,6 +537,7 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 
 		engine = context.scene.render.engine
 		passes = generate.get_textures(mat)
+		conf.log("Load Mat Passes:"+str(passes), vv_only=True)
 		if not self.useExtraMaps:
 			for pass_name in passes:
 				if pass_name != "diffuse":
