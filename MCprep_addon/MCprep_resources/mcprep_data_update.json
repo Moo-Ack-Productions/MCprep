@@ -3193,19 +3193,19 @@
 				0.089036
 			],
 			"redstone_dust_dot": [
-				0.286377,
-				0.566797,
-				0.154644
+				0.3,
+				0,
+				0
 			],
 			"redstone_dust_line0": [
-				0.286377,
-				0.566797,
-				0.154644
+				0.3,
+				0,
+				0
 			],
 			"redstone_dust_line1": [
-				0.286377,
-				0.566797,
-				0.154644
+				0.3,
+				0,
+				0
 			],
 			"spruce_leaves": [
 				0.227161,
@@ -3260,11 +3260,11 @@
 			"lava",
 			"campfire_fire",
 			"shroomlight",
+			"soul_fire_0",
 			"soul_fire_1",
 			"soul_fire_2",
 			"soul_campfire_fire",
-			"soul_fire_0",
-			"soul_fire_1",
+			"redstone_wire_on",
 			"Beacon",
 			"Fire",
 			"Glowstone",

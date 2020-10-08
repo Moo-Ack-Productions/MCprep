@@ -13,7 +13,8 @@
 	"emit":["redstone_block","redstone_lamp_on","glowstone","lava_flow",
 		"lava_still","fire_layer_0","fire_layer_1","fire","fire_0","fire_1",
 		"sea_lantern","magma","beacon","lava","campfire_fire", "shroomlight",
-		"soul_fire_0",, "soul_fire_1", "soul_fire_2", "soul_campfire_fire",
+		"soul_fire_0", "soul_fire_1", "soul_fire_2", "soul_campfire_fire",
+		"redstone_wire_on",
 
 		"Beacon","Fire","Glowstone","Redstone_Lamp_(active)","Sea_Lantern",
 		"Stationary_Lava",
@@ -42,9 +43,9 @@
 		"oak_leaves": [0.227161, 0.614651, 0.089036],
 		"spruce_leaves": [0.227161, 0.614651, 0.089036],
 
-		"redstone_dust_dot": [0.286377, 0.566797, 0.154644],
-		"redstone_dust_line0": [0.286377, 0.566797, 0.154644],
-		"redstone_dust_line1": [0.286377, 0.566797, 0.154644],
+		"redstone_dust_dot": [0.3, 0, 0],
+		"redstone_dust_line0": [0.3, 0, 0],
+		"redstone_dust_line1": [0.3, 0, 0],
 
 		"water_still":[0.067324, 0.135132, 2],
 		"water_flow":[0.067324, 0.135132, 2],
