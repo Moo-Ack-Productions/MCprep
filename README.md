@@ -20,32 +20,15 @@ It should remain a zip folder. In blender, go to preferences, then the addons ta
 
 **If you like the addon, [please consider donating](http://bit.ly/donate2TheDuckCow) for the continued quality development! [Share this addon](https://twitter.com/intent/tweet?text=Make+easier+Minecraft+renders+using+the+MCprep+addon+bit.ly/MCprep+by+@TheDuckCow) so others can benefit from it! Or help by [taking this quick survey](http://bit.ly/MCprepSurvey)!**
 
-Demo Usage
+
+Learn how to use MCprep
 ======
 
+*[Short, 1-minute videos showcasing how to use Blender+MCprep features](https://bit.ly/MCprepTutorials)*
 
-*[Texture swap and Texture Animate Demo](https://www.youtube.com/watch?v=lxF_j0HIsE0)*
+[![Beta video demo](https://img.youtube.com/vi/62fVXVAO13A/0.jpg)](https://bit.ly/MCprepTutorials)
 
-[![Beta video demo](https://img.youtube.com/vi/lxF_j0HIsE0/0.jpg)](https://www.youtube.com/watch?v=lxF_j0HIsE0)
-
-*[Mob spawner tutorial](https://www.youtube.com/watch?v=asB4UcBuWBw)*
-
-*[Skin swapping overview](https://theduckcow.com/dev/blender/mcprep/skin-swapping/)*
-
-*[Mob spawner demo](https://www.youtube.com/watch?v=C3YoZx-seFE)*
-
- [![Mob spawner gif](/visuals/spawner-gif.gif)](https://www.youtube.com/watch?v=C3YoZx-seFE)
-
-*[Pre-release demo, materials & meshswapping demo](https://www.youtube.com/watch?v=Nax7iuCTovk)*
-
- [![Alt text](/visuals/meshswap.demo.gif "Meshswap Preview")](https://www.youtube.com/watch?v=Nax7iuCTovk)
-
-Other video demos:
-
-- [Cycles Materials Update](https://www.youtube.com/watch?v=MRuPRnfdzfI)
-- [Grass field meshswapping](https://www.facebook.com/photo.php?v=737273036339269&l=2318416360725689976)
-- [Scale UV and delete alpha demo](https://twitter.com/TheDuckCow/status/1056659276465364993)
-- [Spawn items](https://twitter.com/TheDuckCow/status/1066494695734484992)
+*[Additional Playlist of MCprep videos/demos](https://www.youtube.com/playlist?list=PL8X_CzUEVBfaajwyguIj_utPXO4tEOr7a)*
 
 
 About MCprep
@@ -69,16 +52,15 @@ Feature list
 | Combine materials/images | Consolidates duplicate materials and images down to the smallest number of unique datablocks. *Note: combine images is only available on blender 2.78+* |
 | Improve UI | A shortcut to quickly improve viewport settings for Minecraft sets. Sets textured solid mode & turns off mipmaps |
 | Mesh Swap | Allows you to replace simple models from 3D exported worlds with more intricate 3D models |
-| Scale UV Faces | Allows you to scale all UV faces of a mesh about their origin |
-| Select Alpha Faces | Allows you to select or delete mesh faces that are transparent in the applied image texture |
+| Scale UV Faces | Allows you to scale all UV faces of a mesh about their origin. Must be in edit mode of a mesh. |
+| Select Alpha Faces | Allows you to select or delete mesh faces that are transparent in the applied image texture. Must be in edit mode of a mesh. |
+| Sync Materials | Search for the `materials.blend` file within the active texture pack, and for any matching materials found in this file, import and overwrite the current file's version of that same material. Found under the World Exporter > Advanced section or in prep materials popup. |
 
 
 | World Tools   |      Description      |
 |----------|:-------------:|
 | Create MC World | Operator which allows user to create either a static or dynamic sky. Options exist to also add clouds, remove existing sun lamps, and define how the Sun/Moon is imported (either as a shader, mesh, or neither). If a dynamic sky is created, a time-control slider will also be displayed below. |
 | Prep World | This operator makes several updates to either Blender Internal, Cycles, or Eevee scenes that are optimal and in most cases will notably improve render times (particularly for cycles) and increase overall aesthetic. |
-
-
 
 
 | Skin Swapper   |      Description      |
@@ -98,6 +80,12 @@ Feature list
 | Spawn: items | Convert any image icon into a 3D mesh, with faces per each pixel and transparent faces already removed. Defaults to loading Minecraft items.|
 
 
+
+| Material Library   |      Description      |
+|----------|:-------------:|
+| Load material | Generate the selected material and apply it to the selected material slot of the active object. Follows convention of the active resource pack and general Prep Materials operator. |
+
+
 ### Spawner mobs included in the current version of MCprep
 ![included-mobs](/visuals/MCprep_mobs_included.png?raw=true)
 
@@ -111,10 +99,10 @@ Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow),
 
 | Player Rigs   |      Creator      |
 |----------|:-------------:|
-| Fancy Feet Alex | Modified by [Jeremy Putnam](http://www.blendswap.com/user/lorddon) (MCprep exclusive) |
-| Fancy Feet Generic Player (ideal for skinswapping) |  [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) ([Rig link](http://bit.ly/MinecraftRig)) |
-| Fancy Feet Steve |  [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) ([Rig link](http://bit.ly/MinecraftRig)) |
+| Fancy Feet Player |  [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) ([Rig link](http://bit.ly/MinecraftRig)) |
+| Fancy Feet Slim Player | Modified by [Jeremy Putnam](http://www.blendswap.com/user/lorddon) (MCprep exclusive) |
 | Simple Player (modified) | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+| Simple Slim Player (modified) | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) + TheDuckCow (MCprep exclusive) |
 | Shapekey Player | Derived from [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home), shapekeys and animation by [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) (MCprep exclusive) |
 | Story Mode Rig | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) (No direct link yet) |
 | VMcomix Steve (rounded) | [VMcomix](https://www.youtube.com/user/VMComix) ([Rig link](http://vmcomix.blogspot.com/)) |
@@ -128,6 +116,7 @@ Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow),
 | Cow | [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html)) |
 | Dolphin | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Fox | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+| Mooshroom (red/brown) | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Parrot | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Pig | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) (No direct link yet) |
 | Panda | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
@@ -153,8 +142,12 @@ Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow),
 | Evoker | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Ghast | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) (No direct link yet) |
 | Guardian | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) ([Rig link](http://www.blendswap.com/blends/view/79729)) |
+| Hoglin | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Husk | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Magma Cube | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+| Piglin | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+| Pillager | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+| Polar bear | [PixelFrosty](https://twitter.com/Pixel_Frosty) ([Demo/download](https://www.youtube.com/watch?v=kbt5HWjafBk))|
 | Phantom | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Ravager | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Shulker | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) ([Rig link](http://www.blendswap.com/blends/view/79729)) |
@@ -162,12 +155,17 @@ Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow),
 | Skeleton | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) ([Rig link, outdated](http://www.blendswap.com/blends/view/79495)) |
 | Slime | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads))  |
 | Spider | [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html)) |
+| Strider | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Vindicator | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Witch | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Wither | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+| Wither Skeleton | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Vindicator | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+| Zoglin | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Zombie | [HissingCreeper](https://www.youtube.com/channel/UCHV3_5kFI93fFOl6KbmhkQA) (No direct link yet) |
 | Zombie Pigman | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+| Zombified Piglin | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+
 
 
 | Friendly/Utility Rigs   |      Creator      |
@@ -176,8 +174,10 @@ Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow),
 | Iron Golem | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) ([Rig link](http://www.blendswap.com/blends/view/79455)) |
 | Llama | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Ocelot | [HissingCreeper](https://www.youtube.com/channel/UCHV3_5kFI93fFOl6KbmhkQA) (No direct link yet) |
+| Simple Villager (Dynamic skin) | [Th3pooka](https://twitter.com/Th3Pooka) |
 | Snow Golem | [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html)) |
 | Villager | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+| Wandering Trader | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Wolf | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) ([Rig link, outdated](http://www.blendswap.com/blends/view/79628)) |
 
 
@@ -218,7 +218,7 @@ Setting options:
   - **Use extra maps:** If extra passes like normal and specular maps are available with the selected resource pack, load them into the material (note: the default MCprep texture pack will not have these passes)
   - **Improve UI:** Does not impact existing materials, but just sets the viewport to a nice minimum default to see the result of prepping materials - but always checked rendered mode to see how they truly look in the end
   - **Combine materials:** This will go through the entire blend file and attempt to merge together same-named materials (e.g. grass and grass.001 and grass.002 will all be consolidated down into one shared material, though something like grass-edit would be left alone)
-
+  - **Sync materials:** Look for any matching material names (after casting to Minecraft canonical names) in the materials.blend file (if presnet) under the active resource pack. If found, replace this local material with that from the materials.blend file.
 
 
 ### Swap texture pack
@@ -264,7 +264,6 @@ To add your own objects to meshswap (or groupswap):
   * "torchlike": objects that can have rotations like a torch on a wall. Objects with this property will be determined to be either on top of a block or placed on the side of another block according to the mesh.
   * **Note:** there is no UI for adding properties to a group, so if you want to add a property to a group (say a torch which has a pre-animated light and particle system, as the included blend file does) you must go into the python consol and add the property like so:  <code>bpy.data.groups['groupName']['propertyName'] = 1</code>  (the value only matters for the variance property)
   * **Example:** <code>bpy.data.groups['torch']['torchlike'] = 1</code> will add the torchlike property to the torch group, allowing it to have correct rotations when meshSwapped in.
-
 
 
 ### Animate textures:
@@ -342,6 +341,20 @@ Using Mineways? Use the following world export settings to use this feature (key
   - If there is a sun in the scene, it will turn on “use sky blend” which will make the rotation of the sun lamp affect the sky color / sun glow position.
 
 
+### Sync Materials
+- **Purpose:** Quickly load in previously set up materials found in the active resource pack's `materials.blend`, and replace corresponding materials on selected objects. Found under the World Exporter > Advanced section, or in prep materials popup.
+- **Step 1:** Select an object with materials you want to sync
+- **Step 1:** Press Sync Materials. This will only affect materials on the selected objects. If nothing was matched to the `materials.blend` file,
+
+To edit the materials.blend file for syncing:
+
+- **Step 1:** Open the materials.blend file in the active resource pack, or create the file if adding it to antoher resource pack. This file should be placed in the root folder of the resource pack, i.e. next to the `pack.png` file and `assets` folder.
+- **Step 2:** Technically optional but recommended: add a new cube for your material for quick previewing. Reset the UV layout in edit mode so each face takes up the whole texture.
+- **Step 3:** Apply a material to this new object, either by:
+  1) Appending from an existing file where you already created this material
+  2) Usse the `Load Materials` panel to load the default MCprep material. Strongly suggested you change the resource pack (under advanced) to be `//` to tell blender to use the local director as the resource pack, so that it doens't reference images outside the resource pack.
+- **Step 3:** Edit the material shader nodes. ONLY the material itself will be synced.
+
 
 ### Skin Swapping:
 - **Purpose:** To provide quick and easy skin changing on rigs and characters already in your blender scene.
@@ -351,6 +364,13 @@ Using Mineways? Use the following world export settings to use this feature (key
 - **Step 3:** Press the button that says "Apply [skin name]"
 - **Step 4:** You're done! If the user interface appears to not update, be sure to **check rendered view** (shift+z). Also note the default behavior is to make a *new* material. This way, if you had other characters with the same skin that you don't want changed, those are left alone. You can turn this off in the redo last menu or via F6.
 
+
+### Load Material:
+- **Purpose:** To quickly load/generate Minecraft materials, without having to first import a world obj. Follows convention of the active resource pack and general Prep Materials operator.
+- **Step 2:** Select an object and go into the Properties > Material tab (this feature is NOT in the MCprep panel).
+- **Step 2:** Load materials. Runs automatically when changing resource pack
+- **Step 3:** Select the material you want to load with left click. You can scroll to find the desired material, or expand the search bar inside the bottom of the UI list box.
+- **Step 4:** Select load - the material will *replace* the material in the current material slot.
 
 
 ### Mob Spawner:
