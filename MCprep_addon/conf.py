@@ -126,7 +126,7 @@ def icons_init():
 	global preview_collections
 	global v
 
-	collection_sets = ["main", "skins", "mobs", "blocks", "items"]
+	collection_sets = ["main", "skins", "mobs", "blocks", "items", "materials"]
 
 	try:
 		for iconset in collection_sets:

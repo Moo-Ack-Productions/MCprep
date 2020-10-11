@@ -40,11 +40,11 @@ def reload_materials(context):
 	extensions = [".png",".jpg",".jpeg"]
 
 	mcprep_props.material_list.clear()
-	if conf.use_icons and conf.preview_collections["items"]:
+	if conf.use_icons and conf.preview_collections["materials"]:
 		try:
-			bpy.utils.previews.remove(conf.preview_collections["items"])
+			bpy.utils.previews.remove(conf.preview_collections["materials"])
 		except:
-			conf.log("MCPREP: Failed to remove icon set, items")
+			conf.log("MCPREP: Failed to remove icon set, materials")
 
 	if not os.path.isdir(resource_folder):
 		conf.log("Error, resource folder does not exist")
@@ -81,10 +81,10 @@ def reload_materials(context):
 		asset.index = i
 
 		# if available, load the custom icon too
-		if not conf.use_icons or conf.preview_collections["items"] == "":
+		if not conf.use_icons or conf.preview_collections["materials"] == "":
 			continue
-		conf.preview_collections["items"].load(
-			"item-{}".format(i), image_file, 'IMAGE')
+		conf.preview_collections["materials"].load(
+			"material-{}".format(i), image_file, 'IMAGE')
 
 	if mcprep_props.material_list_index >= len(mcprep_props.material_list):
 		mcprep_props.material_list_index = len(mcprep_props.material_list) - 1

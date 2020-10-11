@@ -1015,7 +1015,7 @@ class MCPREP_PT_materials(bpy.types.Panel):
 		col = split.column(align=True)
 
 		if scn_props.material_list:
-			col.template_list("MCPREP_UL_item", "",
+			col.template_list("MCPREP_UL_material", "",
 						scn_props, "material_list",
 						scn_props, "material_list_index",
 						rows=4)

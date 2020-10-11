@@ -643,7 +643,7 @@ class MCPREP_OT_spawn_mob_with_skin(bpy.types.Operator):
 
 	relocation = bpy.props.EnumProperty(
 		items = [('Cursor', 'Cursor', 'No relocation'),
-				('Origin', 'Origin', 'Move the rig to the origin'),
+				('Clear', 'Origin', 'Move the rig to the origin'),
 				('Offset', 'Offset root',
 					'Offset the root bone to curse while moving the rest pose to the origin')],
 		name = "Relocation")
