@@ -27,6 +27,7 @@ from . import util
 from .spawner import mobs
 from .spawner import meshswap
 from .spawner import spawn_util
+from .spawner import models;
 from . import world_tools
 from . import addon_updater_ops
 from . import tracking
@@ -61,7 +62,7 @@ class MCPREP_MT_mob_spawner(bpy.types.Menu):
 			row = layout.row()
 			row.operator("mcprep.reload_mobs", text="Load mobs",
 				icon=HAND_ICON)
-			row.scale_y = 2
+			row.scale_y = 3
 			row.alignment = 'CENTER'
 			return
 
@@ -122,6 +123,24 @@ class MCPREP_MT_item_spawn(bpy.types.Menu):
 			else:
 				ops = layout.operator("mcprep.spawn_item", text=item.name)
 			ops.filepath = item.path
+class MCPREP_MT_model_spawn(bpy.types.Menu):
+	"""Menu for loaded item spawners"""
+	bl_label = "Model Spawner"
+	bl_idname = "MCPREP_MT_Model_spawn"
+
+	def draw(self, context):
+		layout = self.layout
+		for item in context.scene.mcprep_props.item_list:
+			icn = "item-{}".format(item.index)
+			if conf.use_icons and icn in conf.preview_collections["models"]:
+				ops =layout.operator("mcprep.spawn_model", text=item.name,
+					icon_value=conf.preview_collections["models"][icn].icon_id)
+			elif conf.use_icons:
+				ops = layout.operator("mcprep.spawn_model", text=item.name,
+					icon="BLANK1")
+			else:
+				ops = layout.operator("mcprep.spawn_model", text=item.name)
+			ops.filepath = model.path
 
 
 class MCPREP_MT_3dview_add(bpy.types.Menu):
@@ -163,6 +182,8 @@ class MCPREP_MT_3dview_add(bpy.types.Menu):
 		if sword_icon is not None:
 			layout.menu(MCPREP_MT_item_spawn.bl_idname,
 				icon_value=sword_icon.icon_id)
+			layout.menu(MCPREP_MT_model_spawn.bl_idname,
+				icon_value=grass_icon.icon_id)
 		else:
 			layout.menu(MCPREP_MT_item_spawn.bl_idname)
 
@@ -187,6 +208,13 @@ class McprepPreference(bpy.types.AddonPreferences):
 		name = "Meshswap path",
 		description = ("Default path to the meshswap asset file, for "
 			"meshswapable objects and groups"),
+		subtype = 'FILE_PATH',
+		default = scriptdir + "/MCprep_resources/mcprep_meshSwap.blend")
+
+	model_path = bpy.props.StringProperty(
+		name = "Model path",
+		description = ("Default path to the model asset file, for "
+			"models"),
 		subtype = 'FILE_PATH',
 		default = scriptdir + "/MCprep_resources/mcprep_meshSwap.blend")
 	mob_path = bpy.props.StringProperty(
@@ -331,8 +359,11 @@ class McprepPreference(bpy.types.AddonPreferences):
 				row = box.row()
 				row.label(text="MeshSwap file not found", icon="ERROR")
 
+
 			row = layout.row()
 			row.scale_y=0.7
+
+			
 			row.label(text="Texture / Resource packs")
 			box = layout.box()
 			split = util.layout_split(box, factor=factor_width)
@@ -385,11 +416,13 @@ class McprepPreference(bpy.types.AddonPreferences):
 			p = col.operator("mcprep.openfolder", text="Open skin folder")
 			p.folder = self.skin_path
 
+                        
 			# misc settings
 			row = layout.row()
 			col = row.column()
 			col.prop(self, "verbose")
 			row = layout.row()
+			
 
 		elif self.preferences_tab == "tutorials":
 			layout.label(text="Unsure on how to use the addon? Check out these resources")
@@ -998,6 +1031,83 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 			b_col = b_row.column(align=True)
 			b_col.operator("mcprep.reload_items")
 
+	def model(self, context):
+		scn_props = context.scene.mcprep_props
+
+		layout = self.layout
+		split = layout.split()
+		col = split.column(align=True)
+
+		if scn_props.model_list:
+			col.template_list("MCPREP_UL_models", "",
+					scn_props, "models_list",
+					scn_props, "models_list_index",
+					rows=4)
+			
+		elif not context.scene.model_path.lower().endswith('.blend'):
+			box = col.box()
+			b_row = box.row()
+			b_row.label(text="Model file must be a .blend")
+			b_row = box.row()
+			b_row.scale_y = 2
+			b_row.operator("mcprep.model_path_reset", icon=LOAD_FACTORY,
+				text="Reset model path")
+		elif not os.path.isfile(bpy.path.abspath(context.scene.model_path)):
+			box = col.box()
+			b_row = box.row()
+			b_row.label(text="Model file not found")
+			b_row = box.row()
+			b_row.scale_y = 2
+			b_row.operator("mcprep.model_path_reset", icon=LOAD_FACTORY,
+				text="Reset model path")
+		else:
+			box = col.box()
+			b_row = box.row()
+			b_row.label(text="No blocks loaded")
+			b_row = box.row()
+			b_row.scale_y = 2
+			b_row.operator("mcprep.reload_spawners",
+				text="Reload assets", icon="ERROR")
+
+		col = layout.column(align=True)
+		row = col.row()
+		row.scale_y = 1.5
+		row.enabled = len(scn_props.model_list)>0
+		if scn_props.model_list:
+			name = scn_props.meshswap_list[scn_props.model_list_index].name
+			block = scn_props.meshswap_list[scn_props.model_list_index].block
+			p = row.operator("mcprep.model_spawner", text="Place: "+name)
+			p.block = block
+			p.location = util.get_cuser_location(context)
+		else:
+			row.operator("mcprep.model_spawner", text="Place block")
+		# something to directly open meshswap file??
+
+		split = layout.split()
+		col = split.column(align=True)
+		row = col.row(align=True)
+
+		if not scn_props.show_settings_spawner:
+			col.prop(scn_props,"show_settings_spawner",
+					text="Advanced", icon="TRIA_RIGHT")
+		else:
+			col.prop(scn_props,"show_settings_spawner",
+					text="Advanced", icon="TRIA_DOWN")
+			box = col.box()
+			b_row = box.row()
+			b_col = b_row.column(align=False)
+			b_col.label(text="Meshswap file")
+			subrow = b_col.row(align=True)
+			subrow.prop(context.scene, "model_path", text="")
+			subrow.operator("mcprep.model_path_reset", icon=LOAD_FACTORY, text="")
+			if not context.scene.model_path.lower().endswith('.blend'):
+				b_col.label(text="MeshSwap file must be a .blend", icon="ERROR")
+			elif not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
+				b_col.label(text="MeshSwap file not found", icon="ERROR")
+			b_row = box.row()
+			b_col = b_row.column(align=True)
+			b_col.operator("mcprep.reload_models")
+
 
 class MCPREP_PT_materials(bpy.types.Panel):
 	"""MCprep panel for materials"""
@@ -1151,7 +1261,8 @@ class McprepProps(bpy.types.PropertyGroup):
 		description="Set mode for rig/object spawner",
 		items = [('mob', 'Mob', 'Show mob spawner'),
 				('meshswap', 'MeshSwap', 'Show MeshSwap spawner'),
-				('item', 'Items', 'Show item spawner')]
+				('item', 'Items', 'Show item spawner'),
+                                 ('Model', 'Models', 'Show model spawner')]
 	)
 
 	# spawn lists
@@ -1164,6 +1275,8 @@ class McprepProps(bpy.types.PropertyGroup):
 	item_list_index = bpy.props.IntProperty(default=0)
 	material_list = bpy.props.CollectionProperty(type=material_manager.ListMaterials)
 	material_list_index = bpy.props.IntProperty(default=0)
+	model_list = bpy.props.CollectionProperty(type=spawn_util.ListModelAssets)
+	model_list_index = bpy.props.IntProperty(default=0)
 
 
 # -----------------------------------------------------------------------------
@@ -1183,6 +1296,7 @@ classes = (
 	MCPREP_PT_world_tools,
 	MCPREP_PT_skins,
 	MCPREP_PT_spawn,
+        MCPREP_MT_model_spawn,
 	MCPREP_PT_materials,
 	MCPREP_PT_materials_subsettings,
 )
@@ -1213,6 +1327,13 @@ def register():
 	bpy.types.Scene.meshswap_path = bpy.props.StringProperty(
 		name = "Meshswap file",
 		description = "File for meshswap library",
+		subtype = 'FILE_PATH',
+		update = meshswap.update_meshswap_path,
+		default = addon_prefs.meshswap_path)
+
+	bpy.types.Scene.model_path = bpy.props.StringProperty(
+		name = "Model file",
+		description = "File for model library",
 		subtype = 'FILE_PATH',
 		update = meshswap.update_meshswap_path,
 		default = addon_prefs.meshswap_path)
@@ -1257,5 +1378,6 @@ def unregister():
 	del bpy.types.Scene.mcprep_props
 	del bpy.types.Scene.mcprep_mob_path
 	del bpy.types.Scene.meshswap_path
+	del bpy.types.Scene.model_path
 	del bpy.types.Scene.mcprep_skin_path
 	del bpy.types.Scene.mcprep_texturepack_path

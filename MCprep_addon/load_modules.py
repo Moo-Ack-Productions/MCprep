@@ -82,6 +82,11 @@ if "mobs" in locals():
 else:
 	from .spawner import mobs
 
+if "models" in locals():
+        importlib.reload(models)
+else:
+        from .spawner import models
+
 if "world_tools" in locals():
 	importlib.reload(world_tools)
 else:
@@ -140,6 +145,7 @@ module_list = (
 	spawn_util,
 	meshswap,
 	mobs,
+        models,
 	item,
 	world_tools,
 	# bridge,
