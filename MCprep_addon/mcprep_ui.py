@@ -130,17 +130,20 @@ class MCPREP_MT_model_spawn(bpy.types.Menu):
 
 	def draw(self, context):
 		layout = self.layout
-		for item in context.scene.mcprep_props.item_list:
-			icn = "item-{}".format(item.index)
-			if conf.use_icons and icn in conf.preview_collections["models"]:
-				ops =layout.operator("mcprep.spawn_model", text=item.name,
-					icon_value=conf.preview_collections["models"][icn].icon_id)
-			elif conf.use_icons:
-				ops = layout.operator("mcprep.spawn_model", text=item.name,
-					icon="BLANK1")
-			else:
-				ops = layout.operator("mcprep.spawn_model", text=item.name)
-			ops.filepath = model.path
+		meshswap_blocks = meshswap.getMeshswapList(context)
+		for blockset in meshswap_blocks:
+			# do some kind of check for if no blocks found
+			icn = "BLANK1"
+			if blockset[0].startswith("Group"):
+				icn = "GROUP"
+
+			opr = layout.operator(
+				"mcprep.meshswap_spawner",
+				text=blockset[1],
+				icon=icn
+			)
+			opr.block = blockset[0]
+			opr.location = util.get_cuser_location(context)
 
 
 class MCPREP_MT_3dview_add(bpy.types.Menu):
@@ -216,7 +219,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 		description = ("Default path to the model asset file, for "
 			"models"),
 		subtype = 'FILE_PATH',
-		default = scriptdir + "/MCprep_resources/mcprep_meshSwap.blend")
+		default = scriptdir + "/MCprep_resources/mcprep_models.blend")
 	mob_path = bpy.props.StringProperty(
 		name = "Mob path",
 		description = "Default folder for rig loads/spawns in new blender instances",
@@ -354,6 +357,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 			col = split.column()
 			col.label(text="Meshwap assets")
 			col = split.column()
+	
 			col.prop(self, "meshswap_path", text="")
 			if not os.path.isfile(bpy.path.abspath(self.meshswap_path)):
 				row = box.row()
@@ -1331,12 +1335,14 @@ def register():
 		update = meshswap.update_meshswap_path,
 		default = addon_prefs.meshswap_path)
 
-	bpy.types.Scene.model_path = bpy.props.StringProperty(
+        
+	"""bpy.types.Scene.model_path = bpy.props.StringProperty(
 		name = "Model file",
 		description = "File for model library",
 		subtype = 'FILE_PATH',
-		update = meshswap.update_meshswap_path,
-		default = addon_prefs.meshswap_path)
+		update = model.update_model_path,
+		default = addon_prefs.model_path)"""
+	
 	bpy.types.Scene.mcprep_texturepack_path = bpy.props.StringProperty(
 		name = "Path to texture pack",
 		subtype = 'DIR_PATH',
@@ -1378,6 +1384,6 @@ def unregister():
 	del bpy.types.Scene.mcprep_props
 	del bpy.types.Scene.mcprep_mob_path
 	del bpy.types.Scene.meshswap_path
-	del bpy.types.Scene.model_path
+	#del bpy.types.Scene.model_path
 	del bpy.types.Scene.mcprep_skin_path
 	del bpy.types.Scene.mcprep_texturepack_path
