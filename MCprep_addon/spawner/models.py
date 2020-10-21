@@ -83,7 +83,7 @@ def getmodelList(context):
 
 	# may redraw too many times, perhaps have flag
 	if not context.scene.mcprep_props.model_list:
-		updateMeshswapList(context)
+		updateModelList(context)
 	return [(itm.block, itm.name.title(), "Place {}".format(itm.name))
 			for itm in context.scene.mcprep_props.model_list]
 
@@ -111,10 +111,10 @@ def update_model_path(self, context):
 		print("Meshswap file is not a .blend, and should be")
 	if not os.path.isfile(bpy.path.abspath(context.scene.model_path)):
 		print("Meshswap blend file does not exist")
-	updateMeshswapList(context)
+	updateModelList(context)
 
 
-def updateMeshswapList(context):
+def updateModelList(context):
 	"""Update the model list"""
 	model_file = bpy.path.abspath(context.scene.model_path)
 	if not os.path.isfile(model_file):
@@ -235,7 +235,7 @@ class MCPREP_OT_model_spawner(bpy.types.Operator):
 	def execute(self, context):
 		pre_groups = list(util.collections())
 
-		meshSwapPath = bpy.path.abspath(context.scene.model_path)
+		modelPath = bpy.path.abspath(context.scene.model_path)
 		method, block = self.block.split("/")
 		toLink = False
 		use_cache = False
@@ -429,9 +429,9 @@ class MCPREP_OT_model_spawner(bpy.types.Operator):
 
 
 class MCPREP_OT_reload_models(bpy.types.Operator):
-	"""Force reload the MeshSwap objects and cache."""
+	"""Force reload the Model objects and cache."""
 	bl_idname = "mcprep.reload_models"
-	bl_label = "Reload MeshSwap"
+	bl_label = "Reload Models"
 
 	@tracking.report_error
 	def execute(self, context):
@@ -612,7 +612,7 @@ class MCPREP_OT_model(bpy.types.Operator):
 				removeList.append(swap)
 				continue
 			# just selecting mesh with same name and if in objList
-			if not (swapProps['meshSwap'] or swapProps['groupSwap']):
+			if not (swapProps['model'] or swapProps['groupSwap']):
 				continue
 
 			conf.log("Swapping '{x}', simplified name '{y}".format(
@@ -908,10 +908,10 @@ class MCPREP_OT_model(bpy.types.Operator):
 				# special cases, make another list for this? number of variants can vary..
 				if name == "torch" or name == "Torch":
 					if name+".1" not in pre_colls:
-						util.bAppendLink(os.path.join(meshSwapPath, g_or_c), name+".1", toLink)
+						util.bAppendLink(os.path.join(modelPath, g_or_c), name+".1", toLink)
 					if name+".2" not in pre_colls:
-						util.bAppendLink(os.path.join(meshSwapPath, g_or_c), name+".2", toLink)
-				util.bAppendLink(os.path.join(meshSwapPath, g_or_c), name, toLink)
+						util.bAppendLink(os.path.join(modelPath, g_or_c), name+".2", toLink)
+				util.bAppendLink(os.path.join(modelPath, g_or_c), name, toLink)
 
 				if util.bv28():
 					post_colls = list(util.collections())

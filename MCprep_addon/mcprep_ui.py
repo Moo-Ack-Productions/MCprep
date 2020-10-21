@@ -27,7 +27,7 @@ from . import util
 from .spawner import mobs
 from .spawner import meshswap
 from .spawner import spawn_util
-from .spawner import models;
+from .spawner import models
 from . import world_tools
 from . import addon_updater_ops
 from . import tracking
@@ -124,13 +124,13 @@ class MCPREP_MT_item_spawn(bpy.types.Menu):
 				ops = layout.operator("mcprep.spawn_item", text=item.name)
 			ops.filepath = item.path
 class MCPREP_MT_model_spawn(bpy.types.Menu):
-	"""Menu for loaded item spawners"""
+	"""Menu for loaded model spawners"""
 	bl_label = "Model Spawner"
 	bl_idname = "MCPREP_MT_Model_spawn"
 
 	def draw(self, context):
 		layout = self.layout
-		meshswap_blocks = meshswap.getMeshswapList(context)
+		model_blocks = models.getModelList(context)
 		for blockset in meshswap_blocks:
 			# do some kind of check for if no blocks found
 			icn = "BLANK1"
@@ -138,7 +138,7 @@ class MCPREP_MT_model_spawn(bpy.types.Menu):
 				icn = "GROUP"
 
 			opr = layout.operator(
-				"mcprep.meshswap_spawner",
+				"mcprep.model_spawner",
 				text=blockset[1],
 				icon=icn
 			)
@@ -614,6 +614,11 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			if not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
 				b_col.label(text="MeshSwap file not found", icon="ERROR")
 
+			b_col.label(text="Meshswap source:")
+			subrow = b_col.row(align=True)
+                        subrow.prop(context.scene, "model_path", text="")
+			subrow.operator("mcprep.model_path_reset", icon=LOAD_FACTORY, text="")
+
 		layout = self.layout # clear out the box formatting
 		split = layout.split()
 		row = split.row(align=True)
@@ -809,6 +814,8 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 			self.meshswap(context)
 		elif context.scene.mcprep_props.spawn_mode=="item":
 			self.item_spawner(context)
+		elif context.scene.mcprep_props.spawn_mode=="model":
+                        self.model_spawner(context)
 
 	def mob_spawner(self, context):
 		scn_props = context.scene.mcprep_props
@@ -1078,8 +1085,8 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 		row.scale_y = 1.5
 		row.enabled = len(scn_props.model_list)>0
 		if scn_props.model_list:
-			name = scn_props.meshswap_list[scn_props.model_list_index].name
-			block = scn_props.meshswap_list[scn_props.model_list_index].block
+			name = scn_props.model_list[scn_props.model_list_index].name
+			block = scn_props.model_list[scn_props.model_list_index].block
 			p = row.operator("mcprep.model_spawner", text="Place: "+name)
 			p.block = block
 			p.location = util.get_cuser_location(context)
@@ -1100,13 +1107,13 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 			box = col.box()
 			b_row = box.row()
 			b_col = b_row.column(align=False)
-			b_col.label(text="Meshswap file")
+			b_col.label(text="Model file")
 			subrow = b_col.row(align=True)
 			subrow.prop(context.scene, "model_path", text="")
 			subrow.operator("mcprep.model_path_reset", icon=LOAD_FACTORY, text="")
 			if not context.scene.model_path.lower().endswith('.blend'):
 				b_col.label(text="MeshSwap file must be a .blend", icon="ERROR")
-			elif not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
+			elif not os.path.isfile(bpy.path.abspath(context.scene.model_path)):
 				b_col.label(text="MeshSwap file not found", icon="ERROR")
 			b_row = box.row()
 			b_col = b_row.column(align=True)
@@ -1336,12 +1343,12 @@ def register():
 		default = addon_prefs.meshswap_path)
 
         
-	"""bpy.types.Scene.model_path = bpy.props.StringProperty(
+	bpy.types.Scene.model_path = bpy.props.StringProperty(
 		name = "Model file",
 		description = "File for model library",
 		subtype = 'FILE_PATH',
 		update = model.update_model_path,
-		default = addon_prefs.model_path)"""
+		default = addon_prefs.model_path)
 	
 	bpy.types.Scene.mcprep_texturepack_path = bpy.props.StringProperty(
 		name = "Path to texture pack",
@@ -1384,6 +1391,6 @@ def unregister():
 	del bpy.types.Scene.mcprep_props
 	del bpy.types.Scene.mcprep_mob_path
 	del bpy.types.Scene.meshswap_path
-	#del bpy.types.Scene.model_path
+	del bpy.types.Scene.model_path
 	del bpy.types.Scene.mcprep_skin_path
 	del bpy.types.Scene.mcprep_texturepack_path

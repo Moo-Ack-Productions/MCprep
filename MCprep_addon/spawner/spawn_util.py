@@ -137,9 +137,9 @@ class MCPREP_UL_item(bpy.types.UIList):
 				layout.label(text="", icon='QUESTION')
 
 
-class MCPREP_UL_models(bpy.types.UIList):
-	"""For model asset listing UIList drawing"""
-	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
+#class MCPREP_UL_models(bpy.types.UIList):
+	#"""For model asset listing UIList drawing"""
+	"""def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
 			#if not conf.use_icons:
 			layout.label(text=set.name)
@@ -155,7 +155,7 @@ class MCPREP_UL_models(bpy.types.UIList):
 			#	layout.label(text="",
 			#		icon_value=conf.preview_collections["items"][icon].icon_id)
 			#else:
-			layout.label(text="", icon='QUESTION')
+			layout.label(text="", icon='QUESTION')"""
 
 				
 
