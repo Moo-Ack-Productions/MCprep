@@ -442,7 +442,7 @@ class MCPREP_OT_reload_models(bpy.types.Operator):
 
 		# still reload even with above issues, cache/UI should be cleared
 		get_model_cache(context, clear=True)
-		updateMeshswapList(context)
+		updateModelList(context)
 		return {'FINISHED'}
 
 
