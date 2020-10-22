@@ -131,7 +131,7 @@ class MCPREP_MT_model_spawn(bpy.types.Menu):
         def draw(self, context):
                 layout = self.layout
                 model_blocks = models.getModelList(context)
-                for blockset in meshswap_blocks:
+                for blockset in model_blocks:
                         # do some kind of check for if no blocks found
                         icn = "BLANK1"
                         if blockset[0].startswith("Group"):
