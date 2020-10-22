@@ -368,7 +368,7 @@ class addon_updater_update_target(bpy.types.Operator):
 		if updater.invalidupdater == True:
 			layout.label(text="Updater error")
 			return
-		split = layout_split(layout, factor=0.66)
+		split = layout_split(layout, factor=0.5)
 		subcol = split.column()
 		subcol.label(text="Select install version")
 		subcol = split.column()
@@ -1295,11 +1295,11 @@ def select_link_function(self, tag):
 	"""
 
 	# -- Default, universal case (and is the only option for GitLab/Bitbucket)
-	link = tag["zipball_url"]
+	#link = tag["zipball_url"]
 
 	# -- Example: select the first (or only) asset instead source code --
-	#if "assets" in tag and "browser_download_url" in tag["assets"][0]:
-	#	link = tag["assets"][0]["browser_download_url"]
+	if "assets" in tag and "browser_download_url" in tag["assets"][0]:
+		link = tag["assets"][0]["browser_download_url"]
 
 	# -- Example: select asset based on OS, where multiple builds exist --
 	# # not tested/no error checking, modify to fit your own needs!
