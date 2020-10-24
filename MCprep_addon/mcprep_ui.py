@@ -357,11 +357,26 @@ class McprepPreference(bpy.types.AddonPreferences):
 			col = split.column()
 			col.label(text="Meshwap assets")
 			col = split.column()
-	
 			col.prop(self, "meshswap_path", text="")
+			
 			if not os.path.isfile(bpy.path.abspath(self.meshswap_path)):
 				row = box.row()
 				row.label(text="MeshSwap file not found", icon="ERROR")
+
+			split = util.layout_split(box, factor=factor_width)
+			col = split.column()
+			col.label(text="Model assets")
+			
+			col = split.column()
+			col.prop(self, "model_path", text="")
+			if not os.path.isfile(bpy.path.abspath(self.model_path)):
+				row = box.row()
+				row.label(text="Model file not found", icon="ERROR")
+	
+
+			
+
+
 
 
 			row = layout.row()
@@ -614,7 +629,7 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			if not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
 				b_col.label(text="MeshSwap file not found", icon="ERROR")
 
-			b_col.label(text="Meshswap source:")
+			b_col.label(text="Model source:")
 			subrow = b_col.row(align=True)
 			subrow.prop(context.scene, "model_path", text="")
 			subrow.operator("mcprep.model_path_reset", icon=LOAD_FACTORY, text="")
