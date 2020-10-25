@@ -249,15 +249,13 @@ class MCPREP_OT_model_spawner(bpy.types.Operator):
 			util.bAppendLink(os.path.join(modelPath,method), block, toLink)
 
 		if method=="Object":
-			# Object-level disabled! Must have better
-			# asset management for this to work
 			for ob in bpy.context.selected_objects:
 				if ob.type != 'MESH':
 					util.select_set(ob, False)
 			try:
 				importedObj = bpy.context.selected_objects[0]
 			except:
-				print("selected object not found") #in case nothing selected.. which happens even during selection?
+				print("selected object not found")
 				self.report({'WARNING'}, "Imported object not found")
 				return {'CANCELLED'}
 			importedObj["MCprep_noSwap"] = 1
@@ -874,7 +872,7 @@ class MCPREP_OT_model(bpy.types.Operator):
 
 		# now import
 		conf.log("about to link, group {} / mesh {}?".format(
-			groupSwap, meshSwap))
+			groupSwap, model))
 		toLink = self.link_groups
 		for ob in context.selected_objects:
 			util.select_set(ob, False)

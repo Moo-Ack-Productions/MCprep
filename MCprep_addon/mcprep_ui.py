@@ -830,7 +830,7 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 		elif context.scene.mcprep_props.spawn_mode=="item":
 			self.item_spawner(context)
 		elif context.scene.mcprep_props.spawn_mode=="model":
-			self.model_spawner(context)
+			self.model(context)
 
 	def mob_spawner(self, context):
 		scn_props = context.scene.mcprep_props
@@ -1065,9 +1065,9 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 		col = split.column(align=True)
 
 		if scn_props.model_list:
-			col.template_list("MCPREP_UL_models", "",
-					scn_props, "models_list",
-					scn_props, "models_list_index",
+			col.template_list("MCPREP_UL_model", "",
+					scn_props, "model_list",
+					scn_props, "model_list_index",
 					rows=4)
 			
 		elif not context.scene.model_path.lower().endswith('.blend'):
@@ -1089,7 +1089,7 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 		else:
 			box = col.box()
 			b_row = box.row()
-			b_row.label(text="No blocks loaded")
+			b_row.label(text="No entities loaded")
 			b_row = box.row()
 			b_row.scale_y = 2
 			b_row.operator("mcprep.reload_spawners",
@@ -1102,11 +1102,11 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 		if scn_props.model_list:
 			name = scn_props.model_list[scn_props.model_list_index].name
 			block = scn_props.model_list[scn_props.model_list_index].block
-			p = row.operator("mcprep.model_spawner", text="Place: "+name)
+			p = row.operator("mcprep.model_spawner", text="Spawn: "+name)
 			p.block = block
 			p.location = util.get_cuser_location(context)
 		else:
-			row.operator("mcprep.model_spawner", text="Place block")
+			row.operator("mcprep.model_spawner", text="Spawn Model")
 		# something to directly open meshswap file??
 
 		split = layout.split()
@@ -1288,7 +1288,7 @@ class McprepProps(bpy.types.PropertyGroup):
 		items = [('mob', 'Mob', 'Show mob spawner'),
 				('meshswap', 'MeshSwap', 'Show MeshSwap spawner'),
 				('item', 'Items', 'Show item spawner'),
-				 ('Model', 'Models', 'Show model spawner')]
+				 ('model', 'Models', 'Show model spawner')]
 	)
 
 	# spawn lists
