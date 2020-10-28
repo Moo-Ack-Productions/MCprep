@@ -77,6 +77,11 @@ if "meshswap" in locals():
 else:
 	from .spawner import meshswap
 
+if "mcmodel" in locals():
+	importlib.reload(mcmodel)
+else:
+	from .spawner import mcmodel
+
 if "mobs" in locals():
 	importlib.reload(mobs)
 else:
@@ -144,6 +149,7 @@ module_list = (
 	world_tools,
 	# bridge,
 	mcprep_ui,
+	mcmodel,
 	)
 
 
