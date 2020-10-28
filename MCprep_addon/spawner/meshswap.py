@@ -215,7 +215,7 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 		description="Automatically snap to whole block locations")
 	make_real = bpy.props.BoolProperty(
 		name="Make real",
-		default=False,
+		default=True,
 		description="Automatically make groups real after placement")
 
 	# toLink = bpy.props.BoolProperty(
