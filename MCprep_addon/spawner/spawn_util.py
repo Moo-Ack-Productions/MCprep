@@ -49,7 +49,7 @@ class MCPREP_OT_reload_spawners(bpy.types.Operator):
 		bpy.ops.mcprep.reload_meshswap()
 		bpy.ops.mcprep.reload_mobs()
 		bpy.ops.mcprep.reload_items()
-		bpy.ops.mcprep.reload_models()
+		bpy.ops.mcprep.reload_entities()
 		return {'FINISHED'}
 
 
@@ -104,8 +104,8 @@ class MCPREP_UL_meshswap(bpy.types.UIList):
 			layout.alignment = 'CENTER'
 			layout.label(text="", icon='QUESTION')
 
-class MCPREP_UL_model(bpy.types.UIList):
-	"""For model asset listing UIList drawing"""
+class MCPREP_UL_entity(bpy.types.UIList):
+	"""For entity asset listing UIList drawing"""
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
 			layout.label(text=set.name)
@@ -137,8 +137,8 @@ class MCPREP_UL_item(bpy.types.UIList):
 				layout.label(text="", icon='QUESTION')
 
 
-#class MCPREP_UL_models(bpy.types.UIList):
-	#"""For model asset listing UIList drawing"""
+#class MCPREP_UL_entities(bpy.types.UIList):
+	#"""For entity asset listing UIList drawing"""
 	"""def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
 			#if not conf.use_icons:
@@ -203,7 +203,7 @@ class ListMeshswapAssets(bpy.types.PropertyGroup):
 	block = bpy.props.StringProperty()  # virtual enum, Group/name
 	description = bpy.props.StringProperty()
 
-class ListModelAssets(bpy.types.PropertyGroup):
+class ListEntityAssets(bpy.types.PropertyGroup):
 	"""For UI drawing of meshswap assets and holding data"""
 	block = bpy.props.StringProperty()  # virtual enum, Group/name
 	description = bpy.props.StringProperty()
@@ -226,11 +226,11 @@ classes = (
 	ListMobAssets,
 	ListMeshswapAssets,
 	ListItemAssets,
-        ListModelAssets,
+        ListEntityAssets,
 	MCPREP_UL_material,
 	MCPREP_UL_mob,
 	MCPREP_UL_meshswap,
-        MCPREP_UL_model,
+        MCPREP_UL_entity,
 	MCPREP_UL_item,
 	MCPREP_OT_reload_spawners,
 	MCPREP_OT_spawn_path_reset,

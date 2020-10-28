@@ -36,56 +36,56 @@ from .. import tracking
 # Mesh swap functions
 # -----------------------------------------------------------------------------
 
-model_cache = {}
-model_cache_path = None
+entity_cache = {}
+entity_cache_path = None
 
-def get_model_cache(context, clear=False):
-	"""Load groups/objects from model spawning lib if not cached, return key vars."""
-	global model_cache
-	global model_cache_path # used to auto-clear path if bpy prop changed
+def get_entity_cache(context, clear=False):
+	"""Load groups/objects from entity spawning lib if not cached, return key vars."""
+	global entity_cache
+	global entity_cache_path # used to auto-clear path if bpy prop changed
 
-	model_path = context.scene.model_path
-	if not model_cache_path:
-		model_cache_path = model_path
+	entity_path = context.scene.entity_path
+	if not entity_cache_path:
+		entity_cache_path = entity_path
 		clear = True
-	if model_cache_path != model_path:
+	if entity_cache_path != entity_path:
 		clear = True
 
-	if model_cache and clear is not True:
-		return model_cache
+	if entity_cache and clear is not True:
+		return entity_cache
 
-	model_cache = {"groups":[], "objects":[]}
-	if not os.path.isfile(model_path):
-		conf.log("Model path not found")
-		return model_cache
-	if not model_path.lower().endswith('.blend'):
-		conf.log("Model path must be a .blend file")
-		return model_cache
+	entity_cache = {"groups":[], "objects":[]}
+	if not os.path.isfile(entity_path):
+		conf.log("Entity path not found")
+		return entity_cache
+	if not entity_path.lower().endswith('.blend'):
+		conf.log("Entity path must be a .blend file")
+		return entity_cache
 
-	with bpy.data.libraries.load(model_path) as (data_from, _):
+	with bpy.data.libraries.load(entity_path) as (data_from, _):
 		if hasattr(data_from, "groups"): # blender 2.7
 			get_attr = "groups"
 		else: # 2.8
 			get_attr = "collections"
 		grp_list = list(getattr(data_from, get_attr))
-		model_cache["groups"] = grp_list
+		entity_cache["groups"] = grp_list
 		for obj in list(data_from.objects):
-			if obj in model_cache["groups"]:
+			if obj in entity_cache["groups"]:
 				# conf.log("Skipping meshwap obj already in cache: "+str(obj))
 				continue
 			# ignore list? e.g. Point.001,
-			model_cache["objects"].append(obj)
-	return model_cache
+			entity_cache["objects"].append(obj)
+	return entity_cache
 
 
-def getModelList(context):
+def getEntityList(context):
 	"""Only used for UI drawing of enum menus, full list."""
 
 	# may redraw too many times, perhaps have flag
-	if not context.scene.mcprep_props.model_list:
-		updateModelList(context)
+	if not context.scene.mcprep_props.entity_list:
+		updateEntityList(context)
 	return [(itm.block, itm.name.title(), "Place {}".format(itm.name))
-			for itm in context.scene.mcprep_props.model_list]
+			for itm in context.scene.mcprep_props.entity_list]
 
 
 def move_assets_to_excluded_layer(context, collections):
@@ -93,62 +93,62 @@ def move_assets_to_excluded_layer(context, collections):
 	initial_view_coll = context.view_layer.active_layer_collection
 
 	# Then, setup the exclude view layer
-	model_exclude_vl = util.get_or_create_viewlayer(
-		context, "Model Exclude")
-	model_exclude_vl.exclude = True
+	entity_exclude_vl = util.get_or_create_viewlayer(
+		context, "Entity Exclude")
+	entity_exclude_vl.exclude = True
 
 	for grp in collections:
 		if grp.name not in initial_view_coll.collection.children:
 			continue # not linked, likely a sub-group not added to scn
-		model_exclude_vl.collection.children.link(grp)
+		entity_exclude_vl.collection.children.link(grp)
 		initial_view_coll.collection.children.unlink(grp)
 
 
-def update_model_path(self, context):
+def update_entity_path(self, context):
 	"""for UI list path callback"""
-	conf.log("Updating model path", vv_only=True)
-	if not context.scene.model_path.lower().endswith('.blend'):
-		print("Meshswap file is not a .blend, and should be")
-	if not os.path.isfile(bpy.path.abspath(context.scene.model_path)):
-		print("Meshswap blend file does not exist")
-	updateModelList(context)
+	conf.log("Updating entity path", vv_only=True)
+	if not context.scene.entity_path.lower().endswith('.blend'):
+		print("Entity file is not a .blend, and should be")
+	if not os.path.isfile(bpy.path.abspath(context.scene.entity_path)):
+		print("Entity blend file does not exist")
+	updateEntityList(context)
 
 
-def updateModelList(context):
-	"""Update the model list"""
-	model_file = bpy.path.abspath(context.scene.model_path)
-	if not os.path.isfile(model_file):
-		print("Invalid model blend file path")
-		context.scene.mcprep_props.model_list.clear()
+def updateEntityList(context):
+	"""Update the entity list"""
+	entity_file = bpy.path.abspath(context.scene.entity_path)
+	if not os.path.isfile(entity_file):
+		print("Invalid entity blend file path")
+		context.scene.mcprep_props.entity_list.clear()
 		return
 
-	temp_model_list = []  # just to skip duplicates
-	model_list = []
+	temp_entity_list = []  # just to skip duplicates
+	entity_list = []
 
-	cache = get_model_cache(context)
+	cache = get_entity_cache(context)
 	prefix = "Group/" if hasattr(bpy.data, "groups") else "Collection/"
 	for name in cache.get("groups"):
 		if not name:
 			continue
-		if util.nameGeneralize(name).lower() in temp_model_list:
+		if util.nameGeneralize(name).lower() in temp_entity_list:
 			continue
 		if util.nameGeneralize(name).lower() == "Rigidbodyworld".lower():
 			continue
 		description = "Place {x} block".format(x=name)
-		model_list.append((prefix+name, name.title(), description))
-		temp_model_list.append(util.nameGeneralize(name).lower())
+		entity_list.append((prefix+name, name.title(), description))
+		temp_entity_list.append(util.nameGeneralize(name).lower())
 
 	# sort the list alphabetically by name
-	if model_list:
+	if entity_list:
 		_, sorted_blocks = zip(*sorted(zip([block[1].lower()
-			for block in model_list], model_list)))
+			for block in entity_list], entity_list)))
 	else:
 		sorted_blocks = []
 
 	# now re-populate the UI list
-	context.scene.mcprep_props.model_list.clear()
+	context.scene.mcprep_props.entity_list.clear()
 	for itm in sorted_blocks:
-		item = context.scene.mcprep_props.model_list.add()
+		item = context.scene.mcprep_props.entity_list.add()
 		item.block = itm[0]
 		item.name = itm[1]
 		item.description = itm[2]
@@ -167,32 +167,32 @@ class face_struct():
 # -----------------------------------------------------------------------------
 
 
-class MCPREP_OT_model_path_reset(bpy.types.Operator):
+class MCPREP_OT_entity_path_reset(bpy.types.Operator):
 	"""Reset the spawn path to the default specified in the addon preferences panel"""
-	bl_idname = "mcprep.model_path_reset"
-	bl_label = "Reset model path"
+	bl_idname = "mcprep.entity_path_reset"
+	bl_label = "Reset entity path"
 	bl_options = {'REGISTER', 'UNDO'}
 
 	@tracking.report_error
 	def execute(self, context):
 
 		addon_prefs = util.get_user_preferences(context)
-		context.scene.model_path = addon_prefs.model_path
-		updateModelList(context)
+		context.scene.entity_path = addon_prefs.entity_path
+		updateEntityList(context)
 		return {'FINISHED'}
 
 
-class MCPREP_OT_model_spawner(bpy.types.Operator):
-	"""Instantly spawn built-in model blocks into a scene"""
-	bl_idname = "mcprep.model_spawner"
-	bl_label = "Model Spawner"
+class MCPREP_OT_entity_spawner(bpy.types.Operator):
+	"""Instantly spawn built-in entity blocks into a scene"""
+	bl_idname = "mcprep.entity_spawner"
+	bl_label = "Entity Spawner"
 	bl_options = {'REGISTER', 'UNDO'}
 
 	# properties, will appear in redo-last menu
 	def swap_enum(self, context):
-		return getModelList(context)
+		return getEntityList(context)
 
-	block = bpy.props.EnumProperty(items=swap_enum, name="Model")
+	block = bpy.props.EnumProperty(items=swap_enum, name="Entity")
 	location = bpy.props.FloatVectorProperty(
 		default=(0,0,0),
 		name = "Location")
@@ -215,7 +215,7 @@ class MCPREP_OT_model_spawner(bpy.types.Operator):
 		description="Automatically snap to whole block locations")
 	make_real = bpy.props.BoolProperty(
 		name="Make real",
-		default=False,
+		default=True,
 		description="Automatically make groups real after placement")
 
 	# toLink = bpy.props.BoolProperty(
@@ -229,13 +229,13 @@ class MCPREP_OT_model_spawner(bpy.types.Operator):
 	def poll(self, context):
 		return context.mode == 'OBJECT'
 
-	track_function = "modelSpawner"
+	track_function = "entitySpawner"
 	track_param = None
 	@tracking.report_error
 	def execute(self, context):
 		pre_groups = list(util.collections())
 
-		modelPath = bpy.path.abspath(context.scene.model_path)
+		entityPath = bpy.path.abspath(context.scene.entity_path)
 		method, block = self.block.split("/",2)
 		toLink = False
 		use_cache = False
@@ -246,7 +246,7 @@ class MCPREP_OT_model_spawner(bpy.types.Operator):
 			# if blender 2.8, see if collection part of the MCprepLib coll.
 			use_cache = True
 		else:
-			util.bAppendLink(os.path.join(modelPath,method), block, toLink)
+			util.bAppendLink(os.path.join(entityPath,method), block, toLink)
 
 		if method=="Object":
 			for ob in bpy.context.selected_objects:
@@ -426,27 +426,27 @@ class MCPREP_OT_model_spawner(bpy.types.Operator):
 		return group
 
 
-class MCPREP_OT_reload_models(bpy.types.Operator):
-	"""Force reload the Model objects and cache."""
-	bl_idname = "mcprep.reload_models"
-	bl_label = "Reload Models"
+class MCPREP_OT_reload_entites(bpy.types.Operator):
+	"""Force reload the Entity objects and cache."""
+	bl_idname = "mcprep.reload_entities"
+	bl_label = "Reload Entities"
 
 	@tracking.report_error
 	def execute(self, context):
-		if not context.scene.model_path.lower().endswith('.blend'):
-			self.report({'WARNING'}, "Meshswap file must be a .blend, try resetting")
-		elif not os.path.isfile(bpy.path.abspath(context.scene.model_path)):
-			self.report({'WARNING'}, "Meshswap blend file does not exist")
+		if not context.scene.entity_path.lower().endswith('.blend'):
+			self.report({'WARNING'}, "Entity file must be a .blend, try resetting")
+		elif not os.path.isfile(bpy.path.abspath(context.scene.entity_path)):
+			self.report({'WARNING'}, "Entity blend file does not exist")
 
 		# still reload even with above issues, cache/UI should be cleared
-		get_model_cache(context, clear=True)
-		updateModelList(context)
+		get_entity_cache(context, clear=True)
+		updateEntityList(context)
 		return {'FINISHED'}
 
 
-class MCPREP_UL_model_list(bpy.types.UIList):
+class MCPREP_UL_entity_list(bpy.types.UIList):
 	"""For asset listing UIList drawing"""
-	# previously McprepMeshswap_UIList
+	# previously McprepEntity_UIList
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
 
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
@@ -458,10 +458,10 @@ class MCPREP_UL_model_list(bpy.types.UIList):
 			layout.label(text="", icon='QUESTION')
 
 
-class MCPREP_OT_model(bpy.types.Operator):
-	"""Swap minecraft objects from world imports for custom 3D models in the according meshSwap blend file"""
-	bl_idname = "mcprep.model"
-	bl_label = "Model"
+class MCPREP_OT_entity(bpy.types.Operator):
+	"""Swap minecraft objects from world imports for custom 3D entites in the according Entity blend file"""
+	bl_idname = "mcprep.entity"
+	bl_label = "Entity"
 	bl_options = {'REGISTER', 'UNDO'}
 
 	# used for only occasionally refreshing the 3D scene while mesh swapping
@@ -470,7 +470,7 @@ class MCPREP_OT_model(bpy.types.Operator):
 	runcount = 0  # current counter status of swapped meshes
 
 	# properties for draw
-	model_join = bpy.props.BoolProperty(
+	entity_join = bpy.props.BoolProperty(
 		name="Join same blocks",
 		default=True,
 		description=("Join together swapped blocks of the same type "
@@ -518,14 +518,14 @@ class MCPREP_OT_model(bpy.types.Operator):
 		# please save the file first. Not implemented
 		if False:
 			layout.label(
-				text="You must save your blend file before modelping",
+				text="You must save your blend file before entityping",
 				icon="ERROR")
 			return
 
 		layout.label(text="GENERAL SETTINGS")
 		row = layout.row()
 		# row.prop(self,"use_dupliverts") # coming soon
-		row.prop(self,"model_join")
+		row.prop(self,"entity_join")
 		row = layout.row()
 		row.prop(self,"link_groups")
 		row.prop(self,"prep_materials")
@@ -537,7 +537,7 @@ class MCPREP_OT_model(bpy.types.Operator):
 		# layout.split()
 		# layout.label(text="HOW TO ADD LIGHTS")
 		# row = layout.row()
-		# row.prop(self,"model_lamps", expand=True)
+		# row.prop(self,"entity_lamps", expand=True)
 		# row = layout.row()
 		# row.prop(self,"filmic_values")
 
@@ -546,10 +546,10 @@ class MCPREP_OT_model(bpy.types.Operator):
 			col = layout.column()
 			col.scale_y = 0.7
 			col.label(text="WARNING: May take a long time to process!!", icon="ERROR")
-			col.label(text="If you selected a large number of blocks to model,", icon="BLANK1")
+			col.label(text="If you selected a large number of blocks to entity,", icon="BLANK1")
 			col.label(text="consider using a smaller area closer to the camera", icon="BLANK1")
 
-	track_function = "model"
+	track_function = "entity"
 	track_exporter = None
 	@tracking.report_error
 	def execute(self, context):
@@ -557,16 +557,16 @@ class MCPREP_OT_model(bpy.types.Operator):
 		addon_prefs = util.get_user_preferences(context)
 		self.track_exporter = addon_prefs.MCprep_exporter_type
 
-		direc = context.scene.model_path
+		direc = context.scene.entity_path
 		if not direc.lower().endswith('.blend'):
-			self.report({'ERROR'}, "Meshswap file must be a .blend!")
+			self.report({'ERROR'}, "Entity file must be a .blend!")
 			return {'CANCELLED'}
 
 		if not os.path.isfile(direc):
 			direc = bpy.path.abspath(direc)
 			# bpy.ops.object.dialogue('INVOKE_DEFAULT') # DOES work! but less streamlined
 			if not os.path.isfile(direc):
-				self.report({'ERROR'}, "Meshswap blend file not found!") # better, actual "error"
+				self.report({'ERROR'}, "Entity blend file not found!") # better, actual "error"
 				return {'CANCELLED'}
 
 		# Assign vars used across operator
@@ -579,7 +579,7 @@ class MCPREP_OT_model(bpy.types.Operator):
 
 		# setup the progress bar
 		denom = len(objList)
-		conf.log("Meshswap to check over {} objects".format(denom))
+		conf.log("Entity to check over {} objects".format(denom))
 		bpy.context.window_manager.progress_begin(0, 100)
 
 		tprep = time.time() - tprep
@@ -610,7 +610,7 @@ class MCPREP_OT_model(bpy.types.Operator):
 				removeList.append(swap)
 				continue
 			# just selecting mesh with same name and if in objList
-			if not (swapProps['model'] or swapProps['groupSwap']):
+			if not (swapProps['entity'] or swapProps['groupSwap']):
 				continue
 
 			conf.log("Swapping '{x}', simplified name '{y}".format(
@@ -648,7 +648,7 @@ class MCPREP_OT_model(bpy.types.Operator):
 
 			if grouped:
 				new_objects += dupedObj # list
-			elif dupedObj and self.model_join:
+			elif dupedObj and self.entity_join:
 				# join meshes together, carefully removing old selected objects
 				# from selection lists
 				util.set_active_object(context, dupedObj[0])
@@ -676,7 +676,7 @@ class MCPREP_OT_model(bpy.types.Operator):
 
 			removeList.append(swap)
 
-			# Setup for later re-selection and applying no-re-model property
+			# Setup for later re-selection and applying no-re-entity property
 			for obj in new_objects:
 				if obj in removeList:
 					continue
@@ -722,11 +722,11 @@ class MCPREP_OT_model(bpy.types.Operator):
 					continue
 			util.select_set(obj, True)
 
-		# Create nicer nested organization of modelped assets, and excluding
-		# this model group to avoid showing in render. Also move newly
+		# Create nicer nested organization of entityped assets, and excluding
+		# this entity group to avoid showing in render. Also move newly
 		# spawned instances into a collection of its own (2.8 only)
 		if util.bv28():
-			swaped_vl = util.get_or_create_viewlayer(context, "Meshswap Render")
+			swaped_vl = util.get_or_create_viewlayer(context, "Entity Render")
 			for obj in new_objects:
 				util.move_to_collection(obj, swaped_vl.collection)
 
@@ -749,7 +749,7 @@ class MCPREP_OT_model(bpy.types.Operator):
 
 		if self.runcount==0:
 			self.report({'ERROR'}, ("Nothing swapped, likely no materials of "
-				"selected objects match the model file objects/groups"))
+				"selected objects match the entity file objects/groups"))
 			return {'CANCELLED'}
 		elif self.runcount==1:
 			self.report({'INFO'}, "Swapped 1 object")
@@ -806,7 +806,7 @@ class MCPREP_OT_model(bpy.types.Operator):
 		"""Called for each object in the loop as soon as possible."""
 
 		groupSwap = False
-		meshSwap = False # if object  is in both group and mesh swap, group will be used
+		Entity = False # if object  is in both group and mesh swap, group will be used
 		edgeFlush = False # blocks perfectly on edges, require rotation
 		edgeFloat = False # floating off edge into air, require rotation ['vines','ladder','lilypad']
 		torchlike = False # ['torch','redstone_torch_on','redstone_torch_off']
@@ -821,7 +821,7 @@ class MCPREP_OT_model(bpy.types.Operator):
 		new_groups = [] # list of newly added groups in this process
 
 		addon_prefs = util.get_user_preferences(context)
-		ModelPath = context.scene.model_path
+		EntityPath = context.scene.entity_path
 		rmable = []
 		if self.track_exporter == "jmc2obj":
 			rmable = ['double_plant_grass_top','torch_flame','cactus_top','cactus_bottom','book',
@@ -848,7 +848,7 @@ class MCPREP_OT_model(bpy.types.Operator):
 
 		# check the actual name against the library
 		name = generate.get_mc_canonical_name(name)[0]
-		cache = get_model_cache(context)
+		cache = get_entity_cache(context)
 		if name in conf.json_data["blocks"]["canon_mapping_block"]:
 			# e.g. remaps entity/chest/normal back to chest
 			name_remap = conf.json_data["blocks"]["canon_mapping_block"][name]
@@ -858,21 +858,21 @@ class MCPREP_OT_model(bpy.types.Operator):
 		if name in cache["groups"] or name in util.collections():
 			groupSwap = True
 		elif name in cache["objects"]:
-			Model = True
+			Entity = True
 		elif not name_remap:
 			return False
 		elif name_remap in cache["groups"] or name_remap in util.collections():
 			groupSwap = True
 			name = name_remap
 		elif name_remap in cache["objects"]:
-			meshSwap = True
+			Entity = True
 			name = name_remap
 		else:
 			return False # if not present, continue
 
 		# now import
 		conf.log("about to link, group {} / mesh {}?".format(
-			groupSwap, model))
+			groupSwap, entity))
 		toLink = self.link_groups
 		for ob in context.selected_objects:
 			util.select_set(ob, False)
@@ -906,10 +906,10 @@ class MCPREP_OT_model(bpy.types.Operator):
 				# special cases, make another list for this? number of variants can vary..
 				if name == "torch" or name == "Torch":
 					if name+".1" not in pre_colls:
-						util.bAppendLink(os.path.join(modelPath, g_or_c), name+".1", toLink)
+						util.bAppendLink(os.path.join(entityPath, g_or_c), name+".1", toLink)
 					if name+".2" not in pre_colls:
-						util.bAppendLink(os.path.join(modelPath, g_or_c), name+".2", toLink)
-				util.bAppendLink(os.path.join(modelPath, g_or_c), name, toLink)
+						util.bAppendLink(os.path.join(entityPath, g_or_c), name+".2", toLink)
+				util.bAppendLink(os.path.join(entityPath, g_or_c), name, toLink)
 
 				if util.bv28():
 					post_colls = list(util.collections())
@@ -943,7 +943,7 @@ class MCPREP_OT_model(bpy.types.Operator):
 					elif x=='frontFaceRotate':
 						front_face_rotate = True
 		else:
-			util.bAppendLink(os.path.join(ModelPath, 'Object'), name, False)
+			util.bAppendLink(os.path.join(EntityPath, 'Object'), name, False)
 			### NOTICE: IF THERE IS A DISCREPENCY BETWEEN ASSETS FILE AND WHAT IT SAYS SHOULD
 			### BE IN FILE, EG NAME OF MESH TO SWAP CHANGED, INDEX ERROR IS THROWN HERE
 			### >> MAKE a more graceful error indication.
@@ -982,10 +982,10 @@ class MCPREP_OT_model(bpy.types.Operator):
 			for ob in context.selected_objects:
 				util.select_set(ob, False)
 		##### HERE set the other properties, e.g. variance and edgefloat, now that the obj exists
-		conf.log("groupSwap: {}, meshSwap: {}".format(groupSwap, meshSwap))
+		conf.log("groupSwap: {}, Entity: {}".format(groupSwap, Entity))
 		conf.log("edgeFloat: {}, variance: {}, torchlike: {}".format(
 			edgeFloat, variance, torchlike))
-		return {'importName':name,'object':importedObj,'meshSwap':meshSwap, 'groupSwap':groupSwap,'variance':variance,
+		return {'importName':name,'object':importedObj,'Entity':Entity, 'groupSwap':groupSwap,'variance':variance,
 				'edgeFlush':edgeFlush,'edgeFloat':edgeFloat,'torchlike':torchlike,
 				'removable':removable,'doorlike':doorlike,
 				'new_groups':new_groups}
@@ -1006,7 +1006,7 @@ class MCPREP_OT_model(bpy.types.Operator):
 		z = round(face.l[2])
 
 		# Reverses which block to count 'on edge' for so that the instances
-		# are placed in "front" of where it hangs, as this is how the model
+		# are placed in "front" of where it hangs, as this is how the entity
 		# assets are setup (object origin will be in front of the hanging item)
 		outside_hanging = 1 if swapProps['edgeFloat'] else -1
 		if util.face_on_edge(face.l): #check if face is on unit block boundary (local coord!)
@@ -1284,14 +1284,14 @@ class MCPREP_OT_model(bpy.types.Operator):
 
 
 class MCPREP_OT_fix_mineways_scale(bpy.types.Operator):
-	"""Quick upscaling of Mineways import by 10 for modelping"""
-	bl_idname = "object.fixmodelsize"
+	"""Quick upscaling of Mineways import by 10 for entityping"""
+	bl_idname = "object.fixentitesize"
 	bl_label = "Mineways quick upscale"
 	bl_options = {'REGISTER', 'UNDO'}
 
 	@tracking.report_error
 	def execute(self, context):
-		conf.log("Attempting to fix Mineways scaling for model")
+		conf.log("Attempting to fix Mineways scaling for entity")
 
 		# get cursor loc first? shouldn't matter which mode/location though
 		tmp_loc = util.get_cuser_location(context)
@@ -1320,11 +1320,11 @@ class MCPREP_OT_fix_mineways_scale(bpy.types.Operator):
 
 
 classes = (
-	MCPREP_OT_model_path_reset,
-	MCPREP_OT_model_spawner,
-	MCPREP_OT_reload_models,
-	MCPREP_UL_model_list,
-	MCPREP_OT_model,
+	MCPREP_OT_entity_path_reset,
+	MCPREP_OT_entity_spawner,
+	MCPREP_OT_reload_entites,
+	MCPREP_UL_entity_list,
+	MCPREP_OT_entity,
 	MCPREP_OT_fix_mineways_scale,
 )
 
@@ -1334,17 +1334,17 @@ def register():
 		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 
-	global model_cache
-	global model_cache_path
-	model_cache = {}
-	model_cache_path = None
+	global entity_cache
+	global entity_cache_path
+	entity_cache = {}
+	entity_cache_path = None
 
 
 def unregister():
 	for cls in reversed(classes):
 		bpy.utils.unregister_class(cls)
 
-	global model_cache
-	global model_cache_path
-	model_cache = {}
-	model_cache_path = None
+	global entity_cache
+	global entity_cache_path
+	entity_cache = {}
+	entity_cache_path = None

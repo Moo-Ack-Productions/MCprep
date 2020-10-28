@@ -27,7 +27,7 @@ from . import util
 from .spawner import mobs
 from .spawner import meshswap
 from .spawner import spawn_util
-from .spawner import models
+from .spawner import entities
 from . import world_tools
 from . import addon_updater_ops
 from . import tracking
@@ -123,22 +123,22 @@ class MCPREP_MT_item_spawn(bpy.types.Menu):
 			else:
 				ops = layout.operator("mcprep.spawn_item", text=item.name)
 			ops.filepath = item.path
-class MCPREP_MT_model_spawn(bpy.types.Menu):
-	"""Menu for loaded model spawners"""
-	bl_label = "Model Spawner"
-	bl_idname = "MCPREP_MT_Model_spawn"
+class MCPREP_MT_entity_spawn(bpy.types.Menu):
+	"""Menu for loaded entity spawners"""
+	bl_label = "Entity Spawner"
+	bl_idname = "MCPREP_MT_Entity_spawn"
 
 	def draw(self, context):
 		layout = self.layout
-		model_blocks = models.getModelList(context)
-		for blockset in model_blocks:
+		entity_blocks = entities.getEntityList(context)
+		for blockset in entity_blocks:
 			# do some kind of check for if no blocks found
 			icn = "BLANK1"
 			if blockset[0].startswith("Group"):
 				icn = "GROUP"
 
 			opr = layout.operator(
-				"mcprep.model_spawner",
+				"mcprep.entity_spawner",
 				text=blockset[1],
 				icon=icn
 			)
@@ -185,7 +185,7 @@ class MCPREP_MT_3dview_add(bpy.types.Menu):
 		if sword_icon is not None:
 			layout.menu(MCPREP_MT_item_spawn.bl_idname,
 				icon_value=sword_icon.icon_id)
-			layout.menu(MCPREP_MT_model_spawn.bl_idname,
+			layout.menu(MCPREP_MT_entity_spawn.bl_idname,
 				icon_value=grass_icon.icon_id)
 		else:
 			layout.menu(MCPREP_MT_item_spawn.bl_idname)
@@ -214,12 +214,12 @@ class McprepPreference(bpy.types.AddonPreferences):
 		subtype = 'FILE_PATH',
 		default = scriptdir + "/MCprep_resources/mcprep_meshSwap.blend")
 
-	model_path = bpy.props.StringProperty(
-		name = "Model path",
-		description = ("Default path to the model asset file, for "
-			"models"),
+	entity_path = bpy.props.StringProperty(
+		name = "Entity path",
+		description = ("Default path to the entity asset file, for "
+			"entities"),
 		subtype = 'FILE_PATH',
-		default = scriptdir + "/MCprep_resources/mcprep_models.blend")
+		default = scriptdir + "/MCprep_resources/mcprep_entities.blend")
 	mob_path = bpy.props.StringProperty(
 		name = "Mob path",
 		description = "Default folder for rig loads/spawns in new blender instances",
@@ -365,13 +365,13 @@ class McprepPreference(bpy.types.AddonPreferences):
 
 			split = util.layout_split(box, factor=factor_width)
 			col = split.column()
-			col.label(text="Model assets")
+			col.label(text="Entity assets")
 			
 			col = split.column()
-			col.prop(self, "model_path", text="")
-			if not os.path.isfile(bpy.path.abspath(self.model_path)):
+			col.prop(self, "entity_path", text="")
+			if not os.path.isfile(bpy.path.abspath(self.entity_path)):
 				row = box.row()
-				row.label(text="Model file not found", icon="ERROR")
+				row.label(text="Entity file not found", icon="ERROR")
 	
 
 			
@@ -629,10 +629,10 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			if not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
 				b_col.label(text="MeshSwap file not found", icon="ERROR")
 
-			b_col.label(text="Model source:")
+			b_col.label(text="Entity source:")
 			subrow = b_col.row(align=True)
-			subrow.prop(context.scene, "model_path", text="")
-			subrow.operator("mcprep.model_path_reset", icon=LOAD_FACTORY, text="")
+			subrow.prop(context.scene, "entity_path", text="")
+			subrow.operator("mcprep.entity_path_reset", icon=LOAD_FACTORY, text="")
 
 		layout = self.layout # clear out the box formatting
 		split = layout.split()
@@ -829,8 +829,8 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 			self.meshswap(context)
 		elif context.scene.mcprep_props.spawn_mode=="item":
 			self.item_spawner(context)
-		elif context.scene.mcprep_props.spawn_mode=="model":
-			self.model(context)
+		elif context.scene.mcprep_props.spawn_mode=="entity":
+			self.entity(context)
 
 	def mob_spawner(self, context):
 		scn_props = context.scene.mcprep_props
@@ -1057,35 +1057,35 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 			b_col = b_row.column(align=True)
 			b_col.operator("mcprep.reload_items")
 
-	def model(self, context):
+	def entity(self, context):
 		scn_props = context.scene.mcprep_props
 
 		layout = self.layout
 		split = layout.split()
 		col = split.column(align=True)
 
-		if scn_props.model_list:
-			col.template_list("MCPREP_UL_model", "",
-					scn_props, "model_list",
-					scn_props, "model_list_index",
+		if scn_props.entity_list:
+			col.template_list("MCPREP_UL_entity", "",
+					scn_props, "entity_list",
+					scn_props, "entity_list_index",
 					rows=4)
 			
-		elif not context.scene.model_path.lower().endswith('.blend'):
+		elif not context.scene.entity_path.lower().endswith('.blend'):
 			box = col.box()
 			b_row = box.row()
-			b_row.label(text="Model file must be a .blend")
+			b_row.label(text="Entity file must be a .blend")
 			b_row = box.row()
 			b_row.scale_y = 2
-			b_row.operator("mcprep.model_path_reset", icon=LOAD_FACTORY,
-				text="Reset model path")
-		elif not os.path.isfile(bpy.path.abspath(context.scene.model_path)):
+			b_row.operator("mcprep.entity_path_reset", icon=LOAD_FACTORY,
+				text="Reset entity path")
+		elif not os.path.isfile(bpy.path.abspath(context.scene.entity_path)):
 			box = col.box()
 			b_row = box.row()
-			b_row.label(text="Model file not found")
+			b_row.label(text="Entity file not found")
 			b_row = box.row()
 			b_row.scale_y = 2
-			b_row.operator("mcprep.model_path_reset", icon=LOAD_FACTORY,
-				text="Reset model path")
+			b_row.operator("mcprep.entity_path_reset", icon=LOAD_FACTORY,
+				text="Reset entity path")
 		else:
 			box = col.box()
 			b_row = box.row()
@@ -1098,16 +1098,15 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 		col = layout.column(align=True)
 		row = col.row()
 		row.scale_y = 1.5
-		row.enabled = len(scn_props.model_list)>0
-		if scn_props.model_list:
-			name = scn_props.model_list[scn_props.model_list_index].name
-			block = scn_props.model_list[scn_props.model_list_index].block
-			p = row.operator("mcprep.model_spawner", text="Spawn: "+name)
+		row.enabled = len(scn_props.entity_list)>0
+		if scn_props.entity_list:
+			name = scn_props.entity_list[scn_props.entity_list_index].name
+			block = scn_props.entity_list[scn_props.entity_list_index].block
+			p = row.operator("mcprep.entity_spawner", text="Spawn: "+name)
 			p.block = block
 			p.location = util.get_cuser_location(context)
 		else:
-			row.operator("mcprep.model_spawner", text="Spawn Model")
-		# something to directly open meshswap file??
+			row.operator("mcprep.entity_spawner", text="Spawn Entity")
 
 		split = layout.split()
 		col = split.column(align=True)
@@ -1122,17 +1121,17 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 			box = col.box()
 			b_row = box.row()
 			b_col = b_row.column(align=False)
-			b_col.label(text="Model file")
+			b_col.label(text="Entity file")
 			subrow = b_col.row(align=True)
-			subrow.prop(context.scene, "model_path", text="")
-			subrow.operator("mcprep.model_path_reset", icon=LOAD_FACTORY, text="")
-			if not context.scene.model_path.lower().endswith('.blend'):
+			subrow.prop(context.scene, "entity_path", text="")
+			subrow.operator("mcprep.entity_path_reset", icon=LOAD_FACTORY, text="")
+			if not context.scene.entity_path.lower().endswith('.blend'):
 				b_col.label(text="MeshSwap file must be a .blend", icon="ERROR")
-			elif not os.path.isfile(bpy.path.abspath(context.scene.model_path)):
+			elif not os.path.isfile(bpy.path.abspath(context.scene.entity_path)):
 				b_col.label(text="MeshSwap file not found", icon="ERROR")
 			b_row = box.row()
 			b_col = b_row.column(align=True)
-			b_col.operator("mcprep.reload_models")
+			b_col.operator("mcprep.reload_entities")
 
 
 class MCPREP_PT_materials(bpy.types.Panel):
@@ -1288,7 +1287,7 @@ class McprepProps(bpy.types.PropertyGroup):
 		items = [('mob', 'Mob', 'Show mob spawner'),
 				('meshswap', 'MeshSwap', 'Show MeshSwap spawner'),
 				('item', 'Items', 'Show item spawner'),
-				 ('model', 'Models', 'Show model spawner')]
+				 ('entity', 'Entities', 'Show entity spawner')]
 	)
 
 	# spawn lists
@@ -1301,8 +1300,8 @@ class McprepProps(bpy.types.PropertyGroup):
 	item_list_index = bpy.props.IntProperty(default=0)
 	material_list = bpy.props.CollectionProperty(type=material_manager.ListMaterials)
 	material_list_index = bpy.props.IntProperty(default=0)
-	model_list = bpy.props.CollectionProperty(type=spawn_util.ListModelAssets)
-	model_list_index = bpy.props.IntProperty(default=0)
+	entity_list = bpy.props.CollectionProperty(type=spawn_util.ListEntityAssets)
+	entity_list_index = bpy.props.IntProperty(default=0)
 
 
 # -----------------------------------------------------------------------------
@@ -1322,7 +1321,7 @@ classes = (
 	MCPREP_PT_world_tools,
 	MCPREP_PT_skins,
 	MCPREP_PT_spawn,
-	MCPREP_MT_model_spawn,
+	MCPREP_MT_entity_spawn,
 	MCPREP_PT_materials,
 	MCPREP_PT_materials_subsettings,
 )
@@ -1358,12 +1357,12 @@ def register():
 		default = addon_prefs.meshswap_path)
 
 	
-	bpy.types.Scene.model_path = bpy.props.StringProperty(
-		name = "Model file",
-		description = "File for model library",
+	bpy.types.Scene.entity_path = bpy.props.StringProperty(
+		name = "Entity file",
+		description = "File for entity library",
 		subtype = 'FILE_PATH',
-		update = models.update_model_path,
-		default = addon_prefs.model_path)
+		update = entities.update_entity_path,
+		default = addon_prefs.entity_path)
 	
 	bpy.types.Scene.mcprep_texturepack_path = bpy.props.StringProperty(
 		name = "Path to texture pack",
@@ -1405,6 +1404,6 @@ def unregister():
 	del bpy.types.Scene.mcprep_props
 	del bpy.types.Scene.mcprep_mob_path
 	del bpy.types.Scene.meshswap_path
-	del bpy.types.Scene.model_path
+	del bpy.types.Scene.entity_path
 	del bpy.types.Scene.mcprep_skin_path
 	del bpy.types.Scene.mcprep_texturepack_path

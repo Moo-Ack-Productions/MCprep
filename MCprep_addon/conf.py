@@ -103,8 +103,8 @@ def init():
 	global rig_categories
 	rig_categories = [] # simple list of directory names
 
-	global model_list
-	model_list = []
+	global entity_list
+	entity_list = []
 
 
 	# -----------------------------------------------
@@ -129,7 +129,7 @@ def icons_init():
 	global preview_collections
 	global v
 
-	collection_sets = ["main", "skins", "mobs", "models", "blocks", "items", "materials"]
+	collection_sets = ["main", "skins", "mobs", "entities", "blocks", "items", "materials"]
 
 	try:
 		for iconset in collection_sets:
