@@ -88,9 +88,9 @@ def getMeshswapList(context):
 			for itm in context.scene.mcprep_props.meshswap_list]
 
 
-def move_assets_to_excluded_layer(context, collections):
-	"""Utility to move source collections to excluded layer to not be rendered"""
-	initial_view_coll = context.view_layer.active_layer_collection
+#def move_assets_to_excluded_layer(context, collections):
+#	"""Utility to move source collections to excluded layer to not be rendered"""
+"""	initial_view_coll = context.view_layer.active_layer_collection
 
 	# Then, setup the exclude view layer
 	meshswap_exclude_vl = util.get_or_create_viewlayer(
@@ -101,7 +101,7 @@ def move_assets_to_excluded_layer(context, collections):
 		if grp.name not in initial_view_coll.collection.children:
 			continue # not linked, likely a sub-group not added to scn
 		meshswap_exclude_vl.collection.children.link(grp)
-		initial_view_coll.collection.children.unlink(grp)
+		initial_view_coll.collection.children.unlink(grp)"""
 
 
 def update_meshswap_path(self, context):
@@ -215,7 +215,7 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 		description="Automatically snap to whole block locations")
 	make_real = bpy.props.BoolProperty(
 		name="Make real",
-		default=False,
+		default=True,
 		description="Automatically make groups real after placement")
 
 	# toLink = bpy.props.BoolProperty(
@@ -233,6 +233,7 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 	track_param = None
 	@tracking.report_error
 	def execute(self, context):
+		#row.operator("mcprep.entity_spawner")
 		pre_groups = list(util.collections())
 
 		meshSwapPath = bpy.path.abspath(context.scene.meshswap_path)
@@ -333,7 +334,7 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 
 			# Move source of group instance into excluded view layer
 			if util.bv28() and group:
-				move_assets_to_excluded_layer(context, [group])
+				util.move_assets_to_excluded_layer(context, [group])
 
 		self.track_param = self.block
 		return {'FINISHED'}

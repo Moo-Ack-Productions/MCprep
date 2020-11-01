@@ -734,3 +734,19 @@ def scene_update(context=None):
 		context.scene.update()
 	elif hasattr(context, "view_layer"): # 2.8
 		context.view_layer.update()
+
+		
+def move_assets_to_excluded_layer(context, collections):
+	"""Utility to move source collections to excluded layer to not be rendered"""
+	initial_view_coll = context.view_layer.active_layer_collection
+
+	# Then, setup the exclude view layer
+	spawner_exclude_vl = get_or_create_viewlayer(
+		context, "Spawner Exclude")
+	spawner_exclude_vl.exclude = True
+
+	for grp in collections:
+		if grp.name not in initial_view_coll.collection.children:
+			continue # not linked, likely a sub-group not added to scn
+		spawner_exclude_vl.collection.children.link(grp)
+		initial_view_coll.collection.children.unlink(grp)

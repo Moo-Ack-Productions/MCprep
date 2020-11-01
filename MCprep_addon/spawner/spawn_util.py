@@ -99,7 +99,6 @@ class MCPREP_UL_meshswap(bpy.types.UIList):
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
 			layout.label(text=set.name)
-			# col.prop(set, "name", text="", emboss=False)
 		elif self.layout_type in {'GRID'}:
 			layout.alignment = 'CENTER'
 			layout.label(text="", icon='QUESTION')
@@ -109,7 +108,6 @@ class MCPREP_UL_entity(bpy.types.UIList):
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
 			layout.label(text=set.name)
-			# col.prop(set, "name", text="", emboss=False)
 		elif self.layout_type in {'GRID'}:
 			layout.alignment = 'CENTER'
 			layout.label(text="", icon='QUESTION')
