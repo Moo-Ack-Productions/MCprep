@@ -733,7 +733,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			for obj in new_objects:
 				util.move_to_collection(obj, swaped_vl.collection)
 
-			move_assets_to_excluded_layer(context, new_groups)
+			util.move_assets_to_excluded_layer(context, new_groups)
 
 		# end progress bar, end of primary section
 		bpy.context.window_manager.progress_end()
