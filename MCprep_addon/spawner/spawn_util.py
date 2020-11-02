@@ -133,30 +133,7 @@ class MCPREP_UL_item(bpy.types.UIList):
 					icon_value=conf.preview_collections["items"][icon].icon_id)
 			else:
 				layout.label(text="", icon='QUESTION')
-
-
-#class MCPREP_UL_entities(bpy.types.UIList):
-	#"""For entity asset listing UIList drawing"""
-	"""def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
-		if self.layout_type in {'DEFAULT', 'COMPACT'}:
-			#if not conf.use_icons:
-			layout.label(text=set.name)
-			#elif conf.use_icons and icon in conf.preview_collections["items"]:
-			#	layout.label(text=set.name,
-			#		icon_value=conf.preview_collections["items"][icon].icon_id)
-			#else:
-			#	layout.label(text=set.name, icon="BLANK1")
-
-		elif self.layout_type in {'GRID'}:
-			layout.alignment = 'CENTER'
-			#if conf.use_icons and icon in conf.preview_collections["items"]:
-			#	layout.label(text="",
-			#		icon_value=conf.preview_collections["items"][icon].icon_id)
-			#else:
-			layout.label(text="", icon='QUESTION')"""
-
 				
-
 
 class MCPREP_UL_material(bpy.types.UIList):
 	"""For material library UIList drawing"""

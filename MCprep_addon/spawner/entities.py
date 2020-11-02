@@ -220,7 +220,7 @@ class MCPREP_OT_entity_spawner(bpy.types.Operator):
 		pre_groups = list(util.collections())
 
 		entityPath = bpy.path.abspath(context.scene.entity_path)
-		method, block = self.block.split("/",2)
+		method, block = self.block.split("/",1)
 		toLink = False
 		use_cache = False
 		group = None
@@ -445,35 +445,7 @@ class MCPREP_UL_entity_list(bpy.types.UIList):
 
 
 
-class MCPREP_OT_fix_mineways_scale(bpy.types.Operator):
-	"""Quick upscaling of Mineways import by 10 for entityping"""
-	bl_idname = "object.fixentitesize"
-	bl_label = "Mineways quick upscale"
-	bl_options = {'REGISTER', 'UNDO'}
 
-	@tracking.report_error
-	def execute(self, context):
-		conf.log("Attempting to fix Mineways scaling for entity")
-
-		# get cursor loc first? shouldn't matter which mode/location though
-		tmp_loc = util.get_cuser_location(context)
-		if hasattr(context.space_data, "pivot_point"):
-			tmp = context.space_data.pivot_point
-			bpy.context.space_data.pivot_point = 'CURSOR'
-		else:
-			tmp = context.scene.tool_settings.transform_pivot_point
-			context.scene.tool_settings.transform_pivot_point = 'CURSOR'
-		util.set_cuser_location((0,0,0), context)
-
-		bpy.ops.transform.resize(value=(10, 10, 10))
-		bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-
-		if hasattr(context.space_data, "pivot_point"):
-			bpy.context.space_data.pivot_point = tmp
-		else:
-			context.scene.tool_settings.transform_pivot_point = tmp
-		util.set_cuser_location(tmp_loc, context)
-		return {'FINISHED'}
 
 
 # -----------------------------------------------------------------------------
@@ -486,7 +458,6 @@ classes = (
 	MCPREP_OT_entity_spawner,
 	MCPREP_OT_reload_entites,
 	MCPREP_UL_entity_list,
-	MCPREP_OT_fix_mineways_scale,
 )
 
 
