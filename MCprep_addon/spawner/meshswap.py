@@ -95,7 +95,8 @@ def move_assets_to_excluded_layer(context, collections):
 	# Then, setup the exclude view layer
 	meshswap_exclude_vl = util.get_or_create_viewlayer(
 		context, "Meshswap Exclude")
-	meshswap_exclude_vl.exclude = True
+	meshswap_exclude_vl.collection.hide_viewport = True
+	meshswap_exclude_vl.collection.hide_render = True
 
 	for grp in collections:
 		if grp.name not in initial_view_coll.collection.children:
