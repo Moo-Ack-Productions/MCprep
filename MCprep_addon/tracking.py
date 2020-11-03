@@ -828,8 +828,25 @@ def report_error(function):
 			return res  # cancelled, so skip running usage
 		elif hasattr(self, "skipUsage") and self.skipUsage is True:
 			return res  # skip running usage
+		elif VALID_IMPORT is False:
+			conf.log("Skipping usage, VALID_IMPORT is False")
+			return
 
-		# Debounc multiple same requests
+		try:
+			wrapper_safe_handler(self)
+		except:
+			err = traceback.format_exc()
+			print("Error while reporting usage for "+str(self.track_function))
+			print(err)
+
+		return res
+
+	def wrapper_safe_handler(self):
+		"""Safely report usage, while debouncing multiple of requests.
+
+		Wrapped at this level as time module could have failed to import, used
+		during the run check
+		"""
 		run_track = hasattr(self, "track_function") and self.track_function
 		if (run_track
 			and Tracker._last_request.get("function") == self.track_function
@@ -856,12 +873,12 @@ def report_error(function):
 				err = traceback.format_exc()
 				print("Error while reporting usage for "+str(self.track_function))
 				print(err)
+
 			# always update the last request gone through
 			Tracker._last_request = {
 				"time": time.time(),
 				"function": self.track_function
 			}
-		return res
 
 	return wrapper
 
