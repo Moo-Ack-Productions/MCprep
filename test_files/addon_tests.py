@@ -72,6 +72,9 @@ class mcprep_testing():
 			self.sync_materials,
 			self.sync_materials_link,
 			self.load_material,
+			self.uv_transform_detection,
+			self.uv_transform_no_alert,
+			self.uv_transform_combined_alert,
 			self.world_tools,
 			]
 		self.run_only = None # name to give to only run this test
@@ -742,7 +745,7 @@ class mcprep_testing():
 		return res
 
 	def import_mineways_separated(self):
-		"""Checks Mineways (multi-image) material name mapping to mcprep_data"""
+		"""Checks Mineways (single-image) material name mapping to mcprep_data"""
 		self._clear_scene()
 		self._import_mineways_separated()
 
@@ -1405,6 +1408,81 @@ class mcprep_testing():
 		mat_item = scn_props.material_list[scn_props.material_list_index]
 		if mat_item.name not in mat.name:
 			return "Material name not loaded "+mat.name
+
+	def uv_transform_detection(self):
+		"""Ensure proper detection and transforms for Mineways all-in-one images"""
+		self._clear_scene()
+		from MCprep.materials.uv_tools import get_uv_bounds_per_material
+
+		bpy.ops.mesh.primitive_cube_add()
+		bpy.ops.object.editmode_toggle()
+		bpy.ops.mesh.select_all(action='SELECT')
+		bpy.ops.uv.reset()
+		bpy.ops.object.editmode_toggle()
+		new_mat = bpy.data.materials.new(name="tmp")
+		bpy.context.object.active_material = new_mat
+
+		if not bpy.context.object or not bpy.context.object.active_material:
+			return "Failed set up for uv_transform_detection"
+
+		uv_bounds = get_uv_bounds_per_material(bpy.context.object)
+		mname = bpy.context.object.active_material.name
+		if uv_bounds != {mname: [0,1,0,1]}:
+			return "UV transform for default cube should have max bounds"
+
+		bpy.ops.object.editmode_toggle()
+		bpy.ops.mesh.select_all(action='SELECT')
+		bpy.ops.uv.sphere_project() # will ensure more irregular UV map, not bounded
+		bpy.ops.object.editmode_toggle()
+		uv_bounds = get_uv_bounds_per_material(bpy.context.object)
+		if uv_bounds == {mname: [0,1,0,1]}:
+			return "UV mapping is irregular, should have different min/max"
+
+	def uv_transform_no_alert(self):
+		"""Ensure that uv transform alert does not go off unexpectedly"""
+		self._clear_scene()
+		from MCprep.materials.uv_tools import detect_invalid_uvs_from_objs
+
+		self._import_mineways_separated()
+		invalid, invalid_objs = detect_invalid_uvs_from_objs(
+			bpy.context.selected_objects)
+		prt = ",".join([obj.name for obj in invalid_objs]) # obj.name.split("_")[-1]
+		if invalid is True:
+			return "Mineways separated tiles export should not alert: "+prt
+
+		self._clear_scene()
+		self._import_jmc2obj_full()
+		invalid, invalid_objs = detect_invalid_uvs_from_objs(
+			bpy.context.selected_objects)
+		prt = ",".join([obj.name.split("_")[-1] for obj in invalid_objs])
+		if invalid is True:
+			return "jmc2obj export should not alert: "+prt
+
+	def uv_transform_combined_alert(self):
+		"""Ensure that uv transform alert goes off for Mineways all-in-one"""
+		self._clear_scene()
+		from MCprep.materials.uv_tools import detect_invalid_uvs_from_objs
+
+		self._import_mineways_combined()
+		invalid, invalid_objs = detect_invalid_uvs_from_objs(
+			bpy.context.selected_objects)
+		if invalid is False:
+			return "Combined image export should alert"
+		if not invalid_objs:
+			return "Correctly alerted combined image, but no obj's returned"
+
+		# Do specific checks for water and lava, since they might be combined
+		# and cover more than one uv position (and falsely pass the test)
+		# in combined, water is called "Stationary_Wat" and "Stationary_Lav"
+		# (yes, appears cutoff; and yes includes the flowing too)
+		# NOTE! in 2.7x, will be named "Stationary_Water", but in 2.9 it is
+		# "Test_MCprep_1.16.4__-145_4_1271_to_-118_255_1311_Stationary_Wat"
+		water_obj = [obj for obj in bpy.data.objects if "Stationary_Wat" in obj.name][0]
+		lava_obj = [obj for obj in bpy.data.objects if "Stationary_Lav" in obj.name][0]
+
+		invalid, invalid_objs = detect_invalid_uvs_from_objs([lava_obj, water_obj])
+		if invalid is False:
+			return "Combined lava/water should still alert"
 
 
 class OCOL:

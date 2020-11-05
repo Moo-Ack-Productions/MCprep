@@ -31,6 +31,7 @@ from .. import conf
 from . import generate
 from .. import tracking
 from .. import util
+from . import uv_tools
 
 
 # -----------------------------------------------------------------------------
@@ -464,6 +465,8 @@ class MCPREP_OT_prep_animated_textures(bpy.types.Operator):
 			if self.break_err:
 				break
 
+		invalid_uv, affected_objs = uv_tools.detect_invalid_uvs_from_objs(objs)
+
 		if self.break_err:
 			print(self.break_err)
 			self.report({"ERROR"},
@@ -477,6 +480,12 @@ class MCPREP_OT_prep_animated_textures(bpy.types.Operator):
 			self.report({"ERROR"},
 				"Animated materials found, but none applied.")
 			return {'CANCELLED'}
+		elif invalid_uv:
+			self.report({'ERROR'},
+				("Detected scaled UV's (all in one texture), be sure to use "
+				"Mineway's 'Export Tiles for textures'"))
+			conf.log("Detected scaled UV's, incompatible with animate textures")
+			return {'FINISHED'}
 		else:
 			self.report({'INFO'}, "Modified {} material(s)".format(
 				self.affected_materials))

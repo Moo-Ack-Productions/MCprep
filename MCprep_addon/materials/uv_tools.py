@@ -19,10 +19,112 @@
 
 import bpy
 
+import time
+
 from .. import conf
 from . import generate
 from .. import tracking
 from .. import util
+
+
+# -----------------------------------------------------------------------------
+# UV functions
+# -----------------------------------------------------------------------------
+
+def get_uv_bounds_per_material(obj):
+	"""Return the maximum uv bounds per object, split per material
+
+	Returns:
+		dict: index of material name, value list of minx, maxx, miny, maxy,
+			where values are in UV terms (0-1, unless wrapping)
+	"""
+	if not obj or obj.type != 'MESH':
+		return {}
+	mats = util.materialsFromObj([obj])
+	if not mats:
+		return {}
+
+	# order of minx, maxx, miny, maxy,
+	# min's start with 1 so comparisons can go lower,
+	# max's start with 0 so comparisons can go higher
+	res = {mat.name:[1,0,1,0] for mat in mats}
+
+	# TODO: add other key for max_uvsize, to detect cases like lava and water
+	# where multiple materials are in one but UVs split over multiple blocks.
+	# In the meantime, threshold of 0.25 set by parent function is a sweetspot
+	active_uv = obj.data.uv_layers.active
+	for poly in obj.data.polygons:
+		m_index = poly.material_index
+		mslot = obj.material_slots[m_index]
+		if not mslot:
+			continue
+
+		# TODO: Consider breaking early after reaching the first N hits of a
+		# given material face within the same object, to avoid slowdown for
+		# very large worlds. Butm early tests show that UV check is still small
+		# compared to overall process time of either swap tex or anim tex.
+
+		mkey = mslot.material.name
+		for loop_ind in poly.loop_indices:
+			# a loop could be an edge or face
+			# loop = obj.data.loops[i] # This polygon/edge
+			uvx, uvy = active_uv.data[loop_ind].uv
+			if uvx < res[mkey][0]: # min x
+				res[mkey][0] = uvx
+			if uvx > res[mkey][1]: # max x
+				res[mkey][1] = uvx
+			if uvy < res[mkey][2]: # min y
+				res[mkey][2] = uvy
+			if uvy > res[mkey][3]: # max y
+				res[mkey][3] = uvy
+	return res
+
+
+def detect_invalid_uvs_from_objs(obj_list):
+	"""Detect all-in one combined images from concentrated UV layouts.
+
+	Returns:
+		bool: True for invalid layout, False of ok layout
+		list: Of objects which appear to have invalid UVs
+	"""
+	invalid = False
+	invalid_objects = []
+
+	# if bounded coverage is less on either axis, treat invalid.
+	# This threshold is slightly arbitrary, can't use 1.0 as some meshes are
+	# rightfully not up against bounds of image. But generally, for combined
+	# images the area covered is closer to 0.05
+	thresh = 0.25
+	conf.log("Doing check for invalid UV faces", vv_only=True)
+	t0 = time.time()
+
+	for obj in obj_list:
+		uv_bounds = get_uv_bounds_per_material(obj)
+		mis_mats = [mt for mt in uv_bounds if (
+			uv_bounds[mt][1] - uv_bounds[mt][0] < thresh
+			and uv_bounds[mt][3] - uv_bounds[mt][2] < thresh)
+			]
+
+		# if multiple materials on object and others don't alert, then toss
+		# out as 'valid'; example scenario of the bottom face of a sign will
+		# alert on its own (and is its own material), but rest of the sign is
+		# indeed beyond and valid.
+		if len(mis_mats) < len(uv_bounds):
+			continue
+
+		# otherwise, alert that this obj appears to have invalid UVs
+		if mis_mats:
+			invalid = True
+			invalid_objects.append(obj)
+	t1 = time.time()
+	t_diff = t1-t0 # round to .1s
+	conf.log("UV check took {}s".format(t_diff), vv_only=True)
+	return invalid, invalid_objects
+
+
+# -----------------------------------------------------------------------------
+# UV Operator definitions
+# -----------------------------------------------------------------------------
 
 
 class MCPREP_OT_scale_uv(bpy.types.Operator):
@@ -105,22 +207,20 @@ class MCPREP_OT_scale_uv(bpy.types.Operator):
 
 			# initialize for avergae center on polygon
 			x=y=n=0  # x,y,number of verts in loop for average purpose
-			for i in f.loop_indices:
+			for loop_ind in f.loop_indices:
 				# a loop could be an edge or face
-				l = ob.data.loops[i] # This polygon/edge
-				v = ob.data.vertices[l.vertex_index]  # The vertex data that loop entry refers to
+				#v = ob.data.vertices[l.vertex_index]  # The vertex data that loop entry refers to
 				# isolate to specific UV already used
-				if not uv.data[l.index].select and self.selected_only is True:
+				if not uv.data[loop_ind].select and self.selected_only is True:
 					continue
-				x+=uv.data[l.index].uv[0]
-				y+=uv.data[l.index].uv[1]
+				x+=uv.data[loop_ind].uv[0]
+				y+=uv.data[loop_ind].uv[1]
 				n+=1
-			for i in f.loop_indices:
-				if not uv.data[l.index].select and self.selected_only is True:
+			for loop_ind in f.loop_indices:
+				if not uv.data[loop_ind].select and self.selected_only is True:
 					continue
-				l = ob.data.loops[i]
-				uv.data[l.index].uv[0] = uv.data[l.index].uv[0]*(1-factor)+x/n*(factor)
-				uv.data[l.index].uv[1] = uv.data[l.index].uv[1]*(1-factor)+y/n*(factor)
+				uv.data[loop_ind].uv[0] = uv.data[loop_ind].uv[0]*(1-factor)+x/n*(factor)
+				uv.data[loop_ind].uv[1] = uv.data[loop_ind].uv[1]*(1-factor)+y/n*(factor)
 				modified = True
 		if not modified:
 			return "No UV faces selected"
