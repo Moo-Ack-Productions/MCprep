@@ -66,10 +66,12 @@ def materialsFromObj(obj_list):
 		# also capture obj materials from dupliverts/instances on e.g. empties
 		if hasattr(obj, "dupli_group") and obj.dupli_group: # 2.7
 			for dup_obj in obj.dupli_group.objects:
-				obj_list.append(dup_obj)
+				if dup_obj not in obj_list:
+					obj_list.append(dup_obj)
 		elif hasattr(obj, "instance_collection") and obj.instance_collection: # 2.8
 			for dup_obj in obj.instance_collection.objects:
-				obj_list.append(dup_obj)
+				if dup_obj not in obj_list:
+					obj_list.append(dup_obj)
 		if obj.type != 'MESH':
 			continue
 		for slot in obj.material_slots:
