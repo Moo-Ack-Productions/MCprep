@@ -1773,6 +1773,7 @@
 			"snow_fox": "entity/fox/snow_fox",
 			"snow_fox_sleep": "entity/fox/snow_fox_sleep",
 			"snow_golem": "entity/snow_golem",
+			"social_interactions": "gui/social_interactions",
 			"soul_0": "particle/soul_0",
 			"soul_1": "particle/soul_1",
 			"soul_10": "particle/soul_10",

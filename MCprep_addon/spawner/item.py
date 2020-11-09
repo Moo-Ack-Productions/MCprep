@@ -20,6 +20,7 @@ import os
 
 import bpy
 from bpy_extras.io_utils import ImportHelper
+import mathutils
 
 from .. import conf
 from .. import util
@@ -170,7 +171,10 @@ def spawn_item_from_filepath(context, path, max_pixels, thickness, threshold,
 		itm_obj.scale[0] = width/height
 	elif height < width:
 		itm_obj.scale[1] = height/width
-	bpy.ops.object.transform_apply(scale=True)
+
+	# Apply scale transform (funcitonally, applies ALL loc, rot, scale)
+	itm_obj.data.transform(itm_obj.matrix_world)
+	itm_obj.matrix_world = mathutils.Matrix()
 
 	# Deselect faces now, as setting face.select = False doens't work even
 	# though using face.select = True does work

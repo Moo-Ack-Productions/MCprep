@@ -60,6 +60,7 @@ class mcprep_testing():
 			self.import_mineways_separated,
 			self.import_mineways_combined,
 			self.name_generalize,
+			self.canonical_name_no_none,
 			self.meshswap_spawner,
 			self.meshswap_jmc2obj,
 			self.meshswap_mineways_separated,
@@ -272,9 +273,9 @@ class mcprep_testing():
 
 	def _set_exporter(self, name):
 		"""Sets the exporter name"""
+		from MCprep.util import get_user_preferences
 		if name not in ['(choose)', 'jmc2obj', 'Mineways']:
 			raise Exception('Invalid exporter set tyep')
-		from MCprep.util import get_user_preferences
 		context = bpy.context
 		if hasattr(context, "user_preferences"):
 			prefs = context.user_preferences.addons.get("MCprep_addon", None)
@@ -789,8 +790,30 @@ class mcprep_testing():
 		if errors:
 			return "Generalize failed: "+", ".join(errors)
 
+	def canonical_name_no_none(self):
+		"""Ensure that MC canonical name never returns none"""
+		from MCprep.materials.generate import get_mc_canonical_name
+		from MCprep.util import materialsFromObj
+		self._clear_scene()
+		self._import_jmc2obj_full()
+		self._import_mineways_separated()
+		self._import_mineways_combined()
+
+		bpy.ops.object.select_all(action='SELECT')
+		mats = materialsFromObj(bpy.context.selected_objects)
+		canons = [[get_mc_canonical_name(mat.name)][0] for mat in mats]
+
+		if None in canons: # detect None response to canon input
+			return "Canon returned none value"
+
+		# calling the reload materials operation, as this is where some error
+		# reports ran into this issue (but could not replicate)
+		bpy.ops.mcprep.reload_materials()
+
 	def meshswap_util(self, mat_name):
 		"""Run meshswap on the first object with found mat_name"""
+		from MCprep.util import select_set
+
 		if mat_name not in bpy.data.materials:
 			return "Not a material: "+mat_name
 		print("\nAttempt meshswap of "+mat_name)
@@ -808,7 +831,6 @@ class mcprep_testing():
 			return "Failed to find obj for "+mat_name
 		print("Found the object - "+obj.name)
 
-		from MCprep.util import select_set
 		bpy.ops.object.select_all(action='DESELECT')
 		select_set(obj, True)
 		res = bpy.ops.mcprep.meshswap()
@@ -1018,9 +1040,8 @@ class mcprep_testing():
 
 	def detect_desaturated_images(self):
 		"""Checks the desaturate images function works"""
-		# self._clear_scene() # not actually needed for this one
-
 		from MCprep.materials.generate import is_image_grayscale
+
 		base = self.get_mcprep_path()
 		print("Raw base", base)
 		base = os.path.join(base, "MCprep_resources",
@@ -1051,8 +1072,8 @@ class mcprep_testing():
 
 	def detect_extra_passes(self):
 		"""Ensure only the correct pbr file matches are found for input file"""
-
 		from MCprep.materials.generate import find_additional_passes
+
 
 		tmp_dir = tempfile.gettempdir()
 
@@ -1411,8 +1432,8 @@ class mcprep_testing():
 
 	def uv_transform_detection(self):
 		"""Ensure proper detection and transforms for Mineways all-in-one images"""
-		self._clear_scene()
 		from MCprep.materials.uv_tools import get_uv_bounds_per_material
+		self._clear_scene()
 
 		bpy.ops.mesh.primitive_cube_add()
 		bpy.ops.object.editmode_toggle()
@@ -1440,8 +1461,8 @@ class mcprep_testing():
 
 	def uv_transform_no_alert(self):
 		"""Ensure that uv transform alert does not go off unexpectedly"""
-		self._clear_scene()
 		from MCprep.materials.uv_tools import detect_invalid_uvs_from_objs
+		self._clear_scene()
 
 		self._import_mineways_separated()
 		invalid, invalid_objs = detect_invalid_uvs_from_objs(
@@ -1460,8 +1481,8 @@ class mcprep_testing():
 
 	def uv_transform_combined_alert(self):
 		"""Ensure that uv transform alert goes off for Mineways all-in-one"""
-		self._clear_scene()
 		from MCprep.materials.uv_tools import detect_invalid_uvs_from_objs
+		self._clear_scene()
 
 		self._import_mineways_combined()
 		invalid, invalid_objs = detect_invalid_uvs_from_objs(
