@@ -1,15 +1,17 @@
-import bpy
-import bmesh
-from bpy.types import Operator
-from bpy.props import *
-from bpy_extras.object_utils import AddObjectHelper, object_data_add
+import os
+import json
 from mathutils import Vector
 from math import pi, sin, cos, radians
 
+import bpy
+import bmesh
+from bpy.types import Operator
+from bpy_extras.object_utils import AddObjectHelper, object_data_add
 from bpy_extras.io_utils import ImportHelper
 
-import json
-import os
+# addon imports
+from .. import conf
+from .. import util
 
 def rotate_around(d,pos,origin,axis='z',offset=[8,0,8],scale=[0.063,0.063,0.063]):
     r=-radians(d)
@@ -24,9 +26,9 @@ def rotate_around(d,pos,origin,axis='z',offset=[8,0,8],scale=[0.063,0.063,0.063]
     new_pos[(1+axis_i)%3]=cos(r)*(a-m)+(b-n)*sin(r)+m
     new_pos[(2+axis_i)%3]=-sin(r)*(a-m)+cos(r)*(b-n)+n
     new_pos[(3+axis_i)%3]=c
-    # offset and scale are applied to the vertices in the return
-    # the default offset is what makes sure the block/item is centered
-    # the default scale will match the scale of the blocks from mineways, or 1 gridspace
+    ''' offset and scale are applied to the vertices in the return
+    the default offset is what makes sure the block/item is centered
+    the default scale will match the scale of the blocks from mineways, or 1 gridspace'''
     return Vector((
         -(new_pos[0]-offset[0])*scale[0],
         (new_pos[2]-offset[2])*scale[2],
@@ -51,8 +53,8 @@ def add_element(elm_from=[0,0,0],elm_to=[16,16,16],rot_origin=[8,8,8],rot_axis='
     
     return [verts,edges,faces]
 
-def add_material(name="material", pth=""):
-    print(name+": "+pth)
+def add_material(name="material", pth=""): # creates a simple material with an image texture from pth
+    conf.log(name+": "+pth)
     mat = bpy.data.materials.new(name=name)
     mat.blend_method = 'CLIP'
     mat.shadow_method = 'CLIP'
@@ -71,10 +73,75 @@ def add_material(name="material", pth=""):
 
     return mat
 
+def locate_image(textures,img,model_filepath):
 
-def add_object(object, obj_name="MinecraftModel", mesh_name="MinecraftModel_mesh", directory=""):
- 
-    mesh = bpy.data.meshes.new(mesh_name)  # add a new mesh
+    context=bpy.context
+    resource_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
+
+    local_path = textures[img]
+    if local_path[0] == '#': #reference to another texture
+        return locate_image(textures,local_path[1:],model_filepath)
+    else:
+        if local_path[0] == '.': #path is local to the model file
+            directory = os.path.dirname(model_filepath)
+        else:
+            if(len(local_path.split(":"))==1):
+                namespace="minecraft"
+            else:
+                namespace=local_path.split(":")[0]
+                local_path=local_path.split(":")[1]
+
+            directory = os.path.join(resource_folder,"assets",namespace,"textures")
+        return os.path.realpath(os.path.join(directory,local_path)+".png")
+
+def read_model(model_filepath): # recursive function that extracts the information from the json files
+    with open(model_filepath, 'r') as f:
+            obj_data=json.loads(f.read())
+    
+    context=bpy.context
+    resource_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
+    
+    elements=None
+    textures=None
+
+    parent = obj_data.get("parent")
+    if parent is not None:
+        if parent=="builtin/generated" or parent=="item/generated":
+            pass # generates the model from the texture
+        elif parent=="builtin/entity":
+            pass # model from an entity file, only for chests, ender chests, mob heads, shields, banners and tridents
+        else:
+            if(len(parent.split(":"))==1):
+                namespace="minecraft"
+                parent_filepath=parent
+            else:
+                namespace=parent.split(":")[0]
+                parent_filepath=parent.split(":")[1]
+            
+            models_dir = os.path.join(resource_folder,"assets",namespace,"models")
+            elements, textures = read_model(os.path.join(models_dir,parent_filepath)+".json")
+    
+    current_elements=obj_data.get("elements")
+    if current_elements is not None:
+        elements = current_elements # overwrites any elements from parents
+
+    current_textures=obj_data.get("textures")
+    if current_textures is not None:
+        if textures is None: textures=current_textures
+        else:
+            for img in current_textures:
+                textures[img]=current_textures[img]
+
+    conf.log("\nfile:"+str(model_filepath))
+    conf.log("parent:"+str(parent))
+    conf.log("elements:"+str(elements))
+    conf.log("textures:"+str(textures))
+
+    return elements, textures
+
+def add_model(model_filepath, obj_name="MinecraftModel"):
+    
+    mesh = bpy.data.meshes.new(obj_name)  # add a new mesh
     obj = bpy.data.objects.new(obj_name, mesh)  # add a new object using the mesh
 
     collection = bpy.context.collection
@@ -88,18 +155,16 @@ def add_object(object, obj_name="MinecraftModel", mesh_name="MinecraftModel_mesh
 
     mesh.uv_layers.new()
     uv_layer = bm.loops.layers.uv.verify()
+    elements, textures = read_model(model_filepath)
 
-    textures = object.get("textures") # currently only looks for textures local to file, need to implement namespace ID with resource packs.
+    materials=[]
     for img in textures:
         if img!="particle":
-            tex_file=textures[img].split('/')[len(textures[img].split('/'))-1]
-            print(tex_file, len(tex_file.split('.')))
-            tex_pth=textures[img] if len(tex_file.split('.'))>1 else textures[img]+".png"
-            
-            mat = add_material(img, os.path.realpath(directory+tex_pth))
+            tex_pth=locate_image(textures,img,model_filepath)
+            mat = add_material(obj_name+"_"+img, tex_pth)
             obj.data.materials.append(mat)
+            materials.append("#"+img)
 
-    elements = object.get("elements")
     if elements is None:
         elements=[{'from':[0,0,0],'to':[0,0,0]}] # temp default elements
 
@@ -141,6 +206,10 @@ def add_object(object, obj_name="MinecraftModel", mesh_name="MinecraftModel_mesh
                     for j in range(len(face.loops)):
                         face.loops[j][uv_layer].uv = uvs[(j+uv_idx)%len(uvs)]
 
+                    face_mat = d_face.get("texture")
+                    if face_mat is not None:
+                        face.material_index = materials.index(face_mat)
+
     # make the bmesh the object's mesh
     bm.to_mesh(mesh)  
     bm.free()
@@ -149,6 +218,7 @@ def draw_import_mcmodel(self, context):
     layout = self.layout
     layout.operator("mcprep.import_mcmodel" , text="Minecraft Model (.json)")
 
+
 class MCPREP_OT_import_minecraft_model(bpy.types.Operator, ImportHelper):
     """Tooltip"""
     bl_idname = "mcprep.import_mcmodel"
@@ -156,25 +226,31 @@ class MCPREP_OT_import_minecraft_model(bpy.types.Operator, ImportHelper):
     bl_options = {'REGISTER', 'UNDO'}
 
     filename_ext=".json"
-    filter_glob: StringProperty(
+    filter_glob = bpy.props.StringProperty(
         default="*.json",
         options={'HIDDEN'},
-        maxlen=255,  # Max internal buffer length, longer would be clamped.
+        maxlen=255  # Max internal buffer length, longer would be clamped.
     )
 
     def execute(self, context):
-        with open(self.filepath, 'r') as f:
-            obj_data=json.loads(f.read())
-
-        directories = self.filepath.split('\\')
-        filename = directories[len(directories)-1][:-len(self.filename_ext)]
-        add_object(obj_data, filename, filename+"_mesh", self.filepath[:-len(filename+self.filename_ext)])
+        filename = os.path.splitext(os.path.basename(self.filepath))[0]
+        add_model(os.path.normpath(self.filepath), filename)
+        # os.path.dirname(self.filepath)
         return {'FINISHED'}
 
+classes = (
+    MCPREP_OT_import_minecraft_model,
+)
+
 def register():
-    bpy.utils.register_class(MCPREP_OT_import_minecraft_model)
+    for cls in classes:
+        util.make_annotations(cls)
+        bpy.utils.register_class(cls)
+
     bpy.types.TOPBAR_MT_file_import.append(draw_import_mcmodel)
 
 def unregister():
+    bpy.types.TOPBAR_MT_file_import.remove(draw_import_mcmodel)
 
-    bpy.utils.unregister_class(MCPREP_OT_import_minecraft_model)
+    for cls in reversed(classes):
+        bpy.utils.unregister_class(cls)
