@@ -453,11 +453,7 @@ def set_cycles_texture(image, material, extra_passes=False):
 			if "normal" in img_sets:
 				new_img = util.loadTexture(img_sets["normal"])
 				node.image = new_img
-				# For later 2.8, fix images color space user
-				if hasattr(node, "color_space"): # 2.7 and earlier 2.8 versions
-					node.color_space = 'NONE'  # for better interpretation of specmaps
-				elif hasattr(new_img, "colorspace_settings"): # later 2.8 versions
-					new_img.colorspace_settings.name = 'Non-Color'
+				util.apply_colorspace(node, 'Non-Color')
 				node.mute = False
 				node.hide = False
 			else:
@@ -474,11 +470,7 @@ def set_cycles_texture(image, material, extra_passes=False):
 				node.image = new_img
 				node.mute = False
 				node.hide = False
-				# For later 2.8, fix images color space user
-				if hasattr(node, "color_space"): # 2.7 and earlier 2.8 versions
-					node.color_space = 'NONE'  # for better interpretation of specmaps
-				elif hasattr(new_img, "colorspace_settings"): # later 2.8 versions
-					new_img.colorspace_settings.name = 'Non-Color'
+				util.apply_colorspace(node, 'Non-Color')
 			else:
 				node.mute = True
 				node.hide = True
@@ -1070,18 +1062,9 @@ def texgen_specular(mat, passes, nodeInputs, use_reflections):
 		nodeTexDiff.interpolation = 'Closest'
 		nodeTexSpec.interpolation = 'Closest'
 
-	# Spec update
-	if hasattr(nodeTexSpec, "color_space"):  # 2.7 and earlier 2.8 versions
-		nodeTexSpec.color_space = 'NONE'  # for better interpretation of specmaps
-	# later 2.8 versions
-	elif nodeTexSpec.image and hasattr(nodeTexSpec.image, "colorspace_settings"):
-		nodeTexSpec.image.colorspace_settings.name = 'Non-Color'
-
-	# Normal update
-	if hasattr(nodeTexNorm, "color_space"):  # 2.7 and earlier 2.8 versions
-		nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
-	elif nodeTexNorm.image and hasattr(nodeTexNorm.image, "colorspace_settings"):
-		nodeTexNorm.image.colorspace_settings.name = 'Non-Color'
+	# Update to use non-color data for spec and normal
+	util.apply_colorspace(nodeTexSpec, 'Non-Color')
+	util.apply_colorspace(nodeTexNorm, 'Non-Color')
 
 	# Graystyle Blending
 	nodeSaturateMix.inputs[0].default_value = 1.0
@@ -1212,18 +1195,9 @@ def texgen_seus(mat, passes, nodeInputs, use_reflections):
 		nodeTexDiff.interpolation = 'Closest'
 		nodeTexSpec.interpolation = 'Closest'
 
-	# Spec update
-	if hasattr(nodeTexSpec, "color_space"):  # 2.7 and earlier 2.8 versions
-		nodeTexSpec.color_space = 'NONE'  # for better interpretation of specmaps
-	# later 2.8 versions
-	elif nodeTexSpec.image and hasattr(nodeTexSpec.image, "colorspace_settings"):
-		nodeTexSpec.image.colorspace_settings.name = 'Non-Color'
-
-	# Normal update
-	if hasattr(nodeTexNorm, "color_space"):  # 2.7 and earlier 2.8 versions
-		nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
-	elif nodeTexNorm.image and hasattr(nodeTexNorm.image, "colorspace_settings"):
-		nodeTexNorm.image.colorspace_settings.name = 'Non-Color'
+	# Update to use non-color data for spec and normal
+	util.apply_colorspace(nodeTexSpec, 'Non-Color')
+	util.apply_colorspace(nodeTexNorm, 'Non-Color')
 
 	# Graystyle Blending
 	nodeSaturateMix.inputs[0].default_value = 1.0
@@ -1683,11 +1657,7 @@ def matgen_special_water(mat, passes):
 		nodeTexDiff.interpolation = 'Closest'
 
 	# Normal update
-	if hasattr(nodeTexNorm, "color_space"):  # 2.7 and earlier 2.8 versions
-		nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
-	elif nodeTexNorm.image and hasattr(nodeTexNorm.image, "colorspace_settings"):
-		nodeTexNorm.image.colorspace_settings.name = 'Non-Color'
-
+	util.apply_colorspace(nodeTexNorm, 'Non-Color')
 	if image_norm:
 		nodeTexNorm.image = image_norm
 		nodeTexNorm.mute = False
@@ -1835,11 +1805,7 @@ def matgen_special_glass(mat, passes):
 		nodeTexDiff.interpolation = 'Closest'
 
 	# Normal update
-	if hasattr(nodeTexNorm, "color_space"):  # 2.7 and earlier 2.8 versions
-		nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
-	elif nodeTexNorm.image and hasattr(nodeTexNorm.image, "colorspace_settings"):
-		nodeTexNorm.image.colorspace_settings.name = 'Non-Color'
-
+	util.apply_colorspace(nodeTexNorm, 'Non-Color')
 	if image_norm:
 		nodeTexNorm.image = image_norm
 		nodeTexNorm.mute = False

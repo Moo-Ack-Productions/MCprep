@@ -164,7 +164,8 @@ class MCPREP_MT_3dview_add(bpy.types.Menu):
 			grass_icon=None
 			sword_icon=None
 
-		if not props.mob_list or not props.meshswap_list or not props.item_list:
+		all_loaded = props.mob_list and props.meshswap_list and props.item_list
+		if not conf.loaded_all_spawners and not all_loaded:
 			row = layout.row()
 			row.operator("mcprep.reload_spawners", text="Load spawners",
 				icon=HAND_ICON)
@@ -470,8 +471,8 @@ class McprepPreference(bpy.types.AddonPreferences):
 					text="World Tools").url = \
 					"https://theduckcow.com/dev/blender/mcprep/world-tools/"
 			row.operator("wm.url_open",
-					text="Demo video/trailer").url = \
-					"https://youtu.be/C3YoZx-seFE?list=PL8X_CzUEVBfaajwyguIj_utPXO4tEOr7a"
+					text="Tutorial Series").url = \
+					"https://bit.ly/MCprepTutorials"
 
 		elif self.preferences_tab == "tracker_updater":
 			layout = self.layout

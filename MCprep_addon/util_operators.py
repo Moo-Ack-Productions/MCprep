@@ -152,8 +152,8 @@ class MCPREP_OT_open_help(bpy.types.Operator):
 	"""Support operator for opening url in UI, but indicating through popup
 	text that it is a supporting/help button"""
 	bl_idname = "mcprep.open_help"
-	bl_label = "Open folder"
-	bl_description = "Need help? Click to open reference page"
+	bl_label = "Open help page"
+	bl_description = "Need help? Click to open a reference page"
 
 	url = bpy.props.StringProperty(
 		name="Url",

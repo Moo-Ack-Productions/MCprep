@@ -32,6 +32,31 @@ from . import conf
 # GENERAL SUPPORTING FUNCTIONS (no registration required)
 # -----------------------------------------------------------------------------
 
+def apply_colorspace(node, color_enum):
+	"""Apply color space in a cross compatible way, for version and language.
+
+	Use enum nomeclature matching Blender 2.8x Default, not 2.7 or other lang
+	"""
+	global noncolor_override
+	noncolor_override = None
+
+	if not node.image:
+		conf.log("Node has no image applied yet, cannot change colorspace")
+
+	# For later 2.8, fix images color space user
+	if hasattr(node, "color_space"): # 2.7 and earlier 2.8 versions
+		node.color_space = 'NONE'  # for better interpretation of specmaps
+	elif hasattr(node.image, "colorspace_settings"): # later 2.8 versions
+		# try default 'Non-color', fall back to best guess 'Non-Colour Data'
+		if color_enum == 'Non-color' and noncolor_override is not None:
+			node.image.colorspace_settings.name = noncolor_override
+		else:
+			try:
+				node.image.colorspace_settings.name = 'Non-Color'
+			except TypeError:
+				node.image.colorspace_settings.name = 'Non-Colour Data'
+				noncolor_override = 'Non-Colour Data'
+
 
 def nameGeneralize(name):
 	"""Get base name from datablock, accounts for duplicates and animated tex."""
@@ -66,10 +91,12 @@ def materialsFromObj(obj_list):
 		# also capture obj materials from dupliverts/instances on e.g. empties
 		if hasattr(obj, "dupli_group") and obj.dupli_group: # 2.7
 			for dup_obj in obj.dupli_group.objects:
-				obj_list.append(dup_obj)
+				if dup_obj not in obj_list:
+					obj_list.append(dup_obj)
 		elif hasattr(obj, "instance_collection") and obj.instance_collection: # 2.8
 			for dup_obj in obj.instance_collection.objects:
-				obj_list.append(dup_obj)
+				if dup_obj not in obj_list:
+					obj_list.append(dup_obj)
 		if obj.type != 'MESH':
 			continue
 		for slot in obj.material_slots:

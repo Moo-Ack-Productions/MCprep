@@ -541,7 +541,11 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 			self.report({'WARNING'}, "No armatures found!")
 		else:
 			conf.log("Using object as primary rig: "+rig_obj.name)
-			util.set_active_object(context, rig_obj)
+			try:
+				util.set_active_object(context, rig_obj)
+			except RuntimeError:
+				conf.log("Failed to set {} as active".format(rig_obj))
+				rig_obj = None
 
 		if rig_obj and self.clearPose or rig_obj and self.relocation=="Offset":
 			if self.relocation == "Offset":
@@ -626,6 +630,11 @@ class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
 		if not os.path.isfile(newrig):
 			conf.log("Error: Rig blend file not found!")
 			self.report({'ERROR'}, "Rig blend file not found!")
+			return {'CANCELLED'}
+
+		if not newrig.lower().endswith('.blend'):
+			conf.log("Error: Not a blend file! Select a .blend file with a rig")
+			self.report({'ERROR'}, "Not a blend file! Select a .blend file with a rig")
 			return {'CANCELLED'}
 
 		# now check the rigs folder indeed exists

@@ -103,8 +103,9 @@ def move_assets_to_excluded_layer(context, collections):
 	for grp in collections:
 		if grp.name not in initial_view_coll.collection.children:
 			continue # not linked, likely a sub-group not added to scn
-		meshswap_exclude_vl.collection.children.link(grp)
 		initial_view_coll.collection.children.unlink(grp)
+		if grp.name not in meshswap_exclude_vl.collection.children:
+			meshswap_exclude_vl.collection.children.link(grp)
 
 
 
