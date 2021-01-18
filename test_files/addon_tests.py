@@ -61,6 +61,7 @@ class mcprep_testing():
 			self.import_mineways_combined,
 			self.name_generalize,
 			self.canonical_name_no_none,
+			self.canonical_test_mappings,
 			self.meshswap_spawner,
 			self.meshswap_jmc2obj,
 			self.meshswap_mineways_separated,
@@ -803,12 +804,49 @@ class mcprep_testing():
 		mats = materialsFromObj(bpy.context.selected_objects)
 		canons = [[get_mc_canonical_name(mat.name)][0] for mat in mats]
 
-		if None in canons: # detect None response to canon input
+		if None in canons:  # detect None response to canon input
 			return "Canon returned none value"
+		if '' in canons:
+			return "Canon returned empty str value"
 
-		# calling the reload materials operation, as this is where some error
-		# reports ran into this issue (but could not replicate)
-		bpy.ops.mcprep.reload_materials()
+		# Ensure it never returns None
+		in_str, _ = get_mc_canonical_name('')
+		if in_str != '':
+			return "Empty str should return empty string, not" + str(in_str)
+
+		did_raise = False
+		try:
+			get_mc_canonical_name(None)
+		except:
+			did_raise = True
+		if not did_raise:
+			return "None input SHOULD raise error"
+
+		# TODO: patch conf.json_data["blocks"] used by addon if possible,
+		# if this is transformed into a true py unit test. This will help
+		# check against report (-MNGGQfGGTJRqoizVCer)
+
+	def canonical_test_mappings(self):
+		"""Test some specific mappings to ensure they return correctly."""
+		from MCprep.materials.generate import get_mc_canonical_name
+
+		misc = {
+			".emit": ".emit",
+		}
+		jmc_to_canon = {
+			"grass": "grass",
+			"mushroom_red": "red_mushroom",
+			# "slime": "slime_block",  # KNOWN jmc, need to address
+		}
+		mineways_to_canon = {}
+
+		for map_type in [misc, jmc_to_canon, mineways_to_canon]:
+			for key, val in map_type.items():
+				res, mapped = get_mc_canonical_name(key)
+				if res == val:
+					continue
+				return "Wrong mapping: {} mapped to {} ({}), not {}".format(
+					key, res, mapped, val)
 
 	def meshswap_util(self, mat_name):
 		"""Run meshswap on the first object with found mat_name"""

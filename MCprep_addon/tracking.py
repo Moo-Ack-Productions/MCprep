@@ -21,6 +21,9 @@
 # fail to work because of this module)
 VALID_IMPORT = True
 
+# Request timeout (total request time may still be longer)
+TIMEOUT = 60
+
 # critical to at least load these
 import os
 import bpy
@@ -288,7 +291,7 @@ class Singleton_tracking(object):
 				resp = self._raw_request_mod_http(method, path, payload)
 				self._httpclient_fallback = True
 		elif self._httpclient_fallback is False:
-			resp =  self._raw_request_mod_requests(method, path, payload)
+			resp = self._raw_request_mod_requests(method, path, payload)
 		else:
 			resp = self._raw_request_mod_http(method, path, payload)
 
@@ -305,12 +308,12 @@ class Singleton_tracking(object):
 		be used. This function works in blender 2.8, and at least 2.79.
 		"""
 		url = self._appurl + path
-		if method=="POST":
-			res = requests.post(url, payload)
-		elif method=="GET":
-			res = requests.get(url)
-		elif method=="PUT":
-			res = requests.put(url, payload)
+		if method == "POST":
+			res = requests.post(url, payload, timeout=TIMEOUT)
+		elif method == "GET":
+			res = requests.get(url, timeout=TIMEOUT)
+		elif method == "PUT":
+			res = requests.put(url, payload, timeout=TIMEOUT)
 		else:
 			raise ValueError("raw_request input must be GET, POST, or PUT")
 
@@ -346,7 +349,7 @@ class Singleton_tracking(object):
 			print("Error: "+str(err))
 			return {'status':'NO_CONNECTION'}
 
-		if method=="POST" or method=="PUT":
+		if method in ("POST", "PUT"):
 			connection.request(method, path, payload)
 		elif method == "GET":
 			connection.request(method, path)

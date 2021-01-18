@@ -474,7 +474,7 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 	track_function = "generate_mat"
 	track_param = None
 	@tracking.report_error
-	def execute(self,context):
+	def execute(self, context):
 		scn_props = context.scene.mcprep_props
 		mat_item = scn_props.material_list[scn_props.material_list_index]
 		mat, err = self.generate_base_material(
@@ -505,7 +505,7 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 
 	def generate_base_material(self, context, name, path):
 		"""Generate a base material from name and active resource pack"""
-		image = bpy.data.images.load(path, check_existing=False)
+		image = bpy.data.images.load(path)
 		mat = bpy.data.materials.new(name=name)
 
 		engine = context.scene.render.engine

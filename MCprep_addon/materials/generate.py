@@ -39,7 +39,7 @@ def get_mc_canonical_name(name):
 	"""Convert a material name to standard MC name.
 
 	Returns:
-		canonical name
+		canonical name, or fallback to generalized name (never returns None)
 		form (mc, jmc, or mineways)
 	"""
 	general_name = util.nameGeneralize(name)
@@ -50,8 +50,8 @@ def get_mc_canonical_name(name):
 
 	# Special case to allow material names, e.g. in meshswap, to end in .emit
 	# while still mapping to canonical names, to pick up features like animated
-	# textures.
-	if ".emit" in general_name:
+	# textures. Cross check that name isn't exactly .emit to avoid None return.
+	if ".emit" in general_name and general_name != ".emit":
 		general_name = general_name.replace(".emit", "")
 
 	if ("blocks" not in conf.json_data
@@ -66,19 +66,23 @@ def get_mc_canonical_name(name):
 	elif general_name in conf.json_data["blocks"]["block_mapping_jmc"]:
 		canon = conf.json_data["blocks"]["block_mapping_jmc"][general_name]
 		form = "jmc2obj"
-	elif general_name.lower() in conf.json_data["blocks"]["block_mapping_jmc"]:
-		canon = conf.json_data["blocks"]["block_mapping_jmc"][general_name.lower()]
-		form = "jmc2obj"
 	elif general_name in conf.json_data["blocks"]["block_mapping_mineways"]:
 		canon = conf.json_data["blocks"]["block_mapping_mineways"][general_name]
 		form = "mineways"
+	elif general_name.lower() in conf.json_data["blocks"]["block_mapping_jmc"]:
+		canon = conf.json_data["blocks"]["block_mapping_jmc"][general_name.lower()]
+		form = "jmc2obj"
 	elif general_name.lower() in conf.json_data["blocks"]["block_mapping_mineways"]:
 		canon = conf.json_data["blocks"]["block_mapping_mineways"][general_name.lower()]
 		form = "mineways"
 	else:
-		conf.log("Canonical name not matched: "+general_name, True)
+		conf.log("Canonical name not matched: " + general_name, True)
 		canon = general_name
 		form = None
+
+	if canon is None or canon == '':
+		conf.log("Error: Encountered None canon value with " + str(general_name))
+		canon = general_name
 
 	return canon, form
 
