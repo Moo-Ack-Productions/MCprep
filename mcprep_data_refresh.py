@@ -75,6 +75,35 @@ def jmc2obj_extras():
 	outlist = {
 		"vines":"vine",
 
+		# removed ~ Jan 15 2021,
+		# added back to maintain longer backwards compatibility
+		"cake_inside": "cake_inner",
+		"cauldron_feet": "cauldron_bottom",
+		"cauldron_inside": "cauldron_inner",
+		"door_wood_bottom": "oak_door_bottom",
+		"door_wood_top": "oak_door_top",
+		"enderchest": "entity/chest/ender",
+		"largechest": "entity/chest/normal_double",
+		"largechest_trapped": "entity/chest/trapped_double",
+		"plank_acacia": "acacia_planks",
+		"plank_birch": "birch_planks",
+		"plank_dark_oak": "dark_oak_planks",
+		"plank_jungle": "jungle_planks",
+		"plank_oak": "oak_planks",
+		"plank_spruce": "spruce_planks",
+		"quartz_bottom": "quartz_block_bottom",
+		"quartz_side": "quartz_block_side",
+		"quartz_side_chiseled": "chiseled_quartz_block",
+		"quartz_side_lines": "quartz_pillar",
+		"quartz_top": "quartz_block_top",
+		"quartz_top_chiseled": "chiseled_quartz_block_top",
+		"quartz_top_lines": "quartz_pillar_top",
+		"red_sandstone_carved": "chiseled_red_sandstone",
+		"sandstone_side": "sandstone",
+		"sandstone_side_carved": "chiseled_sandstone",
+		"stone_brick_circle": "chiseled_stone_bricks",
+		"stone_brick_cracked": "cracked_stone_bricks",
+
 	}
 	return outlist
 

@@ -27,6 +27,7 @@ from . import generate
 from . import sequences
 from .. import tracking
 from .. import util
+from . import uv_tools
 
 
 # -----------------------------------------------------------------------------
@@ -394,10 +395,8 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper, McprepMateri
 			self.report({'ERROR'}, "No materials found on selected objects")
 			return {'CANCELLED'}
 		exporter = generate.detect_form(mat_list)
-		# TODO: add cehck for "mineways combined" and call out not supported
-		# if exporter=="mineways":
-		# 	self.report({'ERROR'}, "Not yet supported for Mineways - coming soon!")
-		# 	return {'CANCELLED'}
+		invalid_uv, affected_objs = uv_tools.detect_invalid_uvs_from_objs(obj_list)
+
 		self.track_exporter = addon_prefs.MCprep_exporter_type
 
 		# set the scene's folder for the texturepack being swapped
@@ -428,7 +427,14 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper, McprepMateri
 				packFormat = self.packFormat,
 				skipUsage = True)
 
-		self.report({'INFO'},"{} materials affected".format(res))
+		if invalid_uv:
+			self.report({'ERROR'},
+				("Detected scaled UV's (all in one texture), be sure to use "
+				"Mineway's 'Export Tiles for textures'"))
+			conf.log("Detected scaledd UV's, incompatible with swap textures")
+			conf.log([ob.name for ob in affected_objs], vv_only=True)
+		else:
+			self.report({'INFO'},"{} materials affected".format(res))
 		self.track_param = context.scene.render.engine
 		return {'FINISHED'}
 
@@ -468,7 +474,7 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 	track_function = "generate_mat"
 	track_param = None
 	@tracking.report_error
-	def execute(self,context):
+	def execute(self, context):
 		scn_props = context.scene.mcprep_props
 		mat_item = scn_props.material_list[scn_props.material_list_index]
 		mat, err = self.generate_base_material(
@@ -499,7 +505,7 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 
 	def generate_base_material(self, context, name, path):
 		"""Generate a base material from name and active resource pack"""
-		image = bpy.data.images.load(path, check_existing=False)
+		image = bpy.data.images.load(path)
 		mat = bpy.data.materials.new(name=name)
 
 		engine = context.scene.render.engine
@@ -518,7 +524,7 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 			node_nrm = mat.node_tree.nodes.new('ShaderNodeTexImage')
 			node_nrm["MCPREP_normal"] = True
 
-			print("Added blank texture node")
+			conf.log("Added blank texture node")
 
 			# now use standard method to update textures
 			generate.set_cycles_texture(image, mat, self.useExtraMaps)
@@ -560,7 +566,6 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 
 		success = res==0
 
-		print("Debug 5", success)
 		if self.animateTextures:
 			sequences.animate_single_material(
 				mat, context.scene.render.engine)

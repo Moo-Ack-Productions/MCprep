@@ -37,7 +37,7 @@ def reload_materials(context):
 	"""Reload the material UI list"""
 	mcprep_props = context.scene.mcprep_props
 	resource_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
-	extensions = [".png",".jpg",".jpeg"]
+	extensions = [".png", ".jpg", ".jpeg"]
 
 	mcprep_props.material_list.clear()
 	if conf.use_icons and conf.preview_collections["materials"]:
@@ -58,8 +58,8 @@ def reload_materials(context):
 
 	search_paths = [
 		resource_folder,
-		os.path.join(resource_folder,"blocks"),
-		os.path.join(resource_folder,"block")]
+		os.path.join(resource_folder, "blocks"),
+		os.path.join(resource_folder, "block")]
 	files = []
 
 	for path in search_paths:
@@ -434,7 +434,8 @@ class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 
 		# even if images of same name already exist, load new block
 		conf.log("Find missing images: Creating new image datablock for "+mat.name)
-		image = bpy.data.images.load(image_path, check_existing=False)
+		# do not use 'check_existing=False' to keep compatibility pre 2.79
+		image = bpy.data.images.load(image_path)
 
 		engine = bpy.context.scene.render.engine
 		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':

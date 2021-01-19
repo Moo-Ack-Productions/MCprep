@@ -48,6 +48,10 @@ class MCPREP_OT_reload_spawners(bpy.types.Operator):
 		bpy.ops.mcprep.reload_meshswap()
 		bpy.ops.mcprep.reload_mobs()
 		bpy.ops.mcprep.reload_items()
+
+		# to prevent re-drawing "load spawners!" if any one of the above
+		# loaded nothing for any reason.
+		conf.loaded_all_spawners = True
 		return {'FINISHED'}
 
 

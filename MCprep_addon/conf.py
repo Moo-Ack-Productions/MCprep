@@ -97,6 +97,12 @@ def init():
 	# For cross-addon lists
 	# -----------------------------------------------
 
+	# To ensure shift-A starts drawing sub menus after pressing load all spawns
+	# as without this, if any one of the spawners loads nothing (invalid folder,
+	# no blend files etc), then it would continue to ask to reload spanwers.
+	global loaded_all_spawners
+	loaded_all_spawners = False
+
 	global skin_list
 	skin_list = [] # each is: [ basename, path ]
 
@@ -191,3 +197,12 @@ def unregister():
 
 	global json_data
 	json_data = None  # actively clearing out json data for next open
+
+	global loaded_all_spawners
+	loaded_all_spawners = False
+	global skin_list
+	skin_list = []
+	global rig_categories
+	rig_categories = []
+	global material_sync_cache
+	material_sync_cache = []

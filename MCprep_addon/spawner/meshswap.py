@@ -95,13 +95,15 @@ def move_assets_to_excluded_layer(context, collections):
 	# Then, setup the exclude view layer
 	meshswap_exclude_vl = util.get_or_create_viewlayer(
 		context, "Meshswap Exclude")
-	meshswap_exclude_vl.exclude = True
+	meshswap_exclude_vl.collection.hide_viewport = True
+	meshswap_exclude_vl.collection.hide_render = True
 
 	for grp in collections:
 		if grp.name not in initial_view_coll.collection.children:
-			continue # not linked, likely a sub-group not added to scn
-		meshswap_exclude_vl.collection.children.link(grp)
+			continue  # not linked, likely a sub-group not added to scn
 		initial_view_coll.collection.children.unlink(grp)
+		if grp.name not in meshswap_exclude_vl.collection.children:
+			meshswap_exclude_vl.collection.children.link(grp)
 
 
 def update_meshswap_path(self, context):
@@ -215,7 +217,7 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 		description="Automatically snap to whole block locations")
 	make_real = bpy.props.BoolProperty(
 		name="Make real",
-		default=False,
+		default=False,  # TODO: make True once able to retain animations like fire
 		description="Automatically make groups real after placement")
 
 	# toLink = bpy.props.BoolProperty(
@@ -297,12 +299,32 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 					# make real doesn't select resulting output now (true for
 					# earlier versions of 2.8, not true in 2.82 at least where
 					# selects everything BUT the source of original instance
+
 					pre_objs = list(bpy.data.objects)
 					bpy.ops.object.duplicates_make_real()
 					post_objs = list(bpy.data.objects)
 					new_objs = list(set(post_objs)-set(pre_objs))
 					for obj in new_objs:
 						util.select_set(obj, True)
+
+						# Re-apply animation if any
+						# TODO: Causes an issue for any animation that depends
+						# on direct xyz placement (noting that parents are
+						# cleared on Make Real). Could try adding a parent to
+						# any given object's current location and give the
+						# equivalent xyz offset at some point in time.
+						"""
+						orig_objs = [obo for obo in group.objects
+							if util.nameGeneralize(obj.name) == util.nameGeneralize(obo.name)]
+						if not orig_objs:
+							continue
+						obo = orig_objs[0]
+						if not obo or not obo.animation_data:
+							continue
+						if not obj.animation_data:
+							obj.animation_data_create()
+						obj.animation_data.action = obo.animation_data.action
+						"""
 				else:
 					bpy.ops.object.duplicates_make_real()
 

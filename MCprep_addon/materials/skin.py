@@ -544,7 +544,9 @@ class MCPREP_OT_add_skin(bpy.types.Operator, ImportHelper):
 			self.report({"ERROR"}, "Target folder for installing does not exist")
 			return {'CANCELLED'}
 
-		# copy the skin file
+		# copy the skin file, overwritting if appropriate
+		if os.path.isfile(new_location):
+			os.remove(new_location)
 		shutil.copy2(source_location, new_location)
 
 		# convert to 1.8 skin as needed (double height)

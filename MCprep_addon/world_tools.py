@@ -663,6 +663,11 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 					mat.use_shadeless = False
 					mat.translucency = 1
 
+			# Now also increase camera render distance to see clouds
+			cams = [obj for obj in bpy.data.objects if obj.type == "CAMERA"]
+			for cam in cams:
+				cam.data.clip_end = 1000 # 1000 matches explicitly to shader
+
 		# ensure all new objects (lights, meshes, control objs) in same group
 		if "mcprep_world" in util.collections():
 			util.collections()["mcprep_world"].name = "mcprep_world_old"

@@ -39,7 +39,7 @@ def get_mc_canonical_name(name):
 	"""Convert a material name to standard MC name.
 
 	Returns:
-		canonical name
+		canonical name, or fallback to generalized name (never returns None)
 		form (mc, jmc, or mineways)
 	"""
 	general_name = util.nameGeneralize(name)
@@ -50,8 +50,8 @@ def get_mc_canonical_name(name):
 
 	# Special case to allow material names, e.g. in meshswap, to end in .emit
 	# while still mapping to canonical names, to pick up features like animated
-	# textures.
-	if ".emit" in general_name:
+	# textures. Cross check that name isn't exactly .emit to avoid None return.
+	if ".emit" in general_name and general_name != ".emit":
 		general_name = general_name.replace(".emit", "")
 
 	if ("blocks" not in conf.json_data
@@ -66,19 +66,23 @@ def get_mc_canonical_name(name):
 	elif general_name in conf.json_data["blocks"]["block_mapping_jmc"]:
 		canon = conf.json_data["blocks"]["block_mapping_jmc"][general_name]
 		form = "jmc2obj"
-	elif general_name.lower() in conf.json_data["blocks"]["block_mapping_jmc"]:
-		canon = conf.json_data["blocks"]["block_mapping_jmc"][general_name.lower()]
-		form = "jmc2obj"
 	elif general_name in conf.json_data["blocks"]["block_mapping_mineways"]:
 		canon = conf.json_data["blocks"]["block_mapping_mineways"][general_name]
 		form = "mineways"
+	elif general_name.lower() in conf.json_data["blocks"]["block_mapping_jmc"]:
+		canon = conf.json_data["blocks"]["block_mapping_jmc"][general_name.lower()]
+		form = "jmc2obj"
 	elif general_name.lower() in conf.json_data["blocks"]["block_mapping_mineways"]:
 		canon = conf.json_data["blocks"]["block_mapping_mineways"][general_name.lower()]
 		form = "mineways"
 	else:
-		conf.log("Canonical name not matched: "+general_name, True)
+		conf.log("Canonical name not matched: " + general_name, True)
 		canon = general_name
 		form = None
+
+	if canon is None or canon == '':
+		conf.log("Error: Encountered None canon value with " + str(general_name))
+		canon = general_name
 
 	return canon, form
 
@@ -453,11 +457,7 @@ def set_cycles_texture(image, material, extra_passes=False):
 			if "normal" in img_sets:
 				new_img = util.loadTexture(img_sets["normal"])
 				node.image = new_img
-				# For later 2.8, fix images color space user
-				if hasattr(node, "color_space"): # 2.7 and earlier 2.8 versions
-					node.color_space = 'NONE'  # for better interpretation of specmaps
-				elif hasattr(new_img, "colorspace_settings"): # later 2.8 versions
-					new_img.colorspace_settings.name = 'Non-Color'
+				util.apply_colorspace(node, 'Non-Color')
 				node.mute = False
 				node.hide = False
 			else:
@@ -474,11 +474,7 @@ def set_cycles_texture(image, material, extra_passes=False):
 				node.image = new_img
 				node.mute = False
 				node.hide = False
-				# For later 2.8, fix images color space user
-				if hasattr(node, "color_space"): # 2.7 and earlier 2.8 versions
-					node.color_space = 'NONE'  # for better interpretation of specmaps
-				elif hasattr(new_img, "colorspace_settings"): # later 2.8 versions
-					new_img.colorspace_settings.name = 'Non-Color'
+				util.apply_colorspace(node, 'Non-Color')
 			else:
 				node.mute = True
 				node.hide = True
@@ -1070,18 +1066,9 @@ def texgen_specular(mat, passes, nodeInputs, use_reflections):
 		nodeTexDiff.interpolation = 'Closest'
 		nodeTexSpec.interpolation = 'Closest'
 
-	# Spec update
-	if hasattr(nodeTexSpec, "color_space"):  # 2.7 and earlier 2.8 versions
-		nodeTexSpec.color_space = 'NONE'  # for better interpretation of specmaps
-	# later 2.8 versions
-	elif nodeTexSpec.image and hasattr(nodeTexSpec.image, "colorspace_settings"):
-		nodeTexSpec.image.colorspace_settings.name = 'Non-Color'
-
-	# Normal update
-	if hasattr(nodeTexNorm, "color_space"):  # 2.7 and earlier 2.8 versions
-		nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
-	elif nodeTexNorm.image and hasattr(nodeTexNorm.image, "colorspace_settings"):
-		nodeTexNorm.image.colorspace_settings.name = 'Non-Color'
+	# Update to use non-color data for spec and normal
+	util.apply_colorspace(nodeTexSpec, 'Non-Color')
+	util.apply_colorspace(nodeTexNorm, 'Non-Color')
 
 	# Graystyle Blending
 	nodeSaturateMix.inputs[0].default_value = 1.0
@@ -1212,18 +1199,9 @@ def texgen_seus(mat, passes, nodeInputs, use_reflections):
 		nodeTexDiff.interpolation = 'Closest'
 		nodeTexSpec.interpolation = 'Closest'
 
-	# Spec update
-	if hasattr(nodeTexSpec, "color_space"):  # 2.7 and earlier 2.8 versions
-		nodeTexSpec.color_space = 'NONE'  # for better interpretation of specmaps
-	# later 2.8 versions
-	elif nodeTexSpec.image and hasattr(nodeTexSpec.image, "colorspace_settings"):
-		nodeTexSpec.image.colorspace_settings.name = 'Non-Color'
-
-	# Normal update
-	if hasattr(nodeTexNorm, "color_space"):  # 2.7 and earlier 2.8 versions
-		nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
-	elif nodeTexNorm.image and hasattr(nodeTexNorm.image, "colorspace_settings"):
-		nodeTexNorm.image.colorspace_settings.name = 'Non-Color'
+	# Update to use non-color data for spec and normal
+	util.apply_colorspace(nodeTexSpec, 'Non-Color')
+	util.apply_colorspace(nodeTexNorm, 'Non-Color')
 
 	# Graystyle Blending
 	nodeSaturateMix.inputs[0].default_value = 1.0
@@ -1683,11 +1661,7 @@ def matgen_special_water(mat, passes):
 		nodeTexDiff.interpolation = 'Closest'
 
 	# Normal update
-	if hasattr(nodeTexNorm, "color_space"):  # 2.7 and earlier 2.8 versions
-		nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
-	elif nodeTexNorm.image and hasattr(nodeTexNorm.image, "colorspace_settings"):
-		nodeTexNorm.image.colorspace_settings.name = 'Non-Color'
-
+	util.apply_colorspace(nodeTexNorm, 'Non-Color')
 	if image_norm:
 		nodeTexNorm.image = image_norm
 		nodeTexNorm.mute = False
@@ -1835,11 +1809,7 @@ def matgen_special_glass(mat, passes):
 		nodeTexDiff.interpolation = 'Closest'
 
 	# Normal update
-	if hasattr(nodeTexNorm, "color_space"):  # 2.7 and earlier 2.8 versions
-		nodeTexNorm.color_space = 'NONE'  # for better interpretation of normals
-	elif nodeTexNorm.image and hasattr(nodeTexNorm.image, "colorspace_settings"):
-		nodeTexNorm.image.colorspace_settings.name = 'Non-Color'
-
+	util.apply_colorspace(nodeTexNorm, 'Non-Color')
 	if image_norm:
 		nodeTexNorm.image = image_norm
 		nodeTexNorm.mute = False

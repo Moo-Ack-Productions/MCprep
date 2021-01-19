@@ -60,6 +60,8 @@ class mcprep_testing():
 			self.import_mineways_separated,
 			self.import_mineways_combined,
 			self.name_generalize,
+			self.canonical_name_no_none,
+			self.canonical_test_mappings,
 			self.meshswap_spawner,
 			self.meshswap_jmc2obj,
 			self.meshswap_mineways_separated,
@@ -72,6 +74,9 @@ class mcprep_testing():
 			self.sync_materials,
 			self.sync_materials_link,
 			self.load_material,
+			self.uv_transform_detection,
+			self.uv_transform_no_alert,
+			self.uv_transform_combined_alert,
 			self.world_tools,
 			]
 		self.run_only = None # name to give to only run this test
@@ -269,9 +274,9 @@ class mcprep_testing():
 
 	def _set_exporter(self, name):
 		"""Sets the exporter name"""
+		from MCprep.util import get_user_preferences
 		if name not in ['(choose)', 'jmc2obj', 'Mineways']:
 			raise Exception('Invalid exporter set tyep')
-		from MCprep.util import get_user_preferences
 		context = bpy.context
 		if hasattr(context, "user_preferences"):
 			prefs = context.user_preferences.addons.get("MCprep_addon", None)
@@ -742,7 +747,7 @@ class mcprep_testing():
 		return res
 
 	def import_mineways_separated(self):
-		"""Checks Mineways (multi-image) material name mapping to mcprep_data"""
+		"""Checks Mineways (single-image) material name mapping to mcprep_data"""
 		self._clear_scene()
 		self._import_mineways_separated()
 
@@ -786,8 +791,67 @@ class mcprep_testing():
 		if errors:
 			return "Generalize failed: "+", ".join(errors)
 
+	def canonical_name_no_none(self):
+		"""Ensure that MC canonical name never returns none"""
+		from MCprep.materials.generate import get_mc_canonical_name
+		from MCprep.util import materialsFromObj
+		self._clear_scene()
+		self._import_jmc2obj_full()
+		self._import_mineways_separated()
+		self._import_mineways_combined()
+
+		bpy.ops.object.select_all(action='SELECT')
+		mats = materialsFromObj(bpy.context.selected_objects)
+		canons = [[get_mc_canonical_name(mat.name)][0] for mat in mats]
+
+		if None in canons:  # detect None response to canon input
+			return "Canon returned none value"
+		if '' in canons:
+			return "Canon returned empty str value"
+
+		# Ensure it never returns None
+		in_str, _ = get_mc_canonical_name('')
+		if in_str != '':
+			return "Empty str should return empty string, not" + str(in_str)
+
+		did_raise = False
+		try:
+			get_mc_canonical_name(None)
+		except:
+			did_raise = True
+		if not did_raise:
+			return "None input SHOULD raise error"
+
+		# TODO: patch conf.json_data["blocks"] used by addon if possible,
+		# if this is transformed into a true py unit test. This will help
+		# check against report (-MNGGQfGGTJRqoizVCer)
+
+	def canonical_test_mappings(self):
+		"""Test some specific mappings to ensure they return correctly."""
+		from MCprep.materials.generate import get_mc_canonical_name
+
+		misc = {
+			".emit": ".emit",
+		}
+		jmc_to_canon = {
+			"grass": "grass",
+			"mushroom_red": "red_mushroom",
+			# "slime": "slime_block",  # KNOWN jmc, need to address
+		}
+		mineways_to_canon = {}
+
+		for map_type in [misc, jmc_to_canon, mineways_to_canon]:
+			for key, val in map_type.items():
+				res, mapped = get_mc_canonical_name(key)
+				if res == val:
+					continue
+				return "Wrong mapping: {} mapped to {} ({}), not {}".format(
+					key, res, mapped, val)
+
 	def meshswap_util(self, mat_name):
 		"""Run meshswap on the first object with found mat_name"""
+		from MCprep.util import select_set
+
 		if mat_name not in bpy.data.materials:
 			return "Not a material: "+mat_name
 		print("\nAttempt meshswap of "+mat_name)
@@ -805,7 +869,6 @@ class mcprep_testing():
 			return "Failed to find obj for "+mat_name
 		print("Found the object - "+obj.name)
 
-		from MCprep.util import select_set
 		bpy.ops.object.select_all(action='DESELECT')
 		select_set(obj, True)
 		res = bpy.ops.mcprep.meshswap()
@@ -1015,9 +1078,8 @@ class mcprep_testing():
 
 	def detect_desaturated_images(self):
 		"""Checks the desaturate images function works"""
-		# self._clear_scene() # not actually needed for this one
-
 		from MCprep.materials.generate import is_image_grayscale
+
 		base = self.get_mcprep_path()
 		print("Raw base", base)
 		base = os.path.join(base, "MCprep_resources",
@@ -1048,8 +1110,8 @@ class mcprep_testing():
 
 	def detect_extra_passes(self):
 		"""Ensure only the correct pbr file matches are found for input file"""
-
 		from MCprep.materials.generate import find_additional_passes
+
 
 		tmp_dir = tempfile.gettempdir()
 
@@ -1405,6 +1467,81 @@ class mcprep_testing():
 		mat_item = scn_props.material_list[scn_props.material_list_index]
 		if mat_item.name not in mat.name:
 			return "Material name not loaded "+mat.name
+
+	def uv_transform_detection(self):
+		"""Ensure proper detection and transforms for Mineways all-in-one images"""
+		from MCprep.materials.uv_tools import get_uv_bounds_per_material
+		self._clear_scene()
+
+		bpy.ops.mesh.primitive_cube_add()
+		bpy.ops.object.editmode_toggle()
+		bpy.ops.mesh.select_all(action='SELECT')
+		bpy.ops.uv.reset()
+		bpy.ops.object.editmode_toggle()
+		new_mat = bpy.data.materials.new(name="tmp")
+		bpy.context.object.active_material = new_mat
+
+		if not bpy.context.object or not bpy.context.object.active_material:
+			return "Failed set up for uv_transform_detection"
+
+		uv_bounds = get_uv_bounds_per_material(bpy.context.object)
+		mname = bpy.context.object.active_material.name
+		if uv_bounds != {mname: [0,1,0,1]}:
+			return "UV transform for default cube should have max bounds"
+
+		bpy.ops.object.editmode_toggle()
+		bpy.ops.mesh.select_all(action='SELECT')
+		bpy.ops.uv.sphere_project() # will ensure more irregular UV map, not bounded
+		bpy.ops.object.editmode_toggle()
+		uv_bounds = get_uv_bounds_per_material(bpy.context.object)
+		if uv_bounds == {mname: [0,1,0,1]}:
+			return "UV mapping is irregular, should have different min/max"
+
+	def uv_transform_no_alert(self):
+		"""Ensure that uv transform alert does not go off unexpectedly"""
+		from MCprep.materials.uv_tools import detect_invalid_uvs_from_objs
+		self._clear_scene()
+
+		self._import_mineways_separated()
+		invalid, invalid_objs = detect_invalid_uvs_from_objs(
+			bpy.context.selected_objects)
+		prt = ",".join([obj.name for obj in invalid_objs]) # obj.name.split("_")[-1]
+		if invalid is True:
+			return "Mineways separated tiles export should not alert: "+prt
+
+		self._clear_scene()
+		self._import_jmc2obj_full()
+		invalid, invalid_objs = detect_invalid_uvs_from_objs(
+			bpy.context.selected_objects)
+		prt = ",".join([obj.name.split("_")[-1] for obj in invalid_objs])
+		if invalid is True:
+			return "jmc2obj export should not alert: "+prt
+
+	def uv_transform_combined_alert(self):
+		"""Ensure that uv transform alert goes off for Mineways all-in-one"""
+		from MCprep.materials.uv_tools import detect_invalid_uvs_from_objs
+		self._clear_scene()
+
+		self._import_mineways_combined()
+		invalid, invalid_objs = detect_invalid_uvs_from_objs(
+			bpy.context.selected_objects)
+		if invalid is False:
+			return "Combined image export should alert"
+		if not invalid_objs:
+			return "Correctly alerted combined image, but no obj's returned"
+
+		# Do specific checks for water and lava, since they might be combined
+		# and cover more than one uv position (and falsely pass the test)
+		# in combined, water is called "Stationary_Wat" and "Stationary_Lav"
+		# (yes, appears cutoff; and yes includes the flowing too)
+		# NOTE! in 2.7x, will be named "Stationary_Water", but in 2.9 it is
+		# "Test_MCprep_1.16.4__-145_4_1271_to_-118_255_1311_Stationary_Wat"
+		water_obj = [obj for obj in bpy.data.objects if "Stationary_Wat" in obj.name][0]
+		lava_obj = [obj for obj in bpy.data.objects if "Stationary_Lav" in obj.name][0]
+
+		invalid, invalid_objs = detect_invalid_uvs_from_objs([lava_obj, water_obj])
+		if invalid is False:
+			return "Combined lava/water should still alert"
 
 
 class OCOL:
