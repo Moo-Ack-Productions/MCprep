@@ -50,6 +50,7 @@ def get_rig_list(context):
 def update_rig_path(self, context):
 	"""List for UI items callback of property spawn_rig_category."""
 	conf.log("Updating rig path", vv_only=True)
+	conf.rig_categories = []
 	update_rig_list(context)
 	spawn_rigs_categories(self, context)
 
@@ -191,6 +192,7 @@ class MCPREP_OT_reload_mobs(bpy.types.Operator):
 
 	@tracking.report_error
 	def execute(self, context):
+		conf.rig_categories = []
 		update_rig_list(context)
 		return {'FINISHED'}
 
@@ -929,7 +931,7 @@ class MCPREP_OT_install_mob_icon(bpy.types.Operator, ImportHelper):
 def spawn_rigs_categories(self, context):
 	"""Used as enum UI list for spawn_rig_category dropdown"""
 	items = []
-	items.append(("all","All Mobs","Show all mobs loaded"))
+	items.append(("all", "All Mobs", "Show all mobs loaded"))
 
 	categories = conf.rig_categories
 	if not conf.rig_categories:
