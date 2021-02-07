@@ -322,10 +322,12 @@ def mineways_extras():
 	}
 	return outlist
 
+
 def split_underscore_mappings(mineways_dict):
 	"""Returns the list, adding new items like Sapling__Spruce_Sapling to Spruce_Sapling"""
 	return {itm.split("__")[-1]:mineways_dict[itm] for itm in mineways_dict
 		if "__" in itm}
+
 
 def mineways2mc(name, vanilla):
 	"""Function that attemtps to map Mineways texture name to canonical"""
@@ -361,7 +363,7 @@ def get_vanilla_list(copy_file=False):
 
 	# parallel sort the list based on the generated tuple
 	verion_tuples, versions = zip(*sorted(zip(verion_tuples, versions)))
-	# print(versions)
+	print(versions)
 
 	jarfile = None
 	for i, ver in reversed(list(enumerate(verion_tuples))):
@@ -374,6 +376,8 @@ def get_vanilla_list(copy_file=False):
 
 	if not jarfile:
 		raise Exception("Could not get most recent jar version")
+	else:
+		print("Extracting from jar "+jarfile)
 
 	mcprep_resources = os.path.join("MCprep_addon", "MCprep_resources",
 		"resourcepacks", "mcprep_default")
