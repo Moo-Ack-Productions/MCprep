@@ -74,8 +74,11 @@ def update_rig_list(context):
 
 			for name in getattr(data_from, get_attr):
 				# special cases, skip some groups
+				# TODO: use name generalize here, to drop collection.001 too
 				if name.lower() in ("rigidbodyworld", "collection"):
 					continue
+				if name.lower().startswith("collection"):
+					continue  # will drop e.g. "Collection 1" from blender 2.7x
 
 				description = "Spawn one {x} rig".format(x=name)
 				mob = context.scene.mcprep_props.mob_list_all.add()
@@ -360,7 +363,7 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 		lower_bones = [bone.name.lower() for bone in armature.pose.bones]
 		lower_name = None
 		for name in ["main", "root", "base", "master"]:
-			if name in  lower_bones:
+			if name in lower_bones:
 				lower_name = name
 				break
 		if not lower_name:
