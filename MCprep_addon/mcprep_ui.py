@@ -730,6 +730,7 @@ class MCPREP_PT_skins(bpy.types.Panel):
 			b_subrow.operator("mcprep.skin_path_reset", icon=LOAD_FACTORY, text="")
 			b_row.operator("mcprep.add_skin")
 			b_row.operator("mcprep.remove_skin")
+			b_row.operator("mcprep.download_username_list")
 			b_row.operator("mcprep.reload_skins")
 			if context.mode == "OBJECT" and skinname:
 				row = b_row.row(align=True)
