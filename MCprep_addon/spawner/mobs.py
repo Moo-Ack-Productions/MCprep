@@ -50,6 +50,7 @@ def get_rig_list(context):
 def update_rig_path(self, context):
 	"""List for UI items callback of property spawn_rig_category."""
 	conf.log("Updating rig path", vv_only=True)
+	conf.rig_categories = []
 	update_rig_list(context)
 	spawn_rigs_categories(self, context)
 
@@ -73,8 +74,11 @@ def update_rig_list(context):
 
 			for name in getattr(data_from, get_attr):
 				# special cases, skip some groups
+				# TODO: use name generalize here, to drop collection.001 too
 				if name.lower() in ("rigidbodyworld", "collection"):
 					continue
+				if name.lower().startswith("collection"):
+					continue  # will drop e.g. "Collection 1" from blender 2.7x
 
 				description = "Spawn one {x} rig".format(x=name)
 				mob = context.scene.mcprep_props.mob_list_all.add()
@@ -191,6 +195,7 @@ class MCPREP_OT_reload_mobs(bpy.types.Operator):
 
 	@tracking.report_error
 	def execute(self, context):
+		conf.rig_categories = []
 		update_rig_list(context)
 		return {'FINISHED'}
 
@@ -313,13 +318,7 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 				return {'CANCELLED'}
 			res = self.load_linked(context, path, name)
 		else:
-			# append the rig, the whole group.. though honestly ideally not, and just append the right objs
-			#idea: link in group, inevtiably need to make into this blend file but then get the remote's
-			# all object names, then unlink/remove group (and object it creates) and directly append all those objects
-			# OOORR do append the group, then remove the group but keep the individual objects
-			# that way we know we don't append in too many objects (e.g. parents pulling in children/vice versa)
 			res = self.load_append(context, path, name)
-			# also issue of "undo/redo"... groups stay linked/ as groups even if this happens!
 
 		# if there is a script with this rig, attempt to run it
 		self.attemptScriptLoad(path)
@@ -358,7 +357,7 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 		lower_bones = [bone.name.lower() for bone in armature.pose.bones]
 		lower_name = None
 		for name in ["main", "root", "base", "master"]:
-			if name in  lower_bones:
+			if name in lower_bones:
 				lower_name = name
 				break
 		if not lower_name:
@@ -456,8 +455,8 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 				print("MCprep mob spawning works better when the root bone's name is 'MAIN'")
 				self.report({'INFO'}, "This addon works better when the root bone's name is 'MAIN'")
 
-
 	def load_append(self, context, path, name):
+		"""Append the whole collection group into this blend file."""
 		if path == '//':
 			# This means the group HAS already been appended..
 			# Could try to recopy thsoe elements, or try re-appending with
@@ -476,6 +475,8 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 			subpath = 'Group'
 		elif hasattr(bpy.data, "collections"):
 			subpath = 'Collection'
+		else:
+			raise Exception("No Group or Collection bpy API endpoint")
 
 		conf.log(os.path.join(path, subpath) + ', ' + name)
 		pregroups = list(util.collections())
@@ -483,7 +484,7 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 		postgroups = list(util.collections())
 
 		g1 = None
-		new_groups = list(set(postgroups)-set(pregroups))
+		new_groups = list(set(postgroups) - set(pregroups))
 		if not new_groups and name in util.collections():
 			# this is more likely to fail but serves as a fallback
 			conf.log("Mob spawn: Had to go to fallback group name grab")
@@ -505,7 +506,7 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 			gl = grp_added.instance_offset
 		else:
 			conf.log("Warning, could not set offset for group; null type?")
-			gl = (0,0,0)
+			gl = (0, 0, 0)
 		cl = util.get_cuser_location(context)
 
 		# For some reason, adding group objects on its own doesn't work
@@ -540,22 +541,22 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 			conf.log("Could not get rig object")
 			self.report({'WARNING'}, "No armatures found!")
 		else:
-			conf.log("Using object as primary rig: "+rig_obj.name)
+			conf.log("Using object as primary rig: " + rig_obj.name)
 			try:
 				util.set_active_object(context, rig_obj)
 			except RuntimeError:
 				conf.log("Failed to set {} as active".format(rig_obj))
 				rig_obj = None
 
-		if rig_obj and self.clearPose or rig_obj and self.relocation=="Offset":
+		if rig_obj and self.clearPose or rig_obj and self.relocation == "Offset":
 			if self.relocation == "Offset":
-				bpy.ops.transform.translate(value=(-gl[0],-gl[1],-gl[2]))
+				bpy.ops.transform.translate(value=(-gl[0], -gl[1], -gl[2]))
 			try:
 				bpy.ops.object.mode_set(mode='POSE')
 			except Exception as e:
-				self.report({'ERROR'},"Failed to enter pose mode: "+str(e))
+				self.report({'ERROR'}, "Failed to enter pose mode: " + str(e))
 				print("Failed to enter pose mode, see logs")
-				print("Exception: ",str(e))
+				print("Exception: ", str(e))
 				print(bpy.context.object)
 				print(rig_obj)
 				print("Mode: ", context.mode)
@@ -842,12 +843,6 @@ class MCPREP_OT_install_mob_icon(bpy.types.Operator, ImportHelper):
 	bl_idname = "mcprep.mob_install_icon"
 	bl_label = "Install mob icon"
 
-	#filename_ext = ".blend"
-	# filter_glob = bpy.props.StringProperty(
-	# 		default="*.blend",
-	# 		options={'HIDDEN'},
-	# 		)
-	# fileselectparams = "use_filter_image"
 	filter_glob = bpy.props.StringProperty(
 		default="",
 		options={'HIDDEN'})
@@ -874,7 +869,6 @@ class MCPREP_OT_install_mob_icon(bpy.types.Operator, ImportHelper):
 		mob = scn_props.mob_list[scn_props.mob_list_index]
 		_, name = mob.mcmob_type.split(':/:')
 		path = context.scene.mcprep_mob_path
-
 
 		icon_dir = os.path.join(path, mob.category, "icons")
 		new_file = os.path.join(icon_dir, name+ext)
@@ -929,7 +923,7 @@ class MCPREP_OT_install_mob_icon(bpy.types.Operator, ImportHelper):
 def spawn_rigs_categories(self, context):
 	"""Used as enum UI list for spawn_rig_category dropdown"""
 	items = []
-	items.append(("all","All Mobs","Show all mobs loaded"))
+	items.append(("all", "All Mobs", "Show all mobs loaded"))
 
 	categories = conf.rig_categories
 	if not conf.rig_categories:

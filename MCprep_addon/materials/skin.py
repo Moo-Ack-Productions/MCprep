@@ -20,7 +20,6 @@
 # library imports
 import bpy
 import os
-import math
 from bpy_extras.io_utils import ImportHelper
 import shutil
 import urllib.request
@@ -52,9 +51,11 @@ def reloadSkinList(context):
 
 	skinlist = []
 	for path in files:
-		if path.split(".")[-1].lower() not in ["png","jpg","jpeg","tiff"]:
+		if path.split(".")[-1].lower() not in ["png", "jpg", "jpeg", "tiff"]:
 			continue
-		skinlist.append( (path, "{x} skin".format(x=path)) )
+		skinlist.append((path, "{x} skin".format(x=path)))
+
+	skinlist = sorted(skinlist, key=lambda x: x[0].lower())
 
 	# clear lists
 	context.scene.mcprep_skins_list.clear()
@@ -75,8 +76,8 @@ def update_skin_path(self, context):
 	reloadSkinList(context)
 
 
-# scene update to auto load skins on load after new file
 def handler_skins_enablehack(scene):
+	"""Scene update to auto load skins on load after new file."""
 	try:
 		bpy.app.handlers.scene_update_pre.remove(handler_skins_enablehack)
 	except:
@@ -288,6 +289,45 @@ def setUVimage(objs, image):
 			uv_face.image = image
 
 
+def download_user(self, context, username):
+	"""Download user skin from online.
+
+	Reusable function from within two common operators for downloading skin.
+	Example link: http://minotar.net/skin/theduckcow
+	"""
+	conf.log("Downloading skin: " + username)
+
+	src_link = "http://minotar.net/skin/"
+	saveloc = os.path.join(
+		bpy.path.abspath(context.scene.mcprep_skin_path),
+		username.lower() + ".png")
+
+	try:
+		if conf.vv:
+			print("Download starting with url: " + src_link + username.lower())
+			print("to save location: "+saveloc)
+		urllib.request.urlretrieve(src_link + username.lower(), saveloc)
+	except urllib.error.HTTPError as e:
+		self.report({"ERROR"}, "Could not find username")
+		return None
+	except urllib.error.URLError as e:
+		self.report({"ERROR"}, "URL error, check internet connection")
+		return None
+	except Exception as e:
+		self.report({"ERROR"}, "Error occured while downloading skin: "+str(e))
+		return None
+
+	# convert to 1.8 skin as needed (double height)
+	converted = False
+	if self.convert_layout:
+		converted = convert_skin_layout(saveloc)
+	if converted:
+		self.track_param = "username + 1.8 convert"
+	else:
+		self.track_param = "username"
+	return saveloc
+
+
 # -----------------------------------------------------------------------------
 # Operators / UI classes
 # -----------------------------------------------------------------------------
@@ -431,12 +471,20 @@ class MCPREP_OT_apply_username_skin(bpy.types.Operator):
 			self.report({"ERROR"},"Invalid username")
 			return {'CANCELLED'}
 
-		skins = [ str(skin[0]).lower() for skin in conf.skin_list ]
-		paths = [ skin[1] for skin in conf.skin_list ]
+		skins = [str(skin[0]).lower() for skin in conf.skin_list]
+		paths = [skin[1] for skin in conf.skin_list]
 		if self.username.lower() not in skins or not self.skip_redownload:
-			conf.log("Downloading skin")
-			res = self.download_user(context)
-			return res
+			# Do the download
+			saveloc = download_user(self, context, self.username)
+			if not saveloc:
+				return {'CANCELLED'}
+
+			# Now load the skin
+			res = loadSkinFile(self, context, saveloc, self.new_material)
+			if res != 0:
+				return {'CANCELLED'}
+			bpy.ops.mcprep.reload_skins()
+			return {'FINISHED'}
 		else:
 			conf.log("Reusing downloaded skin")
 			ind = skins.index(self.username.lower())
@@ -444,46 +492,6 @@ class MCPREP_OT_apply_username_skin(bpy.types.Operator):
 			if res != 0:
 				return {'CANCELLED'}
 			return {'FINISHED'}
-
-	def download_user(self, context):
-		"""Download user skin from online.
-
-		Example link: http://minotar.net/skin/theduckcow
-		"""
-
-		src_link = "http://minotar.net/skin/"
-		saveloc = os.path.join(bpy.path.abspath(context.scene.mcprep_skin_path),
-								self.username.lower()+".png")
-
-		try:
-			if conf.vv:
-				print("Download starting with url: "+src_link+self.username.lower())
-				print("to save location: "+saveloc)
-			urllib.request.urlretrieve(src_link+self.username.lower(), saveloc)
-		except urllib.error.HTTPError as e:
-			self.report({"ERROR"},"Could not find username")
-			return {'CANCELLED'}
-		except urllib.error.URLError as e:
-			self.report({"ERROR"},"URL error, check internet connection")
-			return {'CANCELLED'}
-		except Exception as e:
-			self.report({"ERROR"},"Error occured while downloading skin: "+str(e))
-			return {'CANCELLED'}
-
-		# convert to 1.8 skin as needed (double height)
-		converted = False
-		if self.convert_layout:
-			converted = convert_skin_layout(saveloc)
-		if converted:
-			self.track_param = "username + 1.8 convert"
-		else:
-			self.track_param = "username"
-
-		res = loadSkinFile(self, context, saveloc, self.new_material)
-		if res != 0:
-			return {'CANCELLED'}
-		bpy.ops.mcprep.reload_skins()
-		return {'FINISHED'}
 
 
 class MCPREP_OT_skin_fix_eyes():  # bpy.types.Operator
@@ -605,7 +613,7 @@ class MCPREP_OT_remove_skin(bpy.types.Operator):
 			context.scene.mcprep_skins_list_index = len(conf.skin_list)-1
 
 		# in future, select multiple
-		self.report({"INFO"},"Removed "+bpy.path.basename(file))
+		self.report({"INFO"}, "Removed " + bpy.path.basename(file))
 
 		return {'FINISHED'}
 
@@ -693,6 +701,79 @@ class MCPREP_OT_spawn_mob_with_skin(bpy.types.Operator):
 		return {'FINISHED'}
 
 
+class MCPREP_OT_download_username_list(bpy.types.Operator):
+	"""Apply the active UIlist skin to select characters"""
+	bl_idname = "mcprep.download_username_list"
+	bl_label = "Download username list"
+	bl_description = "Download a list of skins from comma-separated usernames"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	username_list = bpy.props.StringProperty(
+		name="Username list",
+		description="Comma-separated list of usernames to download.",
+		default=""
+	)
+	skip_redownload = bpy.props.BoolProperty(
+		name="Skip download if skin already local",
+		description="Avoid re-downloading skin and apply local file instead",
+		default=True
+	)
+	convert_layout = bpy.props.BoolProperty(
+		name="Convert pre 1.8 skins",
+		description="If an older skin layout (pre Minecraft 1.8) is detected, convert to new format (with clothing layers)",
+		default=True
+	)
+	skipUsage = bpy.props.BoolProperty(
+		default=False,
+		options={'HIDDEN'}
+	)
+
+	def invoke(self, context, event):
+		return context.window_manager.invoke_props_dialog(self,
+			width=400*util.ui_scale())
+
+	def draw(self, context):
+		self.layout.label(text="Enter comma-separted list of usernames below")
+		self.layout.prop(self, "username_list", text="")
+		self.layout.prop(self, "skip_redownload")
+		self.layout.label(
+			text="and then press OK; blender may pause briefly to download")
+
+	track_function = "skin"
+	track_param = "username_list"
+	@tracking.report_error
+	def execute(self, context):
+		if self.username_list == "":
+			self.report({"ERROR"}, "Username list is empty!")
+			return {'CANCELLED'}
+		# Take comma-separated string, split into list and remove whitespace.
+		user_list = [skn.strip() for skn in self.username_list.split(",")]
+		user_list = list(set(user_list))  # Make list unique.
+
+		# Currently loaded
+		skins = [str(skin[0]).lower() for skin in conf.skin_list]
+		issue_skins = []
+		for username in user_list:
+			if username.lower() not in skins or not self.skip_redownload:
+				saveloc = download_user(self, context, username)
+				if not saveloc:
+					issue_skins.append(username)
+
+		bpy.ops.mcprep.reload_skins()
+
+		if issue_skins and len(issue_skins) == len(user_list):
+			self.report({"ERROR"}, "Failed to download any skins, see console.")
+			return {'CANCELLED'}
+		elif issue_skins and len(issue_skins) < len(user_list):
+			self.report({"WARNING"},
+				"Could not download {} of {} skins, see console".format(
+					len(issue_skins), len(user_list)))
+			return {'FINISHED'}
+		else:
+			self.report({"INFO"}, "Downloaded {} skins".format(len(user_list)))
+			return {'FINISHED'}
+
+
 # -----------------------------------------------------------------------------
 #	Registration
 # -----------------------------------------------------------------------------
@@ -704,6 +785,7 @@ classes = (
 	MCPREP_OT_swap_skin_from_file,
 	MCPREP_OT_apply_skin,
 	MCPREP_OT_apply_username_skin,
+	MCPREP_OT_download_username_list,
 	# MCPREP_OT_skin_fix_eyes,
 	MCPREP_OT_add_skin,
 	MCPREP_OT_remove_skin,
