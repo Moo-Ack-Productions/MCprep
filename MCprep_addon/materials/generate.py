@@ -1198,6 +1198,7 @@ def texgen_seus(mat, passes, nodeInputs, use_reflections):
 	if hasattr(nodeTexDiff, "interpolation"):  # 2.72+
 		nodeTexDiff.interpolation = 'Closest'
 		nodeTexSpec.interpolation = 'Closest'
+		nodeTexNorm.interpolation = 'Closest'
 
 	# Update to use non-color data for spec and normal
 	util.apply_colorspace(nodeTexSpec, 'Non-Color')
