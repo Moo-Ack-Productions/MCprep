@@ -20,6 +20,7 @@ TEST_ALL=$1 # pass in -all or only does first
 
 
 VERSIONS=(
+	"/Applications/blender 2.93/Blender.app/Contents/MacOS/Blender"
 	"/Applications/blender 2.90/Blender.app/Contents/MacOS/Blender"
 	"/Applications/blender 2.82/Blender.app/Contents/MacOS/Blender"
 	"/Applications/blender 2.79/Blender.app/Contents/MacOS/Blender"
