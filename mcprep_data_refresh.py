@@ -1,4 +1,4 @@
-#!/usr/local/bin/python3
+#!/opt/homebrew/bin/python3
 # Tool to pull down material names from jmc2obj and Mineways
 
 import json
@@ -51,7 +51,7 @@ def get_jmc2obj_mapping():
 
 	for tex in root:
 		src_tex = tex.get('name')
-		jmc_tex = tex.getchildren()[0].get('name')
+		jmc_tex = list(tex)[0].get('name')
 
 		if not src_tex.endswith('.png'):
 			print("Not a png: "+src_tex)
@@ -410,7 +410,7 @@ def get_vanilla_list(copy_file=False):
 			os.makedirs(os.path.dirname(new_path), exist_ok=True)
 			with archive.open(name) as zf, open(new_path, 'wb') as f:
 				shutil.copyfileobj(zf, f)
-			print("\tCopied "+name)
+			# print("\tCopied "+name)
 
 		# limit to textures only hereafter
 		if not name.endswith('.png'):
