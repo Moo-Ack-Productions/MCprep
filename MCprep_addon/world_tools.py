@@ -270,8 +270,12 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			return {'CANCELLED'}
 
 		if "obj" not in dir(bpy.ops.import_scene):
+			try:
+				bpy.ops.preferences.addon_enable(module="io_scene_obj")
+			except RuntimeError:
+				self.report({"ERROR"}, "Built-in OBJ importer could not be enabled")
+				return {'CANCELLED'}
 			self.report({"INFO"}, "FYI: had to enable OBJ imports in user preferences")
-			bpy.ops.preferences.addon_enable(module="io_scene_obj")
 
 		# There are a number of bug reports that come from the generic call
 		# of obj importing. If this fails, should notify the user to try again
@@ -300,18 +304,24 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 				# Error such as:
 				#   vec[:] = [float_func(v) for v in line_split[1:]]
 				#   ValueError: could not convert string to float: b'6848/28'
+				print(err)
 				self.report({"ERROR"}, obj_import_err_msg)
 				return {'CANCELLED'}
 			elif "invalid literal for int() with base" in str(err):
 				# Error such as:
 				#   idx = int(obj_vert[0])
 				#   ValueError: invalid literal for int() with base 10: b'4semtl'
+				print(err)
 				self.report({"ERROR"}, obj_import_err_msg)
 				return {'CANCELLED'}
 			else:
 				raise err
 		except IndexError as err:
 			if "list index out of range" in str(err):
+				# Error such as:
+				#   verts_split.append(verts_loc[vert_idx])
+				#   IndexError: list index out of range
+				print(err)
 				self.report({"ERROR"}, obj_import_err_msg)
 				return {'CANCELLED'}
 			else:
@@ -322,6 +332,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 				#   keywords["relpath"] = os.path.dirname(bpy.data.filepath)
 				#   UnicodeDecodeError: 'utf-8' codec can't decode byte 0xc4 in
 				#     position 24: invalid continuation byte
+				print(err)
 				self.report({"ERROR"}, obj_import_err_msg)
 				return {'CANCELLED'}
 			else:
@@ -331,8 +342,11 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 				# Error such as:
 				#   nodetex.image = image
 				#   AttributeError: 'NoneType' object has no attribute 'image'
+				print(err)
 				self.report({"ERROR"}, obj_import_err_msg)
 				return {'CANCELLED'}
+			else:
+				raise err
 
 		if res != {'FINISHED'}:
 			self.report({"ERROR"}, "Issue encountered while importing world")
@@ -345,50 +359,44 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			self.split_world_by_material(context)
 
 		addon_prefs = util.get_user_preferences(context)
-		self.track_exporter = addon_prefs.MCprep_exporter_type # soft detection
+		self.track_exporter = addon_prefs.MCprep_exporter_type  # Soft detect.
 		return {'FINISHED'}
 
 	def obj_name_to_material(self, obj):
 		"""Update an objects name based on its first material"""
-		if not obj or not obj.active_material:
+		if not obj:
 			return
-		obj.name = util.nameGeneralize(obj.active_material.name)
+		mat = obj.active_material
+		if not mat and not obj.material_slots:
+			return
+		else:
+			mat = obj.material_slots[0].material
+		if not mat:
+			return
+		obj.name = util.nameGeneralize(mat.name)
 
 	def split_world_by_material(self, context):
 		"""2.8-only function, split combined object into parts by material"""
+		world_name = os.path.basename(self.filepath)
+		world_name = os.path.splitext(world_name)[0]
 
 		# Create the new world collection
 		prefs = util.get_user_preferences(context)
 		if prefs is not None and prefs.MCprep_exporter_type != '(choose)':
-			name = "{}_world".format(prefs.MCprep_exporter_type)
+			name = "{} world: {}".format(
+				prefs.MCprep_exporter_type,
+				world_name)
 		else:
-			name = "minecraft_world"
+			name = "minecraft_world: " + world_name
 		worldg = util.collections().new(name=name)
-		context.scene.collection.children.link(worldg) # add it to the outliner
+		context.scene.collection.children.link(worldg)  # Add to outliner.
 
 		for obj in context.selected_objects:
-			# self.obj_name_to_material(obj)
 			util.move_to_collection(obj, worldg)
-		return
 
-		if context.object:
-			conf.log("Splitting imported obj by material")
-			bpy.ops.mesh.separate(type='MATERIAL')
-			for obj in context.selected_objects:
-				self.obj_name_to_material(obj)
-				util.move_to_collection(obj, worldg)
-		elif context.selected_objects:
-			for obj in context.selected_objects:
-				if obj.type != 'MESH':
-					continue
-				util.set_active_object(context, obj)
-				bpy.ops.mesh.separate(type='MATERIAL')
-			# again to force renames based on material
-			for obj in context.selected_objects:
-				self.obj_name_to_material(obj)
-				util.move_to_collection(obj, worldg)
-		else:
-			conf.log("No object active found to split")
+		# Force renames based on material, as default names are not useful.
+		for obj in worldg.objects:
+			self.obj_name_to_material(obj)
 
 
 class MCPREP_OT_prep_world(bpy.types.Operator):
