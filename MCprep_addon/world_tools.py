@@ -269,11 +269,71 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			self.report({"ERROR"}, "Select the .obj file, NOT the .mtl!")
 			return {'CANCELLED'}
 
-		if not "obj" in dir(bpy.ops.import_scene):
+		if "obj" not in dir(bpy.ops.import_scene):
 			self.report({"INFO"}, "FYI: had to enable OBJ imports in user preferences")
 			bpy.ops.preferences.addon_enable(module="io_scene_obj")
 
-		res = bpy.ops.import_scene.obj(filepath=self.filepath, use_split_groups=True)
+		# There are a number of bug reports that come from the generic call
+		# of obj importing. If this fails, should notify the user to try again
+		# or try exporting again.
+		#
+		# In order to not overly supress error messages, below we only capture
+		# very tight specific errors possible, so that other errors still get
+		# reported so it may be passed off to blender devs. It is understood the
+		# below errors are not internationalized, so someone with another lang
+		# set will get the raw bubbled up traceback.
+		obj_import_err_msg = (
+			"Blender's OBJ importer error, try re-exporting your world and "
+			"import again.")
+		obj_import_mem_msg = (
+			"Memory error during OBJ import, try exporting a smaller world")
+		try:
+			res = bpy.ops.import_scene.obj(
+				filepath=self.filepath, use_split_groups=True)
+		except MemoryError as err:
+			print("Memory error during import OBJ:")
+			print(err)
+			self.report({"ERROR"}, obj_import_mem_msg)
+			return {'CANCELLED'}
+		except ValueError as err:
+			if "could not convert string" in str(err):
+				# Error such as:
+				#   vec[:] = [float_func(v) for v in line_split[1:]]
+				#   ValueError: could not convert string to float: b'6848/28'
+				self.report({"ERROR"}, obj_import_err_msg)
+				return {'CANCELLED'}
+			elif "invalid literal for int() with base" in str(err):
+				# Error such as:
+				#   idx = int(obj_vert[0])
+				#   ValueError: invalid literal for int() with base 10: b'4semtl'
+				self.report({"ERROR"}, obj_import_err_msg)
+				return {'CANCELLED'}
+			else:
+				raise err
+		except IndexError as err:
+			if "list index out of range" in str(err):
+				self.report({"ERROR"}, obj_import_err_msg)
+				return {'CANCELLED'}
+			else:
+				raise err
+		except UnicodeDecodeError as err:
+			if "codec can't decode byte" in str(err):
+				# Error such as:
+				#   keywords["relpath"] = os.path.dirname(bpy.data.filepath)
+				#   UnicodeDecodeError: 'utf-8' codec can't decode byte 0xc4 in
+				#     position 24: invalid continuation byte
+				self.report({"ERROR"}, obj_import_err_msg)
+				return {'CANCELLED'}
+			else:
+				raise err
+		except AttributeError as err:
+			if "object has no attribute 'image'" in str(err):
+				# Error such as:
+				#   nodetex.image = image
+				#   AttributeError: 'NoneType' object has no attribute 'image'
+				self.report({"ERROR"}, obj_import_err_msg)
+				return {'CANCELLED'}
+
 		if res != {'FINISHED'}:
 			self.report({"ERROR"}, "Issue encountered while importing world")
 			return {'CANCELLED'}
