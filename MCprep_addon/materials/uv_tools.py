@@ -59,7 +59,7 @@ def get_uv_bounds_per_material(obj):
 	for poly in obj.data.polygons:
 		m_index = poly.material_index
 		mslot = obj.material_slots[m_index]
-		if not mslot:
+		if not mslot or not mslot.material:
 			continue
 
 		# TODO: Consider breaking early after reaching the first N hits of a
