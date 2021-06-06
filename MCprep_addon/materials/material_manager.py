@@ -206,54 +206,58 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 			postcount = len([True for x in bpy.data.materials if x.users >0])
 			self.report({"INFO"},
 				"Consolidated {x} materials, down to {y} overall".format(
-				x=precount-postcount,
+				x=precount - postcount,
 				y=postcount))
 			return {'FINISHED'}
 
 		# perform the consolidation with one basename set at a time
-		for base in name_cat: # the keys of the dictionary
-			if len(base)<2:
+		for base in name_cat:  # The keys of the dictionary.
+			if len(base) < 2:
 				continue
 
-			name_cat[base].sort() # in-place sorting
+			name_cat[base].sort()  # in-place sorting
 			baseMat = bpy.data.materials[name_cat[base][0]]
 
-			conf.log([name_cat[base]," ## ",baseMat], vv_only=True)
+			conf.log([name_cat[base], " ## ", baseMat], vv_only=True)
 
 			for matname in name_cat[base][1:]:
 				# skip if fake user set
-				if bpy.data.materials[matname].use_fake_user == True:
+				if bpy.data.materials[matname].use_fake_user is True:
 					continue
 				# otherwise, remap
-				res = util.remap_users(bpy.data.materials[matname],baseMat)
+				res = util.remap_users(bpy.data.materials[matname], baseMat)
 				if res != 0:
 					self.report({'ERROR'}, str(res))
 					return {'CANCELLED'}
 				old = bpy.data.materials[matname]
-				conf.log("removing old? "+matname, vv_only=True)
-				if removeold is True and old.users==0:
-					conf.log("removing old:"+matname, vv_only=True)
+				conf.log("removing old? " + matname, vv_only=True)
+				if removeold is True and old.users == 0:
+					conf.log("removing old:" + matname, vv_only=True)
 					try:
 						data.remove(old)
 					except ReferenceError as err:
-						print('Error trying to remove material '+matname)
+						print('Error trying to remove material ' + matname)
+						print(str(err))
+					except ValueError as err:
+						print('Error trying to remove material ' + matname)
 						print(str(err))
 
 			# Final step.. rename to not have .001 if it does
 			genBase = util.nameGeneralize(baseMat.name)
 			if baseMat.name != genBase:
-				if genBase in bpy.data.materials and bpy.data.materials[genBase].users!=0:
+				has_users = bpy.data.materials[genBase].users != 0
+				if genBase in bpy.data.materials and has_users:
 					pass
 				else:
 					baseMat.name = genBase
 			else:
 				baseMat.name = genBase
-			conf.log(["Final: ",baseMat], vv_only=True)
+			conf.log(["Final: ", baseMat], vv_only=True)
 
-		postcount = len(["x" for x in getMaterials(self, context) if x.users >0])
+		postcount = len(["x" for x in getMaterials(self, context) if x.users > 0])
 		self.report({"INFO"}, "Consolidated {x} materials down to {y}".format(
-				x=precount,
-				y=postcount))
+			x=precount,
+			y=postcount))
 
 		return {'FINISHED'}
 
