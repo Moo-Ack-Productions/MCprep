@@ -32,6 +32,7 @@ import bpy
 try:
 	from . import conf
 	from . import util
+	from .addon_updater import Updater as updater
 	import re
 	import requests
 	import traceback
@@ -795,7 +796,7 @@ def report_error(function):
 	"""Decorator for the execute(self, context) function of operators.
 
 	Both captures any errors for user reporting, and runs the usage tracking
-	if/as configured for the operator class. If function returns {'CANCELLED'}
+	if/as configured for the operator class. If function returns {'CANCELLED'},
 	has no track_function class attribute, or skipUsage==True, then
 	usage tracking is skipped.
 	"""
@@ -807,7 +808,15 @@ def report_error(function):
 			Tracker._handling_error = False
 		except:
 			err = traceback.format_exc()
-			print(err) # always print raw traceback
+			print(err)  # Always print raw traceback.
+
+			if updater.json.get("just_updated") is True:
+				print("MCprep was just updated, try restarting blender.")
+				self.report(
+					{"ERROR"},
+					"An error occurred - TRY RESTARTING BLENDER since MCprep just updated")
+				return {'CANCELLED'}
+
 			err = Tracker.remove_indentifiable_information(err)
 
 			# cut off the first three lines of error, which is this wrapper
@@ -855,13 +864,12 @@ def report_error(function):
 			and Tracker._last_request.get("function") == self.track_function
 			and Tracker._last_request.get("time") + Tracker._debounce > time.time()
 			):
-			if Tracker.verbose:
-				print("Skipping usage due to debounce")
+			conf.log("Skipping usage due to debounce")
 			run_track = False
 
 		# If successful completion, run analytics function if relevant
 		if bpy.app.background and run_track:
-			print("Background mode, would have tracked usage: "+self.track_function)
+			conf.log("Background mode, would have tracked usage: " + self.track_function)
 		elif run_track:
 			param = None
 			exporter = None
@@ -902,7 +910,13 @@ def make_annotations(cls):
 	"""Add annotation attribute to class fields to avoid Blender 2.8 warnings"""
 	if not hasattr(bpy.app, "version") or bpy.app.version < (2, 80):
 		return cls
-	bl_props = {k: v for k, v in cls.__dict__.items() if isinstance(v, tuple)}
+	if bpy.app.version < (2, 93, 0):
+		bl_props = {
+			k: v for k, v in cls.__dict__.items() if isinstance(v, tuple)}
+	else:
+		bl_props = {
+			k: v for k, v in cls.__dict__.items()
+			if isinstance(v, bpy.props._PropertyDeferred)}
 	if bl_props:
 		if '__annotations__' not in cls.__dict__:
 			setattr(cls, '__annotations__', {})
@@ -991,7 +1005,3 @@ def register(bl_info):
 def unregister():
 	for cls in reversed(classes):
 		bpy.utils.unregister_class(cls)
-
-
-if __name__ == "__main__":
-	register({"bl_info":(2, 99, 0)})

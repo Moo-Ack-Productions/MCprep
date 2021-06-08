@@ -19,7 +19,6 @@
 
 # library imports
 import errno
-import operator
 import os
 import shutil
 
@@ -298,18 +297,18 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 	def execute(self, context):
 		try:
 			[path, name] = self.mcmob_type.split(':/:')
-			path = os.path.join(context.scene.mcprep_mob_path,path)
-			conf.log("Path is now ",path)
-		except:
-			conf.log("Error: No rigs found!")
-			self.report({'ERROR'}, "No mobs found in folder!")
+		except Exception as err:
+			conf.log("Error: Failed to parse mcmob_type")
+			self.report({'ERROR'}, "Failed to parse mcmob_type, try reloading mobs")
 			return {'CANCELLED'}
+		path = os.path.join(context.scene.mcprep_mob_path, path)
+		conf.log("Path is now ", path)
 
 		try:
 			# must be in object mode, this make similar behavior to other objs
 			bpy.ops.object.mode_set(mode='OBJECT')
 		except:
-			pass # can fail to this e.g. if no objects are selected
+			pass  # Can fail to this e.g. if no objects are selected.
 
 		if self.toLink:
 			if path == '//':
@@ -345,7 +344,7 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 				break
 			elif not prox_obj:
 				prox_obj = obj
-			elif "rig" in obj.name and "rig" not in prox_obj.name.lower():
+			elif "rig" in obj.name.lower() and "rig" not in prox_obj.name.lower():
 				prox_obj = obj
 		return prox_obj
 

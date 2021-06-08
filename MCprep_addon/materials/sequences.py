@@ -170,7 +170,8 @@ def generate_material_sequence(source_path, image_path, form, export_location, c
 		root = os.path.basename(seq_path_base)
 
 		# match string-ending pattern: .../lava_flow/lava_flow_0001.png
-		exp = r"(?i)"+root+r"[\/\\]{1}"+root+r"[_][0-9]{1,5}[.](png|jpg|jpeg)$"
+		resc = re.escape(root)  # Safely escape any meta character names
+		exp = r"(?i)"+resc+r"[\/\\]{1}"+resc+r"[_][0-9]{1,5}[.](png|jpg|jpeg)$"
 		if re.search(exp, source_path):
 			# now it will point to originating subfolder and check caching there
 			seq_path_base = os.path.dirname(seq_path_base)

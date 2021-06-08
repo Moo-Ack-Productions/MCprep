@@ -26,7 +26,7 @@ Learn how to use MCprep
 
 *[Short, 1-minute videos showcasing how to use Blender+MCprep features](https://bit.ly/MCprepTutorials)*
 
-[![Beta video demo](https://img.youtube.com/vi/62fVXVAO13A/0.jpg)](https://bit.ly/MCprepTutorials)
+[![Tutorial playlist](https://img.youtube.com/vi/62fVXVAO13A/0.jpg)](https://bit.ly/MCprepTutorials)
 
 *[Additional Playlist of MCprep videos/demos](https://www.youtube.com/playlist?list=PL8X_CzUEVBfaajwyguIj_utPXO4tEOr7a)*
 
@@ -110,12 +110,14 @@ Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow),
 
 | Passive Rigs   |      Creator      |
 |----------|:-------------:|
+| Axolotl | [Breadcrumb](https://www.youtube.com/channel/UCT1_5td4SWg67fhElGz1S4A) |
 | Bat | [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) (MCprep exclusive) |
 | Cod fish | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Chicken | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) (No direct link yet) |
 | Cow | [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html)) |
 | Dolphin | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Fox | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+| Goat | [TRPHB Animation](https://youtube.com/c/TRPHBAnimation) |
 | Mooshroom (red/brown) | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Parrot | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Pig | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) (No direct link yet) |
@@ -134,6 +136,7 @@ Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow),
 |----------|:-------------:|
 | Bee | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Blaze | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) (No direct link yet) |
+| Cave Spider | [Austin Prescott](https://youtu.be/0xA4-yMr2KY) |
 | Creeper | [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) (MCprep exclusive) |
 | Eldar Guardian | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Ender Dragon | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
