@@ -125,7 +125,6 @@ def draw_mats_common(self, context):
 	# col = row.column()
 	# col.prop(self, "normalIntensity", slider=True)
 
-	split = self.layout.split()
 	row = self.layout.row()
 	col = row.column()
 	col.prop(self, "improveUiSettings")
@@ -219,16 +218,19 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 		if self.combineMaterials is True:
 			bpy.ops.mcprep.combine_materials(selection_only=True, skipUsage=True)
 		if self.improveUiSettings:
-			bpy.ops.mcprep.improve_ui()
+			try:
+				bpy.ops.mcprep.improve_ui()
+			except RuntimeError as err:
+				print("Failed to improve UI with error: " + str(err))
 
 		if self.skipUsage is True:
-			pass # don't report if a meta-call
+			pass  # Don't report if a meta-call.
 		elif count_lib_skipped > 0:
 			self.report({"INFO"},
 				"Modified {} materials, skipped {} linked ones.".format(
 					count, count_lib_skipped))
-		elif count >0:
-			self.report({"INFO"},"Modified "+str(count)+" materials")
+		elif count > 0:
+			self.report({"INFO"}, "Modified " + str(count) + " materials")
 		else:
 			self.report({"ERROR"}, "Nothing modified, be sure you selected objects with existing materials!")
 

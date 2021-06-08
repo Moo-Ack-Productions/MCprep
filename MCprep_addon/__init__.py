@@ -44,7 +44,7 @@ bl_info = {
 	"warning": "",
 	"wiki_url": "https://TheDuckCow.com/MCprep",
 	"author": "Patrick W. Crawford <support@theduckcow.com>",
-	"tracker_url":"https://github.com/TheDuckCow/MCprep/issues"
+	"tracker_url": "https://github.com/TheDuckCow/MCprep/issues"
 }
 
 import importlib
