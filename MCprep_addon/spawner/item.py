@@ -41,7 +41,7 @@ def reload_items(context):
 
 	mcprep_props = context.scene.mcprep_props
 	resource_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
-	extensions = [".png",".jpg",".jpeg"]
+	extensions = [".png", ".jpg", ".jpeg"]
 
 	mcprep_props.item_list.clear()
 	if conf.use_icons and conf.preview_collections["items"]:
@@ -50,29 +50,35 @@ def reload_items(context):
 		except:
 			conf.log("MCPREP: Failed to remove icon set, items")
 
+	# Check levels
+	lvl_1 = os.path.join(resource_folder, "textures")
+	lvl_2 = os.path.join(resource_folder, "minecraft", "textures")
+	lvl_3 = os.path.join(resource_folder, "assets", "minecraft", "textures")
+
 	if not os.path.isdir(resource_folder):
 		conf.log("Error, resource folder does not exist")
 		return
-	elif os.path.isdir(os.path.join(resource_folder,"textures")):
-		resource_folder = os.path.join(resource_folder,"textures")
-	elif os.path.isdir(os.path.join(resource_folder,"minecraft","textures")):
-		resource_folder = os.path.join(resource_folder,"minecraft","textures")
-	elif os.path.isdir(os.path.join(resource_folder,"assets","minecraft","textures")):
-		resource_folder = os.path.join(resource_folder,"assets","minecraft","textures")
+	elif os.path.isdir(lvl_1):
+		resource_folder = lvl_1
+	elif os.path.isdir(lvl_2):
+		resource_folder = lvl_2
+	elif os.path.isdir(lvl_3):
+		resource_folder = lvl_3
 
 	search_paths = [
 		resource_folder,
-		os.path.join(resource_folder,"items"),
-		os.path.join(resource_folder,"item")]
+		os.path.join(resource_folder, "items"),
+		os.path.join(resource_folder, "item")]
 	files = []
 
 	for path in search_paths:
 		if not os.path.isdir(path):
 			continue
-		files += [os.path.join(path, item_file)
-					for item_file in os.listdir(path)
-					if os.path.isfile(os.path.join(path, item_file))
-					and os.path.splitext(item_file.lower())[-1] in extensions]
+		files += [
+			os.path.join(path, item_file)
+			for item_file in os.listdir(path)
+			if os.path.isfile(os.path.join(path, item_file))
+			and os.path.splitext(item_file.lower())[-1] in extensions]
 	for i, item_file in enumerate(sorted(files)):
 		basename = os.path.splitext(os.path.basename(item_file))[0]
 		asset = mcprep_props.item_list.add()
@@ -91,21 +97,21 @@ def reload_items(context):
 		mcprep_props.item_list_index = len(mcprep_props.item_list) - 1
 
 
-def spawn_item_from_filepath(context, path, max_pixels, thickness, threshold,
-	transparency):
+def spawn_item_from_filepath(
+	context, path, max_pixels, thickness, threshold, transparency):
 	"""Reusable function for generating an item from an image filepath
 
 	Arguments
 		context
-		path: full path to image file
+		path: Full path to image file
 		max_pixels: int, maximum number of output faces, will scale down
 		thickness: Thickness of the solidfy modifier, minimum 0
 		threshold: float, alpha value below which faces will be removed
 		transparency: bool, remove faces below threshold
 	"""
 
-	# load image and initialize objects
-	image = None  # image datablock
+	# Load image and initialize objects.
+	image = None  # Image datablock.
 	img_str = os.path.basename(path)
 	name = os.path.splitext(img_str)[0]
 	abspath = bpy.path.abspath(path)
@@ -119,87 +125,94 @@ def spawn_item_from_filepath(context, path, max_pixels, thickness, threshold,
 		image = bpy.data.images.load(abspath)
 
 	# Scale image
-	pix = len(image.pixels)/4
+	pix = len(image.pixels) / 4
 	if pix > max_pixels:
 		# TODO: remove loop and do more direct resizing
 		while pix > max_pixels:
 			width = image.size[0]
 			height = image.size[1]
-			image.scale(width/1.5,height/1.5)
-			pix = len(image.pixels)/4
-	width = image.size[0] # ie columns
-	height = image.size[1] # ie rows
+			image.scale(width / 1.5, height / 1.5)
+			pix = len(image.pixels) / 4
+	width = image.size[0]  # ie columns.
+	height = image.size[1]  # ie rows.
 
 	if width == 0 or height == 0:
 		return None, "Image has invalid 0-size dimension"
 
-	w_even_add = (-0.5 if width%2==0 else 0) + width
-	h_even_add = (-0.5 if height%2==0 else 0) + height
+	w_even_add = (-0.5 if width % 2 == 0 else 0) + width
+	h_even_add = (-0.5 if height % 2 == 0 else 0) + height
 
 	# new method, start with a UV grid and delete faces from there
-	if util.bv28():
+	if bpy.app.version >= (2, 93):  # Index changed
 		bpy.ops.mesh.primitive_grid_add(
-			x_subdivisions=height+1, # outter edges count as a subdiv
-			y_subdivisions=width+1, # outter edges count as a subdiv
+			x_subdivisions=height,  # Outter edges count as a subdiv.
+			y_subdivisions=width,  # Outter edges count as a subdiv.
 			size=2,
 			calc_uvs=True,
-			location=(0,0,0))
-	elif bpy.app.version < (2, 77): # could be 2, 76 even
+			location=(0, 0, 0))
+	elif util.bv28():
 		bpy.ops.mesh.primitive_grid_add(
-			x_subdivisions=height+1, # outter edges count as a subdiv
-			y_subdivisions=width+1, # outter edges count as a subdiv
+			x_subdivisions=height + 1,  # Outter edges count as a subdiv.
+			y_subdivisions=width + 1,  # Outter edges count as a subdiv.
+			size=2,
+			calc_uvs=True,
+			location=(0, 0, 0))
+	elif bpy.app.version < (2, 77):  # Could be 2.76 even.
+		bpy.ops.mesh.primitive_grid_add(
+			x_subdivisions=height + 1,  # Outter edges count as a subdiv.
+			y_subdivisions=width + 1,  # Outter edges count as a subdiv.
 			radius=1,
-			location=(0,0,0))
+			location=(0, 0, 0))
 		bpy.ops.object.mode_set(mode='EDIT')
 		bpy.ops.uv.unwrap()
 		bpy.ops.object.mode_set(mode='OBJECT')
 	else:
 		bpy.ops.mesh.primitive_grid_add(
-			x_subdivisions=height+1, # outter edges count as a subdiv
-			y_subdivisions=width+1, # outter edges count as a subdiv
+			x_subdivisions=height + 1,  # Outter edges count as a subdiv.
+			y_subdivisions=width + 1,  # Outter edges count as a subdiv.
 			radius=1,
 			calc_uvs=True,
-			location=(0,0,0))
+			location=(0, 0, 0))
 	itm_obj = context.object
 
 	if not itm_obj:
 		print("Error, could not create the item primitive object")
 		return None, "Could not create the item primitive object"
 
-	# scale the object to match ratio, keeping max dimension as set above
+	# Scale the object to match ratio, keeping max dimension as set above.
 	if width < height:
-		itm_obj.scale[0] = width/height
+		itm_obj.scale[0] = width / height
 	elif height < width:
-		itm_obj.scale[1] = height/width
+		itm_obj.scale[1] = height / width
 
-	# Apply scale transform (funcitonally, applies ALL loc, rot, scale)
+	# Apply scale transform (funcitonally, applies ALL loc, rot, scale).
 	itm_obj.data.transform(itm_obj.matrix_world)
 	itm_obj.matrix_world = mathutils.Matrix()
 
 	# Deselect faces now, as setting face.select = False doens't work even
-	# though using face.select = True does work
+	# though using face.select = True does work.
 	bpy.ops.object.mode_set(mode='EDIT')
-	bpy.ops.mesh.select_mode(type='FACE')  # ideally capture initial state
+	bpy.ops.mesh.select_mode(type='FACE')  # Ideally capture initial state.
 	bpy.ops.mesh.select_all(action='DESELECT')
 	bpy.ops.object.mode_set(mode='OBJECT')
 
 	if transparency is True:
-		# lazy load alpha part of image to memory, hold for whole operator
+		# Lazy load alpha part of image to memory, hold for whole operator.
 		alpha_faces = list(image.pixels)[3::4]
-		uv = itm_obj.data.uv_layers.active
+		# uv = itm_obj.data.uv_layers.active
 		for face in itm_obj.data.polygons:
 			if len(face.loop_indices) < 3:
 				continue
 
-			# since we just generated UVs and the mesh, safe to get img
-			# coords from face cetner, offset from obj center
-			img_x = int((face.center[0]*width + w_even_add)/2)
-			img_y = int((face.center[1]*height + h_even_add)/2)
+			# Since we just generated UVs and the mesh, safe to get img
+			# coords from face cetner, offset from obj center.
+			img_x = int((face.center[0] * width + w_even_add) / 2)
+			img_y = int((face.center[1] * height + h_even_add) / 2)
 
-			# now verify this index of image is below alpha threshold
-			if len(alpha_faces) > img_y*height + img_x:
-				alpha = alpha_faces[img_y*height + img_x]
-			else: # this shouldn't occur, but reports were filed
+			# Now verify this index of image is below alpha threshold.
+			if len(alpha_faces) > img_y * height + img_x:
+				alpha = alpha_faces[img_y * height + img_x]
+			else:  # This shouldn't occur, but reports were filed.
 				continue
 			if alpha < threshold:
 				face.select = True
@@ -210,15 +223,15 @@ def spawn_item_from_filepath(context, path, max_pixels, thickness, threshold,
 
 	itm_obj.location = util.get_cuser_location(context)
 
-	# Material and Textures
+	# Material and Textures.
 	# TODO: use the generate functions here instead
 	mat = bpy.data.materials.new(name)
 	mat.name = name
 
-	# replace this with generate materials?
+	# Replace this with generate materials?
 	engine = bpy.context.scene.render.engine
 	if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
-		tex = bpy.data.textures.new(name, type = 'IMAGE')
+		tex = bpy.data.textures.new(name, type='IMAGE')
 		tex.image = image
 		mat.specular_intensity = 0
 		mtex = mat.texture_slots.add()
@@ -232,7 +245,7 @@ def spawn_item_from_filepath(context, path, max_pixels, thickness, threshold,
 			mat.use_transparency = 1
 			mat.alpha = 0
 			mat.texture_slots[0].use_map_alpha = 1
-	elif engine=='CYCLES' or engine=='BLENDER_EEVEE':
+	elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 		mat.use_nodes = True
 		nodes = mat.node_tree.nodes
 		links = mat.node_tree.links
@@ -272,7 +285,7 @@ def spawn_item_from_filepath(context, path, max_pixels, thickness, threshold,
 	# Final object updated
 	if thickness > 0:
 		mod = itm_obj.modifiers.new(type='SOLIDIFY', name='Solidify')
-		mod.thickness = thickness/max([width, height])
+		mod.thickness = thickness / max([width, height])
 		mod.offset = 0
 	itm_obj.data.name = name
 	bpy.context.object.data.materials.append(mat)
