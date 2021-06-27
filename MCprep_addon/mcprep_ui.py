@@ -756,24 +756,35 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 	bl_category = "MCprep"
 
 	def draw(self, context):
-		if context.mode != "OBJECT":
-			col = self.layout.column(align=True)
-			col.label(text="Enter object mode", icon="ERROR")
-			col.label(text="to use spawner", icon="BLANK1")
-			col.operator("object.mode_set").mode="OBJECT"
-			col.label(text="")
-			return
+		is_obj_mode = context.mode == "OBJECT"
+		is_pose_mode = context.mode == "POSE"
 		row = self.layout.row(align=True)
-		row.prop(context.scene.mcprep_props,"spawn_mode", expand=True)
-		row.operator("mcprep.open_help", text="", icon="QUESTION"
-			).url = "https://theduckcow.com/dev/blender/mcprep/mcprep-spawner/"
-		addon_updater_ops.check_for_update_background()
-		if context.scene.mcprep_props.spawn_mode=="mob":
+		row.prop(context.scene.mcprep_props, "spawn_mode", expand=True)
+		ops = row.operator("mcprep.open_help", text="", icon="QUESTION")
+		ops.url = "https://theduckcow.com/dev/blender/mcprep/mcprep-spawner/"
+		if context.scene.mcprep_props.spawn_mode == "mob":
+			if not is_obj_mode:
+				self.draw_mode_warning(self.layout)
+				return
 			self.mob_spawner(context)
-		elif context.scene.mcprep_props.spawn_mode=="meshswap":
+		elif context.scene.mcprep_props.spawn_mode == "meshswap":
+			if not is_obj_mode:
+				self.draw_mode_warning(self.layout)
+				return
 			self.meshswap(context)
-		elif context.scene.mcprep_props.spawn_mode=="item":
+		elif context.scene.mcprep_props.spawn_mode == "item":
+			if not is_obj_mode and not is_pose_mode:
+				self.draw_mode_warning(self.layout)
+				return
 			self.item_spawner(context)
+		addon_updater_ops.check_for_update_background()
+
+	def draw_mode_warning(self, ui_element):
+		col = ui_element.column(align=True)
+		col.label(text="Enter object mode", icon="ERROR")
+		col.label(text="to use spawner", icon="BLANK1")
+		col.operator("object.mode_set").mode = "OBJECT"
+		col.label(text="")
 
 	def mob_spawner(self, context):
 		scn_props = context.scene.mcprep_props

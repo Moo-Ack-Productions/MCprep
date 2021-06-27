@@ -290,11 +290,8 @@ def spawn_item_from_filepath(context, path, max_pixels, thickness, threshold,
 # -----------------------------------------------------------------------------
 
 
-class MCPREP_OT_spawn_item(bpy.types.Operator):
-	"""Spawn in an item as a mesh from selected list item"""
-	bl_idname = "mcprep.spawn_item"
-	bl_label = "Spawn selected item"
-	bl_options = {'REGISTER', 'UNDO'}
+class ItemSpawnBase():
+	"""Class to inheret reused MCprep item spawning settings and functions."""
 
 	# TODO: add options like spawning attached to rig hand or other,
 	size = bpy.props.FloatProperty(
@@ -306,7 +303,9 @@ class MCPREP_OT_spawn_item(bpy.types.Operator):
 		name="Thickness",
 		default=1.0,
 		min=0.0,
-		description="The thickness of the item (this can later be changed in modifiers)")
+		description=(
+			"The thickness of the item (this can later be changed in "
+			"modifiers)"))
 	transparency = bpy.props.BoolProperty(
 		name="Remove transparent faces",
 		description="Transparent pixels will be transparent once rendered",
@@ -321,7 +320,9 @@ class MCPREP_OT_spawn_item(bpy.types.Operator):
 		name="Max pixels",
 		default=50000,
 		min=1,
-		description="If needed, scale down image to generate less than this maximum pixel count")
+		description=(
+			"If needed, scale down image to generate less than this maximum "
+			"pixel count"))
 	scale_uvs = bpy.props.FloatProperty(
 		name="Scale UVs",
 		default=0.75,
@@ -330,13 +331,60 @@ class MCPREP_OT_spawn_item(bpy.types.Operator):
 		default="",
 		options={'HIDDEN', 'SKIP_SAVE'})
 	skipUsage = bpy.props.BoolProperty(
-		default = False,
-		options = {'HIDDEN'}
-		)
+		default=False,
+		options={'HIDDEN'})
 
 	@classmethod
 	def poll(cls, context):
-		return context.mode == 'OBJECT'
+		pose_active = context.mode == 'POSE' and context.active_bone
+		return context.mode == 'OBJECT' or pose_active
+
+	def spawn_item_execution(self, context):
+		"""Common execution for both spawn item from filepath and list."""
+		if context.mode == 'POSE' and context.active_bone:
+			spawn_in_pose = True
+			# If in pose mode, assume that we are going to add the item
+			# parented to the active bone, but still switch to object mode.
+			arma_bone = context.active_bone
+			arma_obj = context.object
+			bpy.ops.object.mode_set(mode='OBJECT')
+		else:
+			spawn_in_pose = False
+
+		obj, status = spawn_item_from_filepath(
+			context, self.filepath, self.max_pixels,
+			self.thickness * self.size, self.threshold, self.transparency)
+
+		# apply additional settings
+		# generate materials via prep, without re-loading image datablock
+		if status and not obj:
+			self.report({'ERROR'}, status)
+			return {'CANCELLED'}
+		elif status:
+			self.report({'INFO'}, status)
+
+		# Apply other settings such as overall object scale and uv face scale.
+		for i in range(3):
+			obj.scale[i] *= 0.5 * self.size
+		bpy.ops.object.transform_apply(scale=True, location=False)
+		bpy.ops.mcprep.scale_uv(
+			scale=self.scale_uvs, selected_only=False, skipUsage=True)
+
+		# If originally in pose mode, do any further movement and parenting.
+		if spawn_in_pose:
+			# bpy.ops.object.parent_set(type='BONE')
+			obj.parent = arma_obj
+			obj.parent_type = 'BONE'
+			obj.parent_bone = arma_bone.name
+			obj.location = (0, 0, 0)
+		return {'FINISHED'}
+
+
+class MCPREP_OT_spawn_item(bpy.types.Operator, ItemSpawnBase):
+	"""Spawn in an item as a mesh from selected list item"""
+	bl_idname = "mcprep.spawn_item"
+	bl_label = "Spawn selected item"
+	bl_options = {'REGISTER', 'UNDO'}
 
 	track_function = "item"
 	track_param = "list"
@@ -347,7 +395,8 @@ class MCPREP_OT_spawn_item(bpy.types.Operator):
 		if not self.filepath:
 			scn_props = context.scene.mcprep_props
 			if not scn_props.item_list:
-				self.report({'ERROR'}, "No filepath input, and no items in list loaded")
+				self.report(
+					{'ERROR'}, "No filepath input, and no items in list loaded")
 				return {'CANCELLED'}
 			self.filepath = scn_props.item_list[scn_props.item_list_index].path
 			self.track_param = "list"
@@ -356,29 +405,10 @@ class MCPREP_OT_spawn_item(bpy.types.Operator):
 		else:
 			self.track_param = "shiftA"
 
-		obj, status = spawn_item_from_filepath(
-			context, self.filepath, self.max_pixels,
-			self.thickness*self.size, self.threshold, self.transparency)
-
-		# apply additional settings
-		# generate materials via prep, without re-loading image datablock
-		if status and not obj:
-			self.report({'ERROR'}, status)
-			return {'CANCELLED'}
-		elif status:
-			self.report({'INFO'}, status)
-
-		# apply other settings such as overall object scale and uv face scale
-		for i in range(3):
-			obj.scale[i] *= 0.5 * self.size
-		bpy.ops.object.transform_apply(scale=True, location=False)
-		bpy.ops.mcprep.scale_uv(
-			scale=self.scale_uvs, selected_only=False, skipUsage=True)
-		#bpy.ops.object.mode_set(mode='OBJECT')
-		return {'FINISHED'}
+		return self.spawn_item_execution(context)
 
 
-class MCPREP_OT_spawn_item_from_file(bpy.types.Operator, ImportHelper):
+class MCPREP_OT_spawn_item_from_file(bpy.types.Operator, ImportHelper, ItemSpawnBase):
 	"""Spawn in an item as a mesh from an image file"""
 	bl_idname = "mcprep.spawn_item_file"
 	bl_label = "Item from file"
@@ -394,40 +424,6 @@ class MCPREP_OT_spawn_item_from_file(bpy.types.Operator, ImportHelper):
 		default=True,
 		options={'HIDDEN', 'SKIP_SAVE'})
 
-	size = bpy.props.FloatProperty(
-		name="Size",
-		default=1.0,
-		min=0.001,
-		description="Size in blender units of the item")
-	thickness = bpy.props.FloatProperty(
-		name="Thickness",
-		default=1.0,
-		min=0.0,
-		description="The thickness of the item (this can later be changed in modifiers)")
-	transparency = bpy.props.BoolProperty(
-		name="Remove transparent faces",
-		description="Transparent pixels will be transparent once rendered",
-		default=True)
-	threshold = bpy.props.FloatProperty(
-		name="Transparent threshold",
-		description="1.0 = zero tolerance, no transparent pixels will be generated",
-		default=0.5,
-		min=0.0,
-		max=1.0)
-	scale_uvs = bpy.props.FloatProperty(
-		name="Scale UVs",
-		default=0.75,
-		description="Scale individual UV faces of the generated item")
-	max_pixels = bpy.props.IntProperty(
-		name="Max pixels",
-		default=50000,
-		min=1,
-		description="If the image selected contains more pixels than given number the image will be scaled down")
-
-	@classmethod
-	def poll(cls, context):
-		return context.mode == 'OBJECT'
-
 	track_function = "item"
 	track_param = "from file"
 	@tracking.report_error
@@ -435,22 +431,7 @@ class MCPREP_OT_spawn_item_from_file(bpy.types.Operator, ImportHelper):
 		if not self.filepath:
 			self.report({"WARNING"}, "No image selected, cancelling")
 			return {'CANCELLED'}
-
-		obj, status = spawn_item_from_filepath(context, self.filepath,
-			self.max_pixels, self.thickness, self.threshold, self.transparency)
-
-		if status and not obj:
-			self.report({'ERROR'}, status)
-			return {'CANCELLED'}
-		elif status:
-			self.report({'INFO'}, status)
-
-		# apply other settings such as overall object scale and uv face scale
-		for i in range(3):
-			obj.scale[i] *= 0.5 * self.size
-		bpy.ops.object.transform_apply(scale=True, location=False)
-		bpy.ops.mcprep.scale_uv(scale=self.scale_uvs, selected_only=False)
-		return {"FINISHED"}
+		return self.spawn_item_execution(context)
 
 
 class MCPREP_OT_reload_items(bpy.types.Operator):
@@ -477,6 +458,7 @@ classes = (
 
 
 def register():
+	util.make_annotations(ItemSpawnBase)  # Don't register, only annotate.
 	for cls in classes:
 		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
