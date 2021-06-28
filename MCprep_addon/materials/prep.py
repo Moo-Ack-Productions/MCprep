@@ -460,15 +460,15 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 
 	skipUsage = bpy.props.BoolProperty(
 		default = False,
-		options={'HIDDEN'}
-		)
+		options={'HIDDEN'})
 
 	@classmethod
 	def poll(cls, context):
 		return context.object and context.scene.mcprep_props.material_list
 
 	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self, width=300*util.ui_scale())
+		return context.window_manager.invoke_props_dialog(
+			self, width=300 * util.ui_scale())
 
 	def draw(self, context):
 		draw_mats_common(self, context)
@@ -488,8 +488,11 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 			self.report({"ERROR"}, "Failed generate base material")
 			return {'CANCELLED'}
 
-		mat_ind = context.object.active_material_index
-		context.object.material_slots[mat_ind].material = mat
+		if not context.object.material_slots:
+			context.object.data.materials.append(mat)  # Auto-creates slot.
+		else:
+			mat_ind = context.object.active_material_index
+			context.object.material_slots[mat_ind].material = mat
 		# Using the above in place of below due to some errors of:
 		# "attribute "active_material" from "Object" is read-only"
 		# context.object.active_material = mat
