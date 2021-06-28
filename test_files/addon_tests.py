@@ -26,7 +26,6 @@ import bpy
 import traceback
 
 import os
-import json
 import sys
 import io
 from contextlib import redirect_stdout
@@ -78,8 +77,10 @@ class mcprep_testing():
 			self.uv_transform_no_alert,
 			self.uv_transform_combined_alert,
 			self.world_tools,
-			]
-		self.run_only = None # name to give to only run this test
+			self.test_enable_obj_importer,
+			self.test_generate_material_sequence,
+		]
+		self.run_only = None  # Name to give to only run this test
 
 		self.mcprep_json = {}
 
@@ -1543,6 +1544,53 @@ class mcprep_testing():
 		if invalid is False:
 			return "Combined lava/water should still alert"
 
+	def test_generate_material_sequence(self):
+		"""Ensure that generating an image sequence works as expected."""
+		from MCprep.materials.sequences import generate_material_sequence
+
+		# ALT: call animate_single_material
+		# animate_single_material(
+		# mat, engine, export_location='original', clear_cache=False)
+
+		tiled_img = os.path.join(
+			os.path.dirname(__file__),
+			"test_resource_pack", "textures", "campfire_fire.png")
+		fake_orig_img = tiled_img
+		result_dir = tiled_img[:-4]  # Same name, sans extension.
+
+		try:
+			shutil.rmtree(result_dir)
+		except Exception as err:
+			print("Error removing prior directory of animated campfire")
+			print(err)
+
+		# Ensure that the folder does not initially exist
+		if os.path.isdir(result_dir):
+			return "Folder pre-exists, should be removed before test"
+
+		res, err = generate_material_sequence(
+			source_path=fake_orig_img,
+			image_path=tiled_img,
+			form=None,
+			export_location="original",
+			clear_cache=True)
+
+		if err:
+			return "Generate materials had an error: " + str(err)
+		if not res:
+			return "Failed to get success resposne from generate img sequence"
+
+		if not os.path.isdir(result_dir):
+			return "Output directory does not exist"
+
+		gen_files = [img for img in os.listdir(result_dir) if img.endswith(".png")]
+		if not gen_files:
+			return "No images generated"
+
+	def test_enable_obj_importer(self):
+		"""Ensure module name is correct, since error won't be reported."""
+		bpy.ops.preferences.addon_enable(module="io_scene_obj")
+
 
 class OCOL:
 	"""override class for colors, for terminals not supporting color-out"""
@@ -1652,6 +1700,7 @@ class MCPTEST_PT_test_panel(bpy.types.Panel):
 		col.label(text="")
 		col.operator("mcpreptest.self_destruct")
 
+
 def mcprep_test_index_update(self, context):
 	if context.window_manager.mcprep_test_autorun:
 		print("Auto-run MCprep test")
@@ -1682,8 +1731,7 @@ def register():
 		update=mcprep_test_index_update)
 	bpy.types.WindowManager.mcprep_test_autorun = bpy.props.BoolProperty(
 		name="Autorun test",
-		default=True
-		)
+		default=True)
 
 	# context.window_manager.mcprep_test_index = -1 put into handler to reset?
 	for cls in classes:
@@ -1727,4 +1775,3 @@ if __name__ == "__main__":
 
 	if "--auto_run" in args:
 		test_class.run_all_tests()
-

@@ -1,7 +1,7 @@
 TO INSTALL MCprep
 ======
 
-### Click the link below and download the .zip file (re-zip if auto-unzipped into a folder necessary), install into blender 2.7 or 2.8.
+### Click the link below and download the .zip file (re-zip if auto-unzipped into a folder necessary), install into blender (2.72 through 3.0 supported)
 
 [![Install MCprep](/visuals/mcprep_download.png)](https://theduckcow.com/dev/blender/mcprep-download/)
 
@@ -34,11 +34,11 @@ Learn how to use MCprep
 About MCprep
 ======
 
-This is a blender python addon to increase workflow for creating Minecraft renders and animations, by automatically setting up better materials, importing library models and groups, and setting up proxy characters for animation and default animations for regular features like grass and leaves on imported 3D Minecraft worlds. This addon assumes you have already imported the Minecraft world. While the script should work for any world importer, it has been tested and developed based on the jmc2obj Minecraft world to obj file converted. The addon now also comes with built-in rigs, including characters and mobs, and allows you to quickly place them into your worlds.
+This is a blender python addon to improve and automate many aspects of creating Minecraft renders and animations. It can help you improt world's exported from Minecraft, set up better materials, importing mobs and items, and set up proxy characters for animation, and even includes default animations for common blocks/mobs like tall grass, torches, and mobs like the bat or blaze. This addon assumes you have already exported a Minecraft world to an OBJ file. While the script should work for any world importer, it has been tested and developed based on the jmc2obj and Mineways tools for exporting Minecraft worlds to obj files.
 
 This addon is made to work with an asset library directory, from which models and groups are linked or imported from. This library blend file is included, but does not have all types of blocks generated yet. This will be improved in the future.
 
-This addon is compatible officially down to 2.72 official builds, and up to blender 2.80. Not all features are available in all versions, try to use the latest available blender. *Run into any problems? [Submit bugs/issues here](https://github.com/TheDuckCow/MCprep/issues).*
+This addon is compatible officially down to 2.72 official builds, and up to blender 3.00. Not all features are available in all versions, try to use the latest available blender. *Run into any problems? [Submit bugs/issues here](https://github.com/TheDuckCow/MCprep/issues).*
 
 
 Feature list
