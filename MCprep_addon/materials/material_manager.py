@@ -243,12 +243,12 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 						print('Error trying to remove material ' + matname)
 						print(str(err))
 
-			# Final step.. rename to not have .001 if it does
+			# Final step.. rename to not have .001 if it does,
+			# unless the target base-named material still exists and has users.
 			gen_base = util.nameGeneralize(baseMat.name)
-			base_datablock = bpy.data.materials.get(gen_base)
+			gen_material = bpy.data.materials.get(gen_base)
 			if baseMat.name != gen_base:
-				has_users = base_datablock and base_datablock.users != 0
-				if gen_base in bpy.data.materials and has_users:
+				if gen_material and gen_material.users != 0:
 					pass
 				else:
 					baseMat.name = gen_base
