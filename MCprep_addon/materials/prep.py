@@ -488,7 +488,11 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 			self.report({"ERROR"}, "Failed generate base material")
 			return {'CANCELLED'}
 
-		context.object.active_material = mat
+		mat_ind = context.object.active_material_index
+		context.object.material_slots[mat_ind].material = mat
+		# Using the above in place of below due to some errors of:
+		# "attribute "active_material" from "Object" is read-only"
+		# context.object.active_material = mat
 
 		# Don't want to generally run prep, as this would affect everything
 		# selected, as opposed to affecting just the new material
