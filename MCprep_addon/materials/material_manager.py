@@ -135,22 +135,21 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 
 	# arg to auto-force remove old? versus just keep as 0-users
 	selection_only = bpy.props.BoolProperty(
-		name = "Selection only",
-		description = "Build materials to consoldiate based on selected objects only",
-		default = True
-		)
+		name="Selection only",
+		description="Build materials to consoldiate based on selected objects only",
+		default=True)
 	skipUsage = bpy.props.BoolProperty(
-		default = False,
-		options = {'HIDDEN'}
-		)
+		default=False,
+		options={'HIDDEN'})
 
 	track_function = "combine_materials"
 	@tracking.report_error
 	def execute(self, context):
 		removeold = True
 
-		if self.selection_only==True and len(context.selected_objects)==0:
-			self.report({'ERROR'},
+		if self.selection_only is True and len(context.selected_objects) == 0:
+			self.report(
+				{'ERROR'},
 				"Either turn selection only off or select objects with materials")
 			return {'CANCELLED'}
 
@@ -173,13 +172,13 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 				return mats
 
 		data = getMaterials(self, context)
-		precount = len( ["x" for x in data if x.users >0] )
+		precount = len(["x" for x in data if x.users > 0])
 
-		if len(data)==0:
-			if self.selection_only==True:
-				self.report({"ERROR"},"No materials found on selected objects")
+		if not data:
+			if self.selection_only:
+				self.report({"ERROR"}, "No materials found on selected objects")
 			else:
-				self.report({"ERROR"},"No materials in open file")
+				self.report({"ERROR"}, "No materials in open file")
 			return {'CANCELLED'}
 
 		# get and categorize all materials names
@@ -192,22 +191,24 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 			else:
 				conf.log("Skipping, already added material", True)
 
-		# pre 2.78 solution, deep loop
+		# Pre 2.78 solution, deep loop.
 		if bpy.app.version < (2, 78):
 			for ob in bpy.data.objects:
 				for sl in ob.material_slots:
-					if sl == None or sl.material == None:
+					if sl is None or sl.material is None:
 						continue
 					if sl.material not in data:
-						continue # selection only
-					sl.material = bpy.data.materials[name_cat[util.nameGeneralize(sl.material.name)][0]]
+						continue  # Selection only.
+					name_ref = name_cat[util.nameGeneralize(sl.material.name)][0]
+					sl.material = bpy.data.materials[name_ref]
 			# doesn't remove old textures, but gets it to zero users
 
-			postcount = len([True for x in bpy.data.materials if x.users >0])
-			self.report({"INFO"},
+			postcount = len([True for x in bpy.data.materials if x.users > 0])
+			self.report(
+				{"INFO"},
 				"Consolidated {x} materials, down to {y} overall".format(
-				x=precount - postcount,
-				y=postcount))
+					x=precount - postcount,
+					y=postcount))
 			return {'FINISHED'}
 
 		# perform the consolidation with one basename set at a time
@@ -242,16 +243,17 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 						print('Error trying to remove material ' + matname)
 						print(str(err))
 
-			# Final step.. rename to not have .001 if it does
-			genBase = util.nameGeneralize(baseMat.name)
-			if baseMat.name != genBase:
-				has_users = bpy.data.materials[genBase].users != 0
-				if genBase in bpy.data.materials and has_users:
+			# Final step.. rename to not have .001 if it does,
+			# unless the target base-named material still exists and has users.
+			gen_base = util.nameGeneralize(baseMat.name)
+			gen_material = bpy.data.materials.get(gen_base)
+			if baseMat.name != gen_base:
+				if gen_material and gen_material.users != 0:
 					pass
 				else:
-					baseMat.name = genBase
+					baseMat.name = gen_base
 			else:
-				baseMat.name = genBase
+				baseMat.name = gen_base
 			conf.log(["Final: ", baseMat], vv_only=True)
 
 		postcount = len(["x" for x in getMaterials(self, context) if x.users > 0])
