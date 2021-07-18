@@ -117,6 +117,7 @@ Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow),
 | Cow | [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html)) |
 | Dolphin | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Fox | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+| Glow squid | [TRPHB Animation](https://youtube.com/c/TRPHBAnimation) |
 | Goat | [TRPHB Animation](https://youtube.com/c/TRPHBAnimation) |
 | Mooshroom (red/brown) | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Parrot | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
