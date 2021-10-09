@@ -70,7 +70,11 @@ def detect_world_exporter(filepath):
 		A valid string value for preferences ENUM MCprep_exporter_type
 	"""
 	with open(filepath, 'r') as obj_fd:
-		header = obj_fd.readline()
+		try:
+			header = obj_fd.readline()
+		except UnicodeDecodeError:
+			print("failed to read first line of obj: " + filepath)
+			return '(choose)'
 	if 'mineways' in header.lower():
 		# form of: # Wavefront OBJ file made by Mineways version 5.10...
 		return 'Mineways'
