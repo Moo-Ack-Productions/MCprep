@@ -174,7 +174,11 @@ def mineways_update(self, context):
 		# will run twice inherently
 		temp = self.open_mineways_path.split(".app/")[0]
 		self.open_mineways_path = temp+".app"
-	return
+
+
+def feature_set_update(self, context):
+	tracking.Tracker.feature_set = self.feature_set
+	tracking.trackUsage("feature_set", param=self.feature_set)
 
 
 class McprepPreference(bpy.types.AddonPreferences):
@@ -253,6 +257,12 @@ class McprepPreference(bpy.types.AddonPreferences):
 			"for the direct import bridge"),
 		subtype = 'FILE_PATH',
 		default = '')
+	feature_set = bpy.props.EnumProperty(
+		items=[
+			('supported', 'Supported', 'Use only supported features'),
+			('experimental', 'Experimental', 'Enable experimental features')],
+		name="Feature set",
+		update=feature_set_update)
 
 	# addon updater preferences
 
@@ -388,9 +398,16 @@ class McprepPreference(bpy.types.AddonPreferences):
 
 			# misc settings
 			row = layout.row()
-			col = row.column()
-			col.prop(self, "verbose")
-			row = layout.row()
+			row.prop(self, "verbose")
+			row.prop(self, "feature_set")
+
+			if self.feature_set != "supported":
+				row = layout.row()
+				box = row.box()
+				box.scale_y = 0.6
+				box.label(text="Using MCprep in experimental mode!", icon="ERROR")
+				box.label(text="Early access features and requests for feedback")
+				box.label(text="will be made visible. Thank you for contributing.")
 
 		elif self.preferences_tab == "tutorials":
 			layout.label(text="Unsure on how to use the addon? Check out these resources")
