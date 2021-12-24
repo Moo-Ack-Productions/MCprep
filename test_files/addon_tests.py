@@ -1099,10 +1099,14 @@ class mcprep_testing():
 
 		for tex in saturated:
 			img = bpy.data.images.load(os.path.join(base, tex))
+			if not img:
+				raise Exception('Failed to load img ' + str(tex))
 			if is_image_grayscale(img) is True:
 				raise Exception('Image {} detected as grayscale, should be saturated'.format(tex))
 		for tex in desaturated:
 			img = bpy.data.images.load(os.path.join(base, tex))
+			if not img:
+				raise Exception('Failed to load img ' + str(tex))
 			if is_image_grayscale(img) is False:
 				raise Exception('Image {} detected as saturated - should be grayscale'.format(tex))
 

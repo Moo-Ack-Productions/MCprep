@@ -20,7 +20,6 @@ import bpy
 import os
 import addon_utils
 
-from . import conf
 from . import util
 from . import tracking
 
