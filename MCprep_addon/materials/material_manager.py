@@ -37,7 +37,7 @@ def reload_materials(context):
 	"""Reload the material UI list"""
 	mcprep_props = context.scene.mcprep_props
 	resource_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
-	extensions = [".png",".jpg",".jpeg"]
+	extensions = [".png", ".jpg", ".jpeg"]
 
 	mcprep_props.material_list.clear()
 	if conf.use_icons and conf.preview_collections["materials"]:
@@ -58,8 +58,8 @@ def reload_materials(context):
 
 	search_paths = [
 		resource_folder,
-		os.path.join(resource_folder,"blocks"),
-		os.path.join(resource_folder,"block")]
+		os.path.join(resource_folder, "blocks"),
+		os.path.join(resource_folder, "block")]
 	files = []
 
 	for path in search_paths:
@@ -135,22 +135,21 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 
 	# arg to auto-force remove old? versus just keep as 0-users
 	selection_only = bpy.props.BoolProperty(
-		name = "Selection only",
-		description = "Build materials to consoldiate based on selected objects only",
-		default = True
-		)
+		name="Selection only",
+		description="Build materials to consoldiate based on selected objects only",
+		default=True)
 	skipUsage = bpy.props.BoolProperty(
-		default = False,
-		options = {'HIDDEN'}
-		)
+		default=False,
+		options={'HIDDEN'})
 
 	track_function = "combine_materials"
 	@tracking.report_error
 	def execute(self, context):
 		removeold = True
 
-		if self.selection_only==True and len(context.selected_objects)==0:
-			self.report({'ERROR'},
+		if self.selection_only is True and len(context.selected_objects) == 0:
+			self.report(
+				{'ERROR'},
 				"Either turn selection only off or select objects with materials")
 			return {'CANCELLED'}
 
@@ -173,13 +172,13 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 				return mats
 
 		data = getMaterials(self, context)
-		precount = len( ["x" for x in data if x.users >0] )
+		precount = len(["x" for x in data if x.users > 0])
 
-		if len(data)==0:
-			if self.selection_only==True:
-				self.report({"ERROR"},"No materials found on selected objects")
+		if not data:
+			if self.selection_only:
+				self.report({"ERROR"}, "No materials found on selected objects")
 			else:
-				self.report({"ERROR"},"No materials in open file")
+				self.report({"ERROR"}, "No materials in open file")
 			return {'CANCELLED'}
 
 		# get and categorize all materials names
@@ -192,68 +191,75 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 			else:
 				conf.log("Skipping, already added material", True)
 
-		# pre 2.78 solution, deep loop
+		# Pre 2.78 solution, deep loop.
 		if bpy.app.version < (2, 78):
 			for ob in bpy.data.objects:
 				for sl in ob.material_slots:
-					if sl == None or sl.material == None:
+					if sl is None or sl.material is None:
 						continue
 					if sl.material not in data:
-						continue # selection only
-					sl.material = bpy.data.materials[name_cat[util.nameGeneralize(sl.material.name)][0]]
+						continue  # Selection only.
+					name_ref = name_cat[util.nameGeneralize(sl.material.name)][0]
+					sl.material = bpy.data.materials[name_ref]
 			# doesn't remove old textures, but gets it to zero users
 
-			postcount = len([True for x in bpy.data.materials if x.users >0])
-			self.report({"INFO"},
+			postcount = len([True for x in bpy.data.materials if x.users > 0])
+			self.report(
+				{"INFO"},
 				"Consolidated {x} materials, down to {y} overall".format(
-				x=precount-postcount,
-				y=postcount))
+					x=precount - postcount,
+					y=postcount))
 			return {'FINISHED'}
 
 		# perform the consolidation with one basename set at a time
-		for base in name_cat: # the keys of the dictionary
-			if len(base)<2:
+		for base in name_cat:  # The keys of the dictionary.
+			if len(base) < 2:
 				continue
 
-			name_cat[base].sort() # in-place sorting
+			name_cat[base].sort()  # in-place sorting
 			baseMat = bpy.data.materials[name_cat[base][0]]
 
-			conf.log([name_cat[base]," ## ",baseMat], vv_only=True)
+			conf.log([name_cat[base], " ## ", baseMat], vv_only=True)
 
 			for matname in name_cat[base][1:]:
 				# skip if fake user set
-				if bpy.data.materials[matname].use_fake_user == True:
+				if bpy.data.materials[matname].use_fake_user is True:
 					continue
 				# otherwise, remap
-				res = util.remap_users(bpy.data.materials[matname],baseMat)
+				res = util.remap_users(bpy.data.materials[matname], baseMat)
 				if res != 0:
 					self.report({'ERROR'}, str(res))
 					return {'CANCELLED'}
 				old = bpy.data.materials[matname]
-				conf.log("removing old? "+matname, vv_only=True)
-				if removeold is True and old.users==0:
-					conf.log("removing old:"+matname, vv_only=True)
+				conf.log("removing old? " + matname, vv_only=True)
+				if removeold is True and old.users == 0:
+					conf.log("removing old:" + matname, vv_only=True)
 					try:
 						data.remove(old)
 					except ReferenceError as err:
-						print('Error trying to remove material '+matname)
+						print('Error trying to remove material ' + matname)
+						print(str(err))
+					except ValueError as err:
+						print('Error trying to remove material ' + matname)
 						print(str(err))
 
-			# Final step.. rename to not have .001 if it does
-			genBase = util.nameGeneralize(baseMat.name)
-			if baseMat.name != genBase:
-				if genBase in bpy.data.materials and bpy.data.materials[genBase].users!=0:
+			# Final step.. rename to not have .001 if it does,
+			# unless the target base-named material still exists and has users.
+			gen_base = util.nameGeneralize(baseMat.name)
+			gen_material = bpy.data.materials.get(gen_base)
+			if baseMat.name != gen_base:
+				if gen_material and gen_material.users != 0:
 					pass
 				else:
-					baseMat.name = genBase
+					baseMat.name = gen_base
 			else:
-				baseMat.name = genBase
-			conf.log(["Final: ",baseMat], vv_only=True)
+				baseMat.name = gen_base
+			conf.log(["Final: ", baseMat], vv_only=True)
 
-		postcount = len(["x" for x in getMaterials(self, context) if x.users >0])
+		postcount = len(["x" for x in getMaterials(self, context) if x.users > 0])
 		self.report({"INFO"}, "Consolidated {x} materials down to {y}".format(
-				x=precount,
-				y=postcount))
+			x=precount,
+			y=postcount))
 
 		return {'FINISHED'}
 
@@ -434,7 +440,8 @@ class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 
 		# even if images of same name already exist, load new block
 		conf.log("Find missing images: Creating new image datablock for "+mat.name)
-		image = bpy.data.images.load(image_path, check_existing=False)
+		# do not use 'check_existing=False' to keep compatibility pre 2.79
+		image = bpy.data.images.load(image_path)
 
 		engine = bpy.context.scene.render.engine
 		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':

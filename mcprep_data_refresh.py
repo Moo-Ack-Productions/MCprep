@@ -1,4 +1,4 @@
-#!/usr/local/bin/python3
+#!/opt/homebrew/bin/python3
 # Tool to pull down material names from jmc2obj and Mineways
 
 import json
@@ -51,7 +51,7 @@ def get_jmc2obj_mapping():
 
 	for tex in root:
 		src_tex = tex.get('name')
-		jmc_tex = tex.getchildren()[0].get('name')
+		jmc_tex = list(tex)[0].get('name')
 
 		if not src_tex.endswith('.png'):
 			print("Not a png: "+src_tex)
@@ -74,6 +74,35 @@ def jmc2obj_extras():
 	"""Known additional mappings for jmc2obj"""
 	outlist = {
 		"vines":"vine",
+
+		# removed ~ Jan 15 2021,
+		# added back to maintain longer backwards compatibility
+		"cake_inside": "cake_inner",
+		"cauldron_feet": "cauldron_bottom",
+		"cauldron_inside": "cauldron_inner",
+		"door_wood_bottom": "oak_door_bottom",
+		"door_wood_top": "oak_door_top",
+		"enderchest": "entity/chest/ender",
+		"largechest": "entity/chest/normal_double",
+		"largechest_trapped": "entity/chest/trapped_double",
+		"plank_acacia": "acacia_planks",
+		"plank_birch": "birch_planks",
+		"plank_dark_oak": "dark_oak_planks",
+		"plank_jungle": "jungle_planks",
+		"plank_oak": "oak_planks",
+		"plank_spruce": "spruce_planks",
+		"quartz_bottom": "quartz_block_bottom",
+		"quartz_side": "quartz_block_side",
+		"quartz_side_chiseled": "chiseled_quartz_block",
+		"quartz_side_lines": "quartz_pillar",
+		"quartz_top": "quartz_block_top",
+		"quartz_top_chiseled": "chiseled_quartz_block_top",
+		"quartz_top_lines": "quartz_pillar_top",
+		"red_sandstone_carved": "chiseled_red_sandstone",
+		"sandstone_side": "sandstone",
+		"sandstone_side_carved": "chiseled_sandstone",
+		"stone_brick_circle": "chiseled_stone_bricks",
+		"stone_brick_cracked": "cracked_stone_bricks",
 
 	}
 	return outlist
@@ -293,10 +322,12 @@ def mineways_extras():
 	}
 	return outlist
 
+
 def split_underscore_mappings(mineways_dict):
 	"""Returns the list, adding new items like Sapling__Spruce_Sapling to Spruce_Sapling"""
 	return {itm.split("__")[-1]:mineways_dict[itm] for itm in mineways_dict
 		if "__" in itm}
+
 
 def mineways2mc(name, vanilla):
 	"""Function that attemtps to map Mineways texture name to canonical"""
@@ -332,7 +363,7 @@ def get_vanilla_list(copy_file=False):
 
 	# parallel sort the list based on the generated tuple
 	verion_tuples, versions = zip(*sorted(zip(verion_tuples, versions)))
-	# print(versions)
+	print(versions)
 
 	jarfile = None
 	for i, ver in reversed(list(enumerate(verion_tuples))):
@@ -345,6 +376,8 @@ def get_vanilla_list(copy_file=False):
 
 	if not jarfile:
 		raise Exception("Could not get most recent jar version")
+	else:
+		print("Extracting from jar "+jarfile)
 
 	mcprep_resources = os.path.join("MCprep_addon", "MCprep_resources",
 		"resourcepacks", "mcprep_default")
@@ -377,7 +410,7 @@ def get_vanilla_list(copy_file=False):
 			os.makedirs(os.path.dirname(new_path), exist_ok=True)
 			with archive.open(name) as zf, open(new_path, 'wb') as f:
 				shutil.copyfileobj(zf, f)
-			print("\tCopied "+name)
+			# print("\tCopied "+name)
 
 		# limit to textures only hereafter
 		if not name.endswith('.png'):

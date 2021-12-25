@@ -1,7 +1,7 @@
 TO INSTALL MCprep
 ======
 
-### Click the link below and download the .zip file (re-zip if auto-unzipped into a folder necessary), install into blender 2.7 or 2.8.
+### Click the link below and download the .zip file (re-zip if auto-unzipped into a folder necessary), install into blender (2.72 through 3.0 supported)
 
 [![Install MCprep](/visuals/mcprep_download.png)](https://theduckcow.com/dev/blender/mcprep-download/)
 
@@ -26,7 +26,7 @@ Learn how to use MCprep
 
 *[Short, 1-minute videos showcasing how to use Blender+MCprep features](https://bit.ly/MCprepTutorials)*
 
-[![Beta video demo](https://img.youtube.com/vi/62fVXVAO13A/0.jpg)](https://bit.ly/MCprepTutorials)
+[![Tutorial playlist](https://img.youtube.com/vi/62fVXVAO13A/0.jpg)](https://bit.ly/MCprepTutorials)
 
 *[Additional Playlist of MCprep videos/demos](https://www.youtube.com/playlist?list=PL8X_CzUEVBfaajwyguIj_utPXO4tEOr7a)*
 
@@ -34,11 +34,11 @@ Learn how to use MCprep
 About MCprep
 ======
 
-This is a blender python addon to increase workflow for creating Minecraft renders and animations, by automatically setting up better materials, importing library models and groups, and setting up proxy characters for animation and default animations for regular features like grass and leaves on imported 3D Minecraft worlds. This addon assumes you have already imported the Minecraft world. While the script should work for any world importer, it has been tested and developed based on the jmc2obj Minecraft world to obj file converted. The addon now also comes with built-in rigs, including characters and mobs, and allows you to quickly place them into your worlds.
+This is a blender python addon to improve and automate many aspects of creating Minecraft renders and animations. It can help you improt world's exported from Minecraft, set up better materials, importing mobs and items, and set up proxy characters for animation, and even includes default animations for common blocks/mobs like tall grass, torches, and mobs like the bat or blaze. This addon assumes you have already exported a Minecraft world to an OBJ file. While the script should work for any world importer, it has been tested and developed based on the jmc2obj and Mineways tools for exporting Minecraft worlds to obj files.
 
 This addon is made to work with an asset library directory, from which models and groups are linked or imported from. This library blend file is included, but does not have all types of blocks generated yet. This will be improved in the future.
 
-This addon is compatible officially down to 2.72 official builds, and up to blender 2.80. Not all features are available in all versions, try to use the latest available blender. *Run into any problems? [Submit bugs/issues here](https://github.com/TheDuckCow/MCprep/issues).*
+This addon is compatible officially down to 2.72 official builds, and up to blender 3.00. Not all features are available in all versions, try to use the latest available blender. *Run into any problems? [Submit bugs/issues here](https://github.com/TheDuckCow/MCprep/issues).*
 
 
 Feature list
@@ -110,12 +110,15 @@ Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow),
 
 | Passive Rigs   |      Creator      |
 |----------|:-------------:|
+| Axolotl | [Breadcrumb](https://www.youtube.com/channel/UCT1_5td4SWg67fhElGz1S4A) |
 | Bat | [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) (MCprep exclusive) |
 | Cod fish | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Chicken | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) (No direct link yet) |
 | Cow | [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html)) |
 | Dolphin | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Fox | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+| Glow squid | [TRPHB Animation](https://youtube.com/c/TRPHBAnimation) |
+| Goat | [TRPHB Animation](https://youtube.com/c/TRPHBAnimation) |
 | Mooshroom (red/brown) | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Parrot | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Pig | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) (No direct link yet) |
@@ -134,6 +137,7 @@ Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow),
 |----------|:-------------:|
 | Bee | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Blaze | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) (No direct link yet) |
+| Cave Spider | [Austin Prescott](https://youtu.be/0xA4-yMr2KY) |
 | Creeper | [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) (MCprep exclusive) |
 | Eldar Guardian | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Ender Dragon | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |

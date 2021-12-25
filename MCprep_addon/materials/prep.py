@@ -125,7 +125,6 @@ def draw_mats_common(self, context):
 	# col = row.column()
 	# col.prop(self, "normalIntensity", slider=True)
 
-	split = self.layout.split()
 	row = self.layout.row()
 	col = row.column()
 	col.prop(self, "improveUiSettings")
@@ -219,16 +218,19 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 		if self.combineMaterials is True:
 			bpy.ops.mcprep.combine_materials(selection_only=True, skipUsage=True)
 		if self.improveUiSettings:
-			bpy.ops.mcprep.improve_ui()
+			try:
+				bpy.ops.mcprep.improve_ui()
+			except RuntimeError as err:
+				print("Failed to improve UI with error: " + str(err))
 
 		if self.skipUsage is True:
-			pass # don't report if a meta-call
+			pass  # Don't report if a meta-call.
 		elif count_lib_skipped > 0:
 			self.report({"INFO"},
 				"Modified {} materials, skipped {} linked ones.".format(
 					count, count_lib_skipped))
-		elif count >0:
-			self.report({"INFO"},"Modified "+str(count)+" materials")
+		elif count > 0:
+			self.report({"INFO"}, "Modified " + str(count) + " materials")
 		else:
 			self.report({"ERROR"}, "Nothing modified, be sure you selected objects with existing materials!")
 
@@ -458,15 +460,15 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 
 	skipUsage = bpy.props.BoolProperty(
 		default = False,
-		options={'HIDDEN'}
-		)
+		options={'HIDDEN'})
 
 	@classmethod
 	def poll(cls, context):
 		return context.object and context.scene.mcprep_props.material_list
 
 	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self, width=300*util.ui_scale())
+		return context.window_manager.invoke_props_dialog(
+			self, width=300 * util.ui_scale())
 
 	def draw(self, context):
 		draw_mats_common(self, context)
@@ -474,7 +476,7 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 	track_function = "generate_mat"
 	track_param = None
 	@tracking.report_error
-	def execute(self,context):
+	def execute(self, context):
 		scn_props = context.scene.mcprep_props
 		mat_item = scn_props.material_list[scn_props.material_list_index]
 		mat, err = self.generate_base_material(
@@ -486,7 +488,14 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 			self.report({"ERROR"}, "Failed generate base material")
 			return {'CANCELLED'}
 
-		context.object.active_material = mat
+		if not context.object.material_slots:
+			context.object.data.materials.append(mat)  # Auto-creates slot.
+		else:
+			mat_ind = context.object.active_material_index
+			context.object.material_slots[mat_ind].material = mat
+		# Using the above in place of below due to some errors of:
+		# "attribute "active_material" from "Object" is read-only"
+		# context.object.active_material = mat
 
 		# Don't want to generally run prep, as this would affect everything
 		# selected, as opposed to affecting just the new material
@@ -505,7 +514,7 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 
 	def generate_base_material(self, context, name, path):
 		"""Generate a base material from name and active resource pack"""
-		image = bpy.data.images.load(path, check_existing=False)
+		image = bpy.data.images.load(path)
 		mat = bpy.data.materials.new(name=name)
 
 		engine = context.scene.render.engine

@@ -20,7 +20,6 @@ import bpy
 import os
 import addon_utils
 
-from . import conf
 from . import util
 from . import tracking
 
@@ -108,6 +107,10 @@ class MCPREP_OT_show_preferences(bpy.types.Operator):
 
 		addons_ids = [mod for mod in addon_utils.modules(refresh=False)
 						if mod.__name__ == __package__]
+		if not addons_ids:
+			print("Failed to directly load and open MCprep preferences")
+			return {'FINISHED'}
+
 		addon_blinfo = addon_utils.module_bl_info(addons_ids[0])
 		if not addon_blinfo["show_expanded"]:
 			if hasattr(bpy.ops, "preferences") and hasattr(bpy.ops.preferences, "addon_expand") and util.bv28(): # later 2.8 buids

@@ -39,7 +39,7 @@ def get_mc_canonical_name(name):
 	"""Convert a material name to standard MC name.
 
 	Returns:
-		canonical name
+		canonical name, or fallback to generalized name (never returns None)
 		form (mc, jmc, or mineways)
 	"""
 	general_name = util.nameGeneralize(name)
@@ -50,8 +50,8 @@ def get_mc_canonical_name(name):
 
 	# Special case to allow material names, e.g. in meshswap, to end in .emit
 	# while still mapping to canonical names, to pick up features like animated
-	# textures.
-	if ".emit" in general_name:
+	# textures. Cross check that name isn't exactly .emit to avoid None return.
+	if ".emit" in general_name and general_name != ".emit":
 		general_name = general_name.replace(".emit", "")
 
 	if ("blocks" not in conf.json_data
@@ -66,19 +66,23 @@ def get_mc_canonical_name(name):
 	elif general_name in conf.json_data["blocks"]["block_mapping_jmc"]:
 		canon = conf.json_data["blocks"]["block_mapping_jmc"][general_name]
 		form = "jmc2obj"
-	elif general_name.lower() in conf.json_data["blocks"]["block_mapping_jmc"]:
-		canon = conf.json_data["blocks"]["block_mapping_jmc"][general_name.lower()]
-		form = "jmc2obj"
 	elif general_name in conf.json_data["blocks"]["block_mapping_mineways"]:
 		canon = conf.json_data["blocks"]["block_mapping_mineways"][general_name]
 		form = "mineways"
+	elif general_name.lower() in conf.json_data["blocks"]["block_mapping_jmc"]:
+		canon = conf.json_data["blocks"]["block_mapping_jmc"][general_name.lower()]
+		form = "jmc2obj"
 	elif general_name.lower() in conf.json_data["blocks"]["block_mapping_mineways"]:
 		canon = conf.json_data["blocks"]["block_mapping_mineways"][general_name.lower()]
 		form = "mineways"
 	else:
-		conf.log("Canonical name not matched: "+general_name, True)
+		conf.log("Canonical name not matched: " + general_name, True)
 		canon = general_name
 		form = None
+
+	if canon is None or canon == '':
+		conf.log("Error: Encountered None canon value with " + str(general_name))
+		canon = general_name
 
 	return canon, form
 
@@ -801,50 +805,71 @@ def is_image_grayscale(image):
 		if mx == 0:
 			return 0
 		mn = min(r, g, b)
-		df = mx-mn
-		return (df/mx)
+		df = mx - mn
+		return (df / mx)
 
 	if not image:
 		return None
-	conf.log("Checking image for grayscale "+image.name, vv_only=True)
-	if 'grayscale' in image: # cache
+	conf.log("Checking image for grayscale " + image.name, vv_only=True)
+	if 'grayscale' in image:  # cache
 		return image['grayscale']
 	if not image.pixels:
 		conf.log("Not an image / no pixels", vv_only=True)
 		return None
 
 	# setup sampling to limit number of processed pixels
-	max_samples = 1000
-	pxl_count = len(image.pixels)/image.channels
-	interval = int(pxl_count/max_samples) if pxl_count>max_samples else 1
+	max_samples = 1024  # A 32 by 32 image. May be higher with rounding.
+	pxl_count = len(image.pixels) / image.channels
+	aspect = image.size[0] / image.size[1]
+	datablock_copied = False
+
+	if pxl_count > max_samples:
+		imgcp = image.copy()  # Duplicate the datablock
+
+		# Find new pixel sizes keeping aspect ratio, equation of:
+		# 1024 = nwith * nheight
+		# 1024 = (nheight * aspect) * nheight
+		nheight = (1024 / aspect)**0.5
+		imgcp.scale(int(nheight * aspect), int(nheight))
+		pxl_count = imgcp.size[0] * imgcp.size[1]
+		datablock_copied = True
+	else:
+		imgcp = image
 
 	# Pixel by pixel saturation checks, with some wiggle room thresholds
-	thresh = 0.1 # treat saturated if any more than 10%
+	thresh = 0.1  # treat saturated if any more than 10%
 
 	# max pixels above thresh to return as saturated,
 	# 15% is chosen as ~double the % of "yellow" pixels in vanilla jungle leaves
-	max_thresh = 0.15*pxl_count
+	max_thresh = 0.15 * pxl_count
 
 	# running count to check against
 	pixels_saturated = 0
 
-	# check all pixels until
-	for ind in range(int(pxl_count))[::interval]:
-		ind = ind*image.channels # could be rgb or rgba
-		if image.channels > 3 and image.pixels[ind+3] == 0:
-			continue # skip alpha pixels during check
-		if rgb_to_saturation(image.pixels[ind],
-							image.pixels[ind+1],
-							image.pixels[ind+2]) > thresh:
+	is_grayscale = True  # True until proven false.
+
+	# check all pixels until exceeded threshold.
+	for ind in range(int(pxl_count))[::]:
+		ind = ind * imgcp.channels  # could be rgb or rgba
+		if imgcp.channels > 3 and imgcp.pixels[ind + 3] == 0:
+			continue  # skip alpha pixels during check
+		this_saturated = rgb_to_saturation(
+			imgcp.pixels[ind],
+			imgcp.pixels[ind + 1],
+			imgcp.pixels[ind + 2])
+		if this_saturated > thresh:
 			pixels_saturated += 1
 		if pixels_saturated >= max_thresh:
-			image['grayscale'] = False
-			conf.log("Image not grayscale: "+image.name, vv_only=True)
-			return False
+			is_grayscale = False
+			conf.log("Image not grayscale: " + image.name, vv_only=True)
+			break
 
-	image['grayscale'] = True # set cache
-	conf.log("Image is grayscale: "+image.name, vv_only=True)
-	return True
+	if datablock_copied:  # Cleanup if image was copied to scale down size.
+		bpy.data.images.remove(imgcp)
+
+	image['grayscale'] = is_grayscale  # set cache
+	conf.log("Image is grayscale: " + image.name, vv_only=True)
+	return is_grayscale
 
 
 def set_saturation_material(mat):
@@ -1194,6 +1219,7 @@ def texgen_seus(mat, passes, nodeInputs, use_reflections):
 	if hasattr(nodeTexDiff, "interpolation"):  # 2.72+
 		nodeTexDiff.interpolation = 'Closest'
 		nodeTexSpec.interpolation = 'Closest'
+		nodeTexNorm.interpolation = 'Closest'
 
 	# Update to use non-color data for spec and normal
 	util.apply_colorspace(nodeTexSpec, 'Non-Color')
@@ -1311,8 +1337,14 @@ def matgen_cycles_principled(mat, passes, use_reflections, use_emission, only_so
 	links.new(nodeMixEmit.outputs["Shader"], nodeMixTrans.inputs[2])
 	links.new(nodeMixTrans.outputs["Shader"], nodeOut.inputs[0])
 
-	nodeInputs = [[principled.inputs["Base Color"], nodeEmit.inputs["Color"], nodeEmitCam.inputs["Color"]], [nodeMixTrans.inputs["Fac"]], [nodeMixEmit.inputs[0]], [
-		principled.inputs["Roughness"]], [principled.inputs["Metallic"]], [principled.inputs["Specular"]], [principled.inputs["Normal"]]]
+	nodeInputs = [
+		[principled.inputs["Base Color"], nodeEmit.inputs["Color"], nodeEmitCam.inputs["Color"]],
+		[nodeMixTrans.inputs["Fac"]],
+		[nodeMixEmit.inputs[0]],
+		[principled.inputs["Roughness"]],
+		[principled.inputs["Metallic"]],
+		[principled.inputs["Specular"]],
+		[principled.inputs["Normal"]]]
 
 	# generate texture format and connect
 

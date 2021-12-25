@@ -21,6 +21,9 @@
 # fail to work because of this module)
 VALID_IMPORT = True
 
+# Request timeout (total request time may still be longer)
+TIMEOUT = 60
+
 # critical to at least load these
 import os
 import bpy
@@ -29,6 +32,7 @@ import bpy
 try:
 	from . import conf
 	from . import util
+	from .addon_updater import Updater as updater
 	import re
 	import requests
 	import traceback
@@ -85,7 +89,7 @@ class Singleton_tracking(object):
 		self._httpclient_fallback = None # set to True/False after first req
 		self._last_request = {} # used to debounce sequential requests
 		self._debounce = 5 # seconds to avoid duplicative requests
-
+		self._feature_set = 0  # Supported addon features (e.g. experimental)
 
 	# -------------------------------------------------------------------------
 	# Getters and setters
@@ -198,6 +202,21 @@ class Singleton_tracking(object):
 		else:
 			self._platform = self.string_trunc(value)
 
+	@property
+	def feature_set(self):
+		values = ["", "supported", "experimental"]
+		return values[self._feature_set]
+	@feature_set.setter
+	def feature_set(self, value):
+		if not value:
+			self._feature_set = 0
+		elif value == "supported":
+			self._feature_set = 1
+		elif value == "experimental":
+			self._feature_set = 2
+		else:
+			raise ValueError(
+				"feature_set must be one of supported, experimental, or None")
 
 	# number/settings for frequency use before ask for enable tracking
 
@@ -288,7 +307,7 @@ class Singleton_tracking(object):
 				resp = self._raw_request_mod_http(method, path, payload)
 				self._httpclient_fallback = True
 		elif self._httpclient_fallback is False:
-			resp =  self._raw_request_mod_requests(method, path, payload)
+			resp = self._raw_request_mod_requests(method, path, payload)
 		else:
 			resp = self._raw_request_mod_http(method, path, payload)
 
@@ -305,12 +324,12 @@ class Singleton_tracking(object):
 		be used. This function works in blender 2.8, and at least 2.79.
 		"""
 		url = self._appurl + path
-		if method=="POST":
-			res = requests.post(url, payload)
-		elif method=="GET":
-			res = requests.get(url)
-		elif method=="PUT":
-			res = requests.put(url, payload)
+		if method == "POST":
+			res = requests.post(url, payload, timeout=TIMEOUT)
+		elif method == "GET":
+			res = requests.get(url, timeout=TIMEOUT)
+		elif method == "PUT":
+			res = requests.put(url, payload, timeout=TIMEOUT)
 		else:
 			raise ValueError("raw_request input must be GET, POST, or PUT")
 
@@ -346,7 +365,7 @@ class Singleton_tracking(object):
 			print("Error: "+str(err))
 			return {'status':'NO_CONNECTION'}
 
-		if method=="POST" or method=="PUT":
+		if method in ("POST", "PUT"):
 			connection.request(method, path, payload)
 		elif method == "GET":
 			connection.request(method, path)
@@ -627,13 +646,14 @@ def trackInstalled(background=None):
 		return
 
 	# if already installed, skip
-	if Tracker.json["status"] == None and \
-			Tracker.json["install_id"] != None: return
+	if Tracker.json["status"] is None and Tracker.json["install_id"] is not None:
+		return
 
-	if Tracker.verbose: print(Tracker.addon+" install registered")
+	if Tracker.verbose:
+		print(Tracker.addon + " install registered")
 
 	# if no override set, use default
-	if background == None:
+	if background is None:
 		background = Tracker.background
 
 	def runInstall(background):
@@ -644,30 +664,30 @@ def trackInstalled(background=None):
 			location = "/1/track/install.json"
 
 		# capture re-installs/other status events
-		if Tracker.json["status"]==None:
+		if Tracker.json["status"] is None:
 			status = "New install"
 		else:
 			status = Tracker.json["status"]
-			Tracker.json["status"]=None
+			Tracker.json["status"] = None
 			Tracker.save_tracker_json()
 
 		Tracker.json["install_date"] = str(datetime.now())
 		payload = json.dumps({
-				"timestamp": {".sv": "timestamp"},
-				"usertime":Tracker.string_trunc(Tracker.json["install_date"]),
-				"version":Tracker.version,
-				"blender":Tracker.blender_version,
-				"status":Tracker.string_trunc(status),
-				"platform":Tracker.platform,
-				"language":Tracker.language,
-				"ID":str(Tracker.json["install_id"])
-			})
+			"timestamp": {".sv": "timestamp"},
+			"usertime": Tracker.string_trunc(Tracker.json["install_date"]),
+			"version": Tracker.version,
+			"blender": Tracker.blender_version,
+			"status": Tracker.string_trunc(status),
+			"platform": Tracker.platform,
+			"language": Tracker.language,
+			"ID": str(Tracker.json["install_id"])
+		})
 
-		resp = Tracker.request('POST', location, payload, background, callback)
+		_ = Tracker.request('POST', location, payload, background, callback)
 
 	def callback(arg):
 		"""After call, assumes input is dict server response."""
-		if type(arg) != type({'name':'ID'}):
+		if not isinstance(arg, dict):
 			return
 		elif "name" not in arg:
 			return
@@ -691,13 +711,13 @@ def trackUsage(function, param=None, exporter=None, background=None):
 	if not VALID_IMPORT:
 		return
 	if Tracker.tracking_enabled is False:
-		return # skip if not opted in
+		return  # skip if not opted in
 	if Tracker.verbose:
-		print("{} usage: {}, param: {}, exporter: {}".format(
-			Tracker.addon, function, str(param), str(exporter)))
+		print("{} usage: {}, param: {}, exporter: {}, mode: {}".format(
+			Tracker.addon, function, param, exporter, Tracker.feature_set))
 
 	# if no override set, use default
-	if not background:
+	if background is None:
 		background = Tracker.background
 
 	def runUsage(background):
@@ -708,17 +728,18 @@ def trackUsage(function, param=None, exporter=None, background=None):
 			location = "/1/track/usage.json"
 
 		payload = json.dumps({
-				"timestamp":{".sv": "timestamp"},
-				"version":Tracker.version,
-				"blender":Tracker.blender_version,
-				"platform":Tracker.platform,
-				"function":Tracker.string_trunc(function),
-				"param":Tracker.string_trunc(param),
-				"exporter":Tracker.string_trunc(exporter),
-				"language":Tracker.language,
-				"ID":Tracker.json["install_id"]
-			})
-		resp = Tracker.request('POST', location, payload, background)
+			"timestamp": {".sv": "timestamp"},
+			"version": Tracker.version,
+			"blender": Tracker.blender_version,
+			"platform": Tracker.platform,
+			"function": Tracker.string_trunc(function),
+			"param": Tracker.string_trunc(param),
+			"exporter": Tracker.string_trunc(exporter),
+			"language": Tracker.language,
+			"ID": Tracker.json["install_id"],
+			"mode": Tracker._feature_set
+		})
+		_ = Tracker.request('POST', location, payload, background)
 
 	if Tracker.failsafe is True:
 		try:
@@ -735,11 +756,13 @@ def logError(report, background=None):
 		return
 
 	# if no override set, use default
-	if background == None: background = Tracker.background
+	if background is None:
+		background = Tracker.background
 
 	def runError(background):
 		# ie auto sent in background, must adhere to tracking usage
-		if Tracker.tracking_enabled is False: return # skip if not opted in
+		if Tracker.tracking_enabled is False:
+			return  # skip if not opted in
 
 		if Tracker.dev is True:
 			location = "/1/log/user_report_dev.json"
@@ -760,24 +783,25 @@ def logError(report, background=None):
 
 		# Comply with server-side validation, don't exceed lengths
 		if len(user_comment) > USER_COMMENT_LENGTH:
-			user_comment = user_comment[:USER_COMMENT_LENGTH-1] + "|"
+			user_comment = user_comment[:USER_COMMENT_LENGTH - 1] + "|"
 		if len(error) > ERROR_STRING_LENGTH:
 			# TODO: make smarter, perhaps grabbing portion of start of error
 			# and portion of end to get all needed info
-			end_bound = len(error)-ERROR_STRING_LENGTH+1
+			end_bound = len(error) - ERROR_STRING_LENGTH + 1
 			error = "|" + error[end_bound:]
 
 		payload = json.dumps({
-				"timestamp":{".sv": "timestamp"},
-				"version":Tracker.version,
-				"blender":Tracker.blender_version,
-				"platform":Tracker.platform,
-				"error":error,
-				"user_comment":user_comment,
-				"status":"None",  # used later for flagging if fixed or not
-				"ID":Tracker.json["install_id"]
-			})
-		resp = Tracker.request('POST', location, payload, background)
+			"timestamp": {".sv": "timestamp"},
+			"version": Tracker.version,
+			"blender": Tracker.blender_version,
+			"platform": Tracker.platform,
+			"error": error,
+			"user_comment": user_comment,
+			"status": "None",  # used later for flagging if fixed or not
+			"ID": Tracker.json["install_id"],
+			"mode": Tracker._feature_set
+		})
+		_ = Tracker.request('POST', location, payload, background)
 
 	if Tracker.failsafe is True:
 		try:
@@ -792,7 +816,7 @@ def report_error(function):
 	"""Decorator for the execute(self, context) function of operators.
 
 	Both captures any errors for user reporting, and runs the usage tracking
-	if/as configured for the operator class. If function returns {'CANCELLED'}
+	if/as configured for the operator class. If function returns {'CANCELLED'},
 	has no track_function class attribute, or skipUsage==True, then
 	usage tracking is skipped.
 	"""
@@ -804,7 +828,15 @@ def report_error(function):
 			Tracker._handling_error = False
 		except:
 			err = traceback.format_exc()
-			print(err) # always print raw traceback
+			print(err)  # Always print raw traceback.
+
+			if updater.json.get("just_updated") is True:
+				print("MCprep was just updated, try restarting blender.")
+				self.report(
+					{"ERROR"},
+					"An error occurred - TRY RESTARTING BLENDER since MCprep just updated")
+				return {'CANCELLED'}
+
 			err = Tracker.remove_indentifiable_information(err)
 
 			# cut off the first three lines of error, which is this wrapper
@@ -852,13 +884,12 @@ def report_error(function):
 			and Tracker._last_request.get("function") == self.track_function
 			and Tracker._last_request.get("time") + Tracker._debounce > time.time()
 			):
-			if Tracker.verbose:
-				print("Skipping usage due to debounce")
+			conf.log("Skipping usage due to debounce")
 			run_track = False
 
 		# If successful completion, run analytics function if relevant
 		if bpy.app.background and run_track:
-			print("Background mode, would have tracked usage: "+self.track_function)
+			conf.log("Background mode, would have tracked usage: " + self.track_function)
 		elif run_track:
 			param = None
 			exporter = None
@@ -899,7 +930,13 @@ def make_annotations(cls):
 	"""Add annotation attribute to class fields to avoid Blender 2.8 warnings"""
 	if not hasattr(bpy.app, "version") or bpy.app.version < (2, 80):
 		return cls
-	bl_props = {k: v for k, v in cls.__dict__.items() if isinstance(v, tuple)}
+	if bpy.app.version < (2, 93, 0):
+		bl_props = {
+			k: v for k, v in cls.__dict__.items() if isinstance(v, tuple)}
+	else:
+		bl_props = {
+			k: v for k, v in cls.__dict__.items()
+			if isinstance(v, bpy.props._PropertyDeferred)}
 	if bl_props:
 		if '__annotations__' not in cls.__dict__:
 			setattr(cls, '__annotations__', {})
@@ -988,7 +1025,3 @@ def register(bl_info):
 def unregister():
 	for cls in reversed(classes):
 		bpy.utils.unregister_class(cls)
-
-
-if __name__ == "__main__":
-	register({"bl_info":(2, 99, 0)})

@@ -44,6 +44,10 @@ def get_uv_bounds_per_material(obj):
 	if not mats:
 		return {}
 
+	active_uv = obj.data.uv_layers.active
+	if not active_uv or not active_uv.data:
+		return {}
+
 	# order of minx, maxx, miny, maxy,
 	# min's start with 1 so comparisons can go lower,
 	# max's start with 0 so comparisons can go higher
@@ -52,11 +56,10 @@ def get_uv_bounds_per_material(obj):
 	# TODO: add other key for max_uvsize, to detect cases like lava and water
 	# where multiple materials are in one but UVs split over multiple blocks.
 	# In the meantime, threshold of 0.25 set by parent function is a sweetspot
-	active_uv = obj.data.uv_layers.active
 	for poly in obj.data.polygons:
 		m_index = poly.material_index
 		mslot = obj.material_slots[m_index]
-		if not mslot:
+		if not mslot or not mslot.material:
 			continue
 
 		# TODO: Consider breaking early after reaching the first N hits of a

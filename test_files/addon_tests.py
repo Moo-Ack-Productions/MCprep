@@ -26,7 +26,6 @@ import bpy
 import traceback
 
 import os
-import json
 import sys
 import io
 from contextlib import redirect_stdout
@@ -61,6 +60,7 @@ class mcprep_testing():
 			self.import_mineways_combined,
 			self.name_generalize,
 			self.canonical_name_no_none,
+			self.canonical_test_mappings,
 			self.meshswap_spawner,
 			self.meshswap_jmc2obj,
 			self.meshswap_mineways_separated,
@@ -77,8 +77,10 @@ class mcprep_testing():
 			self.uv_transform_no_alert,
 			self.uv_transform_combined_alert,
 			self.world_tools,
-			]
-		self.run_only = None # name to give to only run this test
+			self.test_enable_obj_importer,
+			self.test_generate_material_sequence,
+		]
+		self.run_only = None  # Name to give to only run this test
 
 		self.mcprep_json = {}
 
@@ -803,12 +805,49 @@ class mcprep_testing():
 		mats = materialsFromObj(bpy.context.selected_objects)
 		canons = [[get_mc_canonical_name(mat.name)][0] for mat in mats]
 
-		if None in canons: # detect None response to canon input
+		if None in canons:  # detect None response to canon input
 			return "Canon returned none value"
+		if '' in canons:
+			return "Canon returned empty str value"
 
-		# calling the reload materials operation, as this is where some error
-		# reports ran into this issue (but could not replicate)
-		bpy.ops.mcprep.reload_materials()
+		# Ensure it never returns None
+		in_str, _ = get_mc_canonical_name('')
+		if in_str != '':
+			return "Empty str should return empty string, not" + str(in_str)
+
+		did_raise = False
+		try:
+			get_mc_canonical_name(None)
+		except:
+			did_raise = True
+		if not did_raise:
+			return "None input SHOULD raise error"
+
+		# TODO: patch conf.json_data["blocks"] used by addon if possible,
+		# if this is transformed into a true py unit test. This will help
+		# check against report (-MNGGQfGGTJRqoizVCer)
+
+	def canonical_test_mappings(self):
+		"""Test some specific mappings to ensure they return correctly."""
+		from MCprep.materials.generate import get_mc_canonical_name
+
+		misc = {
+			".emit": ".emit",
+		}
+		jmc_to_canon = {
+			"grass": "grass",
+			"mushroom_red": "red_mushroom",
+			# "slime": "slime_block",  # KNOWN jmc, need to address
+		}
+		mineways_to_canon = {}
+
+		for map_type in [misc, jmc_to_canon, mineways_to_canon]:
+			for key, val in map_type.items():
+				res, mapped = get_mc_canonical_name(key)
+				if res == val:
+					continue
+				return "Wrong mapping: {} mapped to {} ({}), not {}".format(
+					key, res, mapped, val)
 
 	def meshswap_util(self, mat_name):
 		"""Run meshswap on the first object with found mat_name"""
@@ -1060,10 +1099,14 @@ class mcprep_testing():
 
 		for tex in saturated:
 			img = bpy.data.images.load(os.path.join(base, tex))
+			if not img:
+				raise Exception('Failed to load img ' + str(tex))
 			if is_image_grayscale(img) is True:
 				raise Exception('Image {} detected as grayscale, should be saturated'.format(tex))
 		for tex in desaturated:
 			img = bpy.data.images.load(os.path.join(base, tex))
+			if not img:
+				raise Exception('Failed to load img ' + str(tex))
 			if is_image_grayscale(img) is False:
 				raise Exception('Image {} detected as saturated - should be grayscale'.format(tex))
 
@@ -1505,6 +1548,53 @@ class mcprep_testing():
 		if invalid is False:
 			return "Combined lava/water should still alert"
 
+	def test_generate_material_sequence(self):
+		"""Ensure that generating an image sequence works as expected."""
+		from MCprep.materials.sequences import generate_material_sequence
+
+		# ALT: call animate_single_material
+		# animate_single_material(
+		# mat, engine, export_location='original', clear_cache=False)
+
+		tiled_img = os.path.join(
+			os.path.dirname(__file__),
+			"test_resource_pack", "textures", "campfire_fire.png")
+		fake_orig_img = tiled_img
+		result_dir = tiled_img[:-4]  # Same name, sans extension.
+
+		try:
+			shutil.rmtree(result_dir)
+		except Exception as err:
+			print("Error removing prior directory of animated campfire")
+			print(err)
+
+		# Ensure that the folder does not initially exist
+		if os.path.isdir(result_dir):
+			return "Folder pre-exists, should be removed before test"
+
+		res, err = generate_material_sequence(
+			source_path=fake_orig_img,
+			image_path=tiled_img,
+			form=None,
+			export_location="original",
+			clear_cache=True)
+
+		if err:
+			return "Generate materials had an error: " + str(err)
+		if not res:
+			return "Failed to get success resposne from generate img sequence"
+
+		if not os.path.isdir(result_dir):
+			return "Output directory does not exist"
+
+		gen_files = [img for img in os.listdir(result_dir) if img.endswith(".png")]
+		if not gen_files:
+			return "No images generated"
+
+	def test_enable_obj_importer(self):
+		"""Ensure module name is correct, since error won't be reported."""
+		bpy.ops.preferences.addon_enable(module="io_scene_obj")
+
 
 class OCOL:
 	"""override class for colors, for terminals not supporting color-out"""
@@ -1614,6 +1704,7 @@ class MCPTEST_PT_test_panel(bpy.types.Panel):
 		col.label(text="")
 		col.operator("mcpreptest.self_destruct")
 
+
 def mcprep_test_index_update(self, context):
 	if context.window_manager.mcprep_test_autorun:
 		print("Auto-run MCprep test")
@@ -1644,8 +1735,7 @@ def register():
 		update=mcprep_test_index_update)
 	bpy.types.WindowManager.mcprep_test_autorun = bpy.props.BoolProperty(
 		name="Autorun test",
-		default=True
-		)
+		default=True)
 
 	# context.window_manager.mcprep_test_index = -1 put into handler to reset?
 	for cls in classes:
@@ -1689,4 +1779,3 @@ if __name__ == "__main__":
 
 	if "--auto_run" in args:
 		test_class.run_all_tests()
-
