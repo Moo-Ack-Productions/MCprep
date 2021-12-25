@@ -29,6 +29,7 @@ from mathutils import Vector
 from .. import conf
 from .. import util
 from . import mobs
+
 from .. import tracking
 
 
@@ -49,9 +50,13 @@ class MCPREP_OT_reload_spawners(bpy.types.Operator):
 		bpy.ops.mcprep.reload_mobs()
 		bpy.ops.mcprep.reload_items()
 
+		bpy.ops.mcprep.reload_entities()
+
+
 		# to prevent re-drawing "load spawners!" if any one of the above
 		# loaded nothing for any reason.
 		conf.loaded_all_spawners = True
+
 		return {'FINISHED'}
 
 
@@ -101,7 +106,15 @@ class MCPREP_UL_meshswap(bpy.types.UIList):
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
 			layout.label(text=set.name)
-			# col.prop(set, "name", text="", emboss=False)
+		elif self.layout_type in {'GRID'}:
+			layout.alignment = 'CENTER'
+			layout.label(text="", icon='QUESTION')
+
+class MCPREP_UL_entity(bpy.types.UIList):
+	"""For entity asset listing UIList drawing"""
+	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
+		if self.layout_type in {'DEFAULT', 'COMPACT'}:
+			layout.label(text=set.name)
 		elif self.layout_type in {'GRID'}:
 			layout.alignment = 'CENTER'
 			layout.label(text="", icon='QUESTION')
@@ -127,7 +140,7 @@ class MCPREP_UL_item(bpy.types.UIList):
 					icon_value=conf.preview_collections["items"][icon].icon_id)
 			else:
 				layout.label(text="", icon='QUESTION')
-
+				
 
 class MCPREP_UL_material(bpy.types.UIList):
 	"""For material library UIList drawing"""
@@ -172,6 +185,10 @@ class ListMeshswapAssets(bpy.types.PropertyGroup):
 	block = bpy.props.StringProperty()  # virtual enum, Group/name
 	description = bpy.props.StringProperty()
 
+class ListEntityAssets(bpy.types.PropertyGroup):
+	"""For UI drawing of meshswap assets and holding data"""
+	block = bpy.props.StringProperty()  # virtual enum, Group/name
+	description = bpy.props.StringProperty()
 
 class ListItemAssets(bpy.types.PropertyGroup):
 	"""For UI drawing of item assets and holding data"""
@@ -191,9 +208,11 @@ classes = (
 	ListMobAssets,
 	ListMeshswapAssets,
 	ListItemAssets,
+        ListEntityAssets,
 	MCPREP_UL_material,
 	MCPREP_UL_mob,
 	MCPREP_UL_meshswap,
+        MCPREP_UL_entity,
 	MCPREP_UL_item,
 	MCPREP_OT_reload_spawners,
 	MCPREP_OT_spawn_path_reset,

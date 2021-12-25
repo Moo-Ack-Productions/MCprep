@@ -109,6 +109,9 @@ def init():
 	global rig_categories
 	rig_categories = [] # simple list of directory names
 
+	global entity_list
+	entity_list = []
+
 
 	# -----------------------------------------------
 	# Matieral sync cahce, to avoid repeat lib reads
@@ -132,7 +135,7 @@ def icons_init():
 	global preview_collections
 	global v
 
-	collection_sets = ["main", "skins", "mobs", "blocks", "items", "materials"]
+	collection_sets = ["main", "skins", "mobs", "entities", "blocks", "items", "materials"]
 
 	try:
 		for iconset in collection_sets:

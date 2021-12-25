@@ -88,6 +88,8 @@ def getMeshswapList(context):
 			for itm in context.scene.mcprep_props.meshswap_list]
 
 
+
+
 def move_assets_to_excluded_layer(context, collections):
 	"""Utility to move source collections to excluded layer to not be rendered"""
 	initial_view_coll = context.view_layer.active_layer_collection
@@ -104,6 +106,7 @@ def move_assets_to_excluded_layer(context, collections):
 		initial_view_coll.collection.children.unlink(grp)
 		if grp.name not in meshswap_exclude_vl.collection.children:
 			meshswap_exclude_vl.collection.children.link(grp)
+
 
 
 def update_meshswap_path(self, context):
@@ -355,7 +358,7 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 
 			# Move source of group instance into excluded view layer
 			if util.bv28() and group:
-				move_assets_to_excluded_layer(context, [group])
+				util.move_assets_to_excluded_layer(context, [group])
 
 		self.track_param = self.block
 		return {'FINISHED'}
@@ -754,7 +757,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			for obj in new_objects:
 				util.move_to_collection(obj, swaped_vl.collection)
 
-			move_assets_to_excluded_layer(context, new_groups)
+			util.move_assets_to_excluded_layer(context, new_groups)
 
 		# end progress bar, end of primary section
 		bpy.context.window_manager.progress_end()
