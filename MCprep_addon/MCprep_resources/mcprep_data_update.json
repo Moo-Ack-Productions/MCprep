@@ -888,6 +888,7 @@
 			"arrow": "entity/projectiles/arrow",
 			"ascii": "font/ascii",
 			"ascii_sga": "font/ascii_sga",
+			"asciillager": "font/asciillager",
 			"attached_melon_stem": "attached_melon_stem",
 			"attached_pumpkin_stem": "attached_pumpkin_stem",
 			"axolotl_blue": "entity/axolotl/axolotl_blue",

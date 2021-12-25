@@ -15,7 +15,11 @@ MINEWAYS_URL = "https://raw.githubusercontent.com/erich666/Mineways/master/Win/t
 # JMC_URL = "https://raw.githubusercontent.com/jmc2obj/j-mc-2-obj/master/conf/blocks.conf"
 
 # could have multiple mappings, just use the latest here
-JMC_1_13 = "https://raw.githubusercontent.com/jmc2obj/j-mc-2-obj/master/conf/texsplit_1.13.conf"
+# Legacy URL below here, file no longer exists as it was deleted, but mapping
+# kept for backwards compatibility. However, as people move on to use latest
+# jmc2obj, it will be less of an issue.
+# JMC_1_13 = "https://raw.githubusercontent.com/jmc2obj/j-mc-2-obj/master/conf/texsplit_1.13.conf"
+JMC_1_13 = "https://raw.githubusercontent.com/jmc2obj/j-mc-2-obj/0fb2bd742f0d64b0f7f0dc3cafdba76ebd3a1cc3/conf/texsplit_1.13.conf"
 
 
 def save_file_str(url):
@@ -497,7 +501,7 @@ def run_all(auto=False):
 	vanilla_map = vanilla_overrides(vanilla) # don't need to return as pass ref?
 
 	# load material lists from online blobs
-	jmc = get_jmc2obj_mapping()
+	jmc = get_jmc2obj_mapping()  # Legacy, most jmc2obj mats are now live-parsed.
 	mineways = get_mineways_list(vanilla)
 
 	# load the hard-coded lists
