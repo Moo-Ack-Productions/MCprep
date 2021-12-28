@@ -139,6 +139,7 @@ Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow),
 | Blaze | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) (No direct link yet) |
 | Cave Spider | [Austin Prescott](https://youtu.be/0xA4-yMr2KY) |
 | Creeper | [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) (MCprep exclusive) |
+| Drowned | [thefunnypie2 + HissingCreeper](https://github.com/TheDuckCow/MCprep/issues/160#issuecomment-931923101) |
 | Eldar Guardian | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Ender Dragon | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Enderman | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) ([Rig link](http://www.blendswap.com/blends/view/79750)) |
@@ -159,6 +160,7 @@ Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow),
 | Skeleton | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) ([Rig link, outdated](http://www.blendswap.com/blends/view/79495)) |
 | Slime | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads))  |
 | Spider | [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html)) |
+| Stray | [thefunnypie2 + Trainguy9512](https://github.com/TheDuckCow/MCprep/issues/160#issuecomment-931923101) |
 | Strider | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Vindicator | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Witch | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
@@ -168,6 +170,7 @@ Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow),
 | Zoglin | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Zombie | [HissingCreeper](https://www.youtube.com/channel/UCHV3_5kFI93fFOl6KbmhkQA) (No direct link yet) |
 | Zombie Pigman | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+| Zombie Villager | [thefunnypie2 + HissingCreeper](https://github.com/TheDuckCow/MCprep/issues/160#issuecomment-931923101) |
 | Zombified Piglin | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 
 
@@ -183,6 +186,17 @@ Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow),
 | Villager | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Wandering Trader | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Wolf | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) ([Rig link, outdated](http://www.blendswap.com/blends/view/79628)) |
+
+
+| Entities   |      Creator      |
+|----------|:-------------:|
+| Arrow | [TRPHB Animation](https://www.youtube.com/c/TRPHBAnimation/) |
+| Boat | [TRPHB Animation](https://www.youtube.com/c/TRPHBAnimation/) |
+| Bow | [TRPHB Animation](https://www.youtube.com/c/TRPHBAnimation/) |
+| Crossbow | [TRPHB Animation](https://www.youtube.com/c/TRPHBAnimation/) |
+| Minecart | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+| Shield | [Ageofherosmedia](https://github.com/TheDuckCow/MCprep/issues/245#issuecomment-998745223) |
+
 
 
 | Meshswap Blocks | Creator |
