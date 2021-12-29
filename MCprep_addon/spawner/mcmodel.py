@@ -25,7 +25,6 @@ import bpy
 import bmesh
 from bpy_extras.io_utils import ImportHelper
 
-# addon imports
 from .. import conf
 from .. import util
 
@@ -92,9 +91,9 @@ def add_element(
 	return [verts, edges, faces]
 
 
-def add_material(name="material", pth=""):
-	"""Creates a simple material with an image texture from pth."""
-	conf.log(name + ": " + pth)
+def add_material(name="material", path=""):
+	"""Creates a simple material with an image texture from path."""
+	conf.log(name + ": " + path, vv_only=True)
 	mat = bpy.data.materials.new(name=name)
 	mat.blend_method = 'CLIP'
 	mat.shadow_method = 'CLIP'
@@ -102,20 +101,19 @@ def add_material(name="material", pth=""):
 	matnodes = mat.node_tree.nodes
 
 	tex = matnodes.new('ShaderNodeTexImage')
-	if os.path.isfile(pth):
-		img = bpy.data.images.load(pth, check_existing=True)
+	if os.path.isfile(path):
+		img = bpy.data.images.load(path, check_existing=True)
 		tex.image = img
 	tex.interpolation = 'Closest'
 
 	shader = matnodes['Principled BSDF']
 	mat.node_tree.links.new(shader.inputs['Base Color'], tex.outputs['Color'])
 	mat.node_tree.links.new(shader.inputs['Alpha'], tex.outputs['Alpha'])
-
 	return mat
 
 
 def locate_image(context, textures, img, model_filepath):
-	'''finds and returns the filepath of the image texture'''
+	"""Finds and returns the filepath of the image texture."""
 	resource_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
 
 	local_path = textures[img]

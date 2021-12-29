@@ -136,20 +136,19 @@ class MCPREP_MT_entity_spawn(bpy.types.Menu):
 
 	def draw(self, context):
 		layout = self.layout
-		entity_blocks = entities.getEntityList(context)
-		for blockset in entity_blocks:
-			# do some kind of check for if no blocks found
+		entity_list = entities.getEntityList(context)
+		for entity in entity_list:
+			# do some kind of check for if no entities found
 			icn = "BLANK1"
-			if blockset[0].startswith("Group"):
+			if entity[0].startswith("Group"):
 				icn = "GROUP"
 
 			opr = layout.operator(
 				"mcprep.entity_spawner",
-				text=blockset[1],
+				text=entity[1],
 				icon=icn
 			)
-			opr.block = blockset[0]
-			opr.location = util.get_cuser_location(context)
+			opr.entity = entity[0]
 
 
 class MCPREP_MT_3dview_add(bpy.types.Menu):
@@ -890,8 +889,10 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 				self.draw_mode_warning(self.layout)
 				return
 			self.item_spawner(context)
-		elif context.scene.mcprep_props.spawn_mode=="entity":
-			self.entity(context)
+		elif context.scene.mcprep_props.spawn_mode == "entity":
+			self.entity_spawner(context)
+		elif context.scene.mcprep_props.spawn_mode == "block":
+			self.block_spawner(context)
 		addon_updater_ops.check_for_update_background()
 
 	def draw_mode_warning(self, ui_element):
@@ -1145,7 +1146,7 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 			b_col = b_row.column(align=True)
 			b_col.operator("mcprep.reload_items")
 
-	def entity(self, context):
+	def entity_spawner(self, context):
 		scn_props = context.scene.mcprep_props
 
 		layout = self.layout
@@ -1153,18 +1154,20 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 		col = split.column(align=True)
 
 		if scn_props.entity_list:
-			col.template_list("MCPREP_UL_entity", "",
-					scn_props, "entity_list",
-					scn_props, "entity_list_index",
-					rows=4)
-			
+			col.template_list(
+				"MCPREP_UL_entity", "",
+				scn_props, "entity_list",
+				scn_props, "entity_list_index",
+				rows=4)
+
 		elif not context.scene.entity_path.lower().endswith('.blend'):
 			box = col.box()
 			b_row = box.row()
 			b_row.label(text="Entity file must be a .blend")
 			b_row = box.row()
 			b_row.scale_y = 2
-			b_row.operator("mcprep.entity_path_reset", icon=LOAD_FACTORY,
+			b_row.operator(
+				"mcprep.entity_path_reset", icon=LOAD_FACTORY,
 				text="Reset entity path")
 		elif not os.path.isfile(bpy.path.abspath(context.scene.entity_path)):
 			box = col.box()
@@ -1172,7 +1175,8 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 			b_row.label(text="Entity file not found")
 			b_row = box.row()
 			b_row.scale_y = 2
-			b_row.operator("mcprep.entity_path_reset", icon=LOAD_FACTORY,
+			b_row.operator(
+				"mcprep.entity_path_reset", icon=LOAD_FACTORY,
 				text="Reset entity path")
 		else:
 			box = col.box()
@@ -1180,19 +1184,19 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 			b_row.label(text="No entities loaded")
 			b_row = box.row()
 			b_row.scale_y = 2
-			b_row.operator("mcprep.reload_spawners",
+			b_row.operator(
+				"mcprep.reload_spawners",
 				text="Reload assets", icon="ERROR")
 
 		col = layout.column(align=True)
 		row = col.row()
 		row.scale_y = 1.5
-		row.enabled = len(scn_props.entity_list)>0
+		row.enabled = len(scn_props.entity_list) > 0
 		if scn_props.entity_list:
 			name = scn_props.entity_list[scn_props.entity_list_index].name
-			block = scn_props.entity_list[scn_props.entity_list_index].block
-			p = row.operator("mcprep.entity_spawner", text="Spawn: "+name)
-			p.block = block
-			p.location = util.get_cuser_location(context)
+			entity = scn_props.entity_list[scn_props.entity_list_index].entity
+			p = row.operator("mcprep.entity_spawner", text="Spawn: " + name)
+			p.entity = entity
 		else:
 			row.operator("mcprep.entity_spawner", text="Spawn Entity")
 
@@ -1201,11 +1205,13 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 		row = col.row(align=True)
 
 		if not scn_props.show_settings_spawner:
-			col.prop(scn_props,"show_settings_spawner",
-					text="Advanced", icon="TRIA_RIGHT")
+			col.prop(
+				scn_props, "show_settings_spawner",
+				text="Advanced", icon="TRIA_RIGHT")
 		else:
-			col.prop(scn_props,"show_settings_spawner",
-					text="Advanced", icon="TRIA_DOWN")
+			col.prop(
+				scn_props, "show_settings_spawner",
+				text="Advanced", icon="TRIA_DOWN")
 			box = col.box()
 			b_row = box.row()
 			b_col = b_row.column(align=False)
@@ -1220,6 +1226,69 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 			b_row = box.row()
 			b_col = b_row.column(align=True)
 			b_col.operator("mcprep.reload_entities")
+
+	def block_spawner(self, context):
+		"""Code for drawing the block spawner"""
+		scn_props = context.scene.mcprep_props
+
+		layout = self.layout
+		split = layout.split()
+		col = split.column(align=True)
+
+		if scn_props.item_list:
+			col.template_list(
+				"MCPREP_UL_block", "",
+				scn_props, "block_list",
+				scn_props, "block_list_index",
+				rows=4)
+			col = layout.column(align=True)
+			row = col.row(align=True)
+			row.scale_y = 1.5
+			name = scn_props.block_list[scn_props.block_list_index].name
+			row.operator("mcprep.spawn_block", text="Place: " + name)
+			row = col.row(align=True)
+			row.operator("mcprep.spawn_block_file")
+		else:
+			box = col.box()
+			b_row = box.row()
+			b_row.label(text="No blocks loaded")
+			b_row = box.row()
+			b_row.scale_y = 2
+			b_row.operator(
+				"mcprep.reload_spawners",
+				text="Reload assets", icon="ERROR")
+
+			col = layout.column(align=True)
+			col.enabled = False
+			row = col.row(align=True)
+			row.scale_y = 1.5
+			row.operator("mcprep.spawn_block", text="Place block")
+			row = col.row(align=True)
+			row.operator("mcprep.spawn_block_file")
+
+		split = layout.split()
+		col = split.column(align=True)
+		row = col.row(align=True)
+
+		if not scn_props.show_settings_spawner:
+			col.prop(
+				scn_props, "show_settings_spawner",
+				text="Advanced", icon="TRIA_RIGHT")
+		else:
+			col.prop(
+				scn_props, "show_settings_spawner",
+				text="Advanced", icon="TRIA_DOWN")
+			box = col.box()
+			b_row = box.row()
+			b_col = b_row.column(align=False)
+			b_col.label(text="Resource pack")
+			subrow = b_col.row(align=True)
+			subrow.prop(context.scene, "mcprep_texturepack_path", text="")
+			subrow.operator(
+				"mcprep.reset_texture_path", icon=LOAD_FACTORY, text="")
+			b_row = box.row()
+			b_col = b_row.column(align=True)
+			b_col.operator("mcprep.reload_blocks")
 
 
 class MCPREP_PT_materials(bpy.types.Panel):
@@ -1377,7 +1446,9 @@ class McprepProps(bpy.types.PropertyGroup):
 		items=[
 			('mob', 'Mob', 'Show mob spawner'),
 			('meshswap', 'MeshSwap', 'Show MeshSwap spawner'),
-			('item', 'Items', 'Show item spawner')]
+			('item', 'Item', 'Show item spawner'),
+			('entity', 'Entity', 'Show entity spawner'),
+			('block', 'Block', 'Show block spawner')]
 	)
 
 	# spawn lists
