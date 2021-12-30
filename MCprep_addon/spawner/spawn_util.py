@@ -623,7 +623,7 @@ class ListItemAssets(bpy.types.PropertyGroup):
 
 class ListModelAssets(bpy.types.PropertyGroup):
 	"""For UI drawing of mc model assets and holding data"""
-	path = bpy.props.StringProperty(subtype="FILE_PATH")
+	filepath = bpy.props.StringProperty(subtype="FILE_PATH")
 	description = bpy.props.StringProperty()
 	# index = bpy.props.IntProperty(min=0, default=0)  # for icon drawing
 

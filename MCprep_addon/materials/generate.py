@@ -32,6 +32,7 @@ def update_mcprep_texturepack_path(self, context):
 	"""Triggered if the scene-level resource pack path is updated."""
 	bpy.ops.mcprep.reload_items()
 	bpy.ops.mcprep.reload_materials()
+	bpy.ops.mcprep.reload_models()
 	conf.material_sync_cache = None
 
 

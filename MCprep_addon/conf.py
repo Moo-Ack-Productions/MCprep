@@ -180,9 +180,8 @@ def log(statement, vv_only=False):
 	"""General purpose simple logging function."""
 	global v
 	global vv
-	if vv_only:
-		if vv:
-			print(statement)
+	if v and vv_only and vv:
+		print(statement)
 	elif v:
 		print(statement)
 

@@ -164,13 +164,17 @@ class MCPREP_MT_model_spawn(bpy.types.Menu):
 
 	def draw(self, context):
 		layout = self.layout
+		if not util.bv28():
+			layout.label(text="Requires blender 2.8 or newer")
+			return
 		if not context.scene.mcprep_props.model_list:
 			layout.label(text="No models found!")
 		for model in context.scene.mcprep_props.model_list:
 			opr = layout.operator(
 				mcmodel.MCPREP_OT_spawn_minecraft_model.bl_idname,
 				text=model.name)
-			opr.filepath = model.path
+			opr.filepath = model.filepath
+			opr.location = util.get_cuser_location(context)
 
 
 class MCPREP_MT_3dview_add(bpy.types.Menu):
@@ -1282,6 +1286,9 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 
 		layout = self.layout
 		layout.label(text="Generate blocks/models from .json files")
+		if not util.bv28():
+			layout.label(text="Requires blender 2.8 or newer")
+			return
 		split = layout.split()
 		col = split.column(align=True)
 
@@ -1291,12 +1298,14 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 				scn_props, "model_list",
 				scn_props, "model_list_index",
 				rows=4)
+
 			col = layout.column(align=True)
 			row = col.row(align=True)
 			row.scale_y = 1.5
-			name = scn_props.model_list[scn_props.model_list_index].name
-			ops = row.operator("mcprep.spawn_model", text="Place: " + name)
+			model = scn_props.model_list[scn_props.model_list_index]
+			ops = row.operator("mcprep.spawn_model", text="Place: " + model.name)
 			ops.location = util.get_cuser_location(context)
+			ops.filepath = model.filepath
 			if addon_prefs.MCprep_exporter_type == "Mineways":
 				ops.snapping = "offset"
 			elif addon_prefs.MCprep_exporter_type == "jmc2obj":

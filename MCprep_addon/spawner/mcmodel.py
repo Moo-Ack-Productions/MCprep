@@ -201,10 +201,10 @@ def read_model(context, model_filepath):
 			for img in current_textures:
 				textures[img] = current_textures[img]
 
-	conf.log("\nfile:" + str(model_filepath))
-	conf.log("parent:" + str(parent))
-	conf.log("elements:" + str(elements))
-	conf.log("textures:" + str(textures))
+	conf.log("\nfile:" + str(model_filepath), vv_only=True)
+	# conf.log("parent:" + str(parent))
+	# conf.log("elements:" + str(elements))
+	# conf.log("textures:" + str(textures))
 
 	return elements, textures
 
@@ -354,24 +354,22 @@ def update_model_list(context):
 	context.scene.mcprep_props.model_list.clear()
 	for model in sorted_models:
 		name = os.path.splitext(os.path.basename(model))[0]
+
+		# Filter out models that can't spawn. Typically those that reference
+		# #fire or the likes in the file.
+		if "template" in name:
+			continue
 		item = context.scene.mcprep_props.model_list.add()
-		item.path = model
+		item.filepath = model
 		item.name = name
 		item.description = "Spawn a {} model from active resource pack".format(
 			name)
 
 
-class ListModels(bpy.types.PropertyGroup):
-	"""For UI drawing of item assets and holding data"""
-	description = bpy.props.StringProperty()
-	path = bpy.props.StringProperty(subtype='FILE_PATH')
-	# index = bpy.props.IntProperty(min=0, default=0)  # for icon drawing
-
-
 def draw_import_mcmodel(self, context):
 	"""Import bar layout definition."""
 	layout = self.layout
-	layout.operator("mcprep.import_mcmodel", text="Minecraft Model (.json)")
+	layout.operator("mcprep.import_model_file", text="Minecraft Model (.json)")
 
 
 class ModelSpawnBase():
@@ -392,7 +390,7 @@ class ModelSpawnBase():
 
 	@classmethod
 	def poll(cls, context):
-		return context.mode == 'OBJECT'
+		return context.mode == 'OBJECT' and util.bv28()
 
 	def place_model(self, obj):
 		if self.snapping == "center":
@@ -421,24 +419,26 @@ class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 
 	filepath = bpy.props.StringProperty(
 		default="",
+		subtype="FILE_PATH",
 		options={'HIDDEN', 'SKIP_SAVE'})
 
 	track_function = "model"
 	track_param = "list"
 	@tracking.report_error
 	def execute(self, context):
-		scn_props = context.scene.mcprep_props
-		model = scn_props.model_list[scn_props.model_list_index]
-
-		filepath = model.path
-		obj = add_model(os.path.normpath(filepath), model.name)
+		name = os.path.basename(os.path.splitext(self.filepath)[0])
+		if not self.filepath:
+			self.report({"ERROR"}, "Filepath not found")
+			return {'CANCELLED'}
+		obj = add_model(os.path.normpath(self.filepath), name)
 		self.place_model(obj)
 		self.post_spawn(context, obj)
 		return {'FINISHED'}
 
 
-class MCPREP_OT_import_minecraft_model_file(bpy.types.Operator, ModelSpawnBase):
-	"""Import in an MC model from a json file."""
+class MCPREP_OT_import_minecraft_model_file(
+	bpy.types.Operator, ImportHelper, ModelSpawnBase):
+	"""Import an MC model from a json file."""
 	bl_idname = "mcprep.import_model_file"
 	bl_label = "Import model (.json)"
 	bl_options = {'REGISTER', 'UNDO'}
@@ -455,6 +455,9 @@ class MCPREP_OT_import_minecraft_model_file(bpy.types.Operator, ModelSpawnBase):
 	@tracking.report_error
 	def execute(self, context):
 		filename = os.path.splitext(os.path.basename(self.filepath))[0]
+		if not self.filepath:
+			self.report({"ERROR"}, "Filepath not found")
+			return {'CANCELLED'}
 		obj = add_model(os.path.normpath(self.filepath), filename)
 		self.place_model(obj)
 		self.post_spawn(context, obj)
@@ -485,11 +488,12 @@ def register():
 		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 
-	bpy.types.TOPBAR_MT_file_import.append(draw_import_mcmodel)
+	if util.bv28():
+		bpy.types.TOPBAR_MT_file_import.append(draw_import_mcmodel)
 
 
 def unregister():
-	bpy.types.TOPBAR_MT_file_import.remove(draw_import_mcmodel)
-
+	if util.bv28():
+		bpy.types.TOPBAR_MT_file_import.remove(draw_import_mcmodel)
 	for cls in reversed(classes):
 		bpy.utils.unregister_class(cls)

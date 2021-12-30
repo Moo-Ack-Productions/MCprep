@@ -70,6 +70,8 @@ class mcprep_testing():
 			self.find_missing_images_cycles,
 			self.qa_meshswap_file,
 			self.item_spawner,
+			self.entity_spawner,
+			self.model_spawner,
 			self.sync_materials,
 			self.sync_materials_link,
 			self.load_material,
@@ -210,7 +212,7 @@ class mcprep_testing():
 		# with redirect_stdout(stdout):
 		bpy.ops.wm.read_homefile(app_template="")
 		for obj in bpy.data.objects:
-			bpy.data.objects.remove(obj) # wait, that's illegal?
+			bpy.data.objects.remove(obj)
 		for mat in bpy.data.materials:
 			bpy.data.materials.remove(mat)
 			# for txt in bpy.data.texts:
@@ -1251,7 +1253,7 @@ class mcprep_testing():
 
 		if post_objs == pre_objs:
 			return "No items spawned"
-		elif post_objs > pre_objs+1:
+		elif post_objs > pre_objs + 1:
 			return "More than one item spawned"
 
 		# test core useage on a couple of out of the box textures
@@ -1260,12 +1262,67 @@ class mcprep_testing():
 		# bpy.ops.mcprep.spawn_item_file(filepath=)
 
 		# test with different thicknesses
-
 		# test after changing resource pack
-
 		# test that with an image of more than 1k pixels, it's truncated as expected
-
 		# test with different
+
+	def entity_spawner(self):
+		"""Test entity spawning and reloading"""
+		self._clear_scene()
+		scn_props = bpy.context.scene.mcprep_props
+
+		pre_count = len(scn_props.entity_list)
+		bpy.ops.mcprep.reload_entities()
+		post_count = len(scn_props.entity_list)
+
+		if pre_count != 0:
+			return "Should have opened new file with unloaded assets?"
+		elif post_count == 0:
+			return "No entities loaded"
+		elif post_count < 5:
+			return "Too few entities loaded ({}), missing texturepack?".format(
+				post_count - pre_count)
+
+		# spawn with whatever default index
+		pre_objs = len(bpy.data.objects)
+		bpy.ops.mcprep.entity_spawner()
+		post_objs = len(bpy.data.objects)
+
+		if post_objs == pre_objs:
+			return "No entity spawned"
+
+		# Test collection/group added
+		# Test loading from file.
+
+	def model_spawner(self):
+		"""Test model spawning and reloading"""
+		self._clear_scene()
+		scn_props = bpy.context.scene.mcprep_props
+
+		pre_count = len(scn_props.model_list)
+		bpy.ops.mcprep.reload_models()
+		post_count = len(scn_props.model_list)
+
+		if pre_count != 0:
+			return "Should have opened new file with unloaded assets?"
+		elif post_count == 0:
+			return "No models loaded"
+		elif post_count < 50:
+			return "Too few models loaded, missing texturepack?"
+
+		# spawn with whatever default index
+		pre_objs = len(bpy.data.objects)
+		bpy.ops.mcprep.spawn_model(
+			filepath=scn_props.model_list[scn_props.model_list_index].filepath)
+		post_objs = len(bpy.data.objects)
+
+		if post_objs == pre_objs:
+			return "No models spawned"
+		elif post_objs > pre_objs + 1:
+			return "More than one model spawned"
+
+		# Test collection/group added
+		# Test loading from file.
 
 	def world_tools(self):
 		"""Test adding skies, prepping the world, etc"""
