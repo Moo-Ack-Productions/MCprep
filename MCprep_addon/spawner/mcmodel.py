@@ -321,6 +321,7 @@ def update_model_list(context):
 	like "block", which resource packs often don't define themselves, is
 	available.
 	"""
+	scn_props = context.scene.mcprep_props
 	sorted_models = []  # Struc of model, name, description
 	addon_prefs = util.get_user_preferences()
 
@@ -332,14 +333,26 @@ def update_model_list(context):
 	base_pack = os.path.join(
 		base_pack, "assets", "minecraft", "models", "block")
 
+	if not os.path.isdir(active_pack):
+		scn_props.model_list.clear()
+		scn_props.model_list_index = 0
+		conf.log("No models found for active path " + active_pack)
+		return
+	base_has_models = os.path.isdir(base_pack)
+
 	active_models = [
 		model for model in os.listdir(active_pack)
 		if os.path.isfile(os.path.join(active_pack, model))
 		and model.lower().endswith(".json")]
-	base_models = [
-		model for model in os.listdir(active_pack)
-		if os.path.isfile(os.path.join(active_pack, model))
-		and model.lower().endswith(".json")]
+
+	if base_has_models:
+		base_models = [
+			model for model in os.listdir(active_pack)
+			if os.path.isfile(os.path.join(active_pack, model))
+			and model.lower().endswith(".json")]
+	else:
+		conf.log("Base resource pack has no models folder: " + base_pack)
+		base_models = []
 
 	sorted_models = [
 		os.path.join(active_pack, model) for model in active_models]
@@ -351,7 +364,7 @@ def update_model_list(context):
 	sorted_models = sorted(sorted_models)
 
 	# now re-populate the UI list
-	context.scene.mcprep_props.model_list.clear()
+	scn_props.model_list.clear()
 	for model in sorted_models:
 		name = os.path.splitext(os.path.basename(model))[0]
 
@@ -359,11 +372,14 @@ def update_model_list(context):
 		# #fire or the likes in the file.
 		if "template" in name:
 			continue
-		item = context.scene.mcprep_props.model_list.add()
+		item = scn_props.model_list.add()
 		item.filepath = model
 		item.name = name
 		item.description = "Spawn a {} model from active resource pack".format(
 			name)
+
+	if scn_props.model_list_index >= len(scn_props.model_list):
+		scn_props.model_list_index = len(scn_props.model_list) - 1
 
 
 def draw_import_mcmodel(self, context):

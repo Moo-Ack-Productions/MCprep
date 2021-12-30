@@ -55,15 +55,28 @@ def get_mc_canonical_name(name):
 	if ".emit" in general_name and general_name != ".emit":
 		general_name = general_name.replace(".emit", "")
 
-	if ("blocks" not in conf.json_data
-			or "block_mapping_mc" not in conf.json_data["blocks"]
-			or "block_mapping_jmc" not in conf.json_data["blocks"]
-			or "block_mapping_mineways" not in conf.json_data["blocks"]):
+	no_missing = "blocks" in conf.json_data
+	no_missing &= "block_mapping_mc" in conf.json_data["blocks"]
+	no_missing &= "block_mapping_jmc" in conf.json_data["blocks"]
+	no_missing &= "block_mapping_mineways" in conf.json_data["blocks"]
+
+	if no_missing is False:
 		conf.log("Missing key values in json")
 		return general_name, None
+
+	# The below workaround is to account for the jmc2obj v113+ which changes
+	# how mappings and assignments work.
+	if general_name.startswith("minecraft_block-"):
+		# minecraft_block-name maps to textures/block/name.png,
+		# other options over block are: entity, models, etc.
+		jmc_prefix = True
+		general_name = name[len("minecraft_block-"):]
+	else:
+		jmc_prefix = False
+
 	if general_name in conf.json_data["blocks"]["block_mapping_mc"]:
 		canon = conf.json_data["blocks"]["block_mapping_mc"][general_name]
-		form = "mc"
+		form = "mc" if not jmc_prefix else "jmc2obj"
 	elif general_name in conf.json_data["blocks"]["block_mapping_jmc"]:
 		canon = conf.json_data["blocks"]["block_mapping_jmc"][general_name]
 		form = "jmc2obj"
@@ -71,13 +84,15 @@ def get_mc_canonical_name(name):
 		canon = conf.json_data["blocks"]["block_mapping_mineways"][general_name]
 		form = "mineways"
 	elif general_name.lower() in conf.json_data["blocks"]["block_mapping_jmc"]:
-		canon = conf.json_data["blocks"]["block_mapping_jmc"][general_name.lower()]
+		canon = conf.json_data["blocks"]["block_mapping_jmc"][
+			general_name.lower()]
 		form = "jmc2obj"
 	elif general_name.lower() in conf.json_data["blocks"]["block_mapping_mineways"]:
-		canon = conf.json_data["blocks"]["block_mapping_mineways"][general_name.lower()]
+		canon = conf.json_data["blocks"]["block_mapping_mineways"][
+			general_name.lower()]
 		form = "mineways"
 	else:
-		conf.log("Canonical name not matched: " + general_name, True)
+		conf.log("Canonical name not matched: " + general_name, vv_only=True)
 		canon = general_name
 		form = None
 
@@ -103,38 +118,43 @@ def find_from_texturepack(blockname, resource_folder=None):
 	if not os.path.isdir(resource_folder):
 		conf.log("Error, resource folder does not exist")
 		return
-	elif os.path.isdir(os.path.join(resource_folder,"textures")):
-		resource_folder = os.path.join(resource_folder,"textures")
-	elif os.path.isdir(os.path.join(resource_folder,"minecraft","textures")):
-		resource_folder = os.path.join(resource_folder,"minecraft","textures")
-	elif os.path.isdir(os.path.join(resource_folder,"assets","minecraft","textures")):
-		resource_folder = os.path.join(resource_folder,"assets","minecraft","textures")
 
-	# if conf.vv:print("\tFinal resource folder/subfolder checking:",resource_folder)
+	# Check multiple paths, picking the first match (order is important),
+	# goal of picking out the /textures folder.
+	check_dirs = [
+		os.path.join(resource_folder, "textures"),
+		os.path.join(resource_folder, "minecraft", "textures"),
+		os.path.join(resource_folder, "assets", "minecraft", "textures")]
+	for path in check_dirs:
+		if os.path.isdir(path):
+			resource_folder = path
+			break
 
-	search_paths = [resource_folder,
-					os.path.join(resource_folder,"blocks"),
-					os.path.join(resource_folder,"block"),
-					os.path.join(resource_folder,"items"),
-					os.path.join(resource_folder,"item"),
-					os.path.join(resource_folder,"entity"),
-					os.path.join(resource_folder,"models"),
-					os.path.join(resource_folder,"model"),
-					]
+	search_paths = [
+		resource_folder,
+		# Both singular and plural shown below as it has varied historically.
+		os.path.join(resource_folder, "blocks"),
+		os.path.join(resource_folder, "block"),
+		os.path.join(resource_folder, "items"),
+		os.path.join(resource_folder, "item"),
+		os.path.join(resource_folder, "entity"),
+		os.path.join(resource_folder, "models"),
+		os.path.join(resource_folder, "model"),
+	]
 	res = None
 
 	# first see if subpath included is found, prioritize use of that
-	extensions = [".png",".jpg",".jpeg"]
+	extensions = [".png", ".jpg", ".jpeg"]
 	if "/" in blockname:
 		newpath = blockname.replace("/", os.path.sep)
 		for ext in extensions:
-			if os.path.isfile(os.path.join(resource_folder,newpath+ext)):
-				res = os.path.join(resource_folder,newpath+ext)
+			if os.path.isfile(os.path.join(resource_folder, newpath + ext)):
+				res = os.path.join(resource_folder, newpath + ext)
 				return res
-		newpath = os.path.basename(blockname) # case where goes into other subpaths
+		newpath = os.path.basename(blockname)  # case where goes into other subpaths
 		for ext in extensions:
-			if os.path.isfile(os.path.join(resource_folder,newpath+ext)):
-				res = os.path.join(resource_folder,newpath+ext)
+			if os.path.isfile(os.path.join(resource_folder, newpath + ext)):
+				res = os.path.join(resource_folder, newpath + ext)
 				return res
 
 	# fallback (more common case), wide-search for
@@ -142,15 +162,15 @@ def find_from_texturepack(blockname, resource_folder=None):
 		if not os.path.isdir(path):
 			continue
 		for ext in extensions:
-			check_path = os.path.join(path, blockname+ext)
+			check_path = os.path.join(path, blockname + ext)
 			if os.path.isfile(check_path):
-				res = os.path.join(path, blockname+ext)
+				res = os.path.join(path, blockname + ext)
 				return res
 	# Mineways fallback
 	for suffix in ["-Alpha", "-RGB", "-RGBA"]:
 		if blockname.endswith(suffix):
-			res = os.path.join(resource_folder,"mineways_assets",
-								"mineways"+suffix+".png")
+			res = os.path.join(
+				resource_folder, "mineways_assets", "mineways" + suffix + ".png")
 			if os.path.isfile(res):
 				return res
 
@@ -172,20 +192,18 @@ def detect_form(materials):
 		name = util.nameGeneralize(mat.name)
 		_, form = get_mc_canonical_name(name)
 		if form == "jmc2obj":
-			jmc2obj+=1
+			jmc2obj += 1
 		elif form == "mineways":
-			mineways+=1
+			mineways += 1
 		else:
-			mc+=1
-
-	only_mineways = False
+			mc += 1
 
 	# more logic, e.g. count
-	if mineways==0 and jmc2obj==0:
+	if mineways == 0 and jmc2obj == 0:
 		res = None  # unknown
-	elif mineways>0 and jmc2obj==0:
+	elif mineways > 0 and jmc2obj == 0:
 		res = "mineways"
-	elif jmc2obj>0 and mineways==0:
+	elif jmc2obj > 0 and mineways == 0:
 		res = "jmc2obj"
 	elif jmc2obj < mineways:
 		res = "mineways"
@@ -201,13 +219,14 @@ def checklist(matName, listName):
 	"""Helper to expand single wildcard within generalized material names"""
 	if not conf.json_data:
 		conf.log("No json_data for checklist to call from!")
-	if not "blocks" in conf.json_data or not listName in conf.json_data["blocks"]:
-		conf.log("conf.json_data is missing blocks or listName "+str(listName))
+	if "blocks" not in conf.json_data or listName not in conf.json_data["blocks"]:
+		conf.log(
+			"conf.json_data is missing blocks or listName " + str(listName))
 		return False
 	if matName in conf.json_data["blocks"][listName]:
 		return True
 	for name in conf.json_data["blocks"][listName]:
-		if not '*' in name:
+		if '*' not in name:
 			continue
 		x = name.split('*')
 		if x[0] != '' and x[0] in matName:

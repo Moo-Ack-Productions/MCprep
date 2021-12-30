@@ -719,11 +719,6 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			if not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
 				b_col.label(text="MeshSwap file not found", icon="ERROR")
 
-			b_col.label(text="Entity source:")
-			subrow = b_col.row(align=True)
-			subrow.prop(context.scene, "entity_path", text="")
-			subrow.operator("mcprep.entity_path_reset", icon=LOAD_FACTORY, text="")
-
 		layout = self.layout  # clear out the box formatting
 		split = layout.split()
 		row = split.row(align=True)

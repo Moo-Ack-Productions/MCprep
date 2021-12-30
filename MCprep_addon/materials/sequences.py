@@ -16,16 +16,13 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-"""
-Code relating to the conversion and generation, and to limited degree,
-assigment of textures which are animated.
-"""
 
-import bpy
 import errno
 import json
 import os
 import re
+
+import bpy
 
 from .. import conf
 from . import generate
@@ -39,7 +36,8 @@ from . import uv_tools
 # -----------------------------------------------------------------------------
 
 
-def animate_single_material(mat, engine, export_location='original', clear_cache=False):
+def animate_single_material(
+	mat, engine, export_location='original', clear_cache=False):
 	"""Animates texture for single material, including all passes.
 
 	Args:
@@ -69,13 +67,13 @@ def animate_single_material(mat, engine, export_location='original', clear_cache
 			mat_gen, canon, form, image_path_canon), vv_only=True)
 		return affectable, False, None
 
-	if not os.path.isfile(image_path_canon+".mcmeta"):
-		conf.log(".mcmeta not found for "+mat_gen, vv_only=True)
+	if not os.path.isfile(image_path_canon + ".mcmeta"):
+		conf.log(".mcmeta not found for " + mat_gen, vv_only=True)
 		affectable = False
 		return affectable, False, None
 	affectable = True
 	mcmeta = {}
-	with open(image_path_canon+".mcmeta", "r") as mcf:
+	with open(image_path_canon + ".mcmeta", "r") as mcf:
 		mcmeta = json.load(mcf)
 	conf.log("MCmeta for {}: {}".format(diffuse_block, mcmeta))
 
@@ -87,8 +85,8 @@ def animate_single_material(mat, engine, export_location='original', clear_cache
 	if not source_path:
 		source_path = image_path_canon
 		conf.log("Fallback to using image canon path instead of source path")
-	tile_path_dict, err = generate_material_sequence(source_path, image_path_canon,
-		form, export_location, clear_cache)
+	tile_path_dict, err = generate_material_sequence(
+		source_path, image_path_canon, form, export_location, clear_cache)
 	if err:
 		conf.log("Error occured during sequence generation:")
 		conf.log(err)
@@ -119,21 +117,22 @@ def animate_single_material(mat, engine, export_location='original', clear_cache
 			affected_materials += 1
 
 	generate.set_saturation_material(mat)
-	return affectable, affected_materials>0, None
+	return affectable, affected_materials > 0, None
 
 
 def is_image_tiled(image_block):
 	"""Checks whether an image block tiled."""
-	if not image_block or image_block.size[0]==0:
+	if not image_block or image_block.size[0] == 0:
 		return False
-	tiles = image_block.size[1]/image_block.size[0]
+	tiles = image_block.size[1] / image_block.size[0]
 	if int(tiles) != tiles or not tiles > 1:
 		return False
 	else:
 		return True
 
 
-def generate_material_sequence(source_path, image_path, form, export_location, clear_cache):
+def generate_material_sequence(
+	source_path, image_path, form, export_location, clear_cache):
 	"""Performs frame by frame export of sequences to location based on input.
 
 	Returns Dictionary of the image paths to the first tile of each
@@ -199,8 +198,9 @@ def generate_material_sequence(source_path, image_path, form, export_location, c
 	else:
 		conf.log("DEBUG - other form of animated texture detected")
 
-	perm_denied = "Permission denied, could not make folder - try " + \
-		"running blender as admin"
+	perm_denied = (
+		"Permission denied, could not make folder - "
+		"try running blender as admin")
 
 	for img_pass in img_pass_dict:
 		passfile = img_pass_dict[img_pass]
@@ -213,29 +213,31 @@ def generate_material_sequence(source_path, image_path, form, export_location, c
 			seq_path = os.path.join(os.path.dirname(passfile), pass_name)
 		else:
 			seq_path = os.path.join(seq_path_base, pass_name)
-		conf.log("Using sequence directory: "+seq_path)
+		conf.log("Using sequence directory: " + seq_path)
 
 		try:  # check parent folder exists/create if needed
 			os.mkdir(os.path.dirname(seq_path))
 		except OSError as exc:
+			print(exc)
 			if exc.errno == errno.EACCES:
 				return {}, perm_denied
-			elif exc.errno != errno.EEXIST: # ok if error is that it exists
-				raise Exception("Failed to make director, missing path: "+seq_path)
+			elif exc.errno != errno.EEXIST:  # ok if error is that it exists
+				raise Exception("Failed to make director, missing path: " + seq_path)
 		try:  # check folder exists/create if needed
 			os.mkdir(seq_path)
 		except OSError as exc:
 			if exc.errno == errno.EACCES:
 				return {}, perm_denied
-			elif exc.errno != errno.EEXIST: # ok if error is that it exists
-				raise Exception("Path does not exist: "+seq_path)
+			elif exc.errno != errno.EEXIST:  # ok if error is that it exists
+				raise Exception("Path does not exist: " + seq_path)
 
 		# overwrite the files found if not cached
 		if not os.path.isdir(seq_path):
-			raise Exception("Path does not exist: "+seq_path)
-		cached = [tile for tile in os.listdir(seq_path)
-				if os.path.isfile(os.path.join(seq_path, tile))
-				and tile.startswith(pass_name)]
+			raise Exception("Path does not exist: " + seq_path)
+		cached = [
+			tile for tile in os.listdir(seq_path)
+			if os.path.isfile(os.path.join(seq_path, tile))
+			and tile.startswith(pass_name)]
 		if cached:
 			conf.log("Cached detected")
 
@@ -250,7 +252,7 @@ def generate_material_sequence(source_path, image_path, form, export_location, c
 						raise Exception(exc)
 
 		# generate the sequences
-		params = [] # TODO: get from json file
+		params = []  # TODO: get from json file
 		if clear_cache or not cached:
 			first_tile = export_image_to_sequence(passfile, params, seq_path, form)
 		else:
@@ -276,14 +278,14 @@ def export_image_to_sequence(image_path, params, output_folder=None, form=None):
 
 	# load in the image_path to a temporary datablock, check here if tiled
 	image = bpy.data.images.load(image_path)
-	tiles = image.size[1]/image.size[0]
+	tiles = image.size[1] / image.size[0]
 	if int(tiles) != tiles:
-		conf.log("Not perfectly tiled image - "+image_path)
+		conf.log("Not perfectly tiled image - " + image_path)
 		image.user_clear()
-		if image.users==0:
+		if image.users == 0:
 			bpy.data.images.remove(image)
 		else:
-			conf.log("Couldn't remove image, shouldn't keep: "+image.name)
+			conf.log("Couldn't remove image, shouldn't keep: " + image.name)
 		return None  # any non-titled materials will exit here
 	else:
 		tiles = int(tiles)
@@ -306,43 +308,44 @@ def export_image_to_sequence(image_path, params, output_folder=None, form=None):
 	first_img = None
 	for i in range(tiles):
 		conf.log("Exporting sequence tile " + str(i))
-		tile_name = basename + "_" + str(i+1).zfill(4)
-		out_path = os.path.join(output_folder, tile_name + ext )
+		tile_name = basename + "_" + str(i + 1).zfill(4)
+		out_path = os.path.join(output_folder, tile_name + ext)
 		if not first_img:
 			first_img = out_path
 
-		revi = tiles-i-1 # to reverse index, based on MC tile order
+		revi = tiles - i - 1  # To reverse index, based on MC tile order.
 
 		# new image for copying pixels over to
 		if form != "minways":
-			img_tile = bpy.data.images.new(basename + "-seq-temp",
-				image.size[0], image.size[0], alpha=(image.channels==4))
+			img_tile = bpy.data.images.new(
+				basename + "-seq-temp",
+				image.size[0], image.size[0], alpha=(image.channels == 4))
 			img_tile.filepath = out_path
 
-			if len(img_tile.pixels)*tiles != len(image.pixels):
+			if len(img_tile.pixels) * tiles != len(image.pixels):
 				raise Exception("Mis-match of tile size and source sequence")
-			start = int(pxlen/tiles*revi)
-			end = int(pxlen/tiles*(revi+1))
+			start = int(pxlen / tiles * revi)
+			end = int(pxlen / tiles * (revi + 1))
 			img_tile.pixels = image.pixels[start:end]
 			img_tile.save()
 			# verify it now exists
 			if not os.path.isfile(out_path):
 				raise Exception("Did not successfully save tile frame from sequence")
 			img_tile.user_clear()
-			if img_tile.users==0:
+			if img_tile.users == 0:
 				bpy.data.images.remove(img_tile)
 			else:
-				conf.log("Couldn't remove tile, shouldn't keep: "+img_tile.name)
+				conf.log("Couldn't remove tile, shouldn't keep: " + img_tile.name)
 		else:
 			img_tile = None
 			raise Exception("No Animate Textures Mineways support yet")
 
 	conf.log("Finished exporting frame sequence: " + basename)
 	image.user_clear()
-	if image.users==0:
+	if image.users == 0:
 		bpy.data.images.remove(image)
 	else:
-		conf.log("Couldn't remove image block, shouldn't keep: "+image.name)
+		conf.log("Couldn't remove image block, shouldn't keep: " + image.name)
 
 	return bpy.path.abspath(first_img)
 
@@ -352,7 +355,7 @@ def get_sequence_int_index(base_name):
 	ind = 0
 	nums = '0123456789'
 	for i in range(len(base_name)):
-		if not base_name[-i-1] in nums:
+		if not base_name[-i - 1] in nums:
 			break
 		ind += 1
 	return ind
@@ -363,7 +366,7 @@ def set_sequence_to_texnode(node, image_path):
 
 	Note: this also works as-is where "node" is actually a texture block
 	"""
-	conf.log("Sequence exporting "+os.path.basename(image_path), vv_only=True)
+	conf.log("Sequence exporting " + os.path.basename(image_path), vv_only=True)
 	image_path = bpy.path.abspath(image_path)
 	base_dir = os.path.dirname(image_path)
 	first_img = os.path.splitext(os.path.basename(image_path))[0]
@@ -373,8 +376,7 @@ def set_sequence_to_texnode(node, image_path):
 	ind = get_sequence_int_index(first_img)
 	base_name = first_img[:-ind]
 	start_img = int(first_img[-ind:])
-	img_sets = [f for f in os.listdir(base_dir)
-				if f.startswith(base_name)]
+	img_sets = [f for f in os.listdir(base_dir) if f.startswith(base_name)]
 	img_count = len(img_sets)
 
 	image_data = bpy.data.images.load(image_path)
@@ -399,28 +401,29 @@ class MCPREP_OT_prep_animated_textures(bpy.types.Operator):
 	bl_label = "Animate textures"
 
 	clear_cache = bpy.props.BoolProperty(
-		default = False,
-		name = "Clear cache of previous animated sequence exports",
-		description = "Always regenerate tile files, even if tiles already exist"
-		)
+		default=False,
+		name="Clear cache of previous animated sequence exports",
+		description="Always regenerate tile files, even if tiles already exist"
+	)
 	export_location = bpy.props.EnumProperty(
-		name = "Save location",
-		items = [
+		name="Save location",
+		items=[
 			("original", "Next to current source image",
 				"Save animation tiles next to source image"),
 			("texturepack", "Inside MCprep texturepack",
 				"Save animation tiles to current MCprep texturepack"),
 			("local", "Next to this blend file",
 				"Save animation tiles next to current saved blend file")],
-		description = "Set where to export (or duplicate to) tile sequence images."
-		)
+		description="Set where to export (or duplicate to) tile sequence images."
+	)
 	skipUsage = bpy.props.BoolProperty(
-		default = False,
-		options = {'HIDDEN'}
-		)
+		default=False,
+		options={'HIDDEN'}
+	)
 
 	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self, width=400*util.ui_scale())
+		return context.window_manager.invoke_props_dialog(
+			self, width=400 * util.ui_scale())
 
 	def draw(self, context):
 		row = self.layout.row()
@@ -444,7 +447,8 @@ class MCPREP_OT_prep_animated_textures(bpy.types.Operator):
 	@tracking.report_error
 	def execute(self, context):
 		if not bpy.data.is_saved and self.export_location == "local":
-			self.report({'ERROR'}, "File must be saved first if saving sequence locally")
+			self.report(
+				{'ERROR'}, "File must be saved first if saving sequence locally")
 			return {'CANCELLED'}
 
 		objs = context.selected_objects
@@ -470,21 +474,25 @@ class MCPREP_OT_prep_animated_textures(bpy.types.Operator):
 
 		if self.break_err:
 			print(self.break_err)
-			self.report({"ERROR"},
-				"Halted: "+str(self.break_err))
+			self.report(
+				{"ERROR"},
+				"Halted: " + str(self.break_err))
 			return {'CANCELLED'}
 		elif self.affectable_materials == 0:
-			self.report({"ERROR"},
+			self.report(
+				{"ERROR"},
 				"No animate-able textures found on selected objects")
 			return {'CANCELLED'}
 		elif self.affected_materials == 0:
-			self.report({"ERROR"},
+			self.report(
+				{"ERROR"},
 				"Animated materials found, but none applied.")
 			return {'CANCELLED'}
 		elif invalid_uv:
-			self.report({'ERROR'},
+			self.report(
+				{'ERROR'},
 				("Detected scaled UV's (all in one texture), be sure to use "
-				"Mineway's 'Export Tiles for textures'"))
+					"Mineway's 'Export Tiles for textures'"))
 			conf.log("Detected scaled UV's, incompatible with animate textures")
 			return {'FINISHED'}
 		else:
@@ -508,7 +516,7 @@ class MCPREP_OT_prep_animated_textures(bpy.types.Operator):
 
 
 # -----------------------------------------------------------------------------
-#	Registration
+# Registration
 # -----------------------------------------------------------------------------
 
 
