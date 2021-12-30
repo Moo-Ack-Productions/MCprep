@@ -28,6 +28,7 @@ from .spawner import mobs
 from .spawner import meshswap
 from .spawner import spawn_util
 from .spawner import entities
+from .spawner import mcmodel
 from . import world_tools
 from . import addon_updater_ops
 from . import tracking
@@ -93,6 +94,8 @@ class MCPREP_MT_meshswap_place(bpy.types.Menu):
 	def draw(self, context):
 		layout = self.layout
 		meshswap_blocks = meshswap.getMeshswapList(context)
+		if not meshswap_blocks:
+			layout.label(text="No meshswap blocks found!")
 		for blockset in meshswap_blocks:
 			# do some kind of check for if no blocks found
 			icn = "BLANK1"
@@ -115,6 +118,8 @@ class MCPREP_MT_item_spawn(bpy.types.Menu):
 
 	def draw(self, context):
 		layout = self.layout
+		if not context.scene.mcprep_props.item_list:
+			layout.label(text="No items found!")
 		for item in context.scene.mcprep_props.item_list:
 			icn = "item-{}".format(item.index)
 			if conf.use_icons and icn in conf.preview_collections["items"]:
@@ -132,11 +137,13 @@ class MCPREP_MT_item_spawn(bpy.types.Menu):
 class MCPREP_MT_entity_spawn(bpy.types.Menu):
 	"""Menu for loaded entity spawners"""
 	bl_label = "Entity Spawner"
-	bl_idname = "MCPREP_MT_Entity_spawn"
+	bl_idname = "MCPREP_MT_entity_spawn"
 
 	def draw(self, context):
 		layout = self.layout
 		entity_list = entities.getEntityList(context)
+		if not entity_list:
+			layout.label(text="No entities found!")
 		for entity in entity_list:
 			# do some kind of check for if no entities found
 			icn = "BLANK1"
@@ -146,9 +153,24 @@ class MCPREP_MT_entity_spawn(bpy.types.Menu):
 			opr = layout.operator(
 				"mcprep.entity_spawner",
 				text=entity[1],
-				icon=icn
-			)
+				icon=icn)
 			opr.entity = entity[0]
+
+
+class MCPREP_MT_model_spawn(bpy.types.Menu):
+	"""Menu for loaded model spawners"""
+	bl_label = "Model Spawner"
+	bl_idname = "MCPREP_MT_model_spawn"
+
+	def draw(self, context):
+		layout = self.layout
+		if not context.scene.mcprep_props.model_list:
+			layout.label(text="No models found!")
+		for model in context.scene.mcprep_props.model_list:
+			opr = layout.operator(
+				mcmodel.MCPREP_OT_spawn_minecraft_model.bl_idname,
+				text=model.name)
+			opr.filepath = model.path
 
 
 class MCPREP_MT_3dview_add(bpy.types.Menu):
@@ -161,13 +183,17 @@ class MCPREP_MT_3dview_add(bpy.types.Menu):
 		props = context.scene.mcprep_props
 
 		if conf.preview_collections["main"] != "":
-			spawner_icon = conf.preview_collections["main"]["spawner_icon"]
-			grass_icon = conf.preview_collections["main"]["grass_icon"]
-			sword_icon = conf.preview_collections["main"]["sword_icon"]
+			spawner_icon = conf.preview_collections["main"].get("spawner_icon")
+			grass_icon = conf.preview_collections["main"].get("grass_icon")
+			sword_icon = conf.preview_collections["main"].get("sword_icon")
+			entity_icon = conf.preview_collections["main"].get("entity_icon")
+			model_icon = conf.preview_collections["main"].get("model_icon")
 		else:
 			spawner_icon = None
 			grass_icon = None
 			sword_icon = None
+			entity_icon = None
+			model_icon = None
 
 		all_loaded = props.mob_list and props.meshswap_list and props.item_list
 		if not conf.loaded_all_spawners and not all_loaded:
@@ -184,19 +210,31 @@ class MCPREP_MT_3dview_add(bpy.types.Menu):
 				icon_value=spawner_icon.icon_id)
 		else:
 			layout.menu(MCPREP_MT_mob_spawner.bl_idname)
+
 		if grass_icon is not None:
 			layout.menu(
 				MCPREP_MT_meshswap_place.bl_idname,
 				icon_value=grass_icon.icon_id)
 		else:
 			layout.menu(MCPREP_MT_meshswap_place.bl_idname)
+
 		if sword_icon is not None:
 			layout.menu(
 				MCPREP_MT_item_spawn.bl_idname, icon_value=sword_icon.icon_id)
-			layout.menu(
-				MCPREP_MT_entity_spawn.bl_idname, icon_value=grass_icon.icon_id)
 		else:
 			layout.menu(MCPREP_MT_item_spawn.bl_idname)
+
+		if entity_icon is not None:
+			layout.menu(
+				MCPREP_MT_entity_spawn.bl_idname, icon_value=entity_icon.icon_id)
+		else:
+			layout.menu(MCPREP_MT_entity_spawn.bl_idname)
+
+		if model_icon is not None:
+			layout.menu(
+				MCPREP_MT_model_spawn.bl_idname, icon_value=model_icon.icon_id)
+		else:
+			layout.menu(MCPREP_MT_model_spawn.bl_idname)
 
 
 def mineways_update(self, context):
@@ -890,9 +928,15 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 				return
 			self.item_spawner(context)
 		elif context.scene.mcprep_props.spawn_mode == "entity":
+			if not is_obj_mode:
+				self.draw_mode_warning(self.layout)
+				return
 			self.entity_spawner(context)
-		elif context.scene.mcprep_props.spawn_mode == "block":
-			self.block_spawner(context)
+		elif context.scene.mcprep_props.spawn_mode == "model":
+			if not is_obj_mode:
+				self.draw_mode_warning(self.layout)
+				return
+			self.model_spawner(context)
 		addon_updater_ops.check_for_update_background()
 
 	def draw_mode_warning(self, ui_element):
@@ -906,6 +950,7 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 		scn_props = context.scene.mcprep_props
 
 		layout = self.layout
+		layout.label(text="Import pre-rigged mobs & players")
 		split = layout.split()
 		col = split.column(align=True)
 
@@ -1002,6 +1047,7 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 		scn_props = context.scene.mcprep_props
 
 		layout = self.layout
+		layout.label(text="Import premade 'meshswap' objects/collections")
 		split = layout.split()
 		col = split.column(align=True)
 
@@ -1088,6 +1134,7 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 		scn_props = context.scene.mcprep_props
 
 		layout = self.layout
+		layout.label(text="Generate items from textures")
 		split = layout.split()
 		col = split.column(align=True)
 
@@ -1150,6 +1197,7 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 		scn_props = context.scene.mcprep_props
 
 		layout = self.layout
+		layout.label(text="Import pre-made and rigged entities")
 		split = layout.split()
 		col = split.column(align=True)
 
@@ -1227,31 +1275,36 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 			b_col = b_row.column(align=True)
 			b_col.operator("mcprep.reload_entities")
 
-	def block_spawner(self, context):
-		"""Code for drawing the block spawner"""
+	def model_spawner(self, context):
+		"""Code for drawing the model block spawner"""
 		scn_props = context.scene.mcprep_props
+		addon_prefs = util.get_user_preferences(context)
 
 		layout = self.layout
+		layout.label(text="Generate blocks/models from .json files")
 		split = layout.split()
 		col = split.column(align=True)
 
-		if scn_props.item_list:
+		if scn_props.model_list:
 			col.template_list(
-				"MCPREP_UL_block", "",
-				scn_props, "block_list",
-				scn_props, "block_list_index",
+				"MCPREP_UL_model", "",
+				scn_props, "model_list",
+				scn_props, "model_list_index",
 				rows=4)
 			col = layout.column(align=True)
 			row = col.row(align=True)
 			row.scale_y = 1.5
-			name = scn_props.block_list[scn_props.block_list_index].name
-			row.operator("mcprep.spawn_block", text="Place: " + name)
-			row = col.row(align=True)
-			row.operator("mcprep.spawn_block_file")
+			name = scn_props.model_list[scn_props.model_list_index].name
+			ops = row.operator("mcprep.spawn_model", text="Place: " + name)
+			ops.location = util.get_cuser_location(context)
+			if addon_prefs.MCprep_exporter_type == "Mineways":
+				ops.snapping = "offset"
+			elif addon_prefs.MCprep_exporter_type == "jmc2obj":
+				ops.snapping = "center"
 		else:
 			box = col.box()
 			b_row = box.row()
-			b_row.label(text="No blocks loaded")
+			b_row.label(text="No models loaded")
 			b_row = box.row()
 			b_row.scale_y = 2
 			b_row.operator(
@@ -1259,12 +1312,17 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 				text="Reload assets", icon="ERROR")
 
 			col = layout.column(align=True)
-			col.enabled = False
 			row = col.row(align=True)
+			row.enabled = False
 			row.scale_y = 1.5
-			row.operator("mcprep.spawn_block", text="Place block")
-			row = col.row(align=True)
-			row.operator("mcprep.spawn_block_file")
+			row.operator("mcprep.spawn_model")
+
+		ops = col.operator("mcprep.import_model_file")
+		ops.location = util.get_cuser_location(context)
+		if addon_prefs.MCprep_exporter_type == "Mineways":
+			ops.snapping = "center"
+		elif addon_prefs.MCprep_exporter_type == "jmc2obj":
+			ops.snapping = "offset"
 
 		split = layout.split()
 		col = split.column(align=True)
@@ -1288,7 +1346,7 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 				"mcprep.reset_texture_path", icon=LOAD_FACTORY, text="")
 			b_row = box.row()
 			b_col = b_row.column(align=True)
-			b_col.operator("mcprep.reload_blocks")
+			b_col.operator("mcprep.reload_models")
 
 
 class MCPREP_PT_materials(bpy.types.Panel):
@@ -1445,10 +1503,10 @@ class McprepProps(bpy.types.PropertyGroup):
 		description="Set mode for rig/object spawner",
 		items=[
 			('mob', 'Mob', 'Show mob spawner'),
-			('meshswap', 'MeshSwap', 'Show MeshSwap spawner'),
+			('model', 'Block', 'Show model (block) spawner'),
 			('item', 'Item', 'Show item spawner'),
 			('entity', 'Entity', 'Show entity spawner'),
-			('block', 'Block', 'Show block spawner')]
+			('meshswap', 'MeshSwap', 'Show MeshSwap spawner')]
 	)
 
 	# spawn lists
@@ -1466,6 +1524,8 @@ class McprepProps(bpy.types.PropertyGroup):
 	material_list_index = bpy.props.IntProperty(default=0)
 	entity_list = bpy.props.CollectionProperty(type=spawn_util.ListEntityAssets)
 	entity_list_index = bpy.props.IntProperty(default=0)
+	model_list = bpy.props.CollectionProperty(type=spawn_util.ListModelAssets)
+	model_list_index = bpy.props.IntProperty(default=0)
 
 
 # -----------------------------------------------------------------------------
@@ -1479,13 +1539,14 @@ classes = (
 	MCPREP_MT_mob_spawner,
 	MCPREP_MT_meshswap_place,
 	MCPREP_MT_item_spawn,
+	MCPREP_MT_entity_spawn,
+	MCPREP_MT_model_spawn,
 	MCPREP_MT_3dview_add,
 	MCPREP_PT_world_imports,
 	# MCPREP_PT_bridge,
 	MCPREP_PT_world_tools,
 	MCPREP_PT_skins,
 	MCPREP_PT_spawn,
-	MCPREP_MT_entity_spawn,
 	MCPREP_PT_materials,
 	MCPREP_PT_materials_subsettings,
 )

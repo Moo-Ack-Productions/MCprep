@@ -454,8 +454,8 @@ class MCPREP_OT_reload_spawners(bpy.types.Operator):
 		bpy.ops.mcprep.reload_meshswap()
 		bpy.ops.mcprep.reload_mobs()
 		bpy.ops.mcprep.reload_items()
-
 		bpy.ops.mcprep.reload_entities()
+		bpy.ops.mcprep.reload_models()
 
 		# to prevent re-drawing "load spawners!" if any one of the above
 		# loaded nothing for any reason.
@@ -519,6 +519,16 @@ class MCPREP_UL_meshswap(bpy.types.UIList):
 
 class MCPREP_UL_entity(bpy.types.UIList):
 	"""For entity asset listing UIList drawing"""
+	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
+		if self.layout_type in {'DEFAULT', 'COMPACT'}:
+			layout.label(text=set.name)
+		elif self.layout_type in {'GRID'}:
+			layout.alignment = 'CENTER'
+			layout.label(text="", icon='QUESTION')
+
+
+class MCPREP_UL_model(bpy.types.UIList):
+	"""For model asset listing UIList drawing"""
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
 			layout.label(text=set.name)
@@ -611,6 +621,13 @@ class ListItemAssets(bpy.types.PropertyGroup):
 	index = bpy.props.IntProperty(min=0, default=0)  # for icon drawing
 
 
+class ListModelAssets(bpy.types.PropertyGroup):
+	"""For UI drawing of mc model assets and holding data"""
+	path = bpy.props.StringProperty(subtype="FILE_PATH")
+	description = bpy.props.StringProperty()
+	# index = bpy.props.IntProperty(min=0, default=0)  # for icon drawing
+
+
 # -----------------------------------------------------------------------------
 # Registration
 # -----------------------------------------------------------------------------
@@ -622,10 +639,12 @@ classes = (
 	ListMeshswapAssets,
 	ListItemAssets,
 	ListEntityAssets,
+	ListModelAssets,
 	MCPREP_UL_material,
 	MCPREP_UL_mob,
 	MCPREP_UL_meshswap,
 	MCPREP_UL_entity,
+	MCPREP_UL_model,
 	MCPREP_UL_item,
 	MCPREP_OT_reload_spawners,
 	MCPREP_OT_spawn_path_reset,

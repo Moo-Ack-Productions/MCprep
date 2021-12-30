@@ -416,8 +416,11 @@ class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
 					except OSError as exc:
 						if exc.errno == errno.EACCES:
 							print("Permission denied, try running blender as admin")
+							print(dst)
+							print(exc)
 						elif exc.errno != errno.EEXIST:
 							print("Path does not exist: " + dst)
+							print(exc)
 				for icn in icon_files:
 					icn_base = os.path.basename(icn)
 					try:

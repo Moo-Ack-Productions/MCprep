@@ -88,9 +88,9 @@ else:
 	from .spawner import mobs
 
 if "entities" in locals():
-        importlib.reload(entities)
+	importlib.reload(entities)
 else:
-        from .spawner import entities
+	from .spawner import entities
 
 if "world_tools" in locals():
 	importlib.reload(world_tools)
@@ -150,13 +150,13 @@ module_list = (
 	spawn_util,
 	meshswap,
 	mobs,
-        entities,
+	entities,
+	mcmodel,
 	item,
 	world_tools,
 	# bridge,
 	mcprep_ui,
-	mcmodel,
-	)
+)
 
 
 def register(bl_info):

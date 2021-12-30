@@ -27,6 +27,12 @@ from bpy_extras.io_utils import ImportHelper
 
 from .. import conf
 from .. import util
+from .. import tracking
+
+
+# -----------------------------------------------------------------------------
+# Core MC model functions and implementation
+# -----------------------------------------------------------------------------
 
 
 def rotate_around(
@@ -149,6 +155,7 @@ def read_model(context, model_filepath):
 		obj_data = json.load(f)
 
 	resource_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
+	fallback_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
 
 	elements = None
 	textures = None
@@ -169,11 +176,18 @@ def read_model(context, model_filepath):
 				namespace = parent.split(":")[0]
 				parent_filepath = parent.split(":")[1]
 
+			# resource_folder
 			models_dir = os.path.join(
-				resource_folder, "assets", namespace, "models")
-			elements, textures = read_model(
-				context,
-				os.path.join(models_dir, parent_filepath + ".json"))
+				"assets", namespace, "models", parent_filepath + ".json")
+			active_path = os.path.join(resource_folder, models_dir)
+			base_path = os.path.join(fallback_folder, models_dir)
+
+			if os.path.isfile(active_path):
+				elements, textures = read_model(context, active_path)
+			elif os.path.isfile(base_path):
+				elements, textures = read_model(context, base_path)
+			else:
+				conf.log("Failed to find mcmodel file " + parent_filepath)
 
 	current_elements = obj_data.get("elements")
 	if current_elements is not None:
@@ -196,6 +210,7 @@ def read_model(context, model_filepath):
 
 
 def add_model(model_filepath, obj_name="MinecraftModel"):
+	"""Primary function for generating a model from json file."""
 	mesh = bpy.data.meshes.new(obj_name)  # add a new mesh
 	obj = bpy.data.objects.new(obj_name, mesh)  # add a new object using the mesh
 
@@ -209,6 +224,8 @@ def add_model(model_filepath, obj_name="MinecraftModel"):
 
 	mesh.uv_layers.new()
 	uv_layer = bm.loops.layers.uv.verify()
+
+	# Called recursively!
 	elements, textures = read_model(bpy.context, model_filepath)
 
 	materials = []
@@ -288,17 +305,142 @@ def add_model(model_filepath, obj_name="MinecraftModel"):
 	# make the bmesh the object's mesh
 	bm.to_mesh(mesh)
 	bm.free()
+	return obj
+
+
+# -----------------------------------------------------------------------------
+# UI and resource pack management.
+# -----------------------------------------------------------------------------
+
+
+def update_model_list(context):
+	"""Update the model list.
+
+	Prefer loading model names from the active resource pack, but fall back
+	to the default user preferences pack. This ensures that fallback names
+	like "block", which resource packs often don't define themselves, is
+	available.
+	"""
+	sorted_models = []  # Struc of model, name, description
+	addon_prefs = util.get_user_preferences()
+
+	active_pack = bpy.path.abspath(context.scene.mcprep_texturepack_path)
+	active_pack = os.path.join(
+		active_pack, "assets", "minecraft", "models", "block")
+
+	base_pack = bpy.path.abspath(addon_prefs.custom_texturepack_path)
+	base_pack = os.path.join(
+		base_pack, "assets", "minecraft", "models", "block")
+
+	active_models = [
+		model for model in os.listdir(active_pack)
+		if os.path.isfile(os.path.join(active_pack, model))
+		and model.lower().endswith(".json")]
+	base_models = [
+		model for model in os.listdir(active_pack)
+		if os.path.isfile(os.path.join(active_pack, model))
+		and model.lower().endswith(".json")]
+
+	sorted_models = [
+		os.path.join(active_pack, model) for model in active_models]
+	# Add the fallback models not defined by active pack.
+	sorted_models += [
+		os.path.join(base_pack, model) for model in base_models
+		if model not in active_models]
+
+	sorted_models = sorted(sorted_models)
+
+	# now re-populate the UI list
+	context.scene.mcprep_props.model_list.clear()
+	for model in sorted_models:
+		name = os.path.splitext(os.path.basename(model))[0]
+		item = context.scene.mcprep_props.model_list.add()
+		item.path = model
+		item.name = name
+		item.description = "Spawn a {} model from active resource pack".format(
+			name)
+
+
+class ListModels(bpy.types.PropertyGroup):
+	"""For UI drawing of item assets and holding data"""
+	description = bpy.props.StringProperty()
+	path = bpy.props.StringProperty(subtype='FILE_PATH')
+	# index = bpy.props.IntProperty(min=0, default=0)  # for icon drawing
 
 
 def draw_import_mcmodel(self, context):
+	"""Import bar layout definition."""
 	layout = self.layout
 	layout.operator("mcprep.import_mcmodel", text="Minecraft Model (.json)")
 
 
-class MCPREP_OT_import_minecraft_model(bpy.types.Operator, ImportHelper):
+class ModelSpawnBase():
+	"""Class to inheret reused MCprep item spawning settings and functions."""
+	location = bpy.props.FloatVectorProperty(
+		default=(0, 0, 0),
+		name="Location")
+	snapping = bpy.props.EnumProperty(
+		name="Snapping",
+		items=[
+			("none", "No snap", "Keep exact location"),
+			("center", "Snap center", "Snap to block center"),
+			("offset", "Snap offset", "Snap to block center with 0.5 offset")],
+		description="Automatically snap to whole block locations")
+	skipUsage = bpy.props.BoolProperty(
+		default=False,
+		options={'HIDDEN'})
+
+	@classmethod
+	def poll(cls, context):
+		return context.mode == 'OBJECT'
+
+	def place_model(self, obj):
+		if self.snapping == "center":
+			offset = 0
+			obj.location = [round(x + offset) - offset for x in self.location]
+			obj.location.z -= 0.5
+		elif self.snapping == "offset":
+			offset = 0.5
+			obj.location = [round(x + offset) - offset for x in self.location]
+			obj.location.z -= 0.5
+		else:
+			obj.location = self.location
+
+	def post_spawn(self, context, new_obj):
+		"""Do final consistent cleanup after model is spawned."""
+		for ob in util.get_objects_conext(context):
+			util.select_set(ob, False)
+		util.select_set(new_obj, True)
+
+
+class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 	"""Import in an MC model from a json file."""
-	bl_idname = "mcprep.import_mcmodel"
-	bl_label = "Import MC model"
+	bl_idname = "mcprep.spawn_model"
+	bl_label = "Place model"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	filepath = bpy.props.StringProperty(
+		default="",
+		options={'HIDDEN', 'SKIP_SAVE'})
+
+	track_function = "model"
+	track_param = "list"
+	@tracking.report_error
+	def execute(self, context):
+		scn_props = context.scene.mcprep_props
+		model = scn_props.model_list[scn_props.model_list_index]
+
+		filepath = model.path
+		obj = add_model(os.path.normpath(filepath), model.name)
+		self.place_model(obj)
+		self.post_spawn(context, obj)
+		return {'FINISHED'}
+
+
+class MCPREP_OT_import_minecraft_model_file(bpy.types.Operator, ModelSpawnBase):
+	"""Import in an MC model from a json file."""
+	bl_idname = "mcprep.import_model_file"
+	bl_label = "Import model (.json)"
 	bl_options = {'REGISTER', 'UNDO'}
 
 	filename_ext = ".json"
@@ -308,18 +450,37 @@ class MCPREP_OT_import_minecraft_model(bpy.types.Operator, ImportHelper):
 		maxlen=255  # Max internal buffer length, longer would be clamped.
 	)
 
+	track_function = "model"
+	track_param = "file"
+	@tracking.report_error
 	def execute(self, context):
 		filename = os.path.splitext(os.path.basename(self.filepath))[0]
-		add_model(os.path.normpath(self.filepath), filename)
+		obj = add_model(os.path.normpath(self.filepath), filename)
+		self.place_model(obj)
+		self.post_spawn(context, obj)
+		return {'FINISHED'}
+
+
+class MCPREP_OT_reload_models(bpy.types.Operator):
+	"""Reload model spawner, use after adding/removing/renaming files in the resource pack folder"""
+	bl_idname = "mcprep.reload_models"
+	bl_label = "Reload models"
+
+	@tracking.report_error
+	def execute(self, context):
+		update_model_list(context)
 		return {'FINISHED'}
 
 
 classes = (
-	MCPREP_OT_import_minecraft_model,
+	MCPREP_OT_spawn_minecraft_model,
+	MCPREP_OT_import_minecraft_model_file,
+	MCPREP_OT_reload_models,
 )
 
 
 def register():
+	util.make_annotations(ModelSpawnBase)  # Don't register, only annotate.
 	for cls in classes:
 		util.make_annotations(cls)
 		bpy.utils.register_class(cls)

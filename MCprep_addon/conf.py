@@ -159,6 +159,14 @@ def icons_init():
 			"sword_icon",
 			os.path.join(icons_dir, "sword_icon.png"),
 			'IMAGE')
+		preview_collections["main"].load(
+			"entity_icon",
+			os.path.join(icons_dir, "entity_icon.png"),
+			'IMAGE')
+		preview_collections["main"].load(
+			"model_icon",
+			os.path.join(icons_dir, "model_icon.png"),
+			'IMAGE')
 	except Exception as e:
 		log("Old verison of blender, no custom icons available")
 		log("\t"+str(e))

@@ -434,20 +434,6 @@ class MCPREP_OT_reload_meshswap(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class MCPREP_UL_meshswap_list(bpy.types.UIList):
-	"""For asset listing UIList drawing"""
-
-	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
-
-		if self.layout_type in {'DEFAULT', 'COMPACT'}:
-			col = layout.column()
-			col.prop(set, "name", text="", emboss=False)
-
-		elif self.layout_type in {'GRID'}:
-			layout.alignment = 'CENTER'
-			layout.label(text="", icon='QUESTION')
-
-
 class MCPREP_OT_meshswap(bpy.types.Operator):
 	"""Swap minecraft objects from world imports for custom 3D models in the according meshSwap blend file"""
 	bl_idname = "mcprep.meshswap"
@@ -1342,7 +1328,6 @@ classes = (
 	MCPREP_OT_meshswap_path_reset,
 	MCPREP_OT_meshswap_spawner,
 	MCPREP_OT_reload_meshswap,
-	MCPREP_UL_meshswap_list,
 	MCPREP_OT_meshswap,
 	MCPREP_OT_fix_mineways_scale,
 )

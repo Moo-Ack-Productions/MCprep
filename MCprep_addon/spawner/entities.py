@@ -250,20 +250,6 @@ class MCPREP_OT_reload_entites(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class MCPREP_UL_entity_list(bpy.types.UIList):
-	"""For asset listing UIList drawing"""
-
-	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
-
-		if self.layout_type in {'DEFAULT', 'COMPACT'}:
-			col = layout.column()
-			col.prop(set, "name", text="", emboss=False)
-
-		elif self.layout_type in {'GRID'}:
-			layout.alignment = 'CENTER'
-			layout.label(text="", icon='QUESTION')
-
-
 # -----------------------------------------------------------------------------
 #       Register functions
 # -----------------------------------------------------------------------------
@@ -273,7 +259,6 @@ classes = (
 	MCPREP_OT_entity_path_reset,
 	MCPREP_OT_entity_spawner,
 	MCPREP_OT_reload_entites,
-	MCPREP_UL_entity_list,
 )
 
 
