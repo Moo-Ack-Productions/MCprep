@@ -45,13 +45,14 @@ class mcprep_testing():
 	# {status}, func, prefunc caller (reference only)
 
 	def __init__(self):
-		self.suppress = True # hold stdout
-		self.test_status = {} # {func.__name__: {"check":-1, "res":-1,0,1}}
+		self.suppress = True  # hold stdout
+		self.test_status = {}  # {func.__name__: {"check":-1, "res":-1,0,1}}
 		self.test_cases = [
 			self.enable_mcprep,
 			self.prep_materials,
 			self.openfolder,
 			self.spawn_mob,
+			self.spawn_mob_linked,
 			self.change_skin,
 			self.import_world_split,
 			self.import_world_fail,
@@ -508,25 +509,24 @@ class mcprep_testing():
 		post_path = node.image.filepath
 		if not post_path:
 			os.remove(tmp_image)
-			return "No image loaded for "+mat.name
+			return "No image loaded for " + mat.name
 		elif not os.path.isfile(node.image.filepath):
-			return "File for loaded image does not exist: "+node.image.filepath
+			return "File for loaded image does not exist: " + node.image.filepath
 
 		# Example running with animateTextures too
 
 		# check on image that is packed or not, or packed but no data
 		os.remove(tmp_image)
 
-
 	def openfolder(self):
 		if bpy.app.background is True:
-			return "" # can't test this in background mode
+			return ""  # can't test this in background mode
 
 		folder = bpy.utils.script_path_user()
 		if not os.path.isdir(folder):
 			return "Sample folder doesn't exist, couldn't test"
 		res = bpy.ops.mcprep.openfolder(folder)
-		if res=={"FINISHED"}:
+		if res == {"FINISHED"}:
 			return ""
 		else:
 			return "Failed, returned cancelled"
@@ -534,7 +534,7 @@ class mcprep_testing():
 	def spawn_mob(self):
 		"""Spawn mobs, reload mobs, etc"""
 		self._clear_scene()
-		self._add_character() # run the utility as it's own sort of test
+		self._add_character()  # run the utility as it's own sort of test
 
 		self._clear_scene()
 		bpy.ops.mcprep.reload_mobs()
@@ -542,11 +542,14 @@ class mcprep_testing():
 		# sample don't specify mob, just load whatever is first
 		bpy.ops.mcprep.mob_spawner()
 
-		# spawn an alex
-
+		# spawn with linking
 		# try changing the folder
-
 		# try install mob and uninstall
+
+	def spawn_mob_linked(self):
+		self._clear_scene()
+		bpy.ops.mcprep.reload_mobs()
+		bpy.ops.mcprep.mob_spawner(toLink=True)
 
 	def change_skin(self):
 		"""Test scenarios for changing skin after adding a character."""
@@ -1387,11 +1390,11 @@ class mcprep_testing():
 		if pre_objs >= post_objs:
 			return "Nothing added"
 		# find the sun, ensure it's pointed straight down
+
+		self._clear_scene()
 		obj = get_time_object()
 		if obj:
 			return "Found MCprepHour controller, shouldn't be one (d)"
-
-		self._clear_scene()
 		pre_objs = len(bpy.data.objects)
 		bpy.ops.mcprep.add_mc_sky(
 			world_type='world_static_only',
@@ -1401,11 +1404,6 @@ class mcprep_testing():
 		post_objs = len(bpy.data.objects)
 		if pre_objs >= post_objs:
 			return "Nothing added"
-		# find the sun, ensure it's pointed straight down
-		obj = get_time_object()
-		if obj:
-			return "Found MCprepHour controller, shouldn't be one (e)"
-
 		# test that it removes existing suns by first placing one, and then
 		# affirming it's gone
 
@@ -1417,7 +1415,7 @@ class mcprep_testing():
 		res = bpy.ops.mcprep.sync_materials(
 			link=False,
 			replace_materials=False,
-			skipUsage=True) # track here false to avoid error
+			skipUsage=True)  # track here false to avoid error
 		if res != {'CANCELLED'}:
 			return "Should return cancel in empty scene"
 
