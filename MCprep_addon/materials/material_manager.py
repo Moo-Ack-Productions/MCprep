@@ -44,17 +44,22 @@ def reload_materials(context):
 		try:
 			bpy.utils.previews.remove(conf.preview_collections["materials"])
 		except:
-			conf.log("MCPREP: Failed to remove icon set, materials")
+			conf.log("Failed to remove icon set, materials")
 
 	if not os.path.isdir(resource_folder):
 		conf.log("Error, resource folder does not exist")
 		return
-	elif os.path.isdir(os.path.join(resource_folder,"textures")):
-		resource_folder = os.path.join(resource_folder,"textures")
-	elif os.path.isdir(os.path.join(resource_folder,"minecraft","textures")):
-		resource_folder = os.path.join(resource_folder,"minecraft","textures")
-	elif os.path.isdir(os.path.join(resource_folder,"assets","minecraft","textures")):
-		resource_folder = os.path.join(resource_folder,"assets","minecraft","textures")
+
+	# Check multiple paths, picking the first match (order is important),
+	# goal of picking out the /textures folder.
+	check_dirs = [
+		os.path.join(resource_folder, "textures"),
+		os.path.join(resource_folder, "minecraft", "textures"),
+		os.path.join(resource_folder, "assets", "minecraft", "textures")]
+	for path in check_dirs:
+		if os.path.isdir(path):
+			resource_folder = path
+			break
 
 	search_paths = [
 		resource_folder,
@@ -65,15 +70,17 @@ def reload_materials(context):
 	for path in search_paths:
 		if not os.path.isdir(path):
 			continue
-		files += [os.path.join(path, image_file)
-					for image_file in os.listdir(path)
-					if os.path.isfile(os.path.join(path, image_file))
-					and os.path.splitext(image_file.lower())[-1] in extensions]
+		files += [
+			os.path.join(path, image_file)
+			for image_file in os.listdir(path)
+			if os.path.isfile(os.path.join(path, image_file))
+			and os.path.splitext(image_file.lower())[-1] in extensions]
 	for i, image_file in enumerate(sorted(files)):
 		basename = os.path.splitext(os.path.basename(image_file))[0]
 		if basename.endswith("_s") or basename.endswith("_n"):
-			continue # ignore the pbr passes
-		canon, _ = generate.get_mc_canonical_name(basename) # basename.replace("_", " ")
+			continue  # ignore the pbr passes
+
+		canon, _ = generate.get_mc_canonical_name(basename)
 		asset = mcprep_props.material_list.add()
 		asset.name = canon
 		asset.description = "Generate {} ({})".format(canon, basename)
@@ -271,32 +278,35 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 
 	# arg to auto-force remove old? versus just keep as 0-users
 	selection_only = bpy.props.BoolProperty(
-		name = "Selection only",
-		description = "Build images to consoldiate based on selected objects' materials only",
-		default = False
-		)
+		name="Selection only",
+		description="Build images to consoldiate based on selected objects' materials only",
+		default=False)
 	skipUsage = bpy.props.BoolProperty(
-		default = False,
-		options = {'HIDDEN'}
-		)
+		default=False,
+		options={'HIDDEN'})
 
 	track_function = "combine_images"
 	@tracking.report_error
 	def execute(self, context):
 		removeold = True
 
-		if self.selection_only==True and len(context.selected_objects)==0:
-			self.report({'ERROR'},"Either turn selection only off or select objects with materials/images")
+		if self.selection_only is True and len(context.selected_objects) == 0:
+			self.report(
+				{'ERROR'},
+				"Either turn selection only off or select objects with materials/images")
 			return {'CANCELLED'}
 
 		# 2-level structure to hold base name and all
 		# images blocks with the same base
-		if (bpy.app.version[0]>=2 and bpy.app.version[1] >= 78) == False:
-			self.report({'ERROR'}, "Must use blender 2.78 or higher to use this operator")
+		if bpy.app.version < (2, 78):
+			self.report(
+				{'ERROR'}, "Must use blender 2.78 or higher to use this operator")
 			return {'CANCELLED'}
 
-		if self.selection_only==True:
-			self.report({'ERROR'},"Combine images does not yet work for selection only, retry with option disabled")
+		if self.selection_only is True:
+			self.report(
+				{'ERROR'},
+				"Combine images does not yet work for selection only, retry with option disabled")
 			return {'CANCELLED'}
 
 		name_cat = {}
@@ -323,29 +333,29 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 					sl.material = data[name_cat[util.nameGeneralize(sl.material.name)][0]]
 			# doesn't remove old textures, but gets it to zero users
 
-			postcount = len( ["x" for x in bpy.data.materials if x.users >0] )
-			self.report({"INFO"},
+			postcount = len(["x" for x in bpy.data.materials if x.users > 0])
+			self.report(
+				{"INFO"},
 				"Consolidated {x} materials, down to {y} overall".format(
-				x=precount-postcount,
-				y=postcount))
+					x=precount - postcount, y=postcount))
 			return {'FINISHED'}
 
 		# perform the consolidation with one basename set at a time
 		for base in name_cat:
-			if len(base)<2:
+			if len(base) < 2:
 				continue
-			name_cat[base].sort() # in-place sorting
-			baseImg = bpy.data.images[ name_cat[base][0] ]
+			name_cat[base].sort()  # in-place sorting
+			baseImg = bpy.data.images[name_cat[base][0]]
 
 			for imgname in name_cat[base][1:]:
 				# skip if fake user set
 				if bpy.data.images[imgname].use_fake_user is True:
 					continue
 				# otherwise, remap
-				util.remap_users(data[imgname],baseImg)
+				util.remap_users(data[imgname], baseImg)
 				old = bpy.data.images[imgname]
-				if removeold==True and old.users==0:
-					bpy.data.images.remove( bpy.data.images[imgname] )
+				if removeold is True and old.users == 0:
+					bpy.data.images.remove(bpy.data.images[imgname])
 
 			# Final step.. rename to not have .001 if it does
 			if baseImg.name != util.nameGeneralize(baseImg.name):
@@ -357,8 +367,9 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 			else:
 				baseImg.name = util.nameGeneralize(baseImg.name)
 
-		postcount = len(["x" for x in bpy.data.images if x.users >0])
-		self.report({"INFO"}, "Consolidated {x} images down to {y}".format(
+		postcount = len(["x" for x in bpy.data.images if x.users > 0])
+		self.report(
+			{"INFO"}, "Consolidated {x} images down to {y}".format(
 				x=precount,
 				y=postcount))
 
@@ -366,20 +377,19 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 
 
 class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
-	"""Replace any missing textures with matching images in the active texture pack"""
+	"""Replace missing textures with matching images in the active texture pack"""
 	bl_idname = "mcprep.replace_missing_textures"
 	bl_label = "Find missing textures"
 	bl_options = {'REGISTER', 'UNDO'}
 
 	# deleteAlpha = False
 	animateTextures = bpy.props.BoolProperty(
-		name = "Animate textures (may be slow first time)",
-		description = "Convert tiled images into image sequence for material.",
-		default = True)
+		name="Animate textures (may be slow first time)",
+		description="Convert tiled images into image sequence for material.",
+		default=True)
 	skipUsage = bpy.props.BoolProperty(
-		default = False,
-		options = {'HIDDEN'}
-		)
+		default=False,
+		options={'HIDDEN'})
 
 	track_function = "replace_missing"
 	track_param = None
@@ -389,13 +399,13 @@ class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 
 		# get list of selected objects
 		obj_list = context.selected_objects
-		if len(obj_list)==0:
+		if len(obj_list) == 0:
 			self.report({'ERROR'}, "No objects selected")
 			return {'CANCELLED'}
 
 		# gets the list of materials (without repetition) from selected
 		mat_list = util.materialsFromObj(obj_list)
-		if len(obj_list)==0:
+		if len(obj_list) == 0:
 			self.report({'ERROR'}, "No materials found on selected objects")
 			return {'CANCELLED'}
 
@@ -419,9 +429,10 @@ class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 					sequences.animate_single_material(
 						mat, context.scene.render.engine)
 		if count == 0:
-			self.report({'INFO'},
+			self.report(
+				{'INFO'},
 				"No missing image blocks detected in {} materials".format(
-				len(mat_list)))
+					len(mat_list)))
 
 		self.report({'INFO'}, "Updated {} materials".format(count))
 		self.track_param = context.scene.render.engine
@@ -431,15 +442,15 @@ class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 
 	def load_from_texturepack(self, mat):
 		"""If image datablock not found in passes, try to directly load and assign"""
-		conf.log("Loading from texpack for "+mat.name, vv_only=True)
+		conf.log("Loading from texpack for " + mat.name, vv_only=True)
 		canon, _ = generate.get_mc_canonical_name(mat.name)
 		image_path = generate.find_from_texturepack(canon)
 		if not image_path or not os.path.isfile(image_path):
-			conf.log("Find missing images: No source file found for "+mat.name)
+			conf.log("Find missing images: No source file found for " + mat.name)
 			return False
 
 		# even if images of same name already exist, load new block
-		conf.log("Find missing images: Creating new image datablock for "+mat.name)
+		conf.log("Find missing images: Creating new image datablock for " + mat.name)
 		# do not use 'check_existing=False' to keep compatibility pre 2.79
 		image = bpy.data.images.load(image_path)
 
@@ -449,11 +460,11 @@ class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 		elif engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
 			status = generate.set_cycles_texture(image, mat)
 
-		return status # True or False
+		return status  # True or False
 
 
 # -----------------------------------------------------------------------------
-#	Registration
+# Registration
 # -----------------------------------------------------------------------------
 
 

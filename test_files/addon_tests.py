@@ -50,6 +50,7 @@ class mcprep_testing():
 		self.test_cases = [
 			self.enable_mcprep,
 			self.prep_materials,
+			self.prep_materials_pbr,
 			self.openfolder,
 			self.spawn_mob,
 			self.spawn_mob_linked,
@@ -288,7 +289,6 @@ class mcprep_testing():
 			prefs = context.preferences.addons.get("MCprep_addon", None)
 		prefs.preferences.MCprep_exporter_type = name
 
-
 	# -----------------------------------------------------------------------------
 	# Operator unit tests
 	# -----------------------------------------------------------------------------
@@ -319,7 +319,6 @@ class mcprep_testing():
 		# run once when nothing is selected, no active object
 		self._clear_scene()
 
-
 		# res = bpy.ops.mcprep.prep_materials(
 		# 	animateTextures=False,
 		# 	autoFindMissingTextures=False,
@@ -335,15 +334,15 @@ class mcprep_testing():
 		try:
 			bpy.ops.mcprep.prep_materials(
 				animateTextures=False,
+				packFormat="simple",
 				autoFindMissingTextures=False,
-				improveUiSettings=False
-				)
+				improveUiSettings=False)
 		except RuntimeError as e:
 			if "Error: No objects selected" in str(e):
 				status = 'success'
 			else:
-				return "prep_materials other err: "+str(e)
-		if status=='fail':
+				return "prep_materials other err: " + str(e)
+		if status == 'fail':
 			return "Prep should have failed with error on no objects"
 
 		# add object, no material. Should still fail as no materials
@@ -353,12 +352,13 @@ class mcprep_testing():
 		try:
 			res = bpy.ops.mcprep.prep_materials(
 				animateTextures=False,
+				packFormat="simple",
 				autoFindMissingTextures=False,
 				improveUiSettings=False)
 		except RuntimeError as e:
 			if 'No materials found' in str(e):
-				status = 'success' # expect to fail when nothing selected
-		if status=='fail':
+				status = 'success'  # Expect to fail when nothing selected.
+		if status == 'fail':
 			return "mcprep.prep_materials-02 failure"
 
 		# TODO: Add test where material is added but without an image/nodes
@@ -370,12 +370,51 @@ class mcprep_testing():
 		try:
 			res = bpy.ops.mcprep.prep_materials(
 				animateTextures=False,
+				packFormat="simple",
 				autoFindMissingTextures=False,
 				improveUiSettings=False)
 		except Exception as e:
-			return "Unexpected error: "+str(e)
+			return "Unexpected error: " + str(e)
 		# how to tell if prepping actually occured? Should say 1 material prepped
 		# print(self._get_last_infolog()) # error in 2.82+, not used anyways
+		if res != {'FINISHED'}:
+			return "Did not return finished"
+
+	def prep_materials_pbr(self):
+		# add object with canonical material name. Assume cycles
+		self._clear_scene()
+		bpy.ops.mesh.primitive_plane_add()
+
+		obj = bpy.context.object
+		new_mat, _ = self._create_canon_mat()
+		obj.active_material = new_mat
+		try:
+			res = bpy.ops.mcprep.prep_materials(
+				animateTextures=False,
+				autoFindMissingTextures=False,
+				packFormat="specular",
+				improveUiSettings=False)
+		except Exception as e:
+			return "Unexpected error: " + str(e)
+		if res != {'FINISHED'}:
+			return "Did not return finished"
+
+		self._clear_scene()
+		bpy.ops.mesh.primitive_plane_add()
+
+		obj = bpy.context.object
+		new_mat, _ = self._create_canon_mat()
+		obj.active_material = new_mat
+		try:
+			res = bpy.ops.mcprep.prep_materials(
+				animateTextures=False,
+				autoFindMissingTextures=False,
+				packFormat="seus",
+				improveUiSettings=False)
+		except Exception as e:
+			return "Unexpected error: " + str(e)
+		if res != {'FINISHED'}:
+			return "Did not return finished"
 
 	def prep_materials_cycles(self):
 		"""Cycles-specific tests"""
@@ -385,7 +424,7 @@ class mcprep_testing():
 
 		Scenarios in which we find new textures
 		One: material is empty with no image block assigned at all, though has
-			 image node and material is a canonical name
+			image node and material is a canonical name
 		Two: material has image block but the filepath is missing, find it
 		Three: image is there, or image is packed; ie assume is fine (don't change)
 		"""

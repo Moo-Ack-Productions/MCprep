@@ -40,77 +40,75 @@ class McprepMaterialProps():
 	pass through from one operator to the other (e.g. prep mats on swap packs)
 	"""
 	animateTextures = bpy.props.BoolProperty(
-		name = "Animate textures (may be slow first time)",
-		description = ("Swap still images for the animated sequenced found in "
+		name="Animate textures (may be slow first time)",
+		description=(
+			"Swap still images for the animated sequenced found in "
 			"the active or default texture pack."),
-		default = False)
+		default=False)
 	autoFindMissingTextures = bpy.props.BoolProperty(
-		name = "Find missing images",
-		description = "If the texture for an existing material is missing, try "+\
-				"to load from the default texture pack instead",
-		default = True
-		)
+		name="Find missing images",
+		description=(
+			"If the texture for an existing material is missing, try "
+			"to load from the default texture pack instead"),
+		default=True)
 	combineMaterials = bpy.props.BoolProperty(
-		name = "Combine materials",
-		description = "Consolidate duplciate materials & textures",
-		default = False
-		)
+		name="Combine materials",
+		description="Consolidate duplciate materials & textures",
+		default=False)
 	improveUiSettings = bpy.props.BoolProperty(
-		name = "Improve UI",
-		description = "Automatically improve relevant UI settings",
-		default = True)
+		name="Improve UI",
+		description="Automatically improve relevant UI settings",
+		default=True)
 	usePrincipledShader = bpy.props.BoolProperty(
-		name = "Use Principled Shader (if available)",
-		description = ("If available and using cycles, build materials using the "
-				"principled shader"),
-		default = True
-		)
+		name="Use Principled Shader (if available)",
+		description=(
+			"If available and using cycles, build materials using the "
+			"principled shader"),
+		default=True)
 	useReflections = bpy.props.BoolProperty(
-		name = "Use reflections",
-		description = "Allow appropriate materials to be rendered reflective",
-		default = True
-		)
+		name="Use reflections",
+		description="Allow appropriate materials to be rendered reflective",
+		default=True)
 	useExtraMaps = bpy.props.BoolProperty(
-		name = "Use extra maps",
-		description = ("load other image passes like normal and "
-				"spec maps if available"),
-		default = True
-		)
+		name="Use extra maps",
+		description=(
+			"load other image passes like normal and "
+			"spec maps if available"),
+		default=True)
 	normalIntensity = bpy.props.FloatProperty(
-		name = "Normal map intensity",
-		description = ("Set normal map intensity, if normal maps are found in "
-				"the active texture pack and using normal/spec passes"),
-		default = 1.0,
+		name="Normal map intensity",
+		description=(
+			"Set normal map intensity, if normal maps are found in "
+			"the active texture pack and using normal/spec passes"),
+		default=1.0,
 		max=1,
-		min=0
-		)
+		min=0)
 	makeSolid = bpy.props.BoolProperty(
-		name = "Make all materials solid",
-		description = "Make all materials solid only, for shadows and rendering",
-		default = False
-		)
+		name="Make all materials solid",
+		description="Make all materials solid only, for shadows and rendering",
+		default=False)
 	syncMaterials = bpy.props.BoolProperty(
-		name = "Sync materials",
-		description = ("Synchronize materials with those in the active "
+		name="Sync materials",
+		description=(
+			"Synchronize materials with those in the active "
 			"pack's materials.blend file"),
-		default = True
-		)
+		default=True)
 	packFormat = bpy.props.EnumProperty(
 		name="Pack Format",
 		description="Change the pack format when using a PBR resource pack.",
 		items=[
+			("simple", "Simple (no PBR)",
+				"Use a simple shader setup with no PBR or emission falloff."),
 			("specular", "Specular", "Sets the pack format to Specular."),
-			("seus", "SEUS", "Sets the pack format to SEUS.")],
-		default="specular"
+			("seus", "SEUS", "Sets the pack format to SEUS.")]
 	)
-	# prop: set all blocks as solid (no transparency), assume has trans, or compute check
 
 
 def draw_mats_common(self, context):
 	row = self.layout.row()
 	col = row.column()
 	engine = context.scene.render.engine
-	if engine=='CYCLES' or engine=='BLENDER_EEVEE':
+	if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 		col.prop(self, "packFormat")
 		col.prop(self, "usePrincipledShader")
 	col.prop(self, "useReflections")
@@ -139,12 +137,12 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 	bl_options = {'REGISTER', 'UNDO'}
 
 	skipUsage = bpy.props.BoolProperty(
-		default = False,
-		options = {'HIDDEN'}
-		)
+		default=False,
+		options={'HIDDEN'})
 
 	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self, width=300*util.ui_scale())
+		return context.window_manager.invoke_props_dialog(
+			self, width=300 * util.ui_scale())
 
 	def draw(self, context):
 		draw_mats_common(self, context)
@@ -176,7 +174,8 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 
 		for mat in mat_list:
 			if not mat:
-				conf.log("During prep, found null material:"+str(mat), vv_only=True)
+				conf.log(
+					"During prep, found null material:" + str(mat), vv_only=True)
 				continue
 			elif mat.library:
 				count_lib_skipped += 1
@@ -191,21 +190,24 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 			if self.autoFindMissingTextures:
 				for pass_name in passes:
 					res = generate.replace_missing_texture(passes[pass_name])
-					if res>0:
+					if res > 0:
 						mat["texture_swapped"] = True  # used to apply saturation
 
 			if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
-				res = generate.matprep_internal(mat, passes,
-					self.useReflections, self.makeSolid)
-				if res==0:
-					count+=1
+				res = generate.matprep_internal(
+					mat, passes, self.useReflections, self.makeSolid)
+				if res == 0:
+					count += 1
 			elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
-				res = generate.matprep_cycles(mat, passes, self.useReflections,
+				res = generate.matprep_cycles(
+					mat, passes, self.useReflections,
 					self.usePrincipledShader, self.makeSolid, self.packFormat)
-				if res==0:
-					count+=1
+				if res == 0:
+					count += 1
 			else:
-				self.report({'ERROR'}, "Only Blender Internal, Cycles, or Eevee supported")
+				self.report(
+					{'ERROR'},
+					"Only Blender Internal, Cycles, or Eevee supported")
 				return {'CANCELLED'}
 
 			if self.animateTextures:
@@ -226,13 +228,16 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 		if self.skipUsage is True:
 			pass  # Don't report if a meta-call.
 		elif count_lib_skipped > 0:
-			self.report({"INFO"},
+			self.report(
+				{"INFO"},
 				"Modified {} materials, skipped {} linked ones.".format(
 					count, count_lib_skipped))
 		elif count > 0:
 			self.report({"INFO"}, "Modified " + str(count) + " materials")
 		else:
-			self.report({"ERROR"}, "Nothing modified, be sure you selected objects with existing materials!")
+			self.report(
+				{"ERROR"},
+				"Nothing modified, be sure you selected objects with existing materials!")
 
 		addon_prefs = util.get_user_preferences(context)
 		self.track_param = context.scene.render.engine
@@ -241,7 +246,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 
 
 class MCPREP_OT_materials_help(bpy.types.Operator):
-	"""Follow up popup to assist the user who may not have gotten expected change"""
+	"""Follow up popup to assist after not getting the expected change"""
 	bl_idname = "mcprep.prep_materials_help"
 	bl_label = "MCprep Materials Help"
 	bl_options = {'REGISTER', 'UNDO'}
@@ -254,19 +259,18 @@ class MCPREP_OT_materials_help(bpy.types.Operator):
 			print("Re-enabling popup warnings")
 
 	help_num = bpy.props.IntProperty(
-		default = 0,
-		options = {'HIDDEN'}
-		)
+		default=0,
+		options={'HIDDEN'})
 	suppress_help = bpy.props.BoolProperty(
-		name = "Don't show this again",
-		default = False,
-		options = {'HIDDEN'},
-		update = update_supress_help
-		)
+		name="Don't show this again",
+		default=False,
+		options={'HIDDEN'},
+		update=update_supress_help)
 
 	def invoke(self, context, event):
 		# check here whether to trigger popup, based on supression
-		return context.window_manager.invoke_props_dialog(self, width=400*util.ui_scale())
+		return context.window_manager.invoke_props_dialog(
+			self, width=400 * util.ui_scale())
 
 	def draw(self, context):
 		layout = self.layout
@@ -303,43 +307,40 @@ class MCPREP_OT_materials_help(bpy.types.Operator):
 
 	def execute(self, context):
 		if self.help_num == 0:
-			bpy.ops.wm.url_open(
-				url = "")
+			bpy.ops.wm.url_open(url="")
 
 		return {'FINISHED'}
 
 
-class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper, McprepMaterialProps):
+class MCPREP_OT_swap_texture_pack(
+	bpy.types.Operator, ImportHelper, McprepMaterialProps):
 	"""Swap current textures for that of a texture pack folder"""
 	bl_idname = "mcprep.swap_texture_pack"
 	bl_label = "Swap Texture Pack"
-	bl_description = ("Change the texture pack for all materials of selected objects, "
+	bl_description = (
+		"Change the texture pack for all materials of selected objects, "
 		"select a folder path for an unzipped resource pack or texture folder")
 	bl_options = {'REGISTER', 'UNDO'}
 
 	filter_glob = bpy.props.StringProperty(
 		default="",
-		options = {'HIDDEN'}
-		)
+		options={'HIDDEN'})
 	use_filter_folder = True
 	fileselectparams = "use_filter_blender"
 	filepath = bpy.props.StringProperty(subtype='DIR_PATH')
 	filter_image = bpy.props.BoolProperty(
 		default=True,
-		options={'HIDDEN', 'SKIP_SAVE'}
-		)
+		options={'HIDDEN', 'SKIP_SAVE'})
 	filter_folder = bpy.props.BoolProperty(
 		default=True,
-		options={'HIDDEN', 'SKIP_SAVE'}
-		)
+		options={'HIDDEN', 'SKIP_SAVE'})
 	prepMaterials = bpy.props.BoolProperty(
-			name = "Prep materials",
-			description = "Runs prep materials after texture swap to regenerate materials.",
-			default=False)
+		name="Prep materials",
+		description="Runs prep materials after texture swap to regenerate materials",
+		default=False)
 	skipUsage = bpy.props.BoolProperty(
-		default = False,
-		options={'HIDDEN'}
-		)
+		default=False,
+		options={'HIDDEN'})
 
 	@classmethod
 	def poll(cls, context):
@@ -372,7 +373,7 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper, McprepMateri
 	track_param = None
 	track_exporter = None
 	@tracking.report_error
-	def execute(self,context):
+	def execute(self, context):
 		addon_prefs = util.get_user_preferences(context)
 
 		# check folder exist, but keep relative if relevant
@@ -387,16 +388,16 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper, McprepMateri
 
 		# get list of selected objects
 		obj_list = context.selected_objects
-		if len(obj_list)==0:
+		if len(obj_list) == 0:
 			self.report({'ERROR'}, "No objects selected")
 			return {'CANCELLED'}
 
 		# gets the list of materials (without repetition) from selected
 		mat_list = util.materialsFromObj(obj_list)
-		if len(obj_list)==0:
+		if len(obj_list) == 0:
 			self.report({'ERROR'}, "No materials found on selected objects")
 			return {'CANCELLED'}
-		exporter = generate.detect_form(mat_list)
+		_ = generate.detect_form(mat_list)
 		invalid_uv, affected_objs = uv_tools.detect_invalid_uvs_from_objs(obj_list)
 
 		self.track_exporter = addon_prefs.MCprep_exporter_type
@@ -412,31 +413,32 @@ class MCPREP_OT_swap_texture_pack(bpy.types.Operator, ImportHelper, McprepMateri
 			if self.animateTextures:
 				sequences.animate_single_material(
 					mat, context.scene.render.engine)
-			generate.set_saturation_material(mat) # may be a double call if was animated tex
+			# may be a double call if was animated tex
+			generate.set_saturation_material(mat)
 
 		if self.prepMaterials:
 			bpy.ops.mcprep.prep_materials(
-				animateTextures = self.animateTextures,
-				autoFindMissingTextures = self.autoFindMissingTextures,
-				combineMaterials = self.combineMaterials,
-				improveUiSettings = self.improveUiSettings,
-				usePrincipledShader = self.usePrincipledShader,
-				useReflections = self.useReflections,
-				useExtraMaps = self.useExtraMaps,
-				normalIntensity = self.normalIntensity,
-				makeSolid = self.makeSolid,
-				syncMaterials = self.syncMaterials,
-				packFormat = self.packFormat,
-				skipUsage = True)
+				animateTextures=self.animateTextures,
+				autoFindMissingTextures=self.autoFindMissingTextures,
+				combineMaterials=self.combineMaterials,
+				improveUiSettings=self.improveUiSettings,
+				usePrincipledShader=self.usePrincipledShader,
+				useReflections=self.useReflections,
+				useExtraMaps=self.useExtraMaps,
+				normalIntensity=self.normalIntensity,
+				makeSolid=self.makeSolid,
+				syncMaterials=self.syncMaterials,
+				packFormat=self.packFormat,
+				skipUsage=True)
 
 		if invalid_uv:
-			self.report({'ERROR'},
-				("Detected scaled UV's (all in one texture), be sure to use "
+			self.report({'ERROR'}, (
+				"Detected scaled UV's (all in one texture), be sure to use "
 				"Mineway's 'Export Tiles for textures'"))
 			conf.log("Detected scaledd UV's, incompatible with swap textures")
 			conf.log([ob.name for ob in affected_objs], vv_only=True)
 		else:
-			self.report({'INFO'},"{} materials affected".format(res))
+			self.report({'INFO'}, "{} materials affected".format(res))
 		self.track_param = context.scene.render.engine
 		return {'FINISHED'}
 
@@ -454,13 +456,11 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 	"""Load the select material from the active resource pack and prep it"""
 	bl_idname = "mcprep.load_material"
 	bl_label = "Generate material"
-	bl_description = ("Generate and apply the selected material based on active "
-		"resource pack")
+	bl_description = (
+		"Generate and apply the selected material based on active resource pack")
 	bl_options = {'REGISTER', 'UNDO'}
 
-	skipUsage = bpy.props.BoolProperty(
-		default = False,
-		options={'HIDDEN'})
+	skipUsage = bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	@classmethod
 	def poll(cls, context):
@@ -545,14 +545,14 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 	def update_material(self, context, mat):
 		"""Update the initially created material"""
 		if not mat:
-			conf.log("During prep, found null material:"+str(mat), vv_only=True)
+			conf.log("During prep, found null material:" + str(mat), vv_only=True)
 			return
 		elif mat.library:
 			return
 
 		engine = context.scene.render.engine
 		passes = generate.get_textures(mat)
-		conf.log("Load Mat Passes:"+str(passes), vv_only=True)
+		conf.log("Load Mat Passes:" + str(passes), vv_only=True)
 		if not self.useExtraMaps:
 			for pass_name in passes:
 				if pass_name != "diffuse":
@@ -561,19 +561,20 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 		if self.autoFindMissingTextures:
 			for pass_name in passes:
 				res = generate.replace_missing_texture(passes[pass_name])
-				if res>0:
+				if res > 0:
 					mat["texture_swapped"] = True  # used to apply saturation
 
 		if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
-			res = generate.matprep_internal(mat, passes,
-				self.useReflections, self.makeSolid)
+			res = generate.matprep_internal(
+				mat, passes, self.useReflections, self.makeSolid)
 		elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
-			res = generate.matprep_cycles(mat, passes, self.useReflections,
+			res = generate.matprep_cycles(
+				mat, passes, self.useReflections,
 				self.usePrincipledShader, self.makeSolid, self.packFormat)
 		else:
 			return False, "Only Blender Internal, Cycles, or Eevee supported"
 
-		success = res==0
+		success = res == 0
 
 		if self.animateTextures:
 			sequences.animate_single_material(
@@ -583,7 +584,7 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 
 
 # -----------------------------------------------------------------------------
-#	Registration
+# Registration
 # -----------------------------------------------------------------------------
 
 

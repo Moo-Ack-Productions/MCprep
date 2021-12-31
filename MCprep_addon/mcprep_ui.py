@@ -1046,7 +1046,7 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 		scn_props = context.scene.mcprep_props
 
 		layout = self.layout
-		layout.label(text="Import premade 'meshswap' objects/collections")
+		layout.label(text="Import premade blocks (e.g. lights)")
 		split = layout.split()
 		col = split.column(align=True)
 
@@ -1196,7 +1196,7 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 		scn_props = context.scene.mcprep_props
 
 		layout = self.layout
-		layout.label(text="Import pre-made and rigged entities")
+		layout.label(text="Import rigged entities (non blocks)")
 		split = layout.split()
 		col = split.column(align=True)
 
@@ -1280,7 +1280,7 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 		addon_prefs = util.get_user_preferences(context)
 
 		layout = self.layout
-		layout.label(text="Generate blocks/models from .json files")
+		layout.label(text="Generate models from .json files")
 		if not util.bv28():
 			layout.label(text="Requires blender 2.8 or newer")
 			return
