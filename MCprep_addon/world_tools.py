@@ -279,6 +279,9 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		if self.filepath.lower().endswith(".mtl"):
 			self.report({"ERROR"}, "Select the .obj file, NOT the .mtl!")
 			return {'CANCELLED'}
+		if not self.filepath.lower().endswith(".obj"):
+			self.report({"ERROR"}, "You must select a .obj file to import")
+			return {'CANCELLED'}
 
 		if "obj" not in dir(bpy.ops.import_scene):
 			try:
