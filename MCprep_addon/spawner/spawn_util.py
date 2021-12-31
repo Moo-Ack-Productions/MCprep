@@ -205,7 +205,7 @@ def offset_root_bone(context, armature):
 
 def load_linked(self, context, path, name):
 	"""Process for loading mob or entity via linked library.
-	
+
 	Used by mob spawner when chosing to link instead of append.
 	"""
 
@@ -251,7 +251,24 @@ def load_linked(self, context, path, name):
 		self.report({'WARNING'}, "No object found to proxy")
 		return
 
-	bpy.ops.object.proxy_make(object=prox_obj.name)
+	if "proxy_make" in dir(bpy.ops.object):
+		# The pre 3.0 way.
+		# Can't check using hasattr, as the leftover class is still there
+		# even though the operator no longer is callable.
+		bpy.ops.object.proxy_make(object=prox_obj.name)
+	elif hasattr(bpy.ops.object, "make_override_library"):
+		# Was in some 2.9x versions, but prefer proxy_make for consistency.
+		pre_colls = list(bpy.data.collections)
+		bpy.ops.object.make_override_library()  # Must be active.
+		post_colls = list(bpy.data.collections)
+		new_colls = list(set(post_colls) - set(pre_colls))
+		if len(new_colls) == 1:
+			act = get_rig_from_objects(new_colls[0].all_objects)
+			util.set_active_object(context, act)
+		else:
+			print("Error: failed to get new override collection")
+			raise Exception("Failed to get override collection")
+
 	coll = util.instance_collection(act)
 	if hasattr(coll, "dupli_offset"):
 		gl = coll.dupli_offset
