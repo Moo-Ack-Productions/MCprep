@@ -17,8 +17,6 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import os
-import random
-import traceback
 
 import bpy
 from bpy_extras.io_utils import ImportHelper
@@ -35,24 +33,28 @@ from . import tracking
 
 time_obj_cache = None
 
+
 def get_time_object():
 	"""Returns the time object if present in the file"""
-	global time_obj_cache # to avoid re parsing every time
+	global time_obj_cache  # to avoid re parsing every time
 
 	if time_obj_cache is not None:
 		try:
 			if "MCprepHour" not in time_obj_cache:
 				time_obj_cache = None
 		except ReferenceError:
-			time_obj_cache = None # e.g. if item was deleted
-	if (time_obj_cache is not None
-			and (time_obj_cache not in bpy.data.objects[:]
-			or "MCprepHour" not in time_obj_cache)):
+			time_obj_cache = None  # e.g. if item was deleted
+
+	cached = time_obj_cache is not None
+	obj_gone = cached and time_obj_cache not in bpy.data.objects[:]
+	key_missing = cached and "MCprepHour" not in time_obj_cache
+	if obj_gone or key_missing:
 		time_obj_cache = None
 
 	if time_obj_cache is None:
 		time_objs = [obj for obj in bpy.data.objects if "MCprepHour" in obj]
 		if time_objs:
+			# If multiple contain this key, fetch the most recent.
 			time_objs.sort(key=lambda x: x.name)
 			time_obj_cache = time_objs[-1]
 
@@ -94,25 +96,24 @@ class MCPREP_OT_open_jmc2obj(bpy.types.Operator):
 
 	# poll, and prompt to download if not present w/ tutorial link
 	skipUsage = bpy.props.BoolProperty(
-		default = False,
-		options={'HIDDEN'}
-		)
+		default=False,
+		options={'HIDDEN'})
 
 	track_function = "open_program"
 	track_param = "jmc2obj"
 	@tracking.report_error
-	def execute(self,context):
+	def execute(self, context):
 		addon_prefs = util.get_user_preferences(context)
 		res = util.open_program(addon_prefs.open_jmc2obj_path)
 
-		if res ==-1:
+		if res == -1:
 			bpy.ops.mcprep.install_jmc2obj('INVOKE_DEFAULT')
 			return {'CANCELLED'}
-		elif res !=0:
-			self.report({'ERROR'},str(res))
+		elif res != 0:
+			self.report({'ERROR'}, str(res))
 			return {'CANCELLED'}
 		else:
-			self.report({'INFO'},"jmc2obj should open soon")
+			self.report({'INFO'}, "jmc2obj should open soon")
 		return {'FINISHED'}
 
 
@@ -126,15 +127,16 @@ class MCPREP_OT_install_jmc2obj(bpy.types.Operator):
 
 	def invoke(self, context, event):
 		wm = context.window_manager
-		return wm.invoke_popup(self, width=400*util.ui_scale())
+		return wm.invoke_popup(self, width=400 * util.ui_scale())
 
 	def draw(self, context):
 		self.layout.label(text="Valid program path not found!")
 		self.layout.separator()
 		self.layout.label(text="Need to install jmc2obj?")
-		self.layout.operator("wm.url_open", text="Click to download").url =\
-				"http://www.jmc2obj.net/"
-		split = self.layout.split()
+		self.layout.operator(
+			"wm.url_open", text="Click to download"
+		).url = "http://www.jmc2obj.net/"
+		_ = self.layout.split()
 		col = self.layout.column()
 		col.scale_y = 0.7
 		col.label(text="Then, go to MCprep's user preferences and set the jmc2obj")
@@ -147,11 +149,14 @@ class MCPREP_OT_install_jmc2obj(bpy.types.Operator):
 			# preferences window, and the user then opens a filebrowser e.g.
 			# by pressing a folder icon, blender will instant-crash.
 			# Thus, don't offer to open preferences for these blender versions
-			row.operator("mcprep.open_preferences",
-				text="Open MCprep preferences", icon="PREFERENCES").tab = "settings"
+			row.operator(
+				"mcprep.open_preferences",
+				text="Open MCprep preferences",
+				icon="PREFERENCES").tab = "settings"
 
-		row.operator("wm.url_open", text="Open tutorial").url =\
-				"https://theduckcow.com/dev/blender/mcprep/setup-world-exporters/"
+		row.operator(
+			"wm.url_open", text="Open tutorial"
+		).url = "https://theduckcow.com/dev/blender/mcprep/setup-world-exporters/"
 		return
 
 	def execute(self, context):
@@ -169,14 +174,13 @@ class MCPREP_OT_open_mineways(bpy.types.Operator):
 
 	# poll, and prompt to download if not present w/ tutorial link
 	skipUsage = bpy.props.BoolProperty(
-		default = False,
-		options={'HIDDEN'}
-		)
+		default=False,
+		options={'HIDDEN'})
 
 	track_function = "open_program"
 	track_param = "mineways"
 	@tracking.report_error
-	def execute(self,context):
+	def execute(self, context):
 		addon_prefs = util.get_user_preferences(context)
 		if os.path.isfile(addon_prefs.open_mineways_path):
 			res = util.open_program(addon_prefs.open_mineways_path)
@@ -190,7 +194,7 @@ class MCPREP_OT_open_mineways(bpy.types.Operator):
 			self.report({'ERROR'}, str(res))
 			return {'CANCELLED'}
 		else:
-			self.report({'INFO'},"Mineways should open soon")
+			self.report({'INFO'}, "Mineways should open soon")
 		return {'FINISHED'}
 
 
@@ -204,15 +208,16 @@ class MCPREP_OT_install_mineways(bpy.types.Operator):
 
 	def invoke(self, context, event):
 		wm = context.window_manager
-		return wm.invoke_popup(self, width=400*util.ui_scale())
+		return wm.invoke_popup(self, width=400 * util.ui_scale())
 
 	def draw(self, context):
 		self.layout.label(text="Valid program path not found!")
 		self.layout.separator()
 		self.layout.label(text="Need to install Mineways?")
-		self.layout.operator("wm.url_open", text="Click to download").url =\
-				"http://www.realtimerendering.com/erich/minecraft/public/mineways/"
-		split = self.layout.split()
+		self.layout.operator(
+			"wm.url_open", text="Click to download"
+		).url = "http://www.realtimerendering.com/erich/minecraft/public/mineways/"
+		_ = self.layout.split()
 		col = self.layout.column()
 		col.scale_y = 0.7
 		col.label(text="Then, go to MCprep's user preferences and set the")
@@ -224,11 +229,14 @@ class MCPREP_OT_install_mineways(bpy.types.Operator):
 			# preferences window, and the user then opens a filebrowser e.g.
 			# by pressing a folder icon, blender will instant-crash.
 			# Thus, don't offer to open preferences for these blender versions
-			row.operator("mcprep.open_preferences",
-				text="Open MCprep preferences", icon="PREFERENCES").tab = "settings"
+			row.operator(
+				"mcprep.open_preferences",
+				text="Open MCprep preferences",
+				icon="PREFERENCES").tab = "settings"
 
-		row.operator("wm.url_open", text="Open tutorial").url =\
-				"https://theduckcow.com/dev/blender/mcprep/setup-world-exporters/"
+		row.operator(
+			"wm.url_open", text="Open tutorial"
+		).url = "https://theduckcow.com/dev/blender/mcprep/setup-world-exporters/"
 		return
 
 	def execute(self, context):
@@ -254,9 +262,8 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		options={'HIDDEN'})
 	fileselectparams = "use_filter_blender"
 	skipUsage = bpy.props.BoolProperty(
-		default = False,
-		options={'HIDDEN'}
-		)
+		default=False,
+		options={'HIDDEN'})
 
 	track_function = "import_split"
 	track_exporter = None
@@ -411,9 +418,8 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 
 	skipUsage = bpy.props.BoolProperty(
-		default = False,
-		options = {'HIDDEN'}
-		)
+		default=False,
+		options={'HIDDEN'})
 
 	track_function = "prep_world"
 	track_param = None
@@ -488,12 +494,14 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 			mix_shader.location = (300, 300)
 			output.location = (500, 300)
 			background_others.inputs["Color"].default_value = (0.14965, 0.425823, 1, 1)
-			background_others.inputs["Strength"].default_value = 0.1 # to minimize light on scene
+			background_others.inputs["Strength"].default_value = 0.1
 			background_camera.inputs["Color"].default_value = (0.14965, 0.425823, 1, 1)
 			background_camera.inputs["Strength"].default_value = 1
 			world_links.new(light_paths.outputs[0], mix_shader.inputs[0])
-			world_links.new(background_others.outputs["Background"], mix_shader.inputs[1])
-			world_links.new(background_camera.outputs["Background"], mix_shader.inputs[2])
+			world_links.new(
+				background_others.outputs["Background"], mix_shader.inputs[1])
+			world_links.new(
+				background_camera.outputs["Background"], mix_shader.inputs[2])
 			world_links.new(mix_shader.outputs["Shader"], output.inputs[0])
 
 		# is not great
@@ -571,11 +579,26 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 		engine = bpy.context.scene.render.engine
 		enums = []
 		if bpy.app.version >= (2, 77) and engine in ("CYCLES", "BLENDER_EEVEE"):
-			enums.append(("world_shader", "Dynamic sky + shader sun/moon", "Import dynamic sky and shader-based sun and moon"))
-		enums.append(("world_mesh", "Dynamic sky + mesh sun/moon", "Import dynamic sky and mesh sun and moon"))
-		enums.append(("world_only", "Dynamic sky only", "Import dynamic sky, with no sun or moon"))
-		enums.append(("world_static_mesh", "Static sky + mesh sun/moon", "Create static sky with mesh sun and moon"))
-		enums.append(("world_static_only", "Static sky only", "Create static sky, with no sun or moon"))
+			enums.append((
+				"world_shader",
+				"Dynamic sky + shader sun/moon",
+				"Import dynamic sky and shader-based sun and moon"))
+		enums.append((
+			"world_mesh",
+			"Dynamic sky + mesh sun/moon",
+			"Import dynamic sky and mesh sun and moon"))
+		enums.append((
+			"world_only",
+			"Dynamic sky only",
+			"Import dynamic sky, with no sun or moon"))
+		enums.append((
+			"world_static_mesh",
+			"Static sky + mesh sun/moon",
+			"Create static sky with mesh sun and moon"))
+		enums.append((
+			"world_static_only",
+			"Static sky only",
+			"Create static sky, with no sun or moon"))
 		return enums
 
 	world_type = bpy.props.EnumProperty(
@@ -585,36 +608,36 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 	initial_time = bpy.props.EnumProperty(
 		name="Set time (dynamic only)",
 		description="Set initial time of day, only supported for dynamic sky types",
-		items = (
+		items=(
 			("8", "Morning", "Set initial time to 9am"),
 			("12", "Noon", "Set initial time to 12pm"),
 			("18", "Sunset", "Set initial time to 6pm"),
 			("0", "Midnight", "Set initial time to 12am"),
 			("6", "Sunrise", "Set initial time to 6am"))
-		)
+	)
 	add_clouds = bpy.props.BoolProperty(
-		name = "Add clouds",
-		description = "Add in a cloud mesh",
-		default = True
-		)
+		name="Add clouds",
+		description="Add in a cloud mesh",
+		default=True)
 	remove_existing_suns = bpy.props.BoolProperty(
-		name = "Remove initial suns",
-		description = "Remove any existing sunlamps",
-		default = True
-		)
+		name="Remove initial suns",
+		description="Remove any existing sunlamps",
+		default=True)
 
 	def invoke(self, context, event):
 		return context.window_manager.invoke_props_dialog(
-			self, width=400*util.ui_scale())
+			self, width=400 * util.ui_scale())
 
 	def draw(self, context):
 		self.layout.prop(self, "world_type")
-		# self.layout.prop(self, "initial_time") # issue updating driver when set this way
+		# self.layout.prop(self, "initial_time")
+		# issue updating driver when set this way
 		row = self.layout.row()
 		row.prop(self, "add_clouds")
 		row.prop(self, "remove_existing_suns")
 		row = self.layout.row()
-		row.label(text="Note: Dynamic skies use drivers, enable auto-run python scripts")
+		row.label(
+			text="Note: Dynamic skies use drivers, enable auto-run python scripts")
 
 	track_function = "world_time"
 	track_param = None
@@ -640,11 +663,10 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			blend = "clouds_moon_sun.blend"
 			wname = "MCprepWorldCycles"
 
-		blendfile = os.path.join(os.path.dirname(__file__),
-			"MCprep_resources", blend)
+		blendfile = os.path.join(
+			os.path.dirname(__file__), "MCprep_resources", blend)
 
 		prev_world = None
-		prev_world_name = None
 		if self.world_type in ("world_static_mesh", "world_static_only"):
 			# Create world dynamically (previous, simpler implementation)
 			new_sun = self.create_sunlamp(context)
@@ -659,19 +681,22 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 				new_sun.data.shadow_soft_size = 0.5
 				world.use_sky_blend = False
 				world.horizon_color = (0.00938029, 0.0125943, 0.0140572)
-			bpy.ops.mcprep.world(skipUsage=True) # do rest of sky setup
+			bpy.ops.mcprep.world(skipUsage=True)  # do rest of sky setup
 
-		elif engine=='CYCLES' or engine=='BLENDER_EEVEE':
+		elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 			if not os.path.isfile(blendfile):
-				self.report({'ERROR'}, "Source MCprep world blend file does not exist: "+blendfile)
-				conf.log("Source MCprep world blend file does not exist: "+blendfile)
+				self.report(
+					{'ERROR'},
+					"Source MCprep world blend file does not exist: " + blendfile)
+				conf.log(
+					"Source MCprep world blend file does not exist: " + blendfile)
 				return {'CANCELLED'}
 			if wname in bpy.data.worlds:
 				prev_world = bpy.data.worlds[wname]
 				prev_world.name = "-old"
 			new_objs += self.create_dynamic_world(context, blendfile, wname)
 
-		elif engine=='BLENDER_RENDER' or engine=='BLENDER_GAME':
+		elif engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
 			# dynamic world using built-in sun sky and atmosphere
 			new_sun = self.create_sunlamp(context)
 			new_objs.append(new_sun)
@@ -696,27 +721,40 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 
 			time_obj = get_time_object()
 			if not time_obj:
-				conf.log("TODO: implement create time_obj, parent sun to it & driver setup")
+				conf.log(
+					"TODO: implement create time_obj, parent sun to it & driver setup")
 
 		if self.world_type in ("world_static_mesh", "world_mesh"):
 			if not os.path.isfile(blendfile):
-				self.report({'ERROR'}, "Source MCprep world blend file does not exist: "+blendfile)
-				conf.log("Source MCprep world blend file does not exist: "+blendfile)
+				self.report(
+					{'ERROR'},
+					"Source MCprep world blend file does not exist: " + blendfile)
+				conf.log(
+					"Source MCprep world blend file does not exist: " + blendfile)
 				return {'CANCELLED'}
-			resource = blendfile +"/Object"
+			resource = blendfile + "/Object"
 
 			util.bAppendLink(resource, "MoonMesh", False)
-			if context.selected_objects:
-				moonmesh = context.selected_objects[0]
-				moonmesh.parent = get_time_object()
+			non_empties = [
+				ob for ob in context.selected_objects if ob.type != 'EMPTY']
+			if non_empties:
+				moonmesh = non_empties[0]
+				tobj = get_time_object()
+				if tobj != moonmesh:
+					# Sometimes would error, see report -MfO6dDjpxFF4lfqqYGM
+					moonmesh.parent = tobj
 				new_objs.append(moonmesh)
 			else:
 				self.report({'WARNING'}, "Could not add moon")
 
 			util.bAppendLink(resource, "SunMesh", False)
-			if context.selected_objects:
-				sunmesh = context.selected_objects[0]
-				sunmesh.parent = get_time_object()
+			non_empties = [
+				ob for ob in context.selected_objects if ob.type != 'EMPTY']
+			if non_empties:
+				sunmesh = non_empties[0]
+				tobj = get_time_object()
+				if tobj != moonmesh:
+					sunmesh.parent = tobj
 				new_objs.append(sunmesh)
 			else:
 				self.report({'WARNING'}, "Could not add sun")
@@ -725,7 +763,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			bpy.data.worlds.remove(prev_world)
 
 		if self.add_clouds:
-			resource = blendfile +"/Object"
+			resource = blendfile + "/Object"
 			util.bAppendLink(resource, "clouds", False)
 			new_objs += list(context.selected_objects)
 			if engine in ('BLENDER_RENDER', 'BLENDER_GAME'):
@@ -738,7 +776,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			# Now also increase camera render distance to see clouds
 			cams = [obj for obj in bpy.data.objects if obj.type == "CAMERA"]
 			for cam in cams:
-				cam.data.clip_end = 1000 # 1000 matches explicitly to shader
+				cam.data.clip_end = 1000  # 1000 matches explicitly to shader
 
 		# ensure all new objects (lights, meshes, control objs) in same group
 		if "mcprep_world" in util.collections():
@@ -753,12 +791,12 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 
 	def create_sunlamp(self, context):
 		"""Create new sun lamp from primitives"""
-		if hasattr(bpy.data, "lamps"): # 2.7
+		if hasattr(bpy.data, "lamps"):  # 2.7
 			newlamp = bpy.data.lamps.new("Sun", "SUN")
-		else: # 2.8
+		else:  # 2.8
 			newlamp = bpy.data.lights.new("Sun", "SUN")
 		obj = bpy.data.objects.new("Sunlamp", newlamp)
-		obj.location = (0,0,20)
+		obj.location = (0, 0, 20)
 		obj.rotation_euler[0] = 0.481711
 		obj.rotation_euler[1] = 0.303687
 		obj.rotation_euler[1] = 0.527089
@@ -780,9 +818,9 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			try:
 				util.obj_unlink_remove(time_obj_cache, True, context)
 			except:
-				print("Error, could not unlink time_obj_cache "+str(time_obj_cache))
+				print("Error, could not unlink time_obj_cache " + str(time_obj_cache))
 
-		time_obj_cache = None # force reset to use newer cache object
+		time_obj_cache = None  # force reset to use newer cache object
 
 		# Append the world (and time control elements)
 		util.bAppendLink(resource, wname, False)
@@ -852,22 +890,24 @@ class MCPREP_OT_time_set(bpy.types.Operator):
 		name="Time selection",
 		description="Select between the different reflections",
 		items=[
-			("1000","Day","Time (day)=1,000, morning time"),
-			("6000","Noon","Time=6,000, sun is at zenith"),
-			("12000","Sunset","Time=12,000, sun starts setting"), # Approx matching resource
-			("13000","Night","Time (night)=13,000"), # matches command
-			("18000","Midnight","Time=18,000, moon at zenish"), # matches reference
-			("23000","Sunrise","Time set day=23,000, sun first visible")
-			],
-	)
+			("1000", "Day", "Time (day)=1,000, morning time"),
+			("6000", "Noon", "Time=6,000, sun is at zenith"),
+			# Approx matching resource:
+			("12000", "Sunset", "Time=12,000, sun starts setting"),
+			# matches command:
+			("13000", "Night", "Time (night)=13,000"),
+			# matches reference:
+			("18000", "Midnight", "Time=18,000, moon at zenish"),
+			("23000", "Sunrise", "Time set day=23,000, sun first visible")
+		])
 	day_offset = bpy.props.IntProperty(
 		name="Day offset",
 		description="Offset by number of days (ie +/- 24000*n)",
-		default=0
-	)
+		default=0)
 
 	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self, width=400*util.ui_scale())
+		return context.window_manager.invoke_props_dialog(
+			self, width=400 * util.ui_scale())
 
 	def draw(self, context):
 		self.layout.prop(self, "time_enum")
@@ -876,7 +916,7 @@ class MCPREP_OT_time_set(bpy.types.Operator):
 
 	@tracking.report_error
 	def execute(self, context):
-		new_time = 24*self.day_offset
+		new_time = 24 * self.day_offset
 		new_time += int(self.time_enum)
 		context.scene.mcprep_props.world_time = new_time
 		if bpy.context.scene.tool_settings.use_keyframe_insert_auto:
@@ -909,9 +949,10 @@ def world_time_update(self, context):
 
 	return
 
+
 # -----------------------------------------------------------------------------
-#	Above for UI
-#	Below for register
+# Above for UI
+# Below for register
 # -----------------------------------------------------------------------------
 
 

@@ -420,8 +420,9 @@ def get_vanilla_list(copy_file=False):
 		base = os.path.splitext(os.path.basename(name))[0]
 		tsub = name.startswith(tprefix) and os.path.basename(os.path.dirname(name)) in t_subfolders
 		msub = name.startswith(mprefix) and os.path.basename(os.path.dirname(name)) in m_subfolders
+		tsubsub = name.startswith(tprefix) and os.path.basename(os.path.dirname(os.path.dirname(name))) in t_subfolders
 
-		if copy_file is True and (tsub or msub) is True:
+		if copy_file is True and (tsub or msub or tsubsub) is True:
 			# TODO: Further ensure subfolder is one of mcp_subfolders
 			# copy file to MCprep resource directory
 			new_path = os.path.join(mcprep_resources, name)
