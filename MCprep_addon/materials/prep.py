@@ -182,10 +182,26 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 				continue
 
 			passes = generate.get_textures(mat)
-			if not self.useExtraMaps:
+			if not self.useExtraMaps or self.packFormat == "simple":
+				# Clear out extra passes if not needed/requested
 				for pass_name in passes:
 					if pass_name != "diffuse":
 						passes[pass_name] = None
+			elif passes.get("diffuse"):
+				# Otherwise, attempt to get or load extra passes. Needed if
+				# swap texturepack hasn't been used yet, otherwise would need
+				# to prep twice (even if the base diff texture was already
+				# loaded from that pack).
+				diff_filepath = passes["diffuse"].filepath
+				# bpy. makes rel to file, os. resolves any os.pardir refs.
+				abspath = os.path.abspath(bpy.path.abspath(diff_filepath))
+				other_passes = generate.find_additional_passes(abspath)
+				for pass_name in other_passes:
+					if pass_name not in passes or not passes.get(pass_name):
+						# Need to update the according tagged node with tex.
+						passes[pass_name] = bpy.data.images.load(
+							other_passes[pass_name],
+							check_existing=True)
 
 			if self.autoFindMissingTextures:
 				for pass_name in passes:
@@ -514,7 +530,7 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 
 	def generate_base_material(self, context, name, path):
 		"""Generate a base material from name and active resource pack"""
-		image = bpy.data.images.load(path)
+		image = bpy.data.images.load(path, check_existing=True)
 		mat = bpy.data.materials.new(name=name)
 
 		engine = context.scene.render.engine

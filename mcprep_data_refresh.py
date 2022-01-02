@@ -396,7 +396,7 @@ def get_vanilla_list(copy_file=False):
 		for sub in t_subfolders:
 			checkpath = os.path.join(mcprep_resources, tprefix, sub)
 			if os.path.isdir(checkpath):
-				print("Removing MCprep resources folder: " + sub)
+				# print("Removing MCprep resources folder: " + sub)
 				shutil.rmtree(checkpath)
 			else:
 				print("Error! Could not find " + checkpath)
@@ -405,7 +405,7 @@ def get_vanilla_list(copy_file=False):
 		for sub in m_subfolders:
 			checkpath = os.path.join(mcprep_resources, mprefix, sub)
 			if os.path.isdir(checkpath):
-				print("Removing MCprep models folder: " + sub)
+				# print("Removing MCprep models folder: " + sub)
 				shutil.rmtree(checkpath)
 			else:
 				print("Error! Could not find " + checkpath)
@@ -577,7 +577,7 @@ def run_all(auto=False):
 	print(fileout)
 
 	if auto:
-		xin = "y"
+		xin = "n"
 	else:
 		xin = input("Show missing jmc2obj mappings? (y): ")
 	if xin == "y":
@@ -602,7 +602,7 @@ def run_all(auto=False):
 			len(miss), len(vanilla_blocks)))
 
 	if auto:
-		xin = "y"
+		xin = "n"
 	else:
 		xin = input("Show missing Mineways mappings? (y): ")
 	if xin == "y":

@@ -51,6 +51,7 @@ class mcprep_testing():
 			self.enable_mcprep,
 			self.prep_materials,
 			self.prep_materials_pbr,
+			self.prep_missing_passes,
 			self.openfolder,
 			self.spawn_mob,
 			self.spawn_mob_linked,
@@ -237,33 +238,49 @@ class mcprep_testing():
 	def _import_mineways_separated(self):
 		"""Import the full jmc2obj test set"""
 		testdir = os.path.dirname(__file__)
-		obj_path = os.path.join(testdir, "mineways", "separated_textures",
+		obj_path = os.path.join(
+			testdir, "mineways", "separated_textures",
 			"mineways_test_separated_1_15_2.obj")
 		bpy.ops.mcprep.import_world_split(filepath=obj_path)
 
 	def _import_mineways_combined(self):
 		"""Import the full jmc2obj test set"""
 		testdir = os.path.dirname(__file__)
-		obj_path = os.path.join(testdir, "mineways", "combined_textures",
+		obj_path = os.path.join(
+			testdir, "mineways", "combined_textures",
 			"mineways_test_combined_1_15_2.obj")
 		bpy.ops.mcprep.import_world_split(filepath=obj_path)
 
-	def _create_canon_mat(self, canon=None):
+	def _create_canon_mat(self, canon=None, test_pack=False):
 		"""Creates a material that should be recognized"""
 		name = canon if canon else "dirt"
 		mat = bpy.data.materials.new(name)
 		mat.use_nodes = True
 		img_node = mat.node_tree.nodes.new(type="ShaderNodeTexImage")
-		if canon:
+		if canon and not test_pack:
 			base = self.get_mcprep_path()
-			filepath = os.path.join(base, "MCprep_resources",
+			filepath = os.path.join(
+				base, "MCprep_resources",
 				"resourcepacks", "mcprep_default", "assets", "minecraft", "textures",
-				"block", canon+".png")
+				"block", canon + ".png")
+			img = bpy.data.images.load(filepath)
+		elif canon and test_pack:
+			testdir = os.path.dirname(__file__)
+			filepath = os.path.join(
+				testdir, "test_resource_pack", "textures", canon + ".png")
 			img = bpy.data.images.load(filepath)
 		else:
 			img = bpy.data.images.new(name, 16, 16)
 		img_node.image = img
 		return mat, img_node
+
+	def _set_test_mcprep_texturepack_path(self, reset=False):
+		"""Assigns or resets the local texturepack path."""
+		testdir = os.path.dirname(__file__)
+		path = os.path.join(testdir, "test_resource_pack")
+		if not os.path.isdir(path):
+			raise Exception("Failed to set test texturepack path")
+		bpy.context.scene.mcprep_texturepack_path = path
 
 	# Seems that infolog doesn't update in background mode
 	def _get_last_infolog(self):
@@ -288,6 +305,12 @@ class mcprep_testing():
 		elif hasattr(context, "preferences"):
 			prefs = context.preferences.addons.get("MCprep_addon", None)
 		prefs.preferences.MCprep_exporter_type = name
+
+	def _debug_save_file_state(self):
+		"""Saves the current scene state to a test file for inspection."""
+		testdir = os.path.dirname(__file__)
+		path = os.path.join(testdir, "debug_save_state.blend")
+		bpy.ops.wm.save_as_mainfile(filepath=path)
 
 	# -----------------------------------------------------------------------------
 	# Operator unit tests
@@ -415,6 +438,77 @@ class mcprep_testing():
 			return "Unexpected error: " + str(e)
 		if res != {'FINISHED'}:
 			return "Did not return finished"
+
+	def prep_missing_passes(self):
+		"""Test when prepping with passes after simple, n/s passes loaded."""
+
+		self._clear_scene()
+		bpy.ops.mesh.primitive_plane_add()
+
+		self._set_test_mcprep_texturepack_path()
+
+		obj = bpy.context.object
+		new_mat, _ = self._create_canon_mat("diamond_ore", test_pack=True)
+		obj.active_material = new_mat
+
+		# Start with simple material loaded, non pbr/no extra passes
+		try:
+			res = bpy.ops.mcprep.prep_materials(
+				animateTextures=False,
+				autoFindMissingTextures=False,
+				packFormat="simple",
+				useExtraMaps=False,
+				syncMaterials=False,
+				improveUiSettings=False)
+		except Exception as e:
+			return "Unexpected error: " + str(e)
+		if res != {'FINISHED'}:
+			return "Did not return finished"
+		count_images = 0
+		missing_images = 0
+		for node in new_mat.node_tree.nodes:
+			if node.type != "TEX_IMAGE":
+				continue
+			elif node.image:
+				count_images += 1
+			else:
+				missing_images += 1
+		if count_images != 1:
+			return "Should have only 1 pass after simple load - had " + str(count_images)
+		if missing_images != 0:
+			return "Should have only 0 unloaded passes after simple load - had " + str(count_images)
+
+		# Now try pbr load, should find the adjacent _n and _s passes and auto
+		# load it in.
+		self._set_test_mcprep_texturepack_path()
+		# return bpy.context.scene.mcprep_texturepack_path
+		try:
+			res = bpy.ops.mcprep.prep_materials(
+				animateTextures=False,
+				autoFindMissingTextures=False,
+				packFormat="specular",
+				useExtraMaps=True,
+				syncMaterials=False,  # For some reason, had to turn off.
+				improveUiSettings=False)
+		except Exception as e:
+			return "Unexpected error: " + str(e)
+		if res != {'FINISHED'}:
+			return "Did not return finished"
+		count_images = 0
+		missing_images = 0
+		new_mat = obj.active_material
+		for node in new_mat.node_tree.nodes:
+			if node.type != "TEX_IMAGE":
+				continue
+			elif node.image:
+				count_images += 1
+			else:
+				missing_images += 1
+		self._debug_save_file_state()
+		if count_images != 3:
+			return "Should have all 3 passes after pbr load - had " + str(count_images)
+		if missing_images != 0:
+			return "Should have 0 unloaded passes after pbr load - had " + str(count_images)
 
 	def prep_materials_cycles(self):
 		"""Cycles-specific tests"""

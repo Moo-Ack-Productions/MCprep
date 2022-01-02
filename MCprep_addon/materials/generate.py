@@ -1048,6 +1048,7 @@ def texgen_specular(mat, passes, nodeInputs, use_reflections):
 	nodeTexDiff = nodes.new("ShaderNodeTexImage")
 	nodeTexNorm = nodes.new("ShaderNodeTexImage")
 	nodeTexSpec = nodes.new("ShaderNodeTexImage")
+
 	nodeSpecInv = nodes.new("ShaderNodeInvert")
 	nodeSaturateMix = nodes.new("ShaderNodeMixRGB")
 	nodeNormal = nodes.new("ShaderNodeNormalMap")
@@ -1315,6 +1316,7 @@ def matgen_cycles_simple(
 	nodeTexDiff = nodes.new("ShaderNodeTexImage")
 	nodeSaturateMix = nodes.new("ShaderNodeMixRGB")
 	nodeSaturateMix.name = "Add Color"
+	nodeSaturateMix.label = "Add Color"
 	principled = nodes.new("ShaderNodeBsdfPrincipled")
 	node_out = nodes.new("ShaderNodeOutputMaterial")
 

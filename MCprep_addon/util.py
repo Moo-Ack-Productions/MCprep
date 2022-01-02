@@ -235,10 +235,10 @@ def loadTexture(texture):
 			data_img.reload()
 			conf.log("Using already loaded texture", vv_only=True)
 		else:
-			data_img = bpy.data.images.load(texture)
+			data_img = bpy.data.images.load(texture, check_existing=True)
 			conf.log("Loading new texture image", vv_only=True)
 	else:
-		data_img = bpy.data.images.load(texture)
+		data_img = bpy.data.images.load(texture, check_existing=True)
 		conf.log("Loading new texture image", vv_only=True)
 	return data_img
 
