@@ -394,6 +394,8 @@ def get_vanilla_list(copy_file=False):
 	m_subfolders = ["block", "item"]  # Folders of json files to copy.
 	if copy_file:
 		for sub in t_subfolders:
+			if sub == "block":
+				continue  # Avoid deleting animated textures used by meshswap.
 			checkpath = os.path.join(mcprep_resources, tprefix, sub)
 			if os.path.isdir(checkpath):
 				# print("Removing MCprep resources folder: " + sub)
