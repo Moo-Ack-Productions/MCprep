@@ -361,6 +361,12 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 				return {'CANCELLED'}
 			else:
 				raise err
+		except RuntimeError as err:
+			# Possible this is the more broad error that even the abvoe
+			# items are wrapped under. Generally just prompt user to re-export.
+			print(err)
+			self.report({"ERROR"}, obj_import_err_msg)
+			return {'CANCELLED'}
 
 		if res != {'FINISHED'}:
 			self.report({"ERROR"}, "Issue encountered while importing world")
