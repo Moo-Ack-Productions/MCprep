@@ -74,7 +74,10 @@ def animate_single_material(
 	affectable = True
 	mcmeta = {}
 	with open(image_path_canon + ".mcmeta", "r") as mcf:
-		mcmeta = json.load(mcf)
+		try:
+			mcmeta = json.load(mcf)
+		except json.JSONDecodeError:
+			print("Failed to parse the mcmeta data")
 	conf.log("MCmeta for {}: {}".format(diffuse_block, mcmeta))
 
 	# apply the sequence if any found, will be empty dict if not
