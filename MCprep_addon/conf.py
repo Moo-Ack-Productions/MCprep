@@ -31,6 +31,7 @@ except:
 # ADDON GLOBAL VARIABLES AND INITIAL SETTINGS
 # -----------------------------------------------------------------------------
 
+
 def init():
 
 	# -----------------------------------------------
@@ -41,10 +42,10 @@ def init():
 	dev = False
 
 	global v
-	v = True # $VERBOSE, UI setting
+	v = True  # $VERBOSE, UI setting
 
 	global vv
-	vv = dev # $VERYVERBOSE
+	vv = dev  # $VERYVERBOSE
 
 	# -----------------------------------------------
 	# JSON attributes
@@ -55,8 +56,8 @@ def init():
 	global data
 	# import json
 
-	global json_data # mcprep_data.json
-	json_data = None # later will load addon information etc
+	global json_data  # mcprep_data.json
+	json_data = None  # later will load addon information etc
 
 	# if existing json_data_update exists, overwrite it
 	global json_path
@@ -86,12 +87,10 @@ def init():
 	global preview_collections
 	preview_collections = {}
 
-
 	# -----------------------------------------------
 	# For initializing the custom icons
 	# -----------------------------------------------
 	icons_init()
-
 
 	# -----------------------------------------------
 	# For cross-addon lists
@@ -104,11 +103,13 @@ def init():
 	loaded_all_spawners = False
 
 	global skin_list
-	skin_list = [] # each is: [ basename, path ]
+	skin_list = []  # each is: [ basename, path ]
 
 	global rig_categories
-	rig_categories = [] # simple list of directory names
+	rig_categories = []  # simple list of directory names
 
+	global entity_list
+	entity_list = []
 
 	# -----------------------------------------------
 	# Matieral sync cahce, to avoid repeat lib reads
@@ -132,21 +133,22 @@ def icons_init():
 	global preview_collections
 	global v
 
-	collection_sets = ["main", "skins", "mobs", "blocks", "items", "materials"]
+	collection_sets = [
+		"main", "skins", "mobs", "entities", "blocks", "items", "materials"]
 
 	try:
 		for iconset in collection_sets:
 			preview_collections[iconset] = bpy.utils.previews.new()
 
 		script_path = bpy.path.abspath(os.path.dirname(__file__))
-		icons_dir = os.path.join(script_path,'icons')
+		icons_dir = os.path.join(script_path, 'icons')
 		preview_collections["main"].load(
 			"crafting_icon",
 			os.path.join(icons_dir, "crafting_icon.png"),
 			'IMAGE')
 		preview_collections["main"].load(
-			"grass_icon",
-			os.path.join(icons_dir, "grass_icon.png"),
+			"meshswap_icon",
+			os.path.join(icons_dir, "meshswap_icon.png"),
 			'IMAGE')
 		preview_collections["main"].load(
 			"spawner_icon",
@@ -156,9 +158,17 @@ def icons_init():
 			"sword_icon",
 			os.path.join(icons_dir, "sword_icon.png"),
 			'IMAGE')
+		preview_collections["main"].load(
+			"entity_icon",
+			os.path.join(icons_dir, "entity_icon.png"),
+			'IMAGE')
+		preview_collections["main"].load(
+			"model_icon",
+			os.path.join(icons_dir, "model_icon.png"),
+			'IMAGE')
 	except Exception as e:
 		log("Old verison of blender, no custom icons available")
-		log("\t"+str(e))
+		log("\t" + str(e))
 		global use_icons
 		use_icons = False
 		for iconset in collection_sets:
@@ -169,9 +179,8 @@ def log(statement, vv_only=False):
 	"""General purpose simple logging function."""
 	global v
 	global vv
-	if vv_only:
-		if vv:
-			print(statement)
+	if v and vv_only and vv:
+		print(statement)
 	elif v:
 		print(statement)
 
@@ -192,7 +201,7 @@ def unregister():
 			try:
 				bpy.utils.previews.remove(pcoll)
 			except:
-				log('Issue clearing preview set '+str(pcoll))
+				log('Issue clearing preview set ' + str(pcoll))
 	preview_collections.clear()
 
 	global json_data

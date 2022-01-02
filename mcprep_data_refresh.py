@@ -15,7 +15,11 @@ MINEWAYS_URL = "https://raw.githubusercontent.com/erich666/Mineways/master/Win/t
 # JMC_URL = "https://raw.githubusercontent.com/jmc2obj/j-mc-2-obj/master/conf/blocks.conf"
 
 # could have multiple mappings, just use the latest here
-JMC_1_13 = "https://raw.githubusercontent.com/jmc2obj/j-mc-2-obj/master/conf/texsplit_1.13.conf"
+# Legacy URL below here, file no longer exists as it was deleted, but mapping
+# kept for backwards compatibility. However, as people move on to use latest
+# jmc2obj, it will be less of an issue.
+# JMC_1_13 = "https://raw.githubusercontent.com/jmc2obj/j-mc-2-obj/master/conf/texsplit_1.13.conf"
+JMC_1_13 = "https://raw.githubusercontent.com/jmc2obj/j-mc-2-obj/0fb2bd742f0d64b0f7f0dc3cafdba76ebd3a1cc3/conf/texsplit_1.13.conf"
 
 
 def save_file_str(url):
@@ -377,33 +381,50 @@ def get_vanilla_list(copy_file=False):
 	if not jarfile:
 		raise Exception("Could not get most recent jar version")
 	else:
-		print("Extracting from jar "+jarfile)
+		print("Extracting from jar " + jarfile)
 
-	mcprep_resources = os.path.join("MCprep_addon", "MCprep_resources",
+	mcprep_resources = os.path.join(
+		"MCprep_addon", "MCprep_resources",
 		"resourcepacks", "mcprep_default")
-	prefix = 'assets/minecraft/textures/'
-	mcp_subfolders = ["block", "entity", "environment", "item", "mob_effect",
-		"models", "painting", "particle"]
+	tprefix = os.path.join("assets", "minecraft", "textures")
+	mprefix = os.path.join("assets", "minecraft", "models")
+	t_subfolders = [
+		"block", "entity", "environment", "item", "mob_effect", "models",
+		"painting", "particle"]
+	m_subfolders = ["block", "item"]  # Folders of json files to copy.
 	if copy_file:
-		for sub in mcp_subfolders:
-			checkpath = os.path.join(mcprep_resources, prefix, sub)
+		for sub in t_subfolders:
+			if sub == "block":
+				continue  # Avoid deleting animated textures used by meshswap.
+			checkpath = os.path.join(mcprep_resources, tprefix, sub)
 			if os.path.isdir(checkpath):
-				print("Removing MCprep resources folder: "+sub)
+				# print("Removing MCprep resources folder: " + sub)
 				shutil.rmtree(checkpath)
 			else:
-				print("Error! Could not find "+checkpath)
+				print("Error! Could not find " + checkpath)
+
+		# Now we also need to copy the model files (json files)
+		for sub in m_subfolders:
+			checkpath = os.path.join(mcprep_resources, mprefix, sub)
+			if os.path.isdir(checkpath):
+				# print("Removing MCprep models folder: " + sub)
+				shutil.rmtree(checkpath)
+			else:
+				print("Error! Could not find " + checkpath)
 		print("Removed MCprep resource folders, will copy over replacements")
 
 	print("Got jar version: {}".format(os.path.basename(jarfile)))
 	archive = zipfile.ZipFile(jarfile, 'r')
 
 	for name in archive.namelist():
-		if not (name.endswith('.png') or name.endswith('.mcmeta')):
+		if not (name.endswith('.png') or name.endswith('.mcmeta') or name.endswith('.json')):
 			continue
-		base = os.path.basename(name)[:-4]
-		sub_mcp = name.startswith(prefix) and name.split(prefix)[1].split(os.sep)[0] in mcp_subfolders
+		base = os.path.splitext(os.path.basename(name))[0]
+		tsub = name.startswith(tprefix) and os.path.basename(os.path.dirname(name)) in t_subfolders
+		msub = name.startswith(mprefix) and os.path.basename(os.path.dirname(name)) in m_subfolders
+		tsubsub = name.startswith(tprefix) and os.path.basename(os.path.dirname(os.path.dirname(name))) in t_subfolders
 
-		if copy_file is True and sub_mcp is True:
+		if copy_file is True and (tsub or msub or tsubsub) is True:
 			# TODO: Further ensure subfolder is one of mcp_subfolders
 			# copy file to MCprep resource directory
 			new_path = os.path.join(mcprep_resources, name)
@@ -416,16 +437,16 @@ def get_vanilla_list(copy_file=False):
 		if not name.endswith('.png'):
 			continue
 
-		if name.startswith(prefix+"block"):
+		if name.startswith(tprefix + os.sep + "block"):
 			outlist[base] = base
 		elif base in outlist:
-			continue # don't duplicate for non blocks textures
-		elif name.startswith(prefix+"item"):
-			continue # skip adding duplicative item mappings
-		elif name.startswith(prefix): # at least in textures folder
+			continue  # don't duplicate for non blocks textures
+		elif name.startswith(tprefix + os.sep + "item"):
+			continue  # skip adding duplicative item mappings
+		elif name.startswith(tprefix):  # at least in textures folder
 			if 'lava' in name and 'particle' in name:
-				continue # hack to avoid clash with jmc2obj lava:lava_still
-			outlist[base] = name[len(prefix):-4]
+				continue  # hack to avoid clash with jmc2obj lava:lava_still
+			outlist[base] = name[len(tprefix) + 1:-4]
 		else:
 			outlist[base] = None
 			# print("Not in textures folder: "+name)
@@ -497,7 +518,7 @@ def run_all(auto=False):
 	vanilla_map = vanilla_overrides(vanilla) # don't need to return as pass ref?
 
 	# load material lists from online blobs
-	jmc = get_jmc2obj_mapping()
+	jmc = get_jmc2obj_mapping()  # Legacy, most jmc2obj mats are now live-parsed.
 	mineways = get_mineways_list(vanilla)
 
 	# load the hard-coded lists
@@ -558,7 +579,7 @@ def run_all(auto=False):
 	print(fileout)
 
 	if auto:
-		xin = "y"
+		xin = "n"
 	else:
 		xin = input("Show missing jmc2obj mappings? (y): ")
 	if xin == "y":
@@ -583,7 +604,7 @@ def run_all(auto=False):
 			len(miss), len(vanilla_blocks)))
 
 	if auto:
-		xin = "y"
+		xin = "n"
 	else:
 		xin = input("Show missing Mineways mappings? (y): ")
 	if xin == "y":

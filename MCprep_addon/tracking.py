@@ -89,7 +89,7 @@ class Singleton_tracking(object):
 		self._httpclient_fallback = None # set to True/False after first req
 		self._last_request = {} # used to debounce sequential requests
 		self._debounce = 5 # seconds to avoid duplicative requests
-
+		self._feature_set = 0  # Supported addon features (e.g. experimental)
 
 	# -------------------------------------------------------------------------
 	# Getters and setters
@@ -202,6 +202,21 @@ class Singleton_tracking(object):
 		else:
 			self._platform = self.string_trunc(value)
 
+	@property
+	def feature_set(self):
+		values = ["", "supported", "experimental"]
+		return values[self._feature_set]
+	@feature_set.setter
+	def feature_set(self, value):
+		if not value:
+			self._feature_set = 0
+		elif value == "supported":
+			self._feature_set = 1
+		elif value == "experimental":
+			self._feature_set = 2
+		else:
+			raise ValueError(
+				"feature_set must be one of supported, experimental, or None")
 
 	# number/settings for frequency use before ask for enable tracking
 
@@ -631,13 +646,14 @@ def trackInstalled(background=None):
 		return
 
 	# if already installed, skip
-	if Tracker.json["status"] == None and \
-			Tracker.json["install_id"] != None: return
+	if Tracker.json["status"] is None and Tracker.json["install_id"] is not None:
+		return
 
-	if Tracker.verbose: print(Tracker.addon+" install registered")
+	if Tracker.verbose:
+		print(Tracker.addon + " install registered")
 
 	# if no override set, use default
-	if background == None:
+	if background is None:
 		background = Tracker.background
 
 	def runInstall(background):
@@ -648,30 +664,30 @@ def trackInstalled(background=None):
 			location = "/1/track/install.json"
 
 		# capture re-installs/other status events
-		if Tracker.json["status"]==None:
+		if Tracker.json["status"] is None:
 			status = "New install"
 		else:
 			status = Tracker.json["status"]
-			Tracker.json["status"]=None
+			Tracker.json["status"] = None
 			Tracker.save_tracker_json()
 
 		Tracker.json["install_date"] = str(datetime.now())
 		payload = json.dumps({
-				"timestamp": {".sv": "timestamp"},
-				"usertime":Tracker.string_trunc(Tracker.json["install_date"]),
-				"version":Tracker.version,
-				"blender":Tracker.blender_version,
-				"status":Tracker.string_trunc(status),
-				"platform":Tracker.platform,
-				"language":Tracker.language,
-				"ID":str(Tracker.json["install_id"])
-			})
+			"timestamp": {".sv": "timestamp"},
+			"usertime": Tracker.string_trunc(Tracker.json["install_date"]),
+			"version": Tracker.version,
+			"blender": Tracker.blender_version,
+			"status": Tracker.string_trunc(status),
+			"platform": Tracker.platform,
+			"language": Tracker.language,
+			"ID": str(Tracker.json["install_id"])
+		})
 
-		resp = Tracker.request('POST', location, payload, background, callback)
+		_ = Tracker.request('POST', location, payload, background, callback)
 
 	def callback(arg):
 		"""After call, assumes input is dict server response."""
-		if type(arg) != type({'name':'ID'}):
+		if not isinstance(arg, dict):
 			return
 		elif "name" not in arg:
 			return
@@ -695,13 +711,13 @@ def trackUsage(function, param=None, exporter=None, background=None):
 	if not VALID_IMPORT:
 		return
 	if Tracker.tracking_enabled is False:
-		return # skip if not opted in
+		return  # skip if not opted in
 	if Tracker.verbose:
-		print("{} usage: {}, param: {}, exporter: {}".format(
-			Tracker.addon, function, str(param), str(exporter)))
+		print("{} usage: {}, param: {}, exporter: {}, mode: {}".format(
+			Tracker.addon, function, param, exporter, Tracker.feature_set))
 
 	# if no override set, use default
-	if not background:
+	if background is None:
 		background = Tracker.background
 
 	def runUsage(background):
@@ -712,17 +728,18 @@ def trackUsage(function, param=None, exporter=None, background=None):
 			location = "/1/track/usage.json"
 
 		payload = json.dumps({
-				"timestamp":{".sv": "timestamp"},
-				"version":Tracker.version,
-				"blender":Tracker.blender_version,
-				"platform":Tracker.platform,
-				"function":Tracker.string_trunc(function),
-				"param":Tracker.string_trunc(param),
-				"exporter":Tracker.string_trunc(exporter),
-				"language":Tracker.language,
-				"ID":Tracker.json["install_id"]
-			})
-		resp = Tracker.request('POST', location, payload, background)
+			"timestamp": {".sv": "timestamp"},
+			"version": Tracker.version,
+			"blender": Tracker.blender_version,
+			"platform": Tracker.platform,
+			"function": Tracker.string_trunc(function),
+			"param": Tracker.string_trunc(param),
+			"exporter": Tracker.string_trunc(exporter),
+			"language": Tracker.language,
+			"ID": Tracker.json["install_id"],
+			"mode": Tracker._feature_set
+		})
+		_ = Tracker.request('POST', location, payload, background)
 
 	if Tracker.failsafe is True:
 		try:
@@ -739,11 +756,13 @@ def logError(report, background=None):
 		return
 
 	# if no override set, use default
-	if background == None: background = Tracker.background
+	if background is None:
+		background = Tracker.background
 
 	def runError(background):
 		# ie auto sent in background, must adhere to tracking usage
-		if Tracker.tracking_enabled is False: return # skip if not opted in
+		if Tracker.tracking_enabled is False:
+			return  # skip if not opted in
 
 		if Tracker.dev is True:
 			location = "/1/log/user_report_dev.json"
@@ -764,24 +783,25 @@ def logError(report, background=None):
 
 		# Comply with server-side validation, don't exceed lengths
 		if len(user_comment) > USER_COMMENT_LENGTH:
-			user_comment = user_comment[:USER_COMMENT_LENGTH-1] + "|"
+			user_comment = user_comment[:USER_COMMENT_LENGTH - 1] + "|"
 		if len(error) > ERROR_STRING_LENGTH:
 			# TODO: make smarter, perhaps grabbing portion of start of error
 			# and portion of end to get all needed info
-			end_bound = len(error)-ERROR_STRING_LENGTH+1
+			end_bound = len(error) - ERROR_STRING_LENGTH + 1
 			error = "|" + error[end_bound:]
 
 		payload = json.dumps({
-				"timestamp":{".sv": "timestamp"},
-				"version":Tracker.version,
-				"blender":Tracker.blender_version,
-				"platform":Tracker.platform,
-				"error":error,
-				"user_comment":user_comment,
-				"status":"None",  # used later for flagging if fixed or not
-				"ID":Tracker.json["install_id"]
-			})
-		resp = Tracker.request('POST', location, payload, background)
+			"timestamp": {".sv": "timestamp"},
+			"version": Tracker.version,
+			"blender": Tracker.blender_version,
+			"platform": Tracker.platform,
+			"error": error,
+			"user_comment": user_comment,
+			"status": "None",  # used later for flagging if fixed or not
+			"ID": Tracker.json["install_id"],
+			"mode": Tracker._feature_set
+		})
+		_ = Tracker.request('POST', location, payload, background)
 
 	if Tracker.failsafe is True:
 		try:

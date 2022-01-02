@@ -17,7 +17,6 @@
 # ##### END GPL LICENSE BLOCK #####
 
 
-# library imports
 import bpy
 import os
 from bpy_extras.io_utils import ImportHelper
@@ -25,7 +24,6 @@ import shutil
 import urllib.request
 from bpy.app.handlers import persistent
 
-# addon imports
 from .. import conf
 from . import generate
 from .. import tracking

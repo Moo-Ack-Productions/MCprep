@@ -45,13 +45,16 @@ class mcprep_testing():
 	# {status}, func, prefunc caller (reference only)
 
 	def __init__(self):
-		self.suppress = True # hold stdout
-		self.test_status = {} # {func.__name__: {"check":-1, "res":-1,0,1}}
+		self.suppress = True  # hold stdout
+		self.test_status = {}  # {func.__name__: {"check":-1, "res":-1,0,1}}
 		self.test_cases = [
 			self.enable_mcprep,
 			self.prep_materials,
+			self.prep_materials_pbr,
+			self.prep_missing_passes,
 			self.openfolder,
 			self.spawn_mob,
+			self.spawn_mob_linked,
 			self.change_skin,
 			self.import_world_split,
 			self.import_world_fail,
@@ -70,6 +73,8 @@ class mcprep_testing():
 			self.find_missing_images_cycles,
 			self.qa_meshswap_file,
 			self.item_spawner,
+			self.entity_spawner,
+			self.model_spawner,
 			self.sync_materials,
 			self.sync_materials_link,
 			self.load_material,
@@ -210,7 +215,7 @@ class mcprep_testing():
 		# with redirect_stdout(stdout):
 		bpy.ops.wm.read_homefile(app_template="")
 		for obj in bpy.data.objects:
-			bpy.data.objects.remove(obj) # wait, that's illegal?
+			bpy.data.objects.remove(obj)
 		for mat in bpy.data.materials:
 			bpy.data.materials.remove(mat)
 			# for txt in bpy.data.texts:
@@ -233,33 +238,49 @@ class mcprep_testing():
 	def _import_mineways_separated(self):
 		"""Import the full jmc2obj test set"""
 		testdir = os.path.dirname(__file__)
-		obj_path = os.path.join(testdir, "mineways", "separated_textures",
+		obj_path = os.path.join(
+			testdir, "mineways", "separated_textures",
 			"mineways_test_separated_1_15_2.obj")
 		bpy.ops.mcprep.import_world_split(filepath=obj_path)
 
 	def _import_mineways_combined(self):
 		"""Import the full jmc2obj test set"""
 		testdir = os.path.dirname(__file__)
-		obj_path = os.path.join(testdir, "mineways", "combined_textures",
+		obj_path = os.path.join(
+			testdir, "mineways", "combined_textures",
 			"mineways_test_combined_1_15_2.obj")
 		bpy.ops.mcprep.import_world_split(filepath=obj_path)
 
-	def _create_canon_mat(self, canon=None):
+	def _create_canon_mat(self, canon=None, test_pack=False):
 		"""Creates a material that should be recognized"""
 		name = canon if canon else "dirt"
 		mat = bpy.data.materials.new(name)
 		mat.use_nodes = True
 		img_node = mat.node_tree.nodes.new(type="ShaderNodeTexImage")
-		if canon:
+		if canon and not test_pack:
 			base = self.get_mcprep_path()
-			filepath = os.path.join(base, "MCprep_resources",
+			filepath = os.path.join(
+				base, "MCprep_resources",
 				"resourcepacks", "mcprep_default", "assets", "minecraft", "textures",
-				"block", canon+".png")
+				"block", canon + ".png")
+			img = bpy.data.images.load(filepath)
+		elif canon and test_pack:
+			testdir = os.path.dirname(__file__)
+			filepath = os.path.join(
+				testdir, "test_resource_pack", "textures", canon + ".png")
 			img = bpy.data.images.load(filepath)
 		else:
 			img = bpy.data.images.new(name, 16, 16)
 		img_node.image = img
 		return mat, img_node
+
+	def _set_test_mcprep_texturepack_path(self, reset=False):
+		"""Assigns or resets the local texturepack path."""
+		testdir = os.path.dirname(__file__)
+		path = os.path.join(testdir, "test_resource_pack")
+		if not os.path.isdir(path):
+			raise Exception("Failed to set test texturepack path")
+		bpy.context.scene.mcprep_texturepack_path = path
 
 	# Seems that infolog doesn't update in background mode
 	def _get_last_infolog(self):
@@ -285,6 +306,11 @@ class mcprep_testing():
 			prefs = context.preferences.addons.get("MCprep_addon", None)
 		prefs.preferences.MCprep_exporter_type = name
 
+	def _debug_save_file_state(self):
+		"""Saves the current scene state to a test file for inspection."""
+		testdir = os.path.dirname(__file__)
+		path = os.path.join(testdir, "debug_save_state.blend")
+		bpy.ops.wm.save_as_mainfile(filepath=path)
 
 	# -----------------------------------------------------------------------------
 	# Operator unit tests
@@ -316,7 +342,6 @@ class mcprep_testing():
 		# run once when nothing is selected, no active object
 		self._clear_scene()
 
-
 		# res = bpy.ops.mcprep.prep_materials(
 		# 	animateTextures=False,
 		# 	autoFindMissingTextures=False,
@@ -332,15 +357,15 @@ class mcprep_testing():
 		try:
 			bpy.ops.mcprep.prep_materials(
 				animateTextures=False,
+				packFormat="simple",
 				autoFindMissingTextures=False,
-				improveUiSettings=False
-				)
+				improveUiSettings=False)
 		except RuntimeError as e:
 			if "Error: No objects selected" in str(e):
 				status = 'success'
 			else:
-				return "prep_materials other err: "+str(e)
-		if status=='fail':
+				return "prep_materials other err: " + str(e)
+		if status == 'fail':
 			return "Prep should have failed with error on no objects"
 
 		# add object, no material. Should still fail as no materials
@@ -350,12 +375,13 @@ class mcprep_testing():
 		try:
 			res = bpy.ops.mcprep.prep_materials(
 				animateTextures=False,
+				packFormat="simple",
 				autoFindMissingTextures=False,
 				improveUiSettings=False)
 		except RuntimeError as e:
 			if 'No materials found' in str(e):
-				status = 'success' # expect to fail when nothing selected
-		if status=='fail':
+				status = 'success'  # Expect to fail when nothing selected.
+		if status == 'fail':
 			return "mcprep.prep_materials-02 failure"
 
 		# TODO: Add test where material is added but without an image/nodes
@@ -367,12 +393,122 @@ class mcprep_testing():
 		try:
 			res = bpy.ops.mcprep.prep_materials(
 				animateTextures=False,
+				packFormat="simple",
 				autoFindMissingTextures=False,
 				improveUiSettings=False)
 		except Exception as e:
-			return "Unexpected error: "+str(e)
+			return "Unexpected error: " + str(e)
 		# how to tell if prepping actually occured? Should say 1 material prepped
 		# print(self._get_last_infolog()) # error in 2.82+, not used anyways
+		if res != {'FINISHED'}:
+			return "Did not return finished"
+
+	def prep_materials_pbr(self):
+		# add object with canonical material name. Assume cycles
+		self._clear_scene()
+		bpy.ops.mesh.primitive_plane_add()
+
+		obj = bpy.context.object
+		new_mat, _ = self._create_canon_mat()
+		obj.active_material = new_mat
+		try:
+			res = bpy.ops.mcprep.prep_materials(
+				animateTextures=False,
+				autoFindMissingTextures=False,
+				packFormat="specular",
+				improveUiSettings=False)
+		except Exception as e:
+			return "Unexpected error: " + str(e)
+		if res != {'FINISHED'}:
+			return "Did not return finished"
+
+		self._clear_scene()
+		bpy.ops.mesh.primitive_plane_add()
+
+		obj = bpy.context.object
+		new_mat, _ = self._create_canon_mat()
+		obj.active_material = new_mat
+		try:
+			res = bpy.ops.mcprep.prep_materials(
+				animateTextures=False,
+				autoFindMissingTextures=False,
+				packFormat="seus",
+				improveUiSettings=False)
+		except Exception as e:
+			return "Unexpected error: " + str(e)
+		if res != {'FINISHED'}:
+			return "Did not return finished"
+
+	def prep_missing_passes(self):
+		"""Test when prepping with passes after simple, n/s passes loaded."""
+
+		self._clear_scene()
+		bpy.ops.mesh.primitive_plane_add()
+
+		self._set_test_mcprep_texturepack_path()
+
+		obj = bpy.context.object
+		new_mat, _ = self._create_canon_mat("diamond_ore", test_pack=True)
+		obj.active_material = new_mat
+
+		# Start with simple material loaded, non pbr/no extra passes
+		try:
+			res = bpy.ops.mcprep.prep_materials(
+				animateTextures=False,
+				autoFindMissingTextures=False,
+				packFormat="simple",
+				useExtraMaps=False,
+				syncMaterials=False,
+				improveUiSettings=False)
+		except Exception as e:
+			return "Unexpected error: " + str(e)
+		if res != {'FINISHED'}:
+			return "Did not return finished"
+		count_images = 0
+		missing_images = 0
+		for node in new_mat.node_tree.nodes:
+			if node.type != "TEX_IMAGE":
+				continue
+			elif node.image:
+				count_images += 1
+			else:
+				missing_images += 1
+		if count_images != 1:
+			return "Should have only 1 pass after simple load - had " + str(count_images)
+		if missing_images != 0:
+			return "Should have only 0 unloaded passes after simple load - had " + str(count_images)
+
+		# Now try pbr load, should find the adjacent _n and _s passes and auto
+		# load it in.
+		self._set_test_mcprep_texturepack_path()
+		# return bpy.context.scene.mcprep_texturepack_path
+		try:
+			res = bpy.ops.mcprep.prep_materials(
+				animateTextures=False,
+				autoFindMissingTextures=False,
+				packFormat="specular",
+				useExtraMaps=True,
+				syncMaterials=False,  # For some reason, had to turn off.
+				improveUiSettings=False)
+		except Exception as e:
+			return "Unexpected error: " + str(e)
+		if res != {'FINISHED'}:
+			return "Did not return finished"
+		count_images = 0
+		missing_images = 0
+		new_mat = obj.active_material
+		for node in new_mat.node_tree.nodes:
+			if node.type != "TEX_IMAGE":
+				continue
+			elif node.image:
+				count_images += 1
+			else:
+				missing_images += 1
+		self._debug_save_file_state()
+		if count_images != 3:
+			return "Should have all 3 passes after pbr load - had " + str(count_images)
+		if missing_images != 0:
+			return "Should have 0 unloaded passes after pbr load - had " + str(count_images)
 
 	def prep_materials_cycles(self):
 		"""Cycles-specific tests"""
@@ -382,7 +518,7 @@ class mcprep_testing():
 
 		Scenarios in which we find new textures
 		One: material is empty with no image block assigned at all, though has
-			 image node and material is a canonical name
+			image node and material is a canonical name
 		Two: material has image block but the filepath is missing, find it
 		Three: image is there, or image is packed; ie assume is fine (don't change)
 		"""
@@ -506,25 +642,24 @@ class mcprep_testing():
 		post_path = node.image.filepath
 		if not post_path:
 			os.remove(tmp_image)
-			return "No image loaded for "+mat.name
+			return "No image loaded for " + mat.name
 		elif not os.path.isfile(node.image.filepath):
-			return "File for loaded image does not exist: "+node.image.filepath
+			return "File for loaded image does not exist: " + node.image.filepath
 
 		# Example running with animateTextures too
 
 		# check on image that is packed or not, or packed but no data
 		os.remove(tmp_image)
 
-
 	def openfolder(self):
 		if bpy.app.background is True:
-			return "" # can't test this in background mode
+			return ""  # can't test this in background mode
 
 		folder = bpy.utils.script_path_user()
 		if not os.path.isdir(folder):
 			return "Sample folder doesn't exist, couldn't test"
 		res = bpy.ops.mcprep.openfolder(folder)
-		if res=={"FINISHED"}:
+		if res == {"FINISHED"}:
 			return ""
 		else:
 			return "Failed, returned cancelled"
@@ -532,7 +667,7 @@ class mcprep_testing():
 	def spawn_mob(self):
 		"""Spawn mobs, reload mobs, etc"""
 		self._clear_scene()
-		self._add_character() # run the utility as it's own sort of test
+		self._add_character()  # run the utility as it's own sort of test
 
 		self._clear_scene()
 		bpy.ops.mcprep.reload_mobs()
@@ -540,11 +675,14 @@ class mcprep_testing():
 		# sample don't specify mob, just load whatever is first
 		bpy.ops.mcprep.mob_spawner()
 
-		# spawn an alex
-
+		# spawn with linking
 		# try changing the folder
-
 		# try install mob and uninstall
+
+	def spawn_mob_linked(self):
+		self._clear_scene()
+		bpy.ops.mcprep.reload_mobs()
+		bpy.ops.mcprep.mob_spawner(toLink=True)
 
 	def change_skin(self):
 		"""Test scenarios for changing skin after adding a character."""
@@ -1099,10 +1237,14 @@ class mcprep_testing():
 
 		for tex in saturated:
 			img = bpy.data.images.load(os.path.join(base, tex))
+			if not img:
+				raise Exception('Failed to load img ' + str(tex))
 			if is_image_grayscale(img) is True:
 				raise Exception('Image {} detected as grayscale, should be saturated'.format(tex))
 		for tex in desaturated:
 			img = bpy.data.images.load(os.path.join(base, tex))
+			if not img:
+				raise Exception('Failed to load img ' + str(tex))
 			if is_image_grayscale(img) is False:
 				raise Exception('Image {} detected as saturated - should be grayscale'.format(tex))
 
@@ -1247,7 +1389,7 @@ class mcprep_testing():
 
 		if post_objs == pre_objs:
 			return "No items spawned"
-		elif post_objs > pre_objs+1:
+		elif post_objs > pre_objs + 1:
 			return "More than one item spawned"
 
 		# test core useage on a couple of out of the box textures
@@ -1256,12 +1398,67 @@ class mcprep_testing():
 		# bpy.ops.mcprep.spawn_item_file(filepath=)
 
 		# test with different thicknesses
-
 		# test after changing resource pack
-
 		# test that with an image of more than 1k pixels, it's truncated as expected
-
 		# test with different
+
+	def entity_spawner(self):
+		"""Test entity spawning and reloading"""
+		self._clear_scene()
+		scn_props = bpy.context.scene.mcprep_props
+
+		pre_count = len(scn_props.entity_list)
+		bpy.ops.mcprep.reload_entities()
+		post_count = len(scn_props.entity_list)
+
+		if pre_count != 0:
+			return "Should have opened new file with unloaded assets?"
+		elif post_count == 0:
+			return "No entities loaded"
+		elif post_count < 5:
+			return "Too few entities loaded ({}), missing texturepack?".format(
+				post_count - pre_count)
+
+		# spawn with whatever default index
+		pre_objs = len(bpy.data.objects)
+		bpy.ops.mcprep.entity_spawner()
+		post_objs = len(bpy.data.objects)
+
+		if post_objs == pre_objs:
+			return "No entity spawned"
+
+		# Test collection/group added
+		# Test loading from file.
+
+	def model_spawner(self):
+		"""Test model spawning and reloading"""
+		self._clear_scene()
+		scn_props = bpy.context.scene.mcprep_props
+
+		pre_count = len(scn_props.model_list)
+		bpy.ops.mcprep.reload_models()
+		post_count = len(scn_props.model_list)
+
+		if pre_count != 0:
+			return "Should have opened new file with unloaded assets?"
+		elif post_count == 0:
+			return "No models loaded"
+		elif post_count < 50:
+			return "Too few models loaded, missing texturepack?"
+
+		# spawn with whatever default index
+		pre_objs = len(bpy.data.objects)
+		bpy.ops.mcprep.spawn_model(
+			filepath=scn_props.model_list[scn_props.model_list_index].filepath)
+		post_objs = len(bpy.data.objects)
+
+		if post_objs == pre_objs:
+			return "No models spawned"
+		elif post_objs > pre_objs + 1:
+			return "More than one model spawned"
+
+		# Test collection/group added
+		# Test loading from file.
 
 	def world_tools(self):
 		"""Test adding skies, prepping the world, etc"""
@@ -1326,11 +1523,11 @@ class mcprep_testing():
 		if pre_objs >= post_objs:
 			return "Nothing added"
 		# find the sun, ensure it's pointed straight down
+
+		self._clear_scene()
 		obj = get_time_object()
 		if obj:
 			return "Found MCprepHour controller, shouldn't be one (d)"
-
-		self._clear_scene()
 		pre_objs = len(bpy.data.objects)
 		bpy.ops.mcprep.add_mc_sky(
 			world_type='world_static_only',
@@ -1340,11 +1537,6 @@ class mcprep_testing():
 		post_objs = len(bpy.data.objects)
 		if pre_objs >= post_objs:
 			return "Nothing added"
-		# find the sun, ensure it's pointed straight down
-		obj = get_time_object()
-		if obj:
-			return "Found MCprepHour controller, shouldn't be one (e)"
-
 		# test that it removes existing suns by first placing one, and then
 		# affirming it's gone
 
@@ -1356,7 +1548,7 @@ class mcprep_testing():
 		res = bpy.ops.mcprep.sync_materials(
 			link=False,
 			replace_materials=False,
-			skipUsage=True) # track here false to avoid error
+			skipUsage=True)  # track here false to avoid error
 		if res != {'CANCELLED'}:
 			return "Should return cancel in empty scene"
 

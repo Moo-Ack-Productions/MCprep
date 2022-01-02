@@ -29,6 +29,8 @@ from .. import conf
 from .. import util
 from .. import tracking
 
+from . import spawn_util
+
 
 # -----------------------------------------------------------------------------
 # support functions
@@ -41,7 +43,8 @@ def get_rig_list(context):
 	# may redraw too many times, perhaps have flag to prevent re-runs
 	if not context.scene.mcprep_props.mob_list_all:
 		update_rig_list(context)
-	ret_list = [(mob.mcmob_type, mob.name, mob.description)
+	ret_list = [
+		(mob.mcmob_type, mob.name, mob.description)
 		for mob in context.scene.mcprep_props.mob_list_all]
 	return ret_list
 
@@ -60,12 +63,12 @@ def update_rig_list(context):
 	def _add_rigs_from_blend(path, blend_name, category):
 		"""Block for loading blend file groups to get rigs"""
 		with bpy.data.libraries.load(path) as (data_from, data_to):
-			if hasattr(data_from, "groups"): # blender 2.7
+			if hasattr(data_from, "groups"):  # blender 2.7
 				get_attr = "groups"
-			else: # 2.8
+			else:  # 2.8
 				get_attr = "collections"
 
-			extensions = [".png",".jpg",".jpeg"]
+			extensions = [".png", ".jpg", ".jpeg"]
 			icon_folder = os.path.join(os.path.dirname(path), "icons")
 			run_icons = os.path.isdir(icon_folder)
 			if not conf.use_icons or conf.preview_collections["mobs"] == "":
@@ -81,7 +84,7 @@ def update_rig_list(context):
 
 				description = "Spawn one {x} rig".format(x=name)
 				mob = context.scene.mcprep_props.mob_list_all.add()
-				mob.description = description # add in non all-list
+				mob.description = description  # add in non all-list
 				mob.name = name.title()
 				mob.category = category
 				mob.index = len(context.scene.mcprep_props.mob_list_all)
@@ -95,12 +98,12 @@ def update_rig_list(context):
 				if not run_icons:
 					continue
 
-				icons = [f for f in os.listdir(icon_folder)
-							if os.path.isfile(os.path.join(icon_folder, f))
-							and name.lower() == os.path.splitext(f.lower())[0]
-							and not f.startswith(".")
-							and os.path.splitext(f.lower())[-1] in extensions
-							]
+				icons = [
+					f for f in os.listdir(icon_folder)
+					if os.path.isfile(os.path.join(icon_folder, f))
+					and name.lower() == os.path.splitext(f.lower())[0]
+					and not f.startswith(".")
+					and os.path.splitext(f.lower())[-1] in extensions]
 				if not icons:
 					continue
 				conf.preview_collections["mobs"].load(
@@ -123,20 +126,22 @@ def update_rig_list(context):
 		conf.log("Rigpath directory not found")
 		return
 
-	categories = [f	for f in os.listdir(rigpath)
-					if os.path.isdir(os.path.join(rigpath, f))
-					and not f.startswith(".")]
-	no_category_blends = [f	for f in os.listdir(rigpath)
-							if os.path.isfile(os.path.join(rigpath, f))
-							and f.endswith(".blend")
-							and not f.startswith(".")]
+	categories = [
+		f for f in os.listdir(rigpath)
+		if os.path.isdir(os.path.join(rigpath, f)) and not f.startswith(".")]
+	no_category_blends = [
+		f for f in os.listdir(rigpath)
+		if os.path.isfile(os.path.join(rigpath, f))
+		and f.endswith(".blend")
+		and not f.startswith(".")]
 
 	for category in categories:
 		cat_path = os.path.join(rigpath, category)
-		blend_files = [f for f in os.listdir(cat_path)
-						if os.path.isfile(os.path.join(cat_path, f))
-						and f.endswith(".blend")
-						and not f.startswith(".")]
+		blend_files = [
+			f for f in os.listdir(cat_path)
+			if os.path.isfile(os.path.join(cat_path, f))
+			and f.endswith(".blend")
+			and not f.startswith(".")]
 
 		for blend_name in blend_files:
 			blend_path = os.path.join(cat_path, blend_name)
@@ -165,8 +170,9 @@ def update_rig_category(context):
 		category = ""  # to match how the attribute is saved
 	scn_props.mob_list.clear()
 
-	cat_mobs = [mob for mob in scn_props.mob_list_all
-				if mob.category == category or category == "all"]
+	cat_mobs = [
+		mob for mob in scn_props.mob_list_all
+		if mob.category == category or category == "all"]
 	cat_mobs.sort(key=lambda x: x.name, reverse=False)
 
 	# consider bringing the player rigs up first
@@ -176,10 +182,10 @@ def update_rig_category(context):
 		item.name = mob.name
 		item.mcmob_type = mob.mcmob_type
 		item.category = mob.category
-		item.index = mob.index # for icons
+		item.index = mob.index  # for icons
 
 	if scn_props.mob_list_index >= len(scn_props.mob_list):
-		scn_props.mob_list_index = len(scn_props.mob_list)-1
+		scn_props.mob_list_index = len(scn_props.mob_list) - 1
 
 
 # -----------------------------------------------------------------------------
@@ -211,85 +217,46 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 
 	mcmob_type = bpy.props.EnumProperty(items=riglist_enum, name="Mob Type")
 	relocation = bpy.props.EnumProperty(
-		items = [('Cursor', 'Cursor', 'Move the rig to the cursor'),
-				('Clear', 'Origin', 'Move the rig to the origin'),
-				('Offset', 'Offset root', 'Offset the root bone to cursor while leaving the rest pose at the origin')],
-		name = "Relocation"
-		)
+		items=[
+			('Cursor', 'Cursor', 'Move the rig to the cursor'),
+			('Clear', 'Origin', 'Move the rig to the origin'),
+			('Offset', 'Offset root', (
+				'Offset the root bone to cursor while leaving the rest pose '
+				'at the origin'))],
+		name="Relocation")
 	toLink = bpy.props.BoolProperty(
-		name = "Library Link",
-		description = "Library link instead of append the group",
-		default = False
-		)
+		name="Library Link",
+		description="Library link instead of append the group",
+		default=False)
 	clearPose = bpy.props.BoolProperty(
-		name = "Clear Pose",
-		description = "Clear the pose to rest position",
-		default = True
-		)
-	auto_prep = bpy.props.BoolProperty(
-		name = "Prep materials (will reset nodes)",
-		description = "Prep materials of the added rig, will replace cycles node groups with default",
-		default = True
-		)
+		name="Clear Pose",
+		description="Clear the pose to rest position",
+		default=True)
+	prep_materials = bpy.props.BoolProperty(
+		name="Prep materials (will reset nodes)",
+		description=(
+			"Prep materials of the added rig, will replace cycles node groups "
+			"with default"),
+		default=True)
+
 	skipUsage = bpy.props.BoolProperty(
-		default = False,
-		options = {'HIDDEN'}
-		)
+		default=False,
+		options={'HIDDEN'})
 
 	def draw(self, context):
 		"""Draw in redo last menu or F6"""
 		row = self.layout.row()
-		row.prop(self,"relocation")
+		row.prop(self, "relocation")
 
 		row = self.layout.row(align=True)
-		row.prop(self,"toLink")
-		row.prop(self,"clearPose")
+		row.prop(self, "toLink")
+		row.prop(self, "clearPose")
 		row = self.layout.row(align=True)
 		engine = context.scene.render.engine
 		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
-			row.prop(self, "auto_prep")
+			row.prop(self, "prep_materials")
 		else:
-			row.prop(self, "auto_prep", text="Prep materials")
-
-	@staticmethod
-	def attemptScriptLoad(path):
-		"""Search for script that matches name of the blend file"""
-
-		# TODO: should also look into the blend if appropriate
-		# if the script already exists in blender, assume can reuse this
-		if not path[-5:]=="blend":
-			return
-		path = path[:-5]+"py"
-
-		if os.path.basename(path) in [txt.name for txt in bpy.data.texts]:
-			conf.log("Script {} already imported, not importing a new one".format(
-				os.path.basename(path)))
-			return
-
-		if not os.path.isfile(path):
-			return # no script found
-		conf.log("Script found, loading and running it")
-		text = bpy.data.texts.load(filepath=path, internal=True)
-		try:
-			ctx = bpy.context.copy()
-			ctx['edit_text'] = text
-		except Exception as err:
-			print("MCprep: Error trying to create context to run script in:")
-			print(str(err))
-		try:
-			bpy.ops.text.run_script(ctx)
-			ctx.use_fake_user = True
-			ctx.use_module = True
-		except:
-			conf.log("Failed to run the script, not registering")
-			return
-		conf.log("Ran the script")
-		text.use_module = True
-
-	def setRootLocation(self, context):
-		pass
-		# should be the consolidated code for
-		# both linking and appending below, .. they branched right now.
+			row.prop(self, "prep_materials", text="Prep materials")
 
 	track_function = "mobSpawner"
 	track_param = None
@@ -312,17 +279,16 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 
 		if self.toLink:
 			if path == '//':
-				# not sure what that means here
 				conf.log("This is the local file. Cancelling...")
 				return {'CANCELLED'}
-			res = self.load_linked(context, path, name)
+			_ = spawn_util.load_linked(self, context, path, name)
 		else:
-			res = self.load_append(context, path, name)
+			_ = spawn_util.load_append(self, context, path, name)
 
 		# if there is a script with this rig, attempt to run it
-		self.attemptScriptLoad(path)
+		spawn_util.attemptScriptLoad(path)
 
-		if self.auto_prep and not self.toLink and context.selected_objects:
+		if self.prep_materials and not self.toLink and context.selected_objects:
 			try:
 				bpy.ops.mcprep.prep_materials(
 					improveUiSettings=False, skipUsage=True)
@@ -332,295 +298,36 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 		self.track_param = self.mcmob_type.split(":/:")[1]
 		return {'FINISHED'}
 
-	@staticmethod
-	def get_rig_from_objects(objects):
-		"""From a list of objects, return the the primary rig (best guess)"""
-		prox_obj = None
-		for obj in objects:
-			if obj.type != 'ARMATURE':
-				continue
-			elif obj.name.lower().endswith('.arma'):
-				prox_obj = obj
-				break
-			elif not prox_obj:
-				prox_obj = obj
-			elif "rig" in obj.name.lower() and "rig" not in prox_obj.name.lower():
-				prox_obj = obj
-		return prox_obj
-
-	@staticmethod
-	def offset_root_bone(context, armature):
-		"""Used to offset bone to world location (cursor)"""
-		conf.log("Attempting offset root")
-		set_bone = False
-		lower_bones = [bone.name.lower() for bone in armature.pose.bones]
-		lower_name = None
-		for name in ["main", "root", "base", "master"]:
-			if name in lower_bones:
-				lower_name = name
-				break
-		if not lower_name:
-			return False
-
-		for bone in armature.pose.bones:
-			if bone.name.lower() != lower_name:
-				continue
-			bone.location = util.matmul(
-				bone.bone.matrix.inverted(),
-				util.get_cuser_location(context),
-				armature.matrix_world.inverted()
-				)
-
-			set_bone = True
-			break
-		return set_bone
-
-	def load_linked(self, context, path, name):
-		"""Process for loading mob via linked library"""
-
-		path = bpy.path.abspath(path)
-		act = None
-		if hasattr(bpy.data, "groups"):
-			util.bAppendLink(path + '/Group', name, True)
-			act = context.object  # assumption of object after linking, 2.7 only
-		elif hasattr(bpy.data, "collections"):
-			util.bAppendLink(path + '/Collection', name, True)
-			act = context.selected_objects[0] # better for 2.8
-
-		# util.bAppendLink(os.path.join(path, g_or_c), name, True)
-		# proxy any and all armatures
-		# here should do all that jazz with hacking by copying files, checking nth number
-		#probably consists of checking currently linked libraries, checking if which
-		#have already been linked into existing rigs
-		# if util.bv28() and context.selected_objects:
-		# 	act = context.selected_objects[0] # better for 2.8
-		# elif context.object:
-		# 	act = context.object  # assumption of object after linking
-		conf.log("Identified new obj as: {}".format(
-			act), vv_only=True)
-
-		if not act:
-			self.report({'ERROR'}, "Could not grab linked in object if any.")
-			return
-		if self.relocation == "Origin":
-			act.location = (0,0,0)
-
-		# find the best armature to proxy, if any
-		prox_obj = None
-		if not act.type == "EMPTY":
-			self.report({'WARNING'}, "Linked object should be type: empty")
-			return
-		elif not util.instance_collection(act):
-			self.report({'WARNING'}, "Linked object has no dupligroup")
-			return
-		else:
-			prox_obj = self.get_rig_from_objects(
-				util.instance_collection(act).objects)
-		if not prox_obj:
-			self.report({'WARNING'}, "No object found to proxy")
-			return
-
-		bpy.ops.object.proxy_make(object=prox_obj.name)
-		coll = util.instance_collection(act)
-		if hasattr(coll, "dupli_offset"):
-			gl = coll.dupli_offset
-		elif hasattr(act, "instance_offset"):
-			gl = coll.instance_offset
-		else:
-			# fallback to ensure gl defined as showed up in user errors,
-			# but not clear how this happens
-			print("WARNING: Assigned fallback gl of (0,0,0)")
-			gl = (0,0,0)
-		# cl = util.get_cuser_location(context)
-
-		if self.relocation == "Offset":
-			# do the offset stuff, set active etc
-			bpy.ops.transform.translate(value=(-gl[0],-gl[1],-gl[2]))
-
-		try:
-			bpy.ops.object.mode_set(mode='POSE')
-			act = bpy.context.object
-		except:
-			self.report({'WARNING'}, "Could not enter pose mode on linked character")
-			return
-		if self.clearPose:
-			bpy.ops.pose.select_all(action='SELECT')
-			bpy.ops.pose.rot_clear()
-			bpy.ops.pose.scale_clear()
-			bpy.ops.pose.loc_clear()
-		if self.relocation == "Offset":
-			set_bone = self.offset_root_bone(context, act)
-			if not set_bone:
-				print("MCprep mob spawning works better when the root bone's name is 'MAIN'")
-				self.report({'INFO'}, "This addon works better when the root bone's name is 'MAIN'")
-
-	def load_append(self, context, path, name):
-		"""Append the whole collection group into this blend file."""
-		if path == '//':
-			# This means the group HAS already been appended..
-			# Could try to recopy thsoe elements, or try re-appending with
-			# renaming of the original group
-			self.report({'ERROR'}, "Group name already exists in local file")
-			conf.log("Group already appended/is here")
-			return
-
-		path = bpy.path.abspath(path)
-		sel = bpy.context.selected_objects # capture state before, technically also copy
-		for ob in util.get_objects_conext(context):
-			util.select_set(ob, False)
-		# consider taking pre-exisitng group names and giving them a temp name to name back at the end
-
-		if hasattr(bpy.data, "groups"):
-			subpath = 'Group'
-		elif hasattr(bpy.data, "collections"):
-			subpath = 'Collection'
-		else:
-			raise Exception("No Group or Collection bpy API endpoint")
-
-		conf.log(os.path.join(path, subpath) + ', ' + name)
-		pregroups = list(util.collections())
-		util.bAppendLink(os.path.join(path, subpath), name, False)
-		postgroups = list(util.collections())
-
-		g1 = None
-		new_groups = list(set(postgroups) - set(pregroups))
-		if not new_groups and name in util.collections():
-			# this is more likely to fail but serves as a fallback
-			conf.log("Mob spawn: Had to go to fallback group name grab")
-			grp_added = util.collections()[name]
-		elif not new_groups:
-			conf.log("Warning, could not detect imported group")
-			self.report({'WARNING'}, "Could not detect imported group")
-			return
-		else:
-			grp_added = new_groups[0] # assume first
-
-		conf.log("Identified object {} with group {} as just imported".format(
-			g1, grp_added), vv_only=True)
-
-		# if rig not centered in original file, assume its group is
-		if hasattr(grp_added, "dupli_offset"): # 2.7
-			gl = grp_added.dupli_offset
-		elif hasattr(grp_added, "instance_offset"): # 2.8
-			gl = grp_added.instance_offset
-		else:
-			conf.log("Warning, could not set offset for group; null type?")
-			gl = (0, 0, 0)
-		cl = util.get_cuser_location(context)
-
-		# For some reason, adding group objects on its own doesn't work
-		all_objects = context.selected_objects
-		addedObjs = [ob for ob in grp_added.objects]
-		for ob in all_objects:
-			if ob not in addedObjs:
-				conf.log("This obj not in group: " + ob.name)
-				# removes things like random bone shapes pulled in,
-				# without deleting them, just unlinking them from the scene
-				util.obj_unlink_remove(ob, False, context)
-
-		if not util.bv28():
-			grp_added.name = "reload-blend-to-remove-this-empty-group"
-			for obj in grp_added.objects:
-				grp_added.objects.unlink(obj)
-				util.select_set(obj, True)
-			grp_added.user_clear()
-		else:
-			for obj in grp_added.objects:
-				if obj not in context.view_layer.objects[:]:
-					continue
-				util.select_set(obj, True)
-
-		# try:
-		# 	util.collections().remove(grp_added)
-		# 	This can cause redo last issues
-		# except:
-		# 	pass
-		rig_obj = self.get_rig_from_objects(addedObjs)
-		if not rig_obj:
-			conf.log("Could not get rig object")
-			self.report({'WARNING'}, "No armatures found!")
-		else:
-			conf.log("Using object as primary rig: " + rig_obj.name)
-			try:
-				util.set_active_object(context, rig_obj)
-			except RuntimeError:
-				conf.log("Failed to set {} as active".format(rig_obj))
-				rig_obj = None
-
-		if rig_obj and self.clearPose or rig_obj and self.relocation == "Offset":
-			if self.relocation == "Offset":
-				bpy.ops.transform.translate(value=(-gl[0], -gl[1], -gl[2]))
-			try:
-				bpy.ops.object.mode_set(mode='POSE')
-			except Exception as e:
-				self.report({'ERROR'}, "Failed to enter pose mode: " + str(e))
-				print("Failed to enter pose mode, see logs")
-				print("Exception: ", str(e))
-				print(bpy.context.object)
-				print(rig_obj)
-				print("Mode: ", context.mode)
-				print("-- end error context printout --")
-
-			posemode = context.mode == 'POSE'
-
-			if self.clearPose:
-				if rig_obj.animation_data:
-					rig_obj.animation_data.action = None
-				# transition to clear out pose this way
-				# for b in ob.pose.bones:
-				# old way, with mode set
-				if posemode:
-					bpy.ops.pose.select_all(action='SELECT')
-					bpy.ops.pose.rot_clear()
-					bpy.ops.pose.scale_clear()
-					bpy.ops.pose.loc_clear()
-
-			if self.relocation == "Offset" and posemode:
-				set_bone = self.offset_root_bone(context, rig_obj)
-				if not set_bone:
-					conf.log("This addon works better when the root bone's name is 'MAIN'")
-					self.report({'INFO'}, "Works better if armature has a root bone named 'MAIN' or 'ROOT'")
-
-		# now do the extra options, e.g. the object-level offsets
-		if context.mode != 'OBJECT':
-			bpy.ops.object.mode_set(mode='OBJECT')
-		if self.relocation == "Origin":
-			bpy.ops.transform.translate(value=(-gl[0],-gl[1],-gl[2]))
-		elif self.relocation=="Cursor":
-			bpy.ops.transform.translate(value=(cl[0]-gl[0],
-												cl[1]-gl[1],
-												cl[2]-gl[2]))
-		# add the original selection back
-		for objs in sel:
-			util.select_set(objs, True)
-
 
 class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
-	"""Install custom rig popup for the mob spawner, all groups in selected blend file will become individually spawnable"""
+	"""Install mob operator."""
 	bl_idname = "mcprep.mob_install_menu"
 	bl_label = "Install new mob"
+	bl_description = (
+		"Install custom rig popup for the mob spawner, all groups/collections "
+		"in selected blend file will become individually spawnable")
 
 	filename_ext = ".blend"
 	filter_glob = bpy.props.StringProperty(
-			default="*.blend",
-			options={'HIDDEN'},
-			)
+		default="*.blend",
+		options={'HIDDEN'},
+	)
 	fileselectparams = "use_filter_blender"
 
 	def getCategories(self, context):
 		path = bpy.path.abspath(context.scene.mcprep_mob_path)
 		ret = []
 		ret.append(("all", "No Category", "Uncategorized mob"))
-		ret += [(f, f.title(), "{} mob".format(f.title()))
-				for f in os.listdir(path)
-				if os.path.isdir(os.path.join(path, f))
-				and not f.startswith(".")]
-		ret.append(("no_category", "No Category", "Uncategorized mob")) # last entry
+		ret += [
+			(f, f.title(), "{} mob".format(f.title()))
+			for f in os.listdir(path)
+			if os.path.isdir(os.path.join(path, f)) and not f.startswith(".")]
+		ret.append(("no_category", "No Category", "Uncategorized mob"))  # last entry
 		return ret
 
 	mob_category = bpy.props.EnumProperty(
-		items = getCategories,
-		name = "Mob Category")
+		items=getCategories,
+		name="Mob Category")
 
 	@tracking.report_error
 	def execute(self, context):
@@ -646,13 +353,13 @@ class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
 
 		# check the file for any groups, any error return failed
 		with bpy.data.libraries.load(newrig) as (data_from, data_to):
-			if hasattr(data_from, "groups"): # blender 2.7
+			if hasattr(data_from, "groups"):  # blender 2.7
 				get_attr = "groups"
-			else: # 2.8
+			else:  # 2.8
 				get_attr = "collections"
-			install_groups = list(getattr(data_from, get_attr)) # list of str's
+			install_groups = list(getattr(data_from, get_attr))  # list of str's
 
-		if 'Collection' in install_groups: # don't count the default 2.8 group
+		if 'Collection' in install_groups:  # don't count the default 2.8 group
 			install_groups.pop(install_groups.index('Collection'))
 
 		if not install_groups:
@@ -672,7 +379,8 @@ class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
 		except IOError as err:
 			print(err)
 			# can fail if permission denied, i.e. an IOError error
-			self.report({'ERROR'},
+			self.report(
+				{'ERROR'},
 				"Failed to copy, manually install by copying blend to folder: {}".format(
 					end_path))
 			return {'CANCELLED'}
@@ -680,18 +388,20 @@ class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
 		# now do same to install py files if any or icons
 		# failure here is non critical
 		try:
-			if os.path.isfile(newrig[:-5]+"py"):
+			if os.path.isfile(newrig[:-5] + "py"):
 				# if there is a script, install that too
-				shutil.copy2(newrig[:-5]+"py",
-					os.path.join(end_path, filename[:-5]+"py"))
+				shutil.copy2(
+					newrig[:-5] + "py",
+					os.path.join(end_path, filename[:-5] + "py"))
 		except IOError as err:
 			print(err)
-			self.report({'WARNING'},
+			self.report(
+				{'WARNING'},
 				"Failed attempt to copy python file: {}".format(
 					end_path))
 
 		# copy all relevant icons, based on groups installed
-		### matching same folde or subfolder icons to append
+		# ## matching same folde or subfolder icons to append
 		if conf.use_icons:
 			basedir = os.path.dirname(newrig)
 			icon_files = self.identify_icons(install_groups, basedir)
@@ -706,15 +416,19 @@ class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
 					except OSError as exc:
 						if exc.errno == errno.EACCES:
 							print("Permission denied, try running blender as admin")
+							print(dst)
+							print(exc)
 						elif exc.errno != errno.EEXIST:
-							print("Path does not exist: "+dst)
+							print("Path does not exist: " + dst)
+							print(exc)
 				for icn in icon_files:
 					icn_base = os.path.basename(icn)
 					try:
 						shutil.copy2(icn, os.path.join(dst, icn_base))
 					except IOError as err:
-						print("Failed to copy over icon file "+icn)
-						print("to "+os.path.join(icondir, icn_base))
+						print("Failed to copy over icon file " + icn)
+						print("to " + os.path.join(icondir, icn_base))
+						print(err)
 
 		# reload the cache
 		update_rig_list(context)
@@ -726,15 +440,15 @@ class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
 		"""Copy over all matching icons from single specific folder"""
 		if not group_names:
 			return []
-		extensions = [".png",".jpg",".jpeg"]
+		extensions = [".png", ".jpg", ".jpeg"]
 		icons = []
 		for name in group_names:
-			icons += [os.path.join(path, f) for f in os.listdir(path)
-						if os.path.isfile(os.path.join(path, f))
-						and name.lower() in f.lower()
-						and not f.startswith(".")
-						and os.path.splitext(f.lower())[-1] in extensions
-						]
+			icons += [
+				os.path.join(path, f) for f in os.listdir(path)
+				if os.path.isfile(os.path.join(path, f))
+				and name.lower() in f.lower()
+				and not f.startswith(".")
+				and os.path.splitext(f.lower())[-1] in extensions]
 		return icons
 
 
@@ -748,7 +462,8 @@ class MCPREP_OT_uninstall_mob(bpy.types.Operator):
 
 	def invoke(self, context, event):
 		self.preDraw(context)
-		return context.window_manager.invoke_props_dialog(self, width=400*util.ui_scale())
+		return context.window_manager.invoke_props_dialog(
+			self, width=400 * util.ui_scale())
 
 	def preDraw(self, context):
 		scn_props = context.scene.mcprep_props
@@ -769,33 +484,33 @@ class MCPREP_OT_uninstall_mob(bpy.types.Operator):
 			path, name = mob.mcmob_type.split(":/:")
 			if path == self.path:
 				self.listing.append(name)
-				count+=1
+				count += 1
 
 	def draw(self, context):
 		row = self.layout.row()
-		row.scale_y=0.5
+		row.scale_y = 0.5
 		scn_props = context.scene.mcprep_props
 		mob = scn_props.mob_list[scn_props.mob_list_index].mcmob_type
 		path = mob.split(":/:")[0]
 		path = os.path.join(context.scene.mcprep_mob_path, path)
-		if len(self.listing)>1:
+		if len(self.listing) > 1:
 			row.label(text="Multiple mobs found in target blend file:")
 			row = self.layout.row()
-			row.scale_y=0.5
+			row.scale_y = 0.5
 
 			# draw 3-column list of mobs to be deleted
 			col1 = row.column()
-			col1.scale_y=0.6
+			col1.scale_y = 0.6
 			col2 = row.column()
-			col2.scale_y=0.6
+			col2.scale_y = 0.6
 			col3 = row.column()
-			col3.scale_y=0.6
+			col3.scale_y = 0.6
 			count = 0
 			for grp in self.listing:
-				count+=1
-				if count%3==0:
+				count += 1
+				if count % 3 == 0:
 					col1.label(text=grp)
-				elif count%3==1:
+				elif count % 3 == 1:
 					col2.label(text=grp)
 				else:
 					col3.label(text=grp)
@@ -809,30 +524,30 @@ class MCPREP_OT_uninstall_mob(bpy.types.Operator):
 		row.label(text=path)
 
 	@tracking.report_error
-	def execute(self,context):
+	def execute(self, context):
 		scn_props = context.scene.mcprep_props
 		mob = scn_props.mob_list[scn_props.mob_list_index].mcmob_type
 		try:
 			path = mob.split(":/:")[0]
-			path = os.path.join(context.scene.mcprep_mob_path,path)
+			path = os.path.join(context.scene.mcprep_mob_path, path)
 		except Exception as e:
 			self.report({'ERROR'}, "Could not resolve file to delete")
-			print("Error trying to remove mob file: "+str(e))
+			print("Error trying to remove mob file: " + str(e))
 			return {'CANCELLED'}
 
-		if os.path.isfile(path) == False:
-			conf.log("Error: Source filepath not found, didn't delete: "+path)
+		if os.path.isfile(path) is False:
+			conf.log("Error: Source filepath not found, didn't delete: " + path)
 			self.report({'ERROR'}, "Source filepath not found, didn't delete")
 			return {'CANCELLED'}
 		else:
 			try:
 				os.remove(path)
-			except:
-				conf.log("Error: could not delete file")
+			except Exception as err:
+				conf.log("Error: could not delete file: " + str(err))
 				self.report({'ERROR'}, "Could not delete file")
 				return {'CANCELLED'}
-		self.report({'INFO'},"Removed: "+str(path))
-		conf.log("Removed file: "+str(path))
+		self.report({'INFO'}, "Removed: " + str(path))
+		conf.log("Removed file: " + str(path))
 		bpy.ops.mcprep.reload_mobs()
 		return {'FINISHED'}
 
@@ -858,8 +573,8 @@ class MCPREP_OT_install_mob_icon(bpy.types.Operator, ImportHelper):
 			self.report({'ERROR'}, "File not found")
 			return {'CANCELLED'}
 
-		extensions = [".png",".jpg",".jpeg"]
-		ext = os.path.splitext(self.filepath)[-1] # get extension, includes .
+		extensions = [".png", ".jpg", ".jpeg"]
+		ext = os.path.splitext(self.filepath)[-1]  # get extension, includes .
 		if ext.lower() not in extensions:
 			self.report({'ERROR'}, "Wrong filetype, must be png or jpg")
 			return {'CANCELLED'}
@@ -870,7 +585,7 @@ class MCPREP_OT_install_mob_icon(bpy.types.Operator, ImportHelper):
 		path = context.scene.mcprep_mob_path
 
 		icon_dir = os.path.join(path, mob.category, "icons")
-		new_file = os.path.join(icon_dir, name+ext)
+		new_file = os.path.join(icon_dir, name + ext)
 		print("New icon file name would be:")
 		print(new_file)
 
@@ -881,7 +596,7 @@ class MCPREP_OT_install_mob_icon(bpy.types.Operator, ImportHelper):
 				if exc.errno == errno.EACCES:
 					print("Permission denied, try running blender as admin")
 				elif exc.errno != errno.EEXIST:
-					print("Path does not exist: "+icon_dir)
+					print("Path does not exist: " + icon_dir)
 
 		# if the file exists already, remove it.
 		if os.path.isfile(new_file):
@@ -895,9 +610,10 @@ class MCPREP_OT_install_mob_icon(bpy.types.Operator, ImportHelper):
 			shutil.copy2(self.filepath, new_file)
 		except IOError as err:
 			print("Failed to copy, manually copy to file name: {}".format(
-					new_file))
+				new_file))
 			print(err)
-			self.report({'ERROR'},
+			self.report(
+				{'ERROR'},
 				"Failed to copy, manually copy to file name: {}".format(
 					new_file))
 			return {'CANCELLED'}
@@ -915,7 +631,7 @@ class MCPREP_OT_install_mob_icon(bpy.types.Operator, ImportHelper):
 		return {'FINISHED'}
 
 # -----------------------------------------------------------------------------
-#	Mob category related
+# Mob category related
 # -----------------------------------------------------------------------------
 
 
@@ -927,13 +643,14 @@ def spawn_rigs_categories(self, context):
 	categories = conf.rig_categories
 	if not conf.rig_categories:
 		it = context.scene.mcprep_mob_path
-		categories = [f for f in os.listdir(it)
-						if os.path.isdir(os.path.join(it,f))]
+		categories = [
+			f for f in os.listdir(it) if os.path.isdir(os.path.join(it, f))]
 		conf.rig_categories = categories
 	for item in categories:
-		ui_name = item+" mobs"
-		items.append((item, ui_name.title(),
-			"Show all mobs in the '"+item+"' category"))
+		ui_name = item + " mobs"
+		items.append((
+			item, ui_name.title(),
+			"Show all mobs in the '" + item + "' category"))
 
 	items.append(("no_category", "Uncategorized", "Show all uncategorized mobs"))
 	return items
@@ -946,7 +663,7 @@ def spawn_rigs_category_load(self, context):
 
 
 # -----------------------------------------------------------------------------
-#	Registration
+# Registration
 # -----------------------------------------------------------------------------
 
 
