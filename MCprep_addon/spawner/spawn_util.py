@@ -216,7 +216,10 @@ def load_linked(self, context, path, name):
 		act = context.object  # assumption of object after linking, 2.7 only
 	elif hasattr(bpy.data, "collections"):
 		util.bAppendLink(path + '/Collection', name, True)
-		act = context.selected_objects[0]  # better for 2.8
+		if len(context.selected_objects) > 0:
+			act = context.selected_objects[0]  # better for 2.8
+		else:
+			print("Error: Should have had at least one object selected.")
 
 	# util.bAppendLink(os.path.join(path, g_or_c), name, True)
 	# proxy any and all armatures
