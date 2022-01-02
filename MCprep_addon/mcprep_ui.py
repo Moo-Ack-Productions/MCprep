@@ -188,13 +188,13 @@ class MCPREP_MT_3dview_add(bpy.types.Menu):
 
 		if conf.preview_collections["main"] != "":
 			spawner_icon = conf.preview_collections["main"].get("spawner_icon")
-			grass_icon = conf.preview_collections["main"].get("grass_icon")
+			meshswap_icon = conf.preview_collections["main"].get("meshswap_icon")
 			sword_icon = conf.preview_collections["main"].get("sword_icon")
 			entity_icon = conf.preview_collections["main"].get("entity_icon")
 			model_icon = conf.preview_collections["main"].get("model_icon")
 		else:
 			spawner_icon = None
-			grass_icon = None
+			meshswap_icon = None
 			sword_icon = None
 			entity_icon = None
 			model_icon = None
@@ -215,12 +215,11 @@ class MCPREP_MT_3dview_add(bpy.types.Menu):
 		else:
 			layout.menu(MCPREP_MT_mob_spawner.bl_idname)
 
-		if grass_icon is not None:
+		if model_icon is not None:
 			layout.menu(
-				MCPREP_MT_meshswap_place.bl_idname,
-				icon_value=grass_icon.icon_id)
+				MCPREP_MT_model_spawn.bl_idname, icon_value=model_icon.icon_id)
 		else:
-			layout.menu(MCPREP_MT_meshswap_place.bl_idname)
+			layout.menu(MCPREP_MT_model_spawn.bl_idname)
 
 		if sword_icon is not None:
 			layout.menu(
@@ -234,11 +233,12 @@ class MCPREP_MT_3dview_add(bpy.types.Menu):
 		else:
 			layout.menu(MCPREP_MT_entity_spawn.bl_idname)
 
-		if model_icon is not None:
+		if meshswap_icon is not None:
 			layout.menu(
-				MCPREP_MT_model_spawn.bl_idname, icon_value=model_icon.icon_id)
+				MCPREP_MT_meshswap_place.bl_idname,
+				icon_value=meshswap_icon.icon_id)
 		else:
-			layout.menu(MCPREP_MT_model_spawn.bl_idname)
+			layout.menu(MCPREP_MT_meshswap_place.bl_idname)
 
 
 def mineways_update(self, context):
@@ -897,462 +897,6 @@ class MCPREP_PT_skins(bpy.types.Panel):
 					row.operator("mcprep.spawn_with_skin", text=tx)
 
 
-class MCPREP_PT_spawn(bpy.types.Panel):
-	"""MCprep panel for mob spawning"""
-	bl_label = "Spawner"
-	bl_space_type = "VIEW_3D"
-	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
-	bl_category = "MCprep"
-
-	def draw(self, context):
-		is_obj_mode = context.mode == "OBJECT"
-		is_pose_mode = context.mode == "POSE"
-		row = self.layout.row(align=True)
-		row.prop(context.scene.mcprep_props, "spawn_mode", expand=True)
-		ops = row.operator("mcprep.open_help", text="", icon="QUESTION")
-		ops.url = "https://theduckcow.com/dev/blender/mcprep/mcprep-spawner/"
-		if context.scene.mcprep_props.spawn_mode == "mob":
-			if not is_obj_mode:
-				self.draw_mode_warning(self.layout)
-				return
-			self.mob_spawner(context)
-		elif context.scene.mcprep_props.spawn_mode == "meshswap":
-			if not is_obj_mode:
-				self.draw_mode_warning(self.layout)
-				return
-			self.meshswap(context)
-		elif context.scene.mcprep_props.spawn_mode == "item":
-			if not is_obj_mode and not is_pose_mode:
-				self.draw_mode_warning(self.layout)
-				return
-			self.item_spawner(context)
-		elif context.scene.mcprep_props.spawn_mode == "entity":
-			if not is_obj_mode:
-				self.draw_mode_warning(self.layout)
-				return
-			self.entity_spawner(context)
-		elif context.scene.mcprep_props.spawn_mode == "model":
-			if not is_obj_mode:
-				self.draw_mode_warning(self.layout)
-				return
-			self.model_spawner(context)
-		addon_updater_ops.check_for_update_background()
-
-	def draw_mode_warning(self, ui_element):
-		col = ui_element.column(align=True)
-		col.label(text="Enter object mode", icon="ERROR")
-		col.label(text="to use spawner", icon="BLANK1")
-		col.operator("object.mode_set").mode = "OBJECT"
-		col.label(text="")
-
-	def mob_spawner(self, context):
-		scn_props = context.scene.mcprep_props
-
-		layout = self.layout
-		layout.label(text="Import pre-rigged mobs & players")
-		split = layout.split()
-		col = split.column(align=True)
-
-		row = col.row()
-		row.prop(scn_props, "spawn_rig_category", text="")
-		if scn_props.mob_list:
-			row = col.row()
-			row.template_list(
-				"MCPREP_UL_mob", "",
-				scn_props, "mob_list",
-				scn_props, "mob_list_index",
-				rows=4)
-		elif scn_props.mob_list_all:
-			box = col.box()
-			b_row = box.row()
-			b_row.label(text="")
-			b_col = box.column()
-			b_col.scale_y = 0.7
-			b_col.label(text="No mobs in category,")
-			b_col.label(text="install a rig below or")
-			b_col.label(text="copy file to folder.")
-			b_row = box.row()
-			b_row.label(text="")
-		else:
-			box = col.box()
-			b_row = box.row()
-			b_row.label(text="No mobs loaded")
-			b_row = box.row()
-			b_row.scale_y = 2
-			b_row.operator(
-				"mcprep.reload_spawners", text="Reload assets", icon="ERROR")
-
-		# get which rig is selected
-		if scn_props.mob_list:
-			name = scn_props.mob_list[scn_props.mob_list_index].name
-			mcmob_type = scn_props.mob_list[scn_props.mob_list_index].mcmob_type
-		else:
-			name = ""
-			mcmob_type = ""
-		col = layout.column(align=True)
-		row = col.row(align=True)
-		row.scale_y = 1.5
-		row.enabled = len(scn_props.mob_list) > 0
-		p = row.operator("mcprep.mob_spawner", text="Spawn " + name)
-		if mcmob_type:
-			p.mcmob_type = mcmob_type
-		p = col.operator("mcprep.mob_install_menu")
-		p.mob_category = scn_props.spawn_rig_category
-
-		split = layout.split()
-		col = split.column(align=True)
-		row = col.row(align=True)
-		if not scn_props.show_settings_spawner:
-			row.prop(
-				scn_props, "show_settings_spawner",
-				text="Advanced", icon="TRIA_RIGHT")
-			row.operator(
-				"mcprep.open_preferences",
-				text="", icon="PREFERENCES").tab = "settings"
-		else:
-			row.prop(
-				scn_props, "show_settings_spawner",
-				text="Advanced", icon="TRIA_DOWN")
-			row.operator(
-				"mcprep.open_preferences",
-				text="", icon="PREFERENCES").tab = "settings"
-			box = col.box()
-			b_row = box.row()
-			b_col = b_row.column(align=False)
-			b_col.label(text="Mob spawner folder")
-			subrow = b_col.row(align=True)
-			subrow.prop(context.scene, "mcprep_mob_path", text="")
-			subrow.operator(
-				"mcprep.spawn_path_reset", icon=LOAD_FACTORY, text="")
-			b_row = box.row()
-			b_col = b_row.column(align=True)
-			ops = b_col.operator("mcprep.openfolder", text="Open mob folder")
-			ops.folder = context.scene.mcprep_mob_path
-
-			if not scn_props.mob_list:
-				b_col.operator("mcprep.mob_install_icon")
-			else:
-				icon_index = scn_props.mob_list[scn_props.mob_list_index].index
-				if "mob-{}".format(icon_index) in conf.preview_collections["mobs"]:
-					b_col.operator(
-						"mcprep.mob_install_icon", text="Change mob icon")
-				else:
-					b_col.operator("mcprep.mob_install_icon")
-			b_col.operator("mcprep.mob_uninstall")
-			b_col.operator("mcprep.reload_mobs", text="Reload mobs")
-			b_col.label(text=mcmob_type)
-
-	def meshswap(self, context):
-		scn_props = context.scene.mcprep_props
-
-		layout = self.layout
-		layout.label(text="Import premade blocks (e.g. lights)")
-		split = layout.split()
-		col = split.column(align=True)
-
-		if scn_props.meshswap_list:
-			col.template_list(
-				"MCPREP_UL_meshswap", "",
-				scn_props, "meshswap_list",
-				scn_props, "meshswap_list_index",
-				rows=4)
-			# col.label(text=datapass.split("/")[0])
-		elif not context.scene.meshswap_path.lower().endswith('.blend'):
-			box = col.box()
-			b_row = box.row()
-			b_row.label(text="Meshswap file must be a .blend")
-			b_row = box.row()
-			b_row.scale_y = 2
-			b_row.operator(
-				"mcprep.meshswap_path_reset", icon=LOAD_FACTORY,
-				text="Reset meshswap path")
-		elif not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
-			box = col.box()
-			b_row = box.row()
-			b_row.label(text="Meshswap file not found")
-			b_row = box.row()
-			b_row.scale_y = 2
-			b_row.operator(
-				"mcprep.meshswap_path_reset", icon=LOAD_FACTORY,
-				text="Reset meshswap path")
-		else:
-			box = col.box()
-			b_row = box.row()
-			b_row.label(text="No blocks loaded")
-			b_row = box.row()
-			b_row.scale_y = 2
-			b_row.operator(
-				"mcprep.reload_spawners",
-				text="Reload assets", icon="ERROR")
-
-		col = layout.column(align=True)
-		row = col.row()
-		row.scale_y = 1.5
-		row.enabled = len(scn_props.meshswap_list) > 0
-		if scn_props.meshswap_list:
-			name = scn_props.meshswap_list[scn_props.meshswap_list_index].name
-			block = scn_props.meshswap_list[scn_props.meshswap_list_index].block
-			p = row.operator("mcprep.meshswap_spawner", text="Place: " + name)
-			p.block = block
-			p.location = util.get_cuser_location(context)
-		else:
-			row.operator("mcprep.meshswap_spawner", text="Place block")
-		# something to directly open meshswap file??
-
-		split = layout.split()
-		col = split.column(align=True)
-		row = col.row(align=True)
-
-		if not scn_props.show_settings_spawner:
-			col.prop(
-				scn_props, "show_settings_spawner",
-				text="Advanced", icon="TRIA_RIGHT")
-		else:
-			col.prop(
-				scn_props,
-				"show_settings_spawner",
-				text="Advanced", icon="TRIA_DOWN")
-			box = col.box()
-			b_row = box.row()
-			b_col = b_row.column(align=False)
-			b_col.label(text="Meshswap file")
-			subrow = b_col.row(align=True)
-			subrow.prop(context.scene, "meshswap_path", text="")
-			subrow.operator(
-				"mcprep.meshswap_path_reset", icon=LOAD_FACTORY, text="")
-			if not context.scene.meshswap_path.lower().endswith('.blend'):
-				b_col.label(text="MeshSwap file must be a .blend", icon="ERROR")
-			elif not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
-				b_col.label(text="MeshSwap file not found", icon="ERROR")
-			b_row = box.row()
-			b_col = b_row.column(align=True)
-			b_col.operator("mcprep.reload_meshswap")
-
-	def item_spawner(self, context):
-		"""Code for drawing the item spawner"""
-		scn_props = context.scene.mcprep_props
-
-		layout = self.layout
-		layout.label(text="Generate items from textures")
-		split = layout.split()
-		col = split.column(align=True)
-
-		if scn_props.item_list:
-			col.template_list(
-				"MCPREP_UL_item", "",
-				scn_props, "item_list",
-				scn_props, "item_list_index",
-				rows=4)
-			col = layout.column(align=True)
-			row = col.row(align=True)
-			row.scale_y = 1.5
-			name = scn_props.item_list[scn_props.item_list_index].name
-			row.operator("mcprep.spawn_item", text="Place: " + name)
-			row = col.row(align=True)
-			row.operator("mcprep.spawn_item_file")
-		else:
-			box = col.box()
-			b_row = box.row()
-			b_row.label(text="No items loaded")
-			b_row = box.row()
-			b_row.scale_y = 2
-			b_row.operator(
-				"mcprep.reload_spawners",
-				text="Reload assets", icon="ERROR")
-
-			col = layout.column(align=True)
-			col.enabled = False
-			row = col.row(align=True)
-			row.scale_y = 1.5
-			row.operator("mcprep.spawn_item", text="Place item")
-			row = col.row(align=True)
-			row.operator("mcprep.spawn_item_file")
-
-		split = layout.split()
-		col = split.column(align=True)
-		row = col.row(align=True)
-
-		if not scn_props.show_settings_spawner:
-			col.prop(
-				scn_props, "show_settings_spawner",
-				text="Advanced", icon="TRIA_RIGHT")
-		else:
-			col.prop(
-				scn_props, "show_settings_spawner",
-				text="Advanced", icon="TRIA_DOWN")
-			box = col.box()
-			b_row = box.row()
-			b_col = b_row.column(align=False)
-			b_col.label(text="Resource pack")
-			subrow = b_col.row(align=True)
-			subrow.prop(context.scene, "mcprep_texturepack_path", text="")
-			subrow.operator(
-				"mcprep.reset_texture_path", icon=LOAD_FACTORY, text="")
-			b_row = box.row()
-			b_col = b_row.column(align=True)
-			b_col.operator("mcprep.reload_items")
-
-	def entity_spawner(self, context):
-		scn_props = context.scene.mcprep_props
-
-		layout = self.layout
-		layout.label(text="Import rigged entities (non blocks)")
-		split = layout.split()
-		col = split.column(align=True)
-
-		if scn_props.entity_list:
-			col.template_list(
-				"MCPREP_UL_entity", "",
-				scn_props, "entity_list",
-				scn_props, "entity_list_index",
-				rows=4)
-
-		elif not context.scene.entity_path.lower().endswith('.blend'):
-			box = col.box()
-			b_row = box.row()
-			b_row.label(text="Entity file must be a .blend")
-			b_row = box.row()
-			b_row.scale_y = 2
-			b_row.operator(
-				"mcprep.entity_path_reset", icon=LOAD_FACTORY,
-				text="Reset entity path")
-		elif not os.path.isfile(bpy.path.abspath(context.scene.entity_path)):
-			box = col.box()
-			b_row = box.row()
-			b_row.label(text="Entity file not found")
-			b_row = box.row()
-			b_row.scale_y = 2
-			b_row.operator(
-				"mcprep.entity_path_reset", icon=LOAD_FACTORY,
-				text="Reset entity path")
-		else:
-			box = col.box()
-			b_row = box.row()
-			b_row.label(text="No entities loaded")
-			b_row = box.row()
-			b_row.scale_y = 2
-			b_row.operator(
-				"mcprep.reload_spawners",
-				text="Reload assets", icon="ERROR")
-
-		col = layout.column(align=True)
-		row = col.row()
-		row.scale_y = 1.5
-		row.enabled = len(scn_props.entity_list) > 0
-		if scn_props.entity_list:
-			name = scn_props.entity_list[scn_props.entity_list_index].name
-			entity = scn_props.entity_list[scn_props.entity_list_index].entity
-			p = row.operator("mcprep.entity_spawner", text="Spawn: " + name)
-			p.entity = entity
-		else:
-			row.operator("mcprep.entity_spawner", text="Spawn Entity")
-
-		split = layout.split()
-		col = split.column(align=True)
-		row = col.row(align=True)
-
-		if not scn_props.show_settings_spawner:
-			col.prop(
-				scn_props, "show_settings_spawner",
-				text="Advanced", icon="TRIA_RIGHT")
-		else:
-			col.prop(
-				scn_props, "show_settings_spawner",
-				text="Advanced", icon="TRIA_DOWN")
-			box = col.box()
-			b_row = box.row()
-			b_col = b_row.column(align=False)
-			b_col.label(text="Entity file")
-			subrow = b_col.row(align=True)
-			subrow.prop(context.scene, "entity_path", text="")
-			subrow.operator("mcprep.entity_path_reset", icon=LOAD_FACTORY, text="")
-			if not context.scene.entity_path.lower().endswith('.blend'):
-				b_col.label(text="MeshSwap file must be a .blend", icon="ERROR")
-			elif not os.path.isfile(bpy.path.abspath(context.scene.entity_path)):
-				b_col.label(text="MeshSwap file not found", icon="ERROR")
-			b_row = box.row()
-			b_col = b_row.column(align=True)
-			b_col.operator("mcprep.reload_entities")
-
-	def model_spawner(self, context):
-		"""Code for drawing the model block spawner"""
-		scn_props = context.scene.mcprep_props
-		addon_prefs = util.get_user_preferences(context)
-
-		layout = self.layout
-		layout.label(text="Generate models from .json files")
-		if not util.bv28():
-			layout.label(text="Requires blender 2.8 or newer")
-			return
-		split = layout.split()
-		col = split.column(align=True)
-
-		if scn_props.model_list:
-			col.template_list(
-				"MCPREP_UL_model", "",
-				scn_props, "model_list",
-				scn_props, "model_list_index",
-				rows=4)
-
-			col = layout.column(align=True)
-			row = col.row(align=True)
-			row.scale_y = 1.5
-			model = scn_props.model_list[scn_props.model_list_index]
-			ops = row.operator("mcprep.spawn_model", text="Place: " + model.name)
-			ops.location = util.get_cuser_location(context)
-			ops.filepath = model.filepath
-			if addon_prefs.MCprep_exporter_type == "Mineways":
-				ops.snapping = "offset"
-			elif addon_prefs.MCprep_exporter_type == "jmc2obj":
-				ops.snapping = "center"
-		else:
-			box = col.box()
-			b_row = box.row()
-			b_row.label(text="No models loaded")
-			b_row = box.row()
-			b_row.scale_y = 2
-			b_row.operator(
-				"mcprep.reload_spawners",
-				text="Reload assets", icon="ERROR")
-
-			col = layout.column(align=True)
-			row = col.row(align=True)
-			row.enabled = False
-			row.scale_y = 1.5
-			row.operator("mcprep.spawn_model")
-
-		ops = col.operator("mcprep.import_model_file")
-		ops.location = util.get_cuser_location(context)
-		if addon_prefs.MCprep_exporter_type == "Mineways":
-			ops.snapping = "center"
-		elif addon_prefs.MCprep_exporter_type == "jmc2obj":
-			ops.snapping = "offset"
-
-		split = layout.split()
-		col = split.column(align=True)
-		row = col.row(align=True)
-
-		if not scn_props.show_settings_spawner:
-			col.prop(
-				scn_props, "show_settings_spawner",
-				text="Advanced", icon="TRIA_RIGHT")
-		else:
-			col.prop(
-				scn_props, "show_settings_spawner",
-				text="Advanced", icon="TRIA_DOWN")
-			box = col.box()
-			b_row = box.row()
-			b_col = b_row.column(align=False)
-			b_col.label(text="Resource pack")
-			subrow = b_col.row(align=True)
-			subrow.prop(context.scene, "mcprep_texturepack_path", text="")
-			subrow.operator(
-				"mcprep.reset_texture_path", icon=LOAD_FACTORY, text="")
-			b_row = box.row()
-			b_col = b_row.column(align=True)
-			b_col.operator("mcprep.reload_models")
-
-
 class MCPREP_PT_materials(bpy.types.Panel):
 	"""MCprep panel for materials"""
 	bl_label = "MCprep materials"
@@ -1413,6 +957,572 @@ class MCPREP_PT_materials_subsettings(bpy.types.Panel):
 		b_row = self.layout.row()
 		b_col = b_row.column(align=True)
 		b_col.operator("mcprep.reload_materials")
+
+
+# -----------------------------------------------------------------------------
+# Spawner related UI
+# -----------------------------------------------------------------------------
+
+def draw_mode_warning(ui_element):
+	col = ui_element.column(align=True)
+	col.label(text="Enter object mode", icon="ERROR")
+	col.label(text="to use spawner", icon="BLANK1")
+	col.operator("object.mode_set").mode = "OBJECT"
+	col.label(text="")
+
+
+def mob_spawner(self, context):
+	scn_props = context.scene.mcprep_props
+
+	layout = self.layout
+	layout.label(text="Import pre-rigged mobs & players")
+	split = layout.split()
+	col = split.column(align=True)
+
+	row = col.row()
+	row.prop(scn_props, "spawn_rig_category", text="")
+	if scn_props.mob_list:
+		row = col.row()
+		row.template_list(
+			"MCPREP_UL_mob", "",
+			scn_props, "mob_list",
+			scn_props, "mob_list_index",
+			rows=4)
+	elif scn_props.mob_list_all:
+		box = col.box()
+		b_row = box.row()
+		b_row.label(text="")
+		b_col = box.column()
+		b_col.scale_y = 0.7
+		b_col.label(text="No mobs in category,")
+		b_col.label(text="install a rig below or")
+		b_col.label(text="copy file to folder.")
+		b_row = box.row()
+		b_row.label(text="")
+	else:
+		box = col.box()
+		b_row = box.row()
+		b_row.label(text="No mobs loaded")
+		b_row = box.row()
+		b_row.scale_y = 2
+		b_row.operator(
+			"mcprep.reload_spawners", text="Reload assets", icon="ERROR")
+
+	# get which rig is selected
+	if scn_props.mob_list:
+		name = scn_props.mob_list[scn_props.mob_list_index].name
+		mcmob_type = scn_props.mob_list[scn_props.mob_list_index].mcmob_type
+	else:
+		name = ""
+		mcmob_type = ""
+	col = layout.column(align=True)
+	row = col.row(align=True)
+	row.scale_y = 1.5
+	row.enabled = len(scn_props.mob_list) > 0
+	p = row.operator("mcprep.mob_spawner", text="Spawn " + name)
+	if mcmob_type:
+		p.mcmob_type = mcmob_type
+	p = col.operator("mcprep.mob_install_menu")
+	p.mob_category = scn_props.spawn_rig_category
+
+	split = layout.split()
+	col = split.column(align=True)
+	row = col.row(align=True)
+	if not scn_props.show_settings_spawner:
+		row.prop(
+			scn_props, "show_settings_spawner",
+			text="Advanced", icon="TRIA_RIGHT")
+		row.operator(
+			"mcprep.open_preferences",
+			text="", icon="PREFERENCES").tab = "settings"
+	else:
+		row.prop(
+			scn_props, "show_settings_spawner",
+			text="Advanced", icon="TRIA_DOWN")
+		row.operator(
+			"mcprep.open_preferences",
+			text="", icon="PREFERENCES").tab = "settings"
+		box = col.box()
+		b_row = box.row()
+		b_col = b_row.column(align=False)
+		b_col.label(text="Mob spawner folder")
+		subrow = b_col.row(align=True)
+		subrow.prop(context.scene, "mcprep_mob_path", text="")
+		subrow.operator(
+			"mcprep.spawn_path_reset", icon=LOAD_FACTORY, text="")
+		b_row = box.row()
+		b_col = b_row.column(align=True)
+		ops = b_col.operator("mcprep.openfolder", text="Open mob folder")
+		ops.folder = context.scene.mcprep_mob_path
+
+		if not scn_props.mob_list:
+			b_col.operator("mcprep.mob_install_icon")
+		else:
+			icon_index = scn_props.mob_list[scn_props.mob_list_index].index
+			if "mob-{}".format(icon_index) in conf.preview_collections["mobs"]:
+				b_col.operator(
+					"mcprep.mob_install_icon", text="Change mob icon")
+			else:
+				b_col.operator("mcprep.mob_install_icon")
+		b_col.operator("mcprep.mob_uninstall")
+		b_col.operator("mcprep.reload_mobs", text="Reload mobs")
+		b_col.label(text=mcmob_type)
+
+
+def meshswap_spawner(self, context):
+	scn_props = context.scene.mcprep_props
+
+	layout = self.layout
+	layout.label(text="Import pre-made blocks (e.g. lights)")
+	split = layout.split()
+	col = split.column(align=True)
+
+	if scn_props.meshswap_list:
+		col.template_list(
+			"MCPREP_UL_meshswap", "",
+			scn_props, "meshswap_list",
+			scn_props, "meshswap_list_index",
+			rows=4)
+		# col.label(text=datapass.split("/")[0])
+	elif not context.scene.meshswap_path.lower().endswith('.blend'):
+		box = col.box()
+		b_row = box.row()
+		b_row.label(text="Meshswap file must be a .blend")
+		b_row = box.row()
+		b_row.scale_y = 2
+		b_row.operator(
+			"mcprep.meshswap_path_reset", icon=LOAD_FACTORY,
+			text="Reset meshswap path")
+	elif not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
+		box = col.box()
+		b_row = box.row()
+		b_row.label(text="Meshswap file not found")
+		b_row = box.row()
+		b_row.scale_y = 2
+		b_row.operator(
+			"mcprep.meshswap_path_reset", icon=LOAD_FACTORY,
+			text="Reset meshswap path")
+	else:
+		box = col.box()
+		b_row = box.row()
+		b_row.label(text="No blocks loaded")
+		b_row = box.row()
+		b_row.scale_y = 2
+		b_row.operator(
+			"mcprep.reload_spawners",
+			text="Reload assets", icon="ERROR")
+
+	col = layout.column(align=True)
+	row = col.row()
+	row.scale_y = 1.5
+	row.enabled = len(scn_props.meshswap_list) > 0
+	if scn_props.meshswap_list:
+		name = scn_props.meshswap_list[scn_props.meshswap_list_index].name
+		block = scn_props.meshswap_list[scn_props.meshswap_list_index].block
+		p = row.operator("mcprep.meshswap_spawner", text="Place: " + name)
+		p.block = block
+		p.location = util.get_cuser_location(context)
+	else:
+		row.operator("mcprep.meshswap_spawner", text="Place block")
+	# something to directly open meshswap file??
+
+	split = layout.split()
+	col = split.column(align=True)
+	row = col.row(align=True)
+
+	if not scn_props.show_settings_spawner:
+		col.prop(
+			scn_props, "show_settings_spawner",
+			text="Advanced", icon="TRIA_RIGHT")
+	else:
+		col.prop(
+			scn_props,
+			"show_settings_spawner",
+			text="Advanced", icon="TRIA_DOWN")
+		box = col.box()
+		b_row = box.row()
+		b_col = b_row.column(align=False)
+		b_col.label(text="Meshswap file")
+		subrow = b_col.row(align=True)
+		subrow.prop(context.scene, "meshswap_path", text="")
+		subrow.operator(
+			"mcprep.meshswap_path_reset", icon=LOAD_FACTORY, text="")
+		if not context.scene.meshswap_path.lower().endswith('.blend'):
+			b_col.label(text="MeshSwap file must be a .blend", icon="ERROR")
+		elif not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
+			b_col.label(text="MeshSwap file not found", icon="ERROR")
+		b_row = box.row()
+		b_col = b_row.column(align=True)
+		b_col.operator("mcprep.reload_meshswap")
+
+
+def item_spawner(self, context):
+	"""Code for drawing the item spawner"""
+	scn_props = context.scene.mcprep_props
+
+	layout = self.layout
+	layout.label(text="Generate items from textures")
+	split = layout.split()
+	col = split.column(align=True)
+
+	if scn_props.item_list:
+		col.template_list(
+			"MCPREP_UL_item", "",
+			scn_props, "item_list",
+			scn_props, "item_list_index",
+			rows=4)
+		col = layout.column(align=True)
+		row = col.row(align=True)
+		row.scale_y = 1.5
+		name = scn_props.item_list[scn_props.item_list_index].name
+		row.operator("mcprep.spawn_item", text="Place: " + name)
+		row = col.row(align=True)
+		row.operator("mcprep.spawn_item_file")
+	else:
+		box = col.box()
+		b_row = box.row()
+		b_row.label(text="No items loaded")
+		b_row = box.row()
+		b_row.scale_y = 2
+		b_row.operator(
+			"mcprep.reload_spawners",
+			text="Reload assets", icon="ERROR")
+
+		col = layout.column(align=True)
+		col.enabled = False
+		row = col.row(align=True)
+		row.scale_y = 1.5
+		row.operator("mcprep.spawn_item", text="Place item")
+		row = col.row(align=True)
+		row.operator("mcprep.spawn_item_file")
+
+	split = layout.split()
+	col = split.column(align=True)
+	row = col.row(align=True)
+
+	if not scn_props.show_settings_spawner:
+		col.prop(
+			scn_props, "show_settings_spawner",
+			text="Advanced", icon="TRIA_RIGHT")
+	else:
+		col.prop(
+			scn_props, "show_settings_spawner",
+			text="Advanced", icon="TRIA_DOWN")
+		box = col.box()
+		b_row = box.row()
+		b_col = b_row.column(align=False)
+		b_col.label(text="Resource pack")
+		subrow = b_col.row(align=True)
+		subrow.prop(context.scene, "mcprep_texturepack_path", text="")
+		subrow.operator(
+			"mcprep.reset_texture_path", icon=LOAD_FACTORY, text="")
+		b_row = box.row()
+		b_col = b_row.column(align=True)
+		b_col.operator("mcprep.reload_items")
+
+
+def entity_spawner(self, context):
+	scn_props = context.scene.mcprep_props
+
+	layout = self.layout
+	layout.label(text="Import pre-rigged entities")
+	split = layout.split()
+	col = split.column(align=True)
+
+	if scn_props.entity_list:
+		col.template_list(
+			"MCPREP_UL_entity", "",
+			scn_props, "entity_list",
+			scn_props, "entity_list_index",
+			rows=4)
+
+	elif not context.scene.entity_path.lower().endswith('.blend'):
+		box = col.box()
+		b_row = box.row()
+		b_row.label(text="Entity file must be a .blend")
+		b_row = box.row()
+		b_row.scale_y = 2
+		b_row.operator(
+			"mcprep.entity_path_reset", icon=LOAD_FACTORY,
+			text="Reset entity path")
+	elif not os.path.isfile(bpy.path.abspath(context.scene.entity_path)):
+		box = col.box()
+		b_row = box.row()
+		b_row.label(text="Entity file not found")
+		b_row = box.row()
+		b_row.scale_y = 2
+		b_row.operator(
+			"mcprep.entity_path_reset", icon=LOAD_FACTORY,
+			text="Reset entity path")
+	else:
+		box = col.box()
+		b_row = box.row()
+		b_row.label(text="No entities loaded")
+		b_row = box.row()
+		b_row.scale_y = 2
+		b_row.operator(
+			"mcprep.reload_spawners",
+			text="Reload assets", icon="ERROR")
+
+	col = layout.column(align=True)
+	row = col.row()
+	row.scale_y = 1.5
+	row.enabled = len(scn_props.entity_list) > 0
+	if scn_props.entity_list:
+		name = scn_props.entity_list[scn_props.entity_list_index].name
+		entity = scn_props.entity_list[scn_props.entity_list_index].entity
+		p = row.operator("mcprep.entity_spawner", text="Spawn: " + name)
+		p.entity = entity
+	else:
+		row.operator("mcprep.entity_spawner", text="Spawn Entity")
+
+	split = layout.split()
+	col = split.column(align=True)
+	row = col.row(align=True)
+
+	if not scn_props.show_settings_spawner:
+		col.prop(
+			scn_props, "show_settings_spawner",
+			text="Advanced", icon="TRIA_RIGHT")
+	else:
+		col.prop(
+			scn_props, "show_settings_spawner",
+			text="Advanced", icon="TRIA_DOWN")
+		box = col.box()
+		b_row = box.row()
+		b_col = b_row.column(align=False)
+		b_col.label(text="Entity file")
+		subrow = b_col.row(align=True)
+		subrow.prop(context.scene, "entity_path", text="")
+		subrow.operator("mcprep.entity_path_reset", icon=LOAD_FACTORY, text="")
+		if not context.scene.entity_path.lower().endswith('.blend'):
+			b_col.label(text="MeshSwap file must be a .blend", icon="ERROR")
+		elif not os.path.isfile(bpy.path.abspath(context.scene.entity_path)):
+			b_col.label(text="MeshSwap file not found", icon="ERROR")
+		b_row = box.row()
+		b_col = b_row.column(align=True)
+		b_col.operator("mcprep.reload_entities")
+
+
+def model_spawner(self, context):
+	"""Code for drawing the model block spawner"""
+	scn_props = context.scene.mcprep_props
+	addon_prefs = util.get_user_preferences(context)
+
+	layout = self.layout
+	layout.label(text="Generate models from .json files")
+	if not util.bv28():
+		layout.label(text="Requires blender 2.8 or newer")
+		return
+	split = layout.split()
+	col = split.column(align=True)
+
+	if scn_props.model_list:
+		col.template_list(
+			"MCPREP_UL_model", "",
+			scn_props, "model_list",
+			scn_props, "model_list_index",
+			rows=4)
+
+		col = layout.column(align=True)
+		row = col.row(align=True)
+		row.scale_y = 1.5
+		model = scn_props.model_list[scn_props.model_list_index]
+		ops = row.operator("mcprep.spawn_model", text="Place: " + model.name)
+		ops.location = util.get_cuser_location(context)
+		ops.filepath = model.filepath
+		if addon_prefs.MCprep_exporter_type == "Mineways":
+			ops.snapping = "offset"
+		elif addon_prefs.MCprep_exporter_type == "jmc2obj":
+			ops.snapping = "center"
+	else:
+		box = col.box()
+		b_row = box.row()
+		b_row.label(text="No models loaded")
+		b_row = box.row()
+		b_row.scale_y = 2
+		b_row.operator(
+			"mcprep.reload_spawners",
+			text="Reload assets", icon="ERROR")
+
+		col = layout.column(align=True)
+		row = col.row(align=True)
+		row.enabled = False
+		row.scale_y = 1.5
+		row.operator("mcprep.spawn_model")
+
+	ops = col.operator("mcprep.import_model_file")
+	ops.location = util.get_cuser_location(context)
+	if addon_prefs.MCprep_exporter_type == "Mineways":
+		ops.snapping = "center"
+	elif addon_prefs.MCprep_exporter_type == "jmc2obj":
+		ops.snapping = "offset"
+
+	split = layout.split()
+	col = split.column(align=True)
+	row = col.row(align=True)
+
+	if not scn_props.show_settings_spawner:
+		col.prop(
+			scn_props, "show_settings_spawner",
+			text="Advanced", icon="TRIA_RIGHT")
+	else:
+		col.prop(
+			scn_props, "show_settings_spawner",
+			text="Advanced", icon="TRIA_DOWN")
+		box = col.box()
+		b_row = box.row()
+		b_col = b_row.column(align=False)
+		b_col.label(text="Resource pack")
+		subrow = b_col.row(align=True)
+		subrow.prop(context.scene, "mcprep_texturepack_path", text="")
+		subrow.operator(
+			"mcprep.reset_texture_path", icon=LOAD_FACTORY, text="")
+		b_row = box.row()
+		b_col = b_row.column(align=True)
+		b_col.operator("mcprep.reload_models")
+
+
+class MCPREP_PT_spawn(bpy.types.Panel):
+	"""MCprep panel for mob spawning"""
+	bl_label = "Spawner"
+	bl_space_type = "VIEW_3D"
+	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
+	bl_category = "MCprep"
+
+	def draw(self, context):
+		row = self.layout.row(align=True)
+		row.label(text="Click triangle to open")
+		# row.prop(context.scene.mcprep_props, "spawn_mode", expand=True)
+		ops = row.operator("mcprep.open_help", text="", icon="QUESTION")
+		ops.url = "https://theduckcow.com/dev/blender/mcprep/mcprep-spawner/"
+		addon_updater_ops.check_for_update_background()
+
+
+class MCPREP_PT_mob_spawner(bpy.types.Panel):
+	"""MCprep panel for mob spawning"""
+	bl_label = "Mob spawner"
+	bl_parent_id = "MCPREP_PT_spawn"
+	bl_space_type = "VIEW_3D"
+	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
+	bl_category = "MCprep"
+	bl_options = {'DEFAULT_CLOSED'}
+
+	def draw(self, context):
+		is_obj_mode = context.mode == "OBJECT"
+		if not is_obj_mode:
+			draw_mode_warning(self.layout)
+			return
+		mob_spawner(self, context)
+
+	def draw_header(self, context):
+		if not conf.use_icons or conf.preview_collections["main"] == "":
+			return
+		icon = conf.preview_collections["main"].get("spawner_icon")
+		if not icon:
+			return
+		self.layout.label(text="", icon_value=icon.icon_id)
+
+
+class MCPREP_PT_model_spawner(bpy.types.Panel):
+	"""MCprep panel for model/block spawning"""
+	bl_label = "Block (model) spawner"
+	bl_parent_id = "MCPREP_PT_spawn"
+	bl_space_type = "VIEW_3D"
+	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
+	bl_category = "MCprep"
+	bl_options = {'DEFAULT_CLOSED'}
+
+	def draw(self, context):
+		is_obj_mode = context.mode == "OBJECT"
+		if not is_obj_mode:
+			draw_mode_warning(self.layout)
+			return
+		model_spawner(self, context)
+
+	def draw_header(self, context):
+		if not conf.use_icons or conf.preview_collections["main"] == "":
+			return
+		icon = conf.preview_collections["main"].get("model_icon")
+		if not icon:
+			return
+		self.layout.label(text="", icon_value=icon.icon_id)
+
+
+class MCPREP_PT_item_spawner(bpy.types.Panel):
+	"""MCprep panel for item spawning"""
+	bl_label = "Item spawner"
+	bl_parent_id = "MCPREP_PT_spawn"
+	bl_space_type = "VIEW_3D"
+	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
+	bl_category = "MCprep"
+	bl_options = {'DEFAULT_CLOSED'}
+
+	def draw(self, context):
+		is_obj_mode = context.mode == "OBJECT"
+		is_pose_mode = context.mode == "POSE"
+		if not is_obj_mode and not is_pose_mode:
+			draw_mode_warning(self.layout)
+			return
+		item_spawner(self, context)
+
+	def draw_header(self, context):
+		if not conf.use_icons or conf.preview_collections["main"] == "":
+			return
+		icon = conf.preview_collections["main"].get("sword_icon")
+		if not icon:
+			return
+		self.layout.label(text="", icon_value=icon.icon_id)
+
+
+class MCPREP_PT_entity_spawner(bpy.types.Panel):
+	"""MCprep panel for entity spawning"""
+	bl_label = "Entity spawner"
+	bl_parent_id = "MCPREP_PT_spawn"
+	bl_space_type = "VIEW_3D"
+	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
+	bl_category = "MCprep"
+	bl_options = {'DEFAULT_CLOSED'}
+
+	def draw(self, context):
+		is_obj_mode = context.mode == "OBJECT"
+		if not is_obj_mode:
+			draw_mode_warning(self.layout)
+			return
+		entity_spawner(self, context)
+
+	def draw_header(self, context):
+		if not conf.use_icons or conf.preview_collections["main"] == "":
+			return
+		icon = conf.preview_collections["main"].get("entity_icon")
+		if not icon:
+			return
+		self.layout.label(text="", icon_value=icon.icon_id)
+
+
+class MCPREP_PT_meshswap_spawner(bpy.types.Panel):
+	"""MCprep panel for meshswap spawning"""
+	bl_label = "Meshswap spawner"
+	bl_parent_id = "MCPREP_PT_spawn"
+	bl_space_type = "VIEW_3D"
+	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
+	bl_category = "MCprep"
+	bl_options = {'DEFAULT_CLOSED'}
+
+	def draw(self, context):
+		is_obj_mode = context.mode == "OBJECT"
+		if not is_obj_mode:
+			draw_mode_warning(self.layout)
+			return
+		meshswap_spawner(self, context)
+
+	def draw_header(self, context):
+		if not conf.use_icons or conf.preview_collections["main"] == "":
+			return
+		icon = conf.preview_collections["main"].get("meshswap_icon")
+		if not icon:
+			return
+		self.layout.label(text="", icon_value=icon.icon_id)
 
 
 # -----------------------------------------------------------------------------
@@ -1551,6 +1661,11 @@ classes = (
 	MCPREP_PT_world_tools,
 	MCPREP_PT_skins,
 	MCPREP_PT_spawn,
+	MCPREP_PT_mob_spawner,
+	MCPREP_PT_model_spawner,
+	MCPREP_PT_item_spawner,
+	MCPREP_PT_entity_spawner,
+	MCPREP_PT_meshswap_spawner,
 	MCPREP_PT_materials,
 	MCPREP_PT_materials_subsettings,
 )
