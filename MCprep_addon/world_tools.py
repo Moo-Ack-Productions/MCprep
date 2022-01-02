@@ -351,6 +351,16 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 				return {'CANCELLED'}
 			else:
 				raise err
+		except TypeError as err:
+			if "enum" in str(err) and "not found in" in str(err):
+				# Error such as:
+				#   enum "Non-Color" not found in ('AppleP3 Filmic Log Encoding',
+				#  'AppleP3 sRGB OETF', ...
+				print(err)
+				self.report({"ERROR"}, obj_import_err_msg)
+				return {'CANCELLED'}
+			else:
+				raise err
 		except AttributeError as err:
 			if "object has no attribute 'image'" in str(err):
 				# Error such as:
