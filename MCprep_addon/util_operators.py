@@ -43,30 +43,32 @@ class MCPREP_OT_improve_ui(bpy.types.Operator):
 		if hasattr(prefs.system, "use_mipmaps"):
 			prefs.system.use_mipmaps = False
 
+		# Check api availability
+		scn_disp = hasattr(context.scene, "display")
+		scn_disp_shade = scn_disp and hasattr(context.scene.display, "shading")
+
 		# show textures in solid mode
 		view = context.space_data
 		if bpy.app.background:
-			return {'CANCELLED'} # headless mode, no visual to improve anyways
+			return {'CANCELLED'}  # headless mode, no visual to improve anyways
 		if not view:
 			self.report({'ERROR'}, "Cannot improve display, no view context")
-			return {'CANCELLED'} # should not occur
-		elif hasattr(view, "show_textured_solid"): # 2.7
+			return {'CANCELLED'}  # should not occur
+		elif hasattr(view, "show_textured_solid"):  # 2.7
 			context.space_data.show_textured_solid = True
 		elif view.type == 'VIEW_3D' and hasattr(context.scene, "display"):
-			try: # can fail e.g. in workbench view
+			try:  # can fail e.g. in workbench view
 				view.shading.color_type = "TEXTURE"
-				view.shading.background_type = "WORLD"
 			except:
 				pass
-		elif hasattr(context.screen, "shading"): # 2.8 non shaded view
-			try: # can fail e.g. in workbench view
+		elif hasattr(context.screen, "shading"):  # 2.8 non shaded view
+			try:  # can fail e.g. in workbench view
 				context.scene.display.shading.color_type = "TEXTURE"
-				context.scene.display.shading.background_type = "WORLD"
 			except:
 				pass
 
 		# now change the active drawing level to a minimum of solid mode
-		view27 = ['TEXTURED','MATEIRAL','RENDERED']
+		view27 = ['TEXTURED', 'MATEIRAL', 'RENDERED']
 		view28 = ['SOLID', 'MATERIAL', 'RENDERED']
 		engine = bpy.context.scene.render.engine
 		if not util.bv28() and view.viewport_shade not in view27:
@@ -78,7 +80,7 @@ class MCPREP_OT_improve_ui(bpy.types.Operator):
 			else:
 				view.viewport_shade = 'SOLID'
 		elif util.bv28() and context.scene.display.shading.type not in view28:
-			if not hasattr(context.scene, "display") or not hasattr(context.scene.display, "shading"):
+			if not scn_disp or not scn_disp_shade:
 				self.report({"WARNING"}, "Improve UI is meant for the 3D view")
 				return {'FINISHED'}
 
