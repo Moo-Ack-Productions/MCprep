@@ -18,6 +18,7 @@ def check_models(context):
 	successful = []
 
 	count = len(scn_props.model_list)
+	prior_obj = None
 
 	print("Total to process: ", count)
 
@@ -29,6 +30,12 @@ def check_models(context):
 			bpy.ops.mcprep.spawn_model(filepath=model.filepath, skipUsage=True)
 
 			new_obj = context.object
+			if new_obj != prior_obj:
+				prior_obj = new_obj
+			else:
+				exceptions.append([model.name, "object was same between iteration"])
+				print("Object was the same between iterations")
+				break
 			if len(new_obj.data.vertices) < 4:
 				exceptions.append([model.name, "Not enough geo generated"])
 				print("#{} {} failed".format(
