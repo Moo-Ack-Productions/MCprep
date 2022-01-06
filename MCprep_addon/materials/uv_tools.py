@@ -51,7 +51,7 @@ def get_uv_bounds_per_material(obj):
 	# order of minx, maxx, miny, maxy,
 	# min's start with 1 so comparisons can go lower,
 	# max's start with 0 so comparisons can go higher
-	res = {mat.name:[1,0,1,0] for mat in mats}
+	res = {mat.name: [1, 0, 1, 0] for mat in mats}
 
 	# TODO: add other key for max_uvsize, to detect cases like lava and water
 	# where multiple materials are in one but UVs split over multiple blocks.
@@ -72,13 +72,13 @@ def get_uv_bounds_per_material(obj):
 			# a loop could be an edge or face
 			# loop = obj.data.loops[i] # This polygon/edge
 			uvx, uvy = active_uv.data[loop_ind].uv
-			if uvx < res[mkey][0]: # min x
+			if uvx < res[mkey][0]:  # min x
 				res[mkey][0] = uvx
-			if uvx > res[mkey][1]: # max x
+			if uvx > res[mkey][1]:  # max x
 				res[mkey][1] = uvx
-			if uvy < res[mkey][2]: # min y
+			if uvy < res[mkey][2]:  # min y
 				res[mkey][2] = uvy
-			if uvy > res[mkey][3]: # max y
+			if uvy > res[mkey][3]:  # max y
 				res[mkey][3] = uvy
 	return res
 
@@ -103,10 +103,11 @@ def detect_invalid_uvs_from_objs(obj_list):
 
 	for obj in obj_list:
 		uv_bounds = get_uv_bounds_per_material(obj)
-		mis_mats = [mt for mt in uv_bounds if (
-			uv_bounds[mt][1] - uv_bounds[mt][0] < thresh
-			and uv_bounds[mt][3] - uv_bounds[mt][2] < thresh)
-			]
+		mis_mats = [
+			mt for mt in uv_bounds
+			if uv_bounds[mt][1] - uv_bounds[mt][0] < thresh
+			and uv_bounds[mt][3] - uv_bounds[mt][2] < thresh
+		]
 
 		# if multiple materials on object and others don't alert, then toss
 		# out as 'valid'; example scenario of the bottom face of a sign will
@@ -120,7 +121,7 @@ def detect_invalid_uvs_from_objs(obj_list):
 			invalid = True
 			invalid_objects.append(obj)
 	t1 = time.time()
-	t_diff = t1-t0 # round to .1s
+	t_diff = t1 - t0  # round to .1s
 	conf.log("UV check took {}s".format(t_diff), vv_only=True)
 	return invalid, invalid_objects
 
@@ -138,10 +139,7 @@ class MCPREP_OT_scale_uv(bpy.types.Operator):
 
 	scale = bpy.props.FloatProperty(default=0.75, name="Scale")
 	selected_only = bpy.props.BoolProperty(default=True, name="Seleced only")
-	skipUsage = bpy.props.BoolProperty(
-		default = False,
-		options = {'HIDDEN'}
-		)
+	skipUsage = bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	@classmethod
 	def poll(cls, context):
@@ -162,7 +160,8 @@ class MCPREP_OT_scale_uv(bpy.types.Operator):
 		# example, matching list of uv coord and 3dVert coord:
 		uvs_XY = [i.uv for i in Object.data.uv_layers[0].data]
 		vertXYZ= [v.co for v in Object.data.vertices]
-		matchingVertIndex = list(chain.from_iterable([p.vertices for p in Object.data.polygons]))
+		matchingVertIndex = list(chain.from_iterable(
+			[p.vertices for p in Object.data.polygons]))
 		# and now, the coord to pair with uv coord:
 		matchingVertsCoord = [vertsXYZ[i] for i in matchingVertIndex]
 		"""
@@ -176,7 +175,7 @@ class MCPREP_OT_scale_uv(bpy.types.Operator):
 			self.report({'WARNING'}, "Active object has no faces")
 			return {'CANCELLED'}
 
-		if not context.object.data.uv_layers.active:#uv==None:
+		if not context.object.data.uv_layers.active:
 			self.report({'ERROR'}, "No active UV map found")
 			return {'CANCELLED'}
 
@@ -188,7 +187,7 @@ class MCPREP_OT_scale_uv(bpy.types.Operator):
 
 		if ret is not None:
 			self.report({'ERROR'}, ret)
-			conf.log("Error, "+ret)
+			conf.log("Error, " + ret)
 			return {'CANCELLED'}
 
 		return {'FINISHED'}
@@ -209,16 +208,17 @@ class MCPREP_OT_scale_uv(bpy.types.Operator):
 				continue  # if not selected, won't show up in UV editor
 
 			# initialize for avergae center on polygon
-			x=y=n=0  # x,y,number of verts in loop for average purpose
+			x = y = n = 0  # x,y,number of verts in loop for average purpose
 			for loop_ind in f.loop_indices:
 				# a loop could be an edge or face
-				#v = ob.data.vertices[l.vertex_index]  # The vertex data that loop entry refers to
+				# The vertex data that loop entry refers to:
+				# v = ob.data.vertices[l.vertex_index]
 				# isolate to specific UV already used
 				if not uv.data[loop_ind].select and self.selected_only is True:
 					continue
-				x+=uv.data[loop_ind].uv[0]
-				y+=uv.data[loop_ind].uv[1]
-				n+=1
+				x += uv.data[loop_ind].uv[0]
+				y += uv.data[loop_ind].uv[1]
+				n += 1
 			for loop_ind in f.loop_indices:
 				if not uv.data[loop_ind].select and self.selected_only is True:
 					continue
@@ -240,19 +240,14 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 	delete = bpy.props.BoolProperty(
 		name="Delete faces",
 		description="Delete detected transparent mesh faces",
-		default = False
-		)
+		default=False)
 	threshold = bpy.props.FloatProperty(
 		name="Threshold",
 		description="How transparent pixels need to be to select",
-		default = 0.2,
+		default=0.2,
 		min=0.0,
-		max=1.0
-		)
-	skipUsage = bpy.props.BoolProperty(
-		default = False,
-		options = {'HIDDEN'}
-		)
+		max=1.0)
+	skipUsage = bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	@classmethod
 	def poll(cls, context):
@@ -313,8 +308,8 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 				textures.append(None)
 				continue
 			elif image.channels != 4:
-				textures.append(None) # no alpha channel anyways
-				conf.log("No alpha channel for: "+image.name)
+				textures.append(None)  # no alpha channel anyways
+				conf.log("No alpha channel for: " + image.name)
 				continue
 			textures.append(image)
 		data = [None for tex in textures]
@@ -322,7 +317,7 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 		uv = ob.data.uv_layers.active
 		for f in ob.data.polygons:
 			if len(f.loop_indices) < 3:
-				continue # don't select edges or vertices
+				continue  # don't select edges or vertices
 			fnd = f.material_index
 			image = textures[fnd]
 			if not image:
@@ -337,9 +332,9 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 			shape = []
 			for i in f.loop_indices:
 				loop = ob.data.loops[i]
-				x = uv.data[loop.index].uv[0]%1 # TODO: fix this wraparound hack
-				y = uv.data[loop.index].uv[1]%1
-				shape.append((x,y))
+				x = uv.data[loop.index].uv[0] % 1  # TODO: fix this wraparound hack
+				y = uv.data[loop.index].uv[1] % 1
+				shape.append((x, y))
 
 			# print("The shape coords:")
 			# print(shape)
@@ -349,11 +344,11 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 
 			xlist, ylist = tuple([list(tup) for tup in zip(*shape)])
 			# not sure if I actually want to +0.5 to the values to get middle..
-			xmin = round(min(xlist)*image.size[0])-0.5
-			xmax = round(max(xlist)*image.size[0])-0.5
-			ymin = round(min(ylist)*image.size[1])-0.5
-			ymax = round(max(ylist)*image.size[1])-0.5
-			conf.log(["\tSet size:",xmin,xmax,ymin,ymax], vv_only=True)
+			xmin = round(min(xlist) * image.size[0]) - 0.5
+			xmax = round(max(xlist) * image.size[0]) - 0.5
+			ymin = round(min(ylist) * image.size[1]) - 0.5
+			ymax = round(max(ylist) * image.size[1]) - 0.5
+			conf.log(["\tSet size:", xmin, xmax, ymin, ymax], vv_only=True)
 
 			# assuming faces are roughly rectangular, sum pixels a face covers
 			asum = 0
@@ -363,12 +358,12 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 					continue
 				for col in range(image.size[0]):
 					if col >= xmin and col <= xmax:
-						asum += data[fnd][image.size[1]*row + col]
+						asum += data[fnd][image.size[1] * row + col]
 						acount += 1
 
 			if acount == 0:
 				acount = 1
-			ratio = float(asum)/float(acount)
+			ratio = float(asum) / float(acount)
 			if ratio < float(threshold):
 				print("\t{} - Below threshold, select".format(ratio))
 				f.select = True
@@ -379,7 +374,7 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 
 
 # -----------------------------------------------------------------------------
-#	Registration
+# Registration
 # -----------------------------------------------------------------------------
 
 

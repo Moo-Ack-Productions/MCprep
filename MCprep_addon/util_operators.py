@@ -95,11 +95,12 @@ class MCPREP_OT_show_preferences(bpy.types.Operator):
 	bl_label = "Show MCprep preferences"
 
 	tab = bpy.props.EnumProperty(
-		items = [('settings', 'Open settings', 'Open MCprep preferences settings'),
-				('tutorials', 'Open tutorials', 'View MCprep tutorials'),
-				('tracker_updater', 'Open tracker/updater settings',
-					'Open user tracking & addon updating settings')],
-		name = "Section")
+		items=[
+			('settings', 'Open settings', 'Open MCprep preferences settings'),
+			('tutorials', 'Open tutorials', 'View MCprep tutorials'),
+			('tracker_updater', 'Open tracker/updater settings',
+				'Open user tracking & addon updating settings')],
+		name="Section")
 
 	@tracking.report_error
 	def execute(self, context):
@@ -107,20 +108,29 @@ class MCPREP_OT_show_preferences(bpy.types.Operator):
 		util.get_preferences(context).active_section = "ADDONS"
 		bpy.data.window_managers["WinMan"].addon_search = "MCprep"
 
-		addons_ids = [mod for mod in addon_utils.modules(refresh=False)
-						if mod.__name__ == __package__]
+		addons_ids = [
+			mod for mod in addon_utils.modules(refresh=False)
+			if mod.__name__ == __package__]
 		if not addons_ids:
 			print("Failed to directly load and open MCprep preferences")
 			return {'FINISHED'}
 
 		addon_blinfo = addon_utils.module_bl_info(addons_ids[0])
 		if not addon_blinfo["show_expanded"]:
-			if hasattr(bpy.ops, "preferences") and hasattr(bpy.ops.preferences, "addon_expand") and util.bv28(): # later 2.8 buids
+			has_prefs = hasattr(bpy.ops, "preferences")
+			has_prefs = has_prefs and hasattr(bpy.ops.preferences, "addon_expand")
+			has_prefs = has_prefs and util.bv28()
+
+			has_exp = hasattr(bpy.ops, "wm")
+			has_exp = has_exp and hasattr(bpy.ops.wm, "addon_expand")
+
+			if has_prefs:  # later 2.8 buids
 				bpy.ops.preferences.addon_expand(module=__package__)
-			elif hasattr(bpy.ops, "wm") and hasattr(bpy.ops.wm, "addon_expand"): # old 2.8 and 2.7
+			elif has_exp:  # old 2.8 and 2.7
 				bpy.ops.wm.addon_expand(module=__package__)
 			else:
-				self.report({"INFO"}, "Search for and expand the MCprep addon in preferences")
+				self.report(
+					{"INFO"}, "Search for and expand the MCprep addon in preferences")
 
 		addon_prefs = util.get_user_preferences(context)
 		addon_prefs.preferences_tab = self.tab
@@ -137,9 +147,10 @@ class MCPREP_OT_open_folder(bpy.types.Operator):
 		default="//")
 
 	@tracking.report_error
-	def execute(self,context):
-		if os.path.isdir(bpy.path.abspath(self.folder))==False:
-			self.report({'ERROR'},
+	def execute(self, context):
+		if not os.path.isdir(bpy.path.abspath(self.folder)):
+			self.report(
+				{'ERROR'},
 				"Invalid folder path: {x}".format(x=self.folder))
 			return {'CANCELLED'}
 
@@ -148,7 +159,7 @@ class MCPREP_OT_open_folder(bpy.types.Operator):
 			msg = "Didn't open folder, navigate to it manually: {x}".format(
 				x=self.folder)
 			print(msg)
-			self.report({'ERROR'},msg)
+			self.report({'ERROR'}, msg)
 			return {'CANCELLED'}
 		return {'FINISHED'}
 
@@ -165,7 +176,7 @@ class MCPREP_OT_open_help(bpy.types.Operator):
 		default="")
 
 	@tracking.report_error
-	def execute(self,context):
+	def execute(self, context):
 		if self.url == "":
 			return {'CANCELLED'}
 		else:
@@ -180,27 +191,30 @@ class MCPREP_OT_prep_material_legacy(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 
 	useReflections = bpy.props.BoolProperty(
-		name = "Use reflections",
-		description = "Allow appropriate materials to be rendered reflective",
-		default = True
-		)
+		name="Use reflections",
+		description="Allow appropriate materials to be rendered reflective",
+		default=True)
 	combineMaterials = bpy.props.BoolProperty(
-		name = "Combine materials",
-		description = "Consolidate duplciate materials & textures",
-		default = False
-		)
+		name="Combine materials",
+		description="Consolidate duplciate materials & textures",
+		default=False)
 
 	track_function = "materials_legacy"
 	@tracking.report_error
 	def execute(self, context):
-		print("Using legacy operator call for MCprep materials, move to use bpy.ops.mcprep.prep_materials")
+		print((
+			"Using legacy operator call for MCprep materials, move to "
+			"use bpy.ops.mcprep.prep_materials"))
 		try:
 			bpy.ops.mcprep.prep_materials(
-				useReflections = self.useReflections,
-				combineMaterials = self.combineMaterials
+				useReflections=self.useReflections,
+				combineMaterials=self.combineMaterials
 			)
 		except:
-			self.report({"ERROR"}, "Legacy Prep Materials failed; use new operator name 'mcprep.prep_materials' going forward and to get more info")
+			self.report({"ERROR"}, (
+				"Legacy Prep Materials failed; use new operator name "
+				"'mcprep.prep_materials' going forward and to get more info"
+			))
 			return {'CANCELLED'}
 		return {'FINISHED'}
 

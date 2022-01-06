@@ -241,12 +241,7 @@ def matprep_internal(mat, passes, use_reflections, only_solid):
 	Will not necessarily properly convert cycles materials into internal."""
 
 	if not conf.json_data:
-		res = util.load_mcprep_json()
-
-	image_diff = passes["diffuse"]
-	image_norm = passes["diffuse"]
-	image_spec = passes["diffuse"]
-	image_disp = None  # not used
+		_ = util.load_mcprep_json()
 
 	newName = mat.name + '_tex'
 	texList = mat.texture_slots.values()
