@@ -5,7 +5,13 @@ Will be slow, spawning each one, and listing which ones have errors.
 
 import bpy
 
-MAX_CHECK = 2000
+# Limit the number of models to spawn.
+MAX_CHECK = 100
+
+# For visualizing or creating a simple asset library. It will get crazy slow
+# if MAX_CHECK is large!
+PLACE_IN_GRID = True
+SPACING = 2  # Spacing between each model in meters.
 
 
 def check_models(context):
@@ -21,6 +27,11 @@ def check_models(context):
 	prior_obj = None
 
 	print("Total to process: ", count)
+	if count > MAX_CHECK:
+		print("Limited to ", MAX_CHECK)
+		count = MAX_CHECK
+
+	width = int(count**0.5)
 
 	for index in range(len(scn_props.model_list)):
 		# scn_props.model_list_index = index
@@ -48,7 +59,13 @@ def check_models(context):
 		finally:
 			print("#{}/{}".format(index, count))
 
-		bpy.ops.object.delete(use_global=True)
+		if PLACE_IN_GRID:
+			row = index // width
+			col = index % width
+			bpy.context.object.location = (row * SPACING, col * SPACING, 0)
+
+		else:
+			bpy.ops.object.delete(use_global=True)
 
 		if MAX_CHECK <= index:
 			break
