@@ -64,11 +64,8 @@ def get_meshswap_cache(context, clear=False):
 		return meshswap_cache
 
 	with bpy.data.libraries.load(meshswap_path) as (data_from, _):
-		if hasattr(data_from, "groups"):  # blender 2.7
-			get_attr = "groups"
-		else:  # 2.8
-			get_attr = "collections"
-		grp_list = list(getattr(data_from, get_attr))
+		grp_list = spawn_util.filter_collections(data_from)
+
 		meshswap_cache["groups"] = grp_list
 		for obj in list(data_from.objects):
 			if obj in meshswap_cache["groups"]:
@@ -131,12 +128,11 @@ def updateMeshswapList(context):
 
 	cache = get_meshswap_cache(context)
 	prefix = "Group/" if hasattr(bpy.data, "groups") else "Collection/"
+
 	for name in cache.get("groups"):
 		if not name:
 			continue
 		if util.nameGeneralize(name).lower() in temp_meshswap_list:
-			continue
-		if util.nameGeneralize(name).lower() == "Rigidbodyworld".lower():
 			continue
 		description = "Place {x} block".format(x=name)
 		meshswap_list.append((prefix + name, name.title(), description))

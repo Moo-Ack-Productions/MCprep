@@ -60,11 +60,7 @@ def get_entity_cache(context, clear=False):
 		return entity_cache
 
 	with bpy.data.libraries.load(entity_path) as (data_from, _):
-		if hasattr(data_from, "groups"):  # Blender 2.7
-			get_attr = "groups"
-		else:  # 2.8
-			get_attr = "collections"
-		grp_list = list(getattr(data_from, get_attr))
+		grp_list = spawn_util.filter_collections(data_from)
 		entity_cache["groups"] = grp_list
 	return entity_cache
 
@@ -107,10 +103,6 @@ def updateEntityList(context):
 		if not name:
 			continue
 		if util.nameGeneralize(name).lower() in temp_entity_list:
-			continue
-		if util.nameGeneralize(name).lower() == "collection":
-			continue
-		if util.nameGeneralize(name).lower() == "Rigidbodyworld".lower():
 			continue
 		description = "Place {x} entity".format(x=name)
 		entity_list.append((prefix + name, name.title(), description))

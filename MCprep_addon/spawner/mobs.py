@@ -63,10 +63,6 @@ def update_rig_list(context):
 	def _add_rigs_from_blend(path, blend_name, category):
 		"""Block for loading blend file groups to get rigs"""
 		with bpy.data.libraries.load(path) as (data_from, data_to):
-			if hasattr(data_from, "groups"):  # blender 2.7
-				get_attr = "groups"
-			else:  # 2.8
-				get_attr = "collections"
 
 			extensions = [".png", ".jpg", ".jpeg"]
 			icon_folder = os.path.join(os.path.dirname(path), "icons")
@@ -74,38 +70,9 @@ def update_rig_list(context):
 			if not conf.use_icons or conf.preview_collections["mobs"] == "":
 				run_icons = False
 
-			# Do a check to see if there are any collections that explicitly
-			# do include the text "MCprep" as a way of filtering which
-			# collections to include. Additionally, skip any rigs containing
-			# the special text for skipping.
-			any_mcprep = False
+			mob_names = spawn_util.filter_collections(data_from)
 
-			all_names = []
-			mcprep_names = []
-
-			for name in getattr(data_from, get_attr):
-				# special cases, skip some groups
-				# TODO: use name generalize here, to drop collection.001 too
-				if name.lower() in ("rigidbodyworld", "collection"):
-					continue
-				if name.lower().startswith("collection"):
-					continue  # will drop e.g. "Collection 1" from blender 2.7x
-
-				shrt = name.replace(" ", "").replace("-", "").replace("_", "")
-				if util.SKIP_COLL in shrt.lower():
-					conf.log("Skipping collection: " + name)
-					continue
-				elif util.INCLUDE_COLL in name.lower():
-					any_mcprep = True
-					mcprep_names.append(name)
-				all_names.append(name)
-
-			if any_mcprep:
-				conf.log("Filtered from {} down to {} MCprep collections".format(
-					len(all_names), len(mcprep_names)))
-				all_names = mcprep_names
-
-			for name in all_names:
+			for name in mob_names:
 				description = "Spawn one {x} rig".format(x=name)
 				mob = context.scene.mcprep_props.mob_list_all.add()
 				mob.description = description  # add in non all-list
@@ -377,11 +344,7 @@ class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
 
 		# check the file for any groups, any error return failed
 		with bpy.data.libraries.load(newrig) as (data_from, data_to):
-			if hasattr(data_from, "groups"):  # blender 2.7
-				get_attr = "groups"
-			else:  # 2.8
-				get_attr = "collections"
-			install_groups = list(getattr(data_from, get_attr))  # list of str's
+			install_groups = spawn_util.filter_collections(data_from)
 
 		if 'Collection' in install_groups:  # don't count the default 2.8 group
 			install_groups.pop(install_groups.index('Collection'))
