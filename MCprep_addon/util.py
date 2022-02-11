@@ -28,6 +28,11 @@ import bpy
 
 from . import conf
 
+# Top-level names used for inclusion or exclusions when filtering through
+# collections in blend files for spawners: mobs, meshswap, and entities.
+INCLUDE_COLL = "mcprep"
+SKIP_COLL = "mcskip"
+
 
 # -----------------------------------------------------------------------------
 # GENERAL SUPPORTING FUNCTIONS (no registration required)

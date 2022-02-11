@@ -74,6 +74,15 @@ def update_rig_list(context):
 			if not conf.use_icons or conf.preview_collections["mobs"] == "":
 				run_icons = False
 
+			# Do a check to see if there are any collections that explicitly
+			# do include the text "MCprep" as a way of filtering which
+			# collections to include. Additionally, skip any rigs containing
+			# the special text for skipping.
+			any_mcprep = False
+
+			all_names = []
+			mcprep_names = []
+
 			for name in getattr(data_from, get_attr):
 				# special cases, skip some groups
 				# TODO: use name generalize here, to drop collection.001 too
@@ -82,6 +91,21 @@ def update_rig_list(context):
 				if name.lower().startswith("collection"):
 					continue  # will drop e.g. "Collection 1" from blender 2.7x
 
+				shrt = name.replace(" ", "").replace("-", "").replace("_", "")
+				if util.SKIP_COLL in shrt.lower():
+					conf.log("Skipping collection: " + name)
+					continue
+				elif util.INCLUDE_COLL in name.lower():
+					any_mcprep = True
+					mcprep_names.append(name)
+				all_names.append(name)
+
+			if any_mcprep:
+				conf.log("Filtered from {} down to {} MCprep collections".format(
+					len(all_names), len(mcprep_names)))
+				all_names = mcprep_names
+
+			for name in all_names:
 				description = "Spawn one {x} rig".format(x=name)
 				mob = context.scene.mcprep_props.mob_list_all.add()
 				mob.description = description  # add in non all-list
