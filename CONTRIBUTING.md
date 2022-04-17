@@ -5,15 +5,16 @@ Thanks for your interest in helping build and extend this addon! MCprep welcomes
 ## How to contribute
 
 1. Fork MCprep
-2. Make changes in your own repository in the forked `dev` branch (NOT master, which matches released code)
-3. Test your changes (including updating `compile.sh` if needed)
-4. Create a pull request back to MCprep:dev with your changes (if you choose the wrong branch, maintainers will fix that for you)
-5. ~ Await review ~
-6. On review, make any requested changes from maintainers.
-7. When ready, maintainers will merge the code on your behalf
-8. Eventually, your code will make it into the next MCprep release, congrats!
+1. Copy over the `MCprep_resources` folder from the latest live release of MCprep into your local `MCprep_addon/` folder of your cloned git repo. Necessary, as these assets are not saved to git lfs yet.
+1. Make changes in your own repository in the forked `dev` branch (NOT master, which matches only released, typically outdated code)
+1. Test your changes (including updating `compile.sh` and `compile.bat` if needed)
+1. Create a pull request back to MCprep:dev with your changes (if you choose the wrong branch, maintainers will fix that for you)
+1. ~ Await review ~
+1. On review, make any requested changes from maintainers. Maintainers may directly push changes to your fork if minimal.
+1. When ready, maintainers will merge the code on your behalf
+1. Eventually, your code will make it into the next MCprep release, congrats!
 
-When it comes to code being reviewed, expect some discussion! If you want to contribute code back but you are not done yet, or want advice, go ahead and start your pull request and clarify it's in draft format - maintainers will likely jump in and give some steering advice.
+When it comes to code being reviewed, expect some discussion! If you want to contribute code back but you are not done yet, or want advice, go ahead and start your pull request and clarify it's in draft format - maintainers will likely jump in and give some steering advice. It's a good learning opportunity, but if the review process is getting too lengthy for your liking, don't hesitate to let maintainers know and we can take a more pragmatic approach (such as maintainers making the changes they are requesting, but likely at a slower rate).
 
 ## Keeping MCprep compatible
 
@@ -22,18 +23,28 @@ MCprep is uniquely made stable and functional across a large number of versions 
 This is largely possible for a few reasons:
 
 1. Automated tests plus an automated installer makes ensures that any changes that break older versions of blender will be caught automatically.
-2. Abstracting API changes vs directly implementing changes. Instead of swapping "group" for "collection" in the change to blender 2.8, we create if/else statements and wrapper functions that fetch the attribute that exists based on the version of blender. Want more info about this? See [the article here](https://theduckcow.com/2019/update-addons-both-blender-28-and-27-support/).
-3. No python annotations. This syntax wasn't supported in old versions of python that came with blender (namely, in Blender 2.7) and so we don't use annotations in this repository. Some workarounds are in place to avoid excessive printouts as a result.
+1. Abstracting API changes vs directly implementing changes. Instead of swapping "group" for "collection" in the change to blender 2.8, we create if/else statements and wrapper functions that fetch the attribute that exists based on the version of blender. Want more info about this? See [the article here](https://theduckcow.com/2019/update-addons-both-blender-28-and-27-support/).
+1. No python annotations. This syntax wasn't supported in old versions of python that came with blender (namely, in Blender 2.7) and so we don't use annotations in this repository. Some workarounds are in place to avoid excessive printouts as a result.
 
 ## Compiling and running tests
 
 As above, a critical component of maintaining support and ensuring the wide number of MCprep features are stable, is running automated tests.
 
-Want to just quickly reload some files after only changing python code (no asset changes)? Try running `compile.sh -fast` which will skip copying over the resources folder and skip zipping the addon. 
+### Compile MCprep using scripts
 
-You run the main test suite by running the wrapper `run_tests.sh` file. This will automatically run the `compile.sh` script which will copy code from your MCprep git repo into the different blender addons folders, and then one by one (if `run_tests.sh -all` is used) it will test each version of blender to see if things are still working. At the end, you get a csv file that indicates which tests fail or passed, broken down by blender version.
+Scripts have been created for Mac OSX (`compile.sh`) and Windows (`compile.bat`) which make it fast to copy the entire addon structure the addon folders for multiple versions of blender. You need to use these scripts, or at the very least validate that they work, as running the automated tests depend on them.
 
-Generally speaking there are some flaky tests that can be generally and safely ignored. This includes the "import_mineways_combined" test.
+The benefit? You don't have to manually navigate and install zip files in blender for each change you make - just run this script and restart blender. It *is* important you do restart blender after changes, as there can be unintended side effects of trying to reload a plugin.
+
+Want to just quickly reload some files after only changing python code (no asset changes)? Mac only: Try running `compile.sh -fast` which will skip copying over the resources folder and skip zipping the addon.
+
+### Run tests
+
+You run the main test suite by running the wrapper `run_tests.sh` file (mac) or `run_tests.bat` (windows). This will automatically run the corresponding `compile` script which will copy code from your MCprep git repo into the different blender addons folders, and then one by one (if `run_tests.sh -all` is used on mac) it will test each version of blender to see if things are still working. At the end, you get a csv file that indicates which tests fail or passed, broken down by blender version.
+
+Note: the windows `run_tests.bat` script always tests across all versions of blender, there is not currently a way to run the tests for only a single version of blender (unless of course, you only have one version of blender listed in your `blender_execs.txt` file).
+
+There are a couple flaky tests, but the goal is to reduce this over time. This includes the "import_mineways_combined" test, which does not pass but is a reminder to try and improve that test specifically. All other tests should pass.
 
 If all tests successfully complete, you'll get a csv file like so:
 
@@ -60,19 +71,20 @@ blender	failed_test	short_err
 ```
 
 
+### Run a specific test quickly
+
+Working on a new test? Or maybe one specific test is failing? It's convenient to be able to run that one test on its own quickly to see if your problem is resolved, which you can do with a command like `.\run_tests.bat -run spawn_mob` (works on Mac's `run_tests.sh` script too).
+
+
 ### **NOTE!**
 
-In order to run these tests, **you must ensure your git folder with your MCprep code is in a safe spot, outside of the blender install folders**. This is because the install script will attempt to remove and then copy the addon back into the blender addons folder.
-
-### **NOTE!**
-
-The automated install  and testing setup here has so far only be set up for Mac OSX. Work is being done to make the equivalent windows bat scripts to support the same behavior there.
+In order to run these tests, **you must ensure your git folder with your MCprep code is in a safe spot, outside of the blender install folders**. This is because the install script will attempt to remove and then copy the addon back into the blender addons folder. Tests will directly load some modules from the git repo folder structure (not from the addons folder), others which use operator calls are using the installed module code in blender itself.
 
 
 ## Creating your blender_installs.txt and blender_exects.txt
 
 
-Your `blender_installs.txt` defines where the `compile.sh` script will install MCprep onto your system. It's a directly copy-paste of the folder.
+Your `blender_installs.txt` defines where the `compile.sh` (Mac OSX) or `compile.bat` (Windows) script will install MCprep onto your system. It's a directly copy-paste of the folder.
 
 On a mac? The text file will be generated automatically for you if you haven't already created it, based on detected blender installs. Otherwise, just create it manually. It could look like:
 
@@ -100,4 +112,20 @@ Your `blender_execs.txt` defines where to find the executables used in the autom
 
 You don't necessarily have to have all these versions of blender installed yourself, maintainers will execute the full amount of tests, but it's a good idea to at least have one version of blender 2.8, 2.9, and 3+ in the mix so you know your code will work backwards. If it doesn't, that's fine too, work with maintainers on how to add version checks (which will just disable your changes for older versions of blender).
 
-Also note that the first line indicates the only version of blender that will be used for testing unless `-all` is specified.
+Also note that the first line indicates the only version of blender that will be used for testing unless `-all` is specified (only for the OSX script; the `run_tests.bat` script will always test all versions of blender listed).
+
+
+## Development on Windows and Mac
+
+Support for development and testing should work for both platforms, just be aware the primary development of MCprep is happening on a Mac OSX machine, so the mac-side utility scripts have a few more features than windows:
+
+- Only the mac `compile.sh` script has the `-fast` option to quickly reload python files (it won't copy over the blends, textures, and won't create a new zip file, all of which can be slow)
+- Only the mac `compile.sh` has the feature of auto-detecting local blender executable installs. This is because on windows, there is a lot of variability where blender executables may be placed, so it should just be manually created anyways.
+- Only the mac `run_tests.sh` script has the `-all` optional flag. By default, the mac script will only install the 
+
+One other detail: MCprep uses git lfs or Large File Storage, to avoid saving binary files in the git history. Some Windows users may run into trouble when first pulling.
+
+- If using Powershell and you cloned your repo using SSH credentials, try running `start-ssh-agent` before running the clone/pull command (per [comment here](https://github.com/git-lfs/git-lfs/issues/3216#issuecomment-1018304297))
+- Alternatively, try using Git for Windows and its console.
+
+Run into other gotchas? Please open a [new issue](https://github.com/TheDuckCow/MCprep/issues)!
