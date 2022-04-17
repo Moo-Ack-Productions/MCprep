@@ -7,3 +7,4 @@ MCprep_addon/mcprep_addon_updater/MCprep_addon_updater_status.json
 blender_execs.txt
 blender_installs.txt
 build
+test_results.tsv
