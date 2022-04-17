@@ -226,7 +226,9 @@ class mcprep_testing():
 		bpy.ops.mcprep.reload_mobs()
 		# mcmob_type='player/Simple Rig - Boxscape-TheDuckCow.blend:/:Simple Player'
 		# mcmob_type='player/Alex FancyFeet - TheDuckCow & VanguardEnni.blend:/:alex'
-		mcmob_type='hostile/mobs - Rymdnisse.blend:/:silverfish'
+		# Formatting os.path.sep below required for windows support.
+		mcmob_type='hostile{}mobs - Rymdnisse.blend:/:silverfish'.format(
+			os.path.sep)
 		bpy.ops.mcprep.mob_spawner(mcmob_type=mcmob_type)
 
 	def _import_jmc2obj_full(self):
@@ -1329,9 +1331,11 @@ class mcprep_testing():
 
 	def qa_meshswap_file(self):
 		"""Open the meshswap file, assert there are no relative paths"""
-		blendfile = os.path.join("MCprep_addon", "MCprep_resources", "mcprep_meshSwap.blend")
 		basepath = os.path.join("MCprep_addon", "MCprep_resources")
 		basepath = os.path.abspath(basepath) # relative to the dev git folder
+		blendfile = os.path.join(basepath, "mcprep_meshSwap.blend")
+		if not os.path.isfile(blendfile):
+			return blendfile + ": missing tests dir local meshswap file"
 		bpy.ops.wm.open_mainfile(filepath=blendfile)
 		# do NOT save this file!
 
