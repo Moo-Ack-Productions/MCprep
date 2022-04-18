@@ -32,6 +32,7 @@ from .spawner import mcmodel
 from . import world_tools
 from . import addon_updater_ops
 from . import tracking
+from . import SceneOptimizer
 from .materials.skin import update_skin_path
 from .materials.generate import update_mcprep_texturepack_path
 from .materials import material_manager
@@ -635,6 +636,8 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		col = split.column(align=True)
 		col.label(text="MCprep tools")
 		col.operator("mcprep.prep_materials", text="Prep Materials")
+		if util.bv30:
+			col.operator("mcprep.optimize_scene", text="Optimize Scene")
 		p = col.operator("mcprep.swap_texture_pack")
 		p.filepath = context.scene.mcprep_texturepack_path
 		if context.mode == "OBJECT":

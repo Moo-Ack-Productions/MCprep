@@ -42,6 +42,7 @@ xcopy /e /k /q MCprep_addon\icons\ "build\%NAME%\icons\"
 xcopy /e /k /q MCprep_addon\materials\ "build\%NAME%\materials\"
 xcopy /e /k /q MCprep_addon\spawner\ "build\%NAME%\spawner\"
 xcopy /e /k /q MCprep_addon\MCprep_resources\ "build\%NAME%\MCprep_resources\"
+xcopy /e /k /q MCprep_addon\SceneOptimizer\ "build\%NAME%\SceneOptimizer\"
 
 :: Built in command for windwos 10+
 cd build
