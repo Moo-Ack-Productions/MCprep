@@ -1,78 +1,105 @@
 import bpy
 from .. import util
 
-class MCprepRendorProperties():
-	def SceneMaterials(self, context):
-		itms = [
-        ("simple", "Basic materials"), 
-        ("glossy", "Lots of glossy materials"), 
-        ("transmissive", "Lots of transmissve materials")]
-		return itms
+class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 
 	def TimeInScene(self, context):
 		itms = [
-        ("Day", "Day time"), 
-        ("Night", "Night time")]
+        ("Day", "Day time", ""), 
+        ("Night", "Night time", "")
+        ]
 		return itms
 
     # --------------------------------- Caustics --------------------------------- #
-	CausticsBool = bpy.props.BoolProperty(
-		name="Caustics",
-        default=False
-	)
-    
-    # -------------------------------- Volumetrics ------------------------------- #
-	VolumetricBool = bpy.props.BoolProperty(
-		name="Volumetrics",
+	CausticsBool : bpy.props.BoolProperty(
+		name="Caustics (Increases render times)",
         default=False
 	)
     
     # -------------------------------- Motion Blur ------------------------------- #
-	MotionBlurBool = bpy.props.BoolProperty(
-		name="Motion Blur (kills render times)",
+	MotionBlurBool : bpy.props.BoolProperty(
+		name="Motion Blur (increases render times)",
+        default=False
+	)
+
+    # ---------------------------------- Fast GI --------------------------------- #
+	FastGIBool : bpy.props.BoolProperty(
+		name="Fast GI (Decreases render times)",
         default=False
 	)
     
     # -------------------------- Materials in the scene -------------------------- #
-	SceneMaterials = bpy.props.EnumProperty(
-		name="Scene Materials",
-		description="What types of materials are in the scene",
-		items=SceneMaterials
+	GlossyBool : bpy.props.BoolProperty(
+		name="Glossy Materials",
+        default=False
+	)
+    
+	TransmissiveBool : bpy.props.BoolProperty(
+		name="Glass Materials",
+        default=False
+	)
+
+	VolumetricBool : bpy.props.BoolProperty(
+		name="Volumetrics" if util.bv30() else "Volumetrics (Increases render times)",
+        default=False
 	)
     
     # ------------------------- Time of day in the scene ------------------------- #
-	TimeInScene = bpy.props.EnumProperty(
-		name="Time in Scene",
+	TimeInScene : bpy.props.EnumProperty(
+		name="",
 		description="Time of day in the scene",
 		items=TimeInScene
 	)
 
-def draw_render_common(self, context):
+def panel_draw(self, context):
     row = self.layout.row()
     col = row.column()
     engine = context.scene.render.engine
-    if engine == 'CYCLES':
-        col.prop(self, "SceneMaterials")
-        col.prop(self, "TimeInScene")
-        col.prop(self, "CausticsBool")
-        col.prop(self, "VolumetricBool")
-        col.prop(self, "MotionBlurBool")
-        
+    scn_props = context.scene.optimizer_props
+    if util.bv30:
+        if engine == 'CYCLES':
+            col.label(text="Materials in Scene")
+            
+            # ---------------------------------- Glossy ---------------------------------- #
+            if scn_props.GlossyBool:
+                col.prop(scn_props, "GlossyBool", icon="INDIRECT_ONLY_ON")
+            else:
+                col.prop(scn_props, "GlossyBool", icon="INDIRECT_ONLY_OFF")
+            
+            # ------------------------------- Transmissive ------------------------------- #
+            if scn_props.TransmissiveBool:
+                col.prop(scn_props, "TransmissiveBool", icon="FULLSCREEN_EXIT")
+            else:
+                col.prop(scn_props, "TransmissiveBool", icon="FULLSCREEN_ENTER")
+                
+            # -------------------------------- Volumetric -------------------------------- #
+            if scn_props.VolumetricBool:
+                col.prop(scn_props, "VolumetricBool", icon="OUTLINER_OB_VOLUME")
+            else:
+                col.prop(scn_props, "VolumetricBool", icon="OUTLINER_DATA_VOLUME")
+                
+            # ---------------------------------- Options --------------------------------- #
+            col.label(text="Options")
+            col.label(text="Time of Day")
+            col.prop(scn_props, "TimeInScene")
+            col.prop(scn_props, "CausticsBool", icon="TRIA_UP")
+            col.prop(scn_props, "MotionBlurBool", icon="TRIA_UP")
+            col.prop(scn_props, "FastGIBool", icon="TRIA_DOWN")
+            col.operator("mcprep.optimize_scene", text="Optimize Scene")
+        else:
+            col.label(text= "Cycles Only >:C")
     else:
-        col.label(text= "Cycles Only >:C")
+        col.label(text= "Old Cycles Support Still a WIP")
 
-class MCPrep_OT_optimize_scene(bpy.types.Operator, MCprepRendorProperties):
+
+class MCPrep_OT_optimize_scene(bpy.types.Operator):
     bl_idname = "mcprep.optimize_scene"
     bl_label = "Optimize Scene"
     bl_options = {'REGISTER', 'UNDO'}
     
-    def invoke(self, context, event):
-        return context.window_manager.invoke_props_dialog(self)
-        
-    def draw(self, context):
-        draw_render_common(self, context)
     def execute(self, context):
         CyclesComputeDeviceType = bpy.context.preferences.addons["cycles"].preferences.compute_device_type, bpy.context.scene.cycles.device
+        scn_props = context.scene.optimizer_props
         """
         Sampling Settings
         """
@@ -87,6 +114,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator, MCprepRendorProperties):
         Glossy = 0  
         Transmissive = 0 
         Volume = 0  
+        FastGI = False;
         
         """
         Volumetric Settings
@@ -112,28 +140,31 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator, MCprepRendorProperties):
         Quality = True 
         
         
-        # --------------------------------- Caustics --------------------------------- #
-        if self.CausticsBool:
+        # -------------------------- Render engine settings -------------------------- #
+        if scn_props.CausticsBool:
             ReflectiveCaustics = True 
             RefractiveCaustics = True 
         
-        if self.MotionBlurBool:
+        if scn_props.MotionBlurBool:
             MotionBlur = True
             
-        if self.VolumetricBool:
-            Volume = 2
-        
+        if scn_props.FastGIBool:
+            FastGI = True
         # ------------------------------ Scene materials ----------------------------- #
-        if self.SceneMaterials == "glossy":
-            Glossy = 5
-            
-        elif self.SceneMaterials == "transmissive":
-            Transmissive = 5
-            
-        elif self.SceneMaterials == "simple":
+        if scn_props.GlossyBool:
             Glossy = 2
+            
+        if scn_props.VolumetricBool:
+            Volume = 2
+            
+        if scn_props.TransmissiveBool:
             Transmissive = 2
-        
+            
+        # -------------------------------- Time of day ------------------------------- #
+        if scn_props.TimeInScene == "Day":
+            NoiseThreshold = 0.2
+        else:
+            NoiseThreshold = 0.02
         
         # ------------------------------ Compute device ------------------------------ #
         if CyclesComputeDeviceType == "NONE":
@@ -208,6 +239,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator, MCprepRendorProperties):
         bpy.context.scene.render.use_motion_blur = MotionBlur
         bpy.context.scene.cycles.volume_bounces = Volume
         bpy.context.scene.cycles.diffuse_bounces = Diffuse
+        bpy.context.scene.cycles.use_fast_gi = FastGI
 
 
         """Other changes"""
@@ -218,16 +250,19 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator, MCprepRendorProperties):
         
         return {'FINISHED'}
 
-classes = [
+classes = (
+    MCprepOptimizerProperties,
     MCPrep_OT_optimize_scene
-]
+)
 def register():
-	util.make_annotations(MCprepRendorProperties)
-	for cls in classes:
-		util.make_annotations(cls)
-		bpy.utils.register_class(cls)
+    for cls in classes:
+        util.make_annotations(cls)
+        bpy.utils.register_class(cls)
+        
+    bpy.types.Scene.optimizer_props = bpy.props.PointerProperty(type=MCprepOptimizerProperties)
 
 
 def unregister():
 	for cls in reversed(classes):
 		bpy.utils.unregister_class(cls)
+	del bpy.types.Scene.optimizer_props

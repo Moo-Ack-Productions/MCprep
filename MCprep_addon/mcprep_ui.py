@@ -32,7 +32,7 @@ from .spawner import mcmodel
 from . import world_tools
 from . import addon_updater_ops
 from . import tracking
-from . import SceneOptimizer
+from .SceneOptimizer import OptimizeScene
 from .materials.skin import update_skin_path
 from .materials.generate import update_mcprep_texturepack_path
 from .materials import material_manager
@@ -636,8 +636,6 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		col = split.column(align=True)
 		col.label(text="MCprep tools")
 		col.operator("mcprep.prep_materials", text="Prep Materials")
-		if util.bv30:
-			col.operator("mcprep.optimize_scene", text="Optimize Scene")
 		p = col.operator("mcprep.swap_texture_pack")
 		p.filepath = context.scene.mcprep_texturepack_path
 		if context.mode == "OBJECT":
@@ -730,6 +728,8 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		addon_updater_ops.update_notice_box_ui(self, context)
 
 
+
+
 class MCPREP_PT_bridge(bpy.types.Panel):
 	"""MCprep panel for directly importing and reloading minecraft saves"""
 	bl_label = "World Bridge"
@@ -740,6 +740,16 @@ class MCPREP_PT_bridge(bpy.types.Panel):
 
 	def draw(self, context):
 		bridge.panel_draw(self, context)
+
+class MCPREP_PT_optimizer(bpy.types.Panel):
+	bl_label = "Cycles Optimizer"
+	bl_space_type = "VIEW_3D"
+	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
+	bl_context = "objectmode"
+	bl_category = "MCprep"
+
+	def draw(self, context):
+		OptimizeScene.panel_draw(self, context);
 
 
 class MCPREP_PT_world_tools(bpy.types.Panel):
@@ -1661,6 +1671,7 @@ classes = (
 	MCPREP_MT_3dview_add,
 	MCPREP_PT_world_imports,
 	# MCPREP_PT_bridge,
+	MCPREP_PT_optimizer,
 	MCPREP_PT_world_tools,
 	MCPREP_PT_skins,
 	MCPREP_PT_spawn,
