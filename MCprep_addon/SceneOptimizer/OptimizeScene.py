@@ -115,20 +115,20 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         Light Bounces
         """
         Diffuse = 2 # This is default because diffuse bounces don't need to be high 
-        Glossy = 0  
-        Transmissive = 0 
+        Glossy = 1
+        Transmissive = 1
         Volume = 0  
         FastGI = False;
         
         """
         Volumetric Settings
         """
-        MaxSteps = 0 
+        MaxSteps = 100 
         
         """
         Filter Glossy and clamping settings
         """
-        FilterGlossy = 0 
+        FilterGlossy = 1
         ClampingIndirect = 1
         
         """
@@ -156,13 +156,13 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
             FastGI = True
         # ------------------------------ Scene materials ----------------------------- #
         if scn_props.GlossyBool:
-            Glossy = 2
+            Glossy = 3
             
         if scn_props.VolumetricBool:
             Volume = 2
             
         if scn_props.TransmissiveBool:
-            Transmissive = 2
+            Transmissive = 3
             
         # -------------------------------- Time of day ------------------------------- #
         if scn_props.TimeInScene == "Day":

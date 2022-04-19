@@ -29,7 +29,6 @@ from .. import tracking
 from .. import util
 from . import uv_tools
 
-
 # -----------------------------------------------------------------------------
 # Material class functions
 # -----------------------------------------------------------------------------
@@ -248,6 +247,9 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 		if self.improveUiSettings:
 			try:
 				bpy.ops.mcprep.improve_ui()
+				if engine == 'CYCLES':
+					if util.bv30():
+						bpy.ops.mcprep.optimize_scene();
 			except RuntimeError as err:
 				print("Failed to improve UI with error: " + str(err))
 
