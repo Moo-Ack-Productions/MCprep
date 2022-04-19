@@ -719,6 +719,23 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 				b_col.label(text="MeshSwap file must be .blend", icon="ERROR")
 			if not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
 				b_col.label(text="MeshSwap file not found", icon="ERROR")
+    
+		"""
+		Optimizer Panel
+		"""
+		row = col.row(align=True)
+		if not scn_props.show_settings_optimizer:
+			row.prop(
+				scn_props, "show_settings_optimizer",
+				text="Cycles Optimizer Settings", icon="TRIA_RIGHT")
+			row.operator(
+				"mcprep.open_preferences",
+				text="", icon="PREFERENCES").tab = "settings"
+		else:
+			row.prop(
+				scn_props, "show_settings_optimizer",
+				text="Cycles Optimizer Settings", icon="TRIA_DOWN")
+			OptimizeScene.panel_draw(self, context)
 
 		layout = self.layout  # clear out the box formatting
 		split = layout.split()
@@ -726,8 +743,6 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 
 		# show update ready if available
 		addon_updater_ops.update_notice_box_ui(self, context)
-
-
 
 
 class MCPREP_PT_bridge(bpy.types.Panel):
@@ -740,17 +755,6 @@ class MCPREP_PT_bridge(bpy.types.Panel):
 
 	def draw(self, context):
 		bridge.panel_draw(self, context)
-
-class MCPREP_PT_optimizer(bpy.types.Panel):
-	bl_label = "Cycles Optimizer"
-	bl_space_type = "VIEW_3D"
-	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
-	bl_context = "objectmode"
-	bl_category = "MCprep"
-
-	def draw(self, context):
-		OptimizeScene.panel_draw(self, context);
-
 
 class MCPREP_PT_world_tools(bpy.types.Panel):
 	"""World settings and tools"""
@@ -1613,6 +1617,10 @@ class McprepProps(bpy.types.PropertyGroup):
 		name="show skin settings",
 		description="Show extra MCprep panel settings",
 		default=False)
+	show_settings_optimizer = bpy.props.BoolProperty(
+		name="show optimizer settings",
+		description="Show extra MCprep panel settings",
+		default=False)
 	show_settings_spawner = bpy.props.BoolProperty(
 		name="show spawner settings",
 		description="Show extra MCprep panel settings",
@@ -1671,7 +1679,6 @@ classes = (
 	MCPREP_MT_3dview_add,
 	MCPREP_PT_world_imports,
 	# MCPREP_PT_bridge,
-	MCPREP_PT_optimizer,
 	MCPREP_PT_world_tools,
 	MCPREP_PT_skins,
 	MCPREP_PT_spawn,
