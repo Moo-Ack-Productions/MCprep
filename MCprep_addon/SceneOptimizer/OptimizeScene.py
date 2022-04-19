@@ -1,6 +1,10 @@
 import bpy
 from .. import util
 
+
+# ---------------------------------------------------------------------------- #
+#                   Optimizer code by StandingPad Animations                   #
+# ---------------------------------------------------------------------------- #
 class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 
 	def TimeInScene(self, context):
@@ -11,35 +15,35 @@ class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 		return itms
 
     # --------------------------------- Caustics --------------------------------- #
-	CausticsBool : bpy.props.BoolProperty(
+	CausticsBool = bpy.props.BoolProperty(
 		name="Caustics (Increases render times)",
         default=False
 	)
     
     # -------------------------------- Motion Blur ------------------------------- #
-	MotionBlurBool : bpy.props.BoolProperty(
+	MotionBlurBool = bpy.props.BoolProperty(
 		name="Motion Blur (increases render times)",
         default=False
 	)
 
     # ---------------------------------- Fast GI --------------------------------- #
-	FastGIBool : bpy.props.BoolProperty(
+	FastGIBool = bpy.props.BoolProperty(
 		name="Fast GI (Decreases render times)",
         default=False
 	)
     
     # -------------------------- Materials in the scene -------------------------- #
-	GlossyBool : bpy.props.BoolProperty(
+	GlossyBool = bpy.props.BoolProperty(
 		name="Glossy Materials",
         default=False
 	)
     
-	TransmissiveBool : bpy.props.BoolProperty(
+	TransmissiveBool = bpy.props.BoolProperty(
 		name="Glass Materials",
         default=False
 	)
 
-	VolumetricBool : bpy.props.BoolProperty(
+	VolumetricBool = bpy.props.BoolProperty(
 		name="Volumetrics" if util.bv30() else "Volumetrics (Increases render times)",
         default=False
 	)
