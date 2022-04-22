@@ -127,7 +127,7 @@ def updateMeshswapList(context):
 	meshswap_list = []
 
 	cache = get_meshswap_cache(context)
-	prefix = "Group/" if hasattr(bpy.data, "groups") else "Collection/"
+	method = "collection"
 
 	for name in cache.get("groups"):
 		if not name:
@@ -135,7 +135,7 @@ def updateMeshswapList(context):
 		if util.nameGeneralize(name).lower() in temp_meshswap_list:
 			continue
 		description = "Place {x} block".format(x=name)
-		meshswap_list.append((prefix + name, name.title(), description))
+		meshswap_list.append((method, name, name.title(), description))
 		temp_meshswap_list.append(util.nameGeneralize(name).lower())
 
 	# sort the list alphabetically by name
@@ -150,9 +150,10 @@ def updateMeshswapList(context):
 	context.scene.mcprep_props.meshswap_list.clear()
 	for itm in sorted_blocks:
 		item = context.scene.mcprep_props.meshswap_list.add()
-		item.block = itm[0]
-		item.name = itm[1]
-		item.description = itm[2]
+		item.method = itm[0]
+		item.block = itm[1]
+		item.name = itm[2]
+		item.description = itm[3]
 
 
 class face_struct():
@@ -194,6 +195,14 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 		return getMeshswapList(context)
 
 	block = bpy.props.EnumProperty(items=swap_enum, name="Meshswap block")
+	method = bpy.props.EnumProperty(
+		name="Import method",
+		items=[
+			# Making collection first to be effective default.
+			("collection", "Collection/group asset", "Collection/group asset"),
+			("object", "Object asset", "Object asset"),
+		],
+		options={'HIDDEN'})
 	location = bpy.props.FloatVectorProperty(
 		default=(0, 0, 0),
 		name="Location")
@@ -237,19 +246,26 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 		pre_groups = list(util.collections())
 
 		meshSwapPath = bpy.path.abspath(context.scene.meshswap_path)
-		method, block = self.block.split("/")
+		block = self.block
+		method = self.method
+		if method == "collection":
+			is_object = False
+			method = "Group" if hasattr(bpy.data, "groups") else "Collection"
+		elif method == "object":
+			is_object = True
+			method = "Object"
 		link = False
 		use_cache = False
 		group = None
 
-		if method in ('Collection', 'Group') and block in util.collections():
+		if not is_object and block in util.collections():
 			group = util.collections()[block]
 			# if blender 2.8, see if collection part of the MCprepLib coll.
 			use_cache = True
 		else:
 			util.bAppendLink(os.path.join(meshSwapPath, method), block, link)
 
-		if method == "Object":
+		if is_object:
 			# Object-level disabled! Must have better
 			# asset management for this to work
 			for ob in bpy.context.selected_objects:
@@ -358,7 +374,7 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 			if util.bv28() and group:
 				util.move_assets_to_excluded_layer(context, [group])
 
-		self.track_param = self.block
+		self.track_param = "{}/{}".format(self.method, self.block)
 		return {'FINISHED'}
 
 	def prep_collection(self, context, block, pre_groups):

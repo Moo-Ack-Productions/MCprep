@@ -1031,46 +1031,57 @@ class mcprep_testing():
 
 		if bpy.app.version >= (2, 80):
 			# Add with make real = False
-			bpy.ops.mcprep.meshswap_spawner(block='Collection/banner', make_real=False)
+			bpy.ops.mcprep.meshswap_spawner(
+				block='banner', method="collection", make_real=False)
 
 			# test doing two of the same one (first won't be cached, second will)
 			# Add one with make real = True
-			bpy.ops.mcprep.meshswap_spawner(block='Collection/fire', make_real=True)
+			bpy.ops.mcprep.meshswap_spawner(
+				block='fire', method="collection", make_real=True)
 			if 'fire' not in bpy.data.collections:
 				return "Fire not in collections"
 			elif not bpy.context.selected_objects:
 				return "Added made-real meshswap objects not selected"
 
-			bpy.ops.mcprep.meshswap_spawner(block='Collection/fire', make_real=False)
+			# Test that cache is properly used. Also test that the default
+			# 'method=colleciton' is used, since that's the only mode of
+			# support for meshswap spawner at the moment.
+			bpy.ops.mcprep.meshswap_spawner(block='fire', make_real=False)
 			if 'fire' not in bpy.data.collections:
 				return "Fire not in collections"
-			count_torch = sum([1 for itm in bpy.data.collections if 'fire' in itm.name])
-			if count_torch != 1:
+			count = sum([1 for itm in bpy.data.collections if 'fire' in itm.name])
+			if count != 1:
 				return "Imported extra fire group, should have cached instead!"
 
 			# test that added item ends up in location location=(1,2,3)
 			loc = (1, 2, 3)
 			bpy.ops.mcprep.meshswap_spawner(
-				block='Collection/fire', make_real=False, location=loc)
+				block='fire', method="collection", make_real=False, location=loc)
 			if not bpy.context.object:
 				return "Added meshswap object not added as active"
 			elif not bpy.context.selected_objects:
 				return "Added meshswap object not selected"
 			if bpy.context.object.location != Vector(loc):
 				return "Location not properly applied"
+			count = sum([1 for itm in bpy.data.collections if 'fire' in itm.name])
+			if count != 1:
+				return "Should have 1 fire groups exactly, did not cache"
 		else:
 			# Add with make real = False
-			bpy.ops.mcprep.meshswap_spawner(block='Group/banner', make_real=False)
+			bpy.ops.mcprep.meshswap_spawner(
+				block='banner', method="collection", make_real=False)
 
 			# test doing two of the same one (first won't be cached, second will)
 			# Add one with make real = True
-			bpy.ops.mcprep.meshswap_spawner(block='Group/fire', make_real=True)
+			bpy.ops.mcprep.meshswap_spawner(
+				block='fire', method="collection", make_real=True)
 			if 'fire' not in bpy.data.groups:
 				return "Fire not in groups"
 			elif not bpy.context.selected_objects:
 				return "Added made-real meshswap objects not selected"
 
-			bpy.ops.mcprep.meshswap_spawner(block='Group/fire', make_real=False)
+			bpy.ops.mcprep.meshswap_spawner(
+				block='fire', method="collection", make_real=False)
 			if 'fire' not in bpy.data.groups:
 				return "Fire not in groups"
 			count_torch = sum([1 for itm in bpy.data.groups if 'fire' in itm.name])
@@ -1080,7 +1091,7 @@ class mcprep_testing():
 			# test that added item ends up in location location=(1,2,3)
 			loc = (1, 2, 3)
 			bpy.ops.mcprep.meshswap_spawner(
-				block='Group/fire', make_real=False, location=loc)
+				block='fire', method="collection", make_real=False, location=loc)
 			if not bpy.context.object:
 				return "Added meshswap object not added as active"
 			elif not bpy.context.selected_objects:

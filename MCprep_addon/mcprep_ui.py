@@ -1119,8 +1119,10 @@ def meshswap_spawner(self, context):
 	if scn_props.meshswap_list:
 		name = scn_props.meshswap_list[scn_props.meshswap_list_index].name
 		block = scn_props.meshswap_list[scn_props.meshswap_list_index].block
+		method = scn_props.meshswap_list[scn_props.meshswap_list_index].method
 		p = row.operator("mcprep.meshswap_spawner", text="Place: " + name)
 		p.block = block
+		p.method = method
 		p.location = util.get_cuser_location(context)
 	else:
 		row.operator("mcprep.meshswap_spawner", text="Place block")

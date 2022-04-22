@@ -681,7 +681,15 @@ class ListMobAssets(bpy.types.PropertyGroup):
 
 class ListMeshswapAssets(bpy.types.PropertyGroup):
 	"""For UI drawing of meshswap assets and holding data"""
-	block = bpy.props.StringProperty()  # virtual enum, Group/name
+	block = bpy.props.StringProperty()  # block name only like "fire"
+	method = bpy.props.EnumProperty(
+		name="Import method",
+		# Collection intentionally first to be default for operator calls.
+		items=[
+			("collection", "Collection/group asset", "Collection/group asset"),
+			("object", "Object asset", "Object asset"),
+		]
+	)
 	description = bpy.props.StringProperty()
 
 
