@@ -20,43 +20,49 @@
 import os
 
 import bpy
-from bpy.app.handlers import persistent
 
 from .. import conf
 from .. import tracking
 from .. import util
 import sync
 
-def sync_default_material(context, material, link, replace):
-	"""If found, load and apply the material found in a library.
+def sync_default_material(context, material, default_material):
+    """
+    This is ideitical to the normal sync materials function but it also copies
+    the material and changes the name
+    """
+    if default_material in conf.material_sync_cache:
+        import_name = default_material
+    elif util.nameGeneralize(default_material) in conf.material_sync_cache:
+        import_name = util.nameGeneralize(default_material)
 
-	Returns:
-		0 if nothing modified, 1 if modified
-		None if no error or string if error
-	"""
-	if material.name in conf.material_sync_cache:
-		import_name = material.name
-	elif util.nameGeneralize(material.name) in conf.material_sync_cache:
-		import_name = util.nameGeneralize(material.name)
-
-	# if link is true, check library material not already linked
-	sync_file = sync.get_sync_blend(context)
-	init_mats = bpy.data.materials[:]
-	util.bAppendLink(os.path.join(sync_file, "Material"), import_name, link)
-
-	imported = set(bpy.data.materials[:]) - set(init_mats)
-	if not imported:
-		return 0, "Could not import " + str(material.name)
-	new_material = list(imported)[0]
+    # if link is true, check library material not already linked
+    sync_file = sync.get_sync_blend(context)
     
-	# 2.78+ only, else silent failure
-	res = util.remap_users(material, new_material)
-	if res != 0:
-		# try a fallback where we at least go over the selected objects
-		return 0, res
-	if replace is True:
-		bpy.data.materials.remove(material)
-	return 1, None
+    # I'm no Python expert (I prefer C++) but Google tells me that this means to copy all the elements 
+    # -StandingPad
+    init_mats = bpy.data.materials[:]
+    util.bAppendLink(os.path.join(sync_file, "Material"), import_name, False) # no linking
+
+    imported = set(bpy.data.materials[:]) - set(init_mats)
+    if not imported:
+        return 0, "Could not import " + str(material.name)
+    new_material = list(imported)[0]
+    
+    # Copy the material and change the name
+    NewDefaultMaterial = new_material.copy()
+    NewDefaultMaterial.name = material.name + "_sync_default"
+    
+    # 2.78+ only, else silent failure
+    res = util.remap_users(material, NewDefaultMaterial)
+    if res != 0:
+        # try a fallback where we at least go over the selected objects
+        return 0, res
+    
+    # remove the old material since we're changing the default and we don't
+    # want to overwhelm users
+    bpy.data.materials.remove(material)
+    return 1, None
 
 class MCPREP_OT_default_material(bpy.types.Operator):
     bl_idname = "mcprep.sync_default_materials"
@@ -90,11 +96,10 @@ class MCPREP_OT_default_material(bpy.types.Operator):
             self.report({'ERROR'}, "No default material found")
             return {'CANCELLED'}
         
-        # --------------------------- Get default material --------------------------- #
-        affected, err = sync.sync_default_material(context, MaterialName, False, True) # no linking
-        
-        if err:
-            conf.log("Most recent error during sync:" + str(err))
+        # ------------------------------ Sync materials ------------------------------ #
+        mat_list = list(bpy.data.materials)
+        for mat in mat_list:
+            affected, err = sync.sync_default_material(context, mat, MaterialName) # no linking
             
         return {'FINISHED'}
     
