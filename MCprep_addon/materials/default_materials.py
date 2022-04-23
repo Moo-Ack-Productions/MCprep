@@ -24,7 +24,7 @@ import bpy
 from .. import conf
 from .. import tracking
 from .. import util
-import sync
+from . import sync
 
 def sync_default_material(context, material, default_material):
     """
