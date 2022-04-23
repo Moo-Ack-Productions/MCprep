@@ -106,6 +106,12 @@ class McprepMaterialProps():
 			"Synchronize materials with those in the active "
 			"pack's materials.blend file"),
 		default=True)
+	newDefault = bpy.props.BoolProperty(
+		name="Sync materials",
+		description=(
+			"Synchronize materials with those in the active "
+			"pack's materials.blend file"),
+		default=True)
 	packFormat = bpy.props.EnumProperty(
 		name="Pack Format",
 		description="Change the pack format when using a PBR resource pack.",
@@ -238,7 +244,9 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 			if self.animateTextures:
 				sequences.animate_single_material(
 					mat, context.scene.render.engine)
-
+		if self.newDefault is True:
+			bpy.ops.mcprep.sync_materials(
+				selected=True, link=False, replace_materials=False, skipUsage=True)
 		if self.syncMaterials is True:
 			bpy.ops.mcprep.sync_materials(
 				selected=True, link=False, replace_materials=False, skipUsage=True)
