@@ -244,18 +244,28 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 			if self.animateTextures:
 				sequences.animate_single_material(
 					mat, context.scene.render.engine)
+    
+		# ----------------------- Use a custom default material ---------------------- #
 		if self.newDefault is True:
-			bpy.ops.mcprep.sync_materials(
+			bpy.ops.mcprep.sync_default_materials(
 				selected=True, link=False, replace_materials=False, skipUsage=True)
+
+		# ------------------------------ Sync materials ------------------------------ #
 		if self.syncMaterials is True:
 			bpy.ops.mcprep.sync_materials(
 				selected=True, link=False, replace_materials=False, skipUsage=True)
+
+		# ----------------------------- Combine materials ---------------------------- #
 		if self.combineMaterials is True:
 			bpy.ops.mcprep.combine_materials(selection_only=True, skipUsage=True)
+
+		# -------------------------------- Improve UI -------------------------------- #
 		if self.improveUiSettings:
 			try:
 				bpy.ops.mcprep.improve_ui()
+				# If we are in Cycles, we should optimize settings
 				if engine == 'CYCLES':
+					# Optimiation is only a 3.0 feature for now
 					if util.bv30():
 						bpy.ops.mcprep.optimize_scene();
 			except RuntimeError as err:
