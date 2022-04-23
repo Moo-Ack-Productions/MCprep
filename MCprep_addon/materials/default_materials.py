@@ -86,8 +86,7 @@ class MCPREP_OT_default_material(bpy.types.Operator):
         # ------------------------------ Sync file stuff ----------------------------- #
         sync_file = sync.get_sync_blend(context)
         if not os.path.isfile(sync_file):
-            if not self.skipUsage:
-                self.report({'ERROR'}, "Sync file not found: " + sync_file)
+            self.report({'ERROR'}, "Sync file not found: " + sync_file)
             return {'CANCELLED'}
 
         # ------------------------- Find the default material ------------------------ #
