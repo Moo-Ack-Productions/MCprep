@@ -26,6 +26,16 @@ from .. import tracking
 from .. import util
 from . import sync
 
+def default_material_in_sync_library(default_material, context):
+	"""Returns true if the material is in the sync mat library blend file"""
+	if conf.material_sync_cache is None:
+		sync.reload_material_sync_library(context)
+	if util.nameGeneralize(default_material) in conf.material_sync_cache:
+		return True
+	elif default_material in conf.material_sync_cache:
+		return True
+	return False
+
 def sync_default_material(context, material, default_material):
     """
     This is ideitical to the normal sync materials function but it also copies
@@ -46,23 +56,41 @@ def sync_default_material(context, material, default_material):
 
     imported = set(bpy.data.materials[:]) - set(init_mats)
     if not imported:
-        return 0, "Could not import " + str(material.name)
+        return "Could not import " + str(material.name)
     new_material = list(imported)[0]
     
+    # checking if there's a node with the label Texture
+    new_material_nodes = new_material.node_tree.nodes
+    if not new_material_nodes.get("Default Texture"):
+        return "Material has no Default Texture node"
+        
     # Copy the material and change the name
     NewDefaultMaterial = new_material.copy()
     NewDefaultMaterial.name = material.name + "_sync_default"
+    
+    # Change the texture
+    NewDefaultMaterial_nodes = NewDefaultMaterial.node_tree.nodes
+    material_nodes = material.node_tree.nodes
+    
+    if not new_material_nodes.get("Diffuse Texture"):
+        return "Material has no Diffuse Texture node"
+    
+    DefaultTextureNode = NewDefaultMaterial_nodes.get("Default Texture")
+    ImageTexture = material_nodes.get("Diffuse Texture").image.name
+    TextureFile = bpy.data.images.get(ImageTexture)
+    DefaultTextureNode.image = TextureFile
+    DefaultTextureNode.interpolation = 'Closest'
     
     # 2.78+ only, else silent failure
     res = util.remap_users(material, NewDefaultMaterial)
     if res != 0:
         # try a fallback where we at least go over the selected objects
-        return 0, res
+        return res
     
     # remove the old material since we're changing the default and we don't
     # want to overwhelm users
     bpy.data.materials.remove(material)
-    return 1, None
+    return None
 
 class MCPREP_OT_default_material(bpy.types.Operator):
     bl_idname = "mcprep.sync_default_materials"
@@ -94,15 +122,17 @@ class MCPREP_OT_default_material(bpy.types.Operator):
 
         # ------------------------- Find the default material ------------------------ #
         MaterialName = f"default_{self.SIMPLE if not self.UsePBR else self.PBR}_{self.Engine}"
-        if not sync.material_in_sync_library(MaterialName, context):
+        if not default_material_in_sync_library(MaterialName, context):
             self.report({'ERROR'}, "No default material found")
             return {'CANCELLED'}
         
         # ------------------------------ Sync materials ------------------------------ #
         mat_list = list(bpy.data.materials)
         for mat in mat_list:
-            affected, err = sync.sync_default_material(context, mat, MaterialName) # no linking
-            
+            err = sync_default_material(context, mat, MaterialName) # no linking
+            if err:
+                conf.log(err)
+                
         return {'FINISHED'}
     
 classes = (
