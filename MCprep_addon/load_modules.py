@@ -67,6 +67,11 @@ if "sync" in locals():
 else:
 	from .materials import sync
 
+if "default_materials" in locals():
+    importlib.reload(default_materials)
+else:
+    from .materials import default_materials
+
 if "uv_tools" in locals():
 	importlib.reload(uv_tools)
 else:
@@ -151,6 +156,7 @@ module_list = (
 	skin,
 	sequences,
 	sync,
+	default_materials,
 	uv_tools,
 	spawn_util,
 	meshswap,
