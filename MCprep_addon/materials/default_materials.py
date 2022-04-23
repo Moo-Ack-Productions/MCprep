@@ -78,6 +78,9 @@ class MCPREP_OT_default_material(bpy.types.Operator):
     name="Engine To Use",
     description="Defines the engine to use",
     default="cycles")
+    
+    SIMPLE = "simple"
+    PBR = "pbr"
 
     track_function = "sync_default_materials"
     track_param = None
@@ -90,7 +93,7 @@ class MCPREP_OT_default_material(bpy.types.Operator):
             return {'CANCELLED'}
 
         # ------------------------- Find the default material ------------------------ #
-        MaterialName = f"default_{self.UsePBR}_{self.Engine}"
+        MaterialName = f"default_{self.SIMPLE if not self.UsePBR else self.PBR}_{self.Engine}"
         if not sync.material_in_sync_library(MaterialName, context):
             self.report({'ERROR'}, "No default material found")
             return {'CANCELLED'}
