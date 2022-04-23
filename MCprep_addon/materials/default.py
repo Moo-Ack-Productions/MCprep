@@ -77,7 +77,7 @@ class MCPREP_OT_default_material(bpy.types.Operator):
     Engine = bpy.props.StringProperty(
     name="Engine To Use",
     description="Defines the engine to use",
-    default="CYCLES")
+    default="cycles")
 
     track_function = "sync_default_materials"
     track_param = None

@@ -247,8 +247,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
     
 		# ----------------------- Use a custom default material ---------------------- #
 		if self.newDefault is True:
-			bpy.ops.mcprep.sync_default_materials(
-				selected=True, link=False, replace_materials=False, skipUsage=True)
+			bpy.ops.mcprep.sync_default_materials(UsePBR=False, Engine=engine.lower)
 
 		# ------------------------------ Sync materials ------------------------------ #
 		if self.syncMaterials is True:
