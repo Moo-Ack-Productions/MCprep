@@ -107,10 +107,8 @@ class McprepMaterialProps():
 			"pack's materials.blend file"),
 		default=True)
 	newDefault = bpy.props.BoolProperty(
-		name="Sync materials",
-		description=(
-			"Synchronize materials with those in the active "
-			"pack's materials.blend file"),
+		name="Use custom default material",
+		description="Use a custom default material if you have one set up",
 		default=True)
 	packFormat = bpy.props.EnumProperty(
 		name="Pack Format",
@@ -134,6 +132,8 @@ def draw_mats_common(self, context):
 	row = self.layout.row()
 	row.prop(self, "useExtraMaps")
 	row.prop(self, "syncMaterials")
+	row = self.layout.row()
+	row.prop(self, "newDefault")
 
 	# col = row.column()
 	# col.prop(self, "normalIntensity", slider=True)
