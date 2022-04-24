@@ -36,7 +36,7 @@ def default_material_in_sync_library(default_material, context):
 		return True
 	return False
 
-def sync_default_material(context, material, default_material):
+def sync_default_material(context, material, default_material, engine):
     """
     This is ideitical to the normal sync materials function but it also copies
     the material and changes the name
@@ -82,7 +82,9 @@ def sync_default_material(context, material, default_material):
     ImageTexture = material_nodes.get("Diffuse Texture").image.name
     TextureFile = bpy.data.images.get(ImageTexture)
     DefaultTextureNode.image = TextureFile
-    DefaultTextureNode.interpolation = 'Closest'
+    
+    if engine is "cycles" or engine is "blender_eevee":
+        DefaultTextureNode.interpolation = 'Closest'
     
     # 2.78+ only, else silent failure
     res = util.remap_users(material, NewDefaultMaterial)
@@ -133,7 +135,7 @@ class MCPREP_OT_default_material(bpy.types.Operator):
         mat_list = list(bpy.data.materials)
         for mat in mat_list:
             try:
-                err = sync_default_material(context, mat, MaterialName) # no linking
+                err = sync_default_material(context, mat, MaterialName, self.Engine) # no linking
                 if err:
                     conf.log(err)
             except Exception as e:

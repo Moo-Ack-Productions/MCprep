@@ -229,7 +229,12 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 					mat, passes, self.useReflections, self.makeSolid)
 				if res == 0:
 					count += 1
-			elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+			# 
+			# Engines:
+			# CYCLES: Cycles
+			# BLENDER_EEVEE: EEVEE
+			# RPR: AMD ProRender
+			elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE' or engine == 'RPR':
 				res = generate.matprep_cycles(
 					mat, passes, self.useReflections,
 					self.usePrincipledShader, self.makeSolid, self.packFormat)
