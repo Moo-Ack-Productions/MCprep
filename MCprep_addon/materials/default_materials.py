@@ -66,7 +66,7 @@ def sync_default_material(context, material, default_material):
         
     # Copy the material and change the name
     NewDefaultMaterial = new_material.copy()
-    NewDefaultMaterial.name = material.name + "_sync_default"
+    NewDefaultMaterial.name = material.name
     
     if not material.node_tree.nodes:
         return "Material has no nodes"
