@@ -109,7 +109,7 @@ class McprepMaterialProps():
 	newDefault = bpy.props.BoolProperty(
 		name="Use custom default material",
 		description="Use a custom default material if you have one set up",
-		default=True)
+		default=False)
 	packFormat = bpy.props.EnumProperty(
 		name="Pack Format",
 		description="Change the pack format when using a PBR resource pack.",
