@@ -68,11 +68,14 @@ def sync_default_material(context, material, default_material):
     NewDefaultMaterial = new_material.copy()
     NewDefaultMaterial.name = material.name + "_sync_default"
     
+    if not material.node_tree.nodes:
+        return "Material has no nodes"
+    
     # Change the texture
     NewDefaultMaterial_nodes = NewDefaultMaterial.node_tree.nodes
     material_nodes = material.node_tree.nodes
     
-    if not new_material_nodes.get("Diffuse Texture"):
+    if not material_nodes.get("Diffuse Texture"):
         return "Material has no Diffuse Texture node"
     
     DefaultTextureNode = NewDefaultMaterial_nodes.get("Default Texture")
@@ -129,9 +132,12 @@ class MCPREP_OT_default_material(bpy.types.Operator):
         # ------------------------------ Sync materials ------------------------------ #
         mat_list = list(bpy.data.materials)
         for mat in mat_list:
-            err = sync_default_material(context, mat, MaterialName) # no linking
-            if err:
-                conf.log(err)
+            try:
+                err = sync_default_material(context, mat, MaterialName) # no linking
+                if err:
+                    conf.log(err)
+            except Exception as e:
+                print(e)
                 
         return {'FINISHED'}
     
