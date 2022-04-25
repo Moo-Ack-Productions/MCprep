@@ -229,12 +229,16 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 					mat, passes, self.useReflections, self.makeSolid)
 				if res == 0:
 					count += 1
-			# 
-			# Engines:
-			# CYCLES: Cycles
-			# BLENDER_EEVEE: EEVEE
-			# RPR: AMD ProRender
-			elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE' or engine == 'RPR':
+
+
+			elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+				res = generate.matprep_cycles(
+					mat, passes, self.useReflections,
+					self.usePrincipledShader, self.makeSolid, self.packFormat)
+				if res == 0:
+					count += 1
+
+			elif util.bvSupportedExternalEngine(engine=engine):
 				res = generate.matprep_cycles(
 					mat, passes, self.useReflections,
 					self.usePrincipledShader, self.makeSolid, self.packFormat)
@@ -243,7 +247,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 			else:
 				self.report(
 					{'ERROR'},
-					"Only Blender Internal, Cycles, or Eevee supported")
+					"Only Blender Internal, Cycles, Eevee, or Radeon Prorender supported")
 				return {'CANCELLED'}
 
 			if self.animateTextures:

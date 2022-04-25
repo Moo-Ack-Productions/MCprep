@@ -210,6 +210,13 @@ def bv30():
         BV_IS_30 = getBV() >= (3, 00)
     return BV_IS_30
 
+SUPPORTED_ENGINES = ("RPR")
+
+def bvSupportedExternalEngine(engine):
+    global SUPPORTED_ENGINES
+    if engine in SUPPORTED_ENGINES:
+        return True 
+    return False
 
 def face_on_edge(faceLoc):
 	"""Check if a face is on the boundary between two blocks (local coordinates)."""
