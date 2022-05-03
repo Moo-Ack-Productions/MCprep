@@ -358,8 +358,12 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 					continue
 				for col in range(image.size[0]):
 					if col >= xmin and col <= xmax:
-						asum += data[fnd][image.size[1] * row + col]
-						acount += 1
+						try:
+							asum += data[fnd][image.size[1] * row + col]
+							acount += 1
+						except IndexError as err:
+							print("Index error while parsing col {}, row {}: {}".format(
+								col, row, err))
 
 			if acount == 0:
 				acount = 1
