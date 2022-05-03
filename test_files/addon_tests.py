@@ -100,9 +100,11 @@ class mcprep_testing():
 				continue
 			self.mcrprep_run_test(test)
 
-		failed_tests = [tst for tst in self.test_status
+		failed_tests = [
+			tst for tst in self.test_status
 			if self.test_status[tst]["check"] < 0]
-		passed_tests = [tst for tst in self.test_status
+		passed_tests = [
+			tst for tst in self.test_status
 			if self.test_status[tst]["check"] > 0]
 
 		print("\n{}COMPLETED, {} passed and {} failed{}".format(
@@ -111,7 +113,7 @@ class mcprep_testing():
 			COL.ENDC))
 		if passed_tests:
 			print("{}Passed tests:{}".format(COL.OKGREEN, COL.ENDC))
-			print("\t"+", ".join(passed_tests))
+			print("\t" + ", ".join(passed_tests))
 		if failed_tests:
 			print("{}Failed tests:{}".format(COL.FAIL, COL.ENDC))
 			for tst in self.test_status:
@@ -129,14 +131,14 @@ class mcprep_testing():
 		"""Append placeholder, presuming if not changed then blender crashed"""
 		with open(TEST_FILE, 'a') as tsv:
 			tsv.write("{}\t{}\t-\n".format(
-				bpy.app.version, "CRASH during "+test_name))
+				bpy.app.version, "CRASH during " + test_name))
 
 	def update_placeholder(self, test_name, test_failure):
 		"""Update text of (if error) or remove placeholder row of file"""
 		with open(TEST_FILE, 'r') as tsv:
 			contents = tsv.readlines()
 
-		if not test_failure: # None or ""
+		if not test_failure:  # None or ""
 			contents = contents[:-1]
 		else:
 			this_failure = "{}\t{}\t{}\n".format(
@@ -160,16 +162,16 @@ class mcprep_testing():
 				res = test_func()
 			if not res:
 				print("\t{}TEST PASSED{}".format(COL.OKGREEN, COL.ENDC))
-				self.test_status[test_func.__name__] = {"check":1, "res": res}
+				self.test_status[test_func.__name__] = {"check": 1, "res": res}
 			else:
 				print("\t{}TEST FAILED:{}".format(COL.FAIL, COL.ENDC))
-				print("\t"+res)
-				self.test_status[test_func.__name__] = {"check":-1, "res": res}
-		except Exception as e:
+				print("\t" + res)
+				self.test_status[test_func.__name__] = {"check": -1, "res": res}
+		except Exception:
 			print("\t{}TEST FAILED{}".format(COL.FAIL, COL.ENDC))
-			print(traceback.format_exc()) # plus other info, e.g. line number/file?
+			print(traceback.format_exc())  # other info, e.g. line number/file
 			res = traceback.format_exc()
-			self.test_status[test_func.__name__] = {"check":-1, "res": res}
+			self.test_status[test_func.__name__] = {"check": -1, "res": res}
 		# print("\tFinished test {}".format(test_func.__name__))
 		self.update_placeholder(test_func.__name__, res)
 
@@ -197,12 +199,11 @@ class mcprep_testing():
 	def get_mcprep_path(self):
 		"""Returns the addon basepath installed in this blender instance"""
 		for base in bpy.utils.script_paths():
-			init = os.path.join(base, "addons", "MCprep_addon") # __init__.py folder
+			init = os.path.join(
+				base, "addons", "MCprep_addon")  # __init__.py folder
 			if os.path.isdir(init):
 				return init
 		return None
-
-
 
 	# -----------------------------------------------------------------------------
 	# Testing utilities, not tests themselves (ie assumed to work)
@@ -226,7 +227,9 @@ class mcprep_testing():
 		bpy.ops.mcprep.reload_mobs()
 		# mcmob_type='player/Simple Rig - Boxscape-TheDuckCow.blend:/:Simple Player'
 		# mcmob_type='player/Alex FancyFeet - TheDuckCow & VanguardEnni.blend:/:alex'
-		mcmob_type='hostile/mobs - Rymdnisse.blend:/:silverfish'
+		# Formatting os.path.sep below required for windows support.
+		mcmob_type = 'hostile{}mobs - Rymdnisse.blend:/:silverfish'.format(
+			os.path.sep)
 		bpy.ops.mcprep.mob_spawner(mcmob_type=mcmob_type)
 
 	def _import_jmc2obj_full(self):
@@ -287,7 +290,7 @@ class mcprep_testing():
 		"""Return back the latest info window log"""
 		for txt in bpy.data.texts:
 			bpy.data.texts.remove(txt)
-		res = bpy.ops.ui.reports_to_textblock()
+		_ = bpy.ops.ui.reports_to_textblock()
 		print("DEVVVV get last infolog:")
 		for ln in bpy.data.texts['Recent Reports'].lines:
 			print(ln.body)
@@ -296,7 +299,7 @@ class mcprep_testing():
 
 	def _set_exporter(self, name):
 		"""Sets the exporter name"""
-		from MCprep.util import get_user_preferences
+		# from MCprep.util import get_user_preferences
 		if name not in ['(choose)', 'jmc2obj', 'Mineways']:
 			raise Exception('Invalid exporter set tyep')
 		context = bpy.context
@@ -327,7 +330,7 @@ class mcprep_testing():
 				bpy.ops.preferences.addon_enable(module="MCprep_addon")
 			else:
 				bpy.ops.wm.addon_enable(module="MCprep_addon")
-		except:
+		except Exception:
 			pass
 
 		# see if we can safely toggle off and back on
@@ -341,16 +344,6 @@ class mcprep_testing():
 	def prep_materials(self):
 		# run once when nothing is selected, no active object
 		self._clear_scene()
-
-		# res = bpy.ops.mcprep.prep_materials(
-		# 	animateTextures=False,
-		# 	autoFindMissingTextures=False,
-		# 	improveUiSettings=False,
-		# 	)
-		# if res != {'CANCELLED'}:
-		# 	return "Should have returned cancelled as no objects selected"
-		# elif "No objects selected" != self._get_last_infolog():
-		# 	return "Did not get the right info log back"
 
 		status = 'fail'
 		print("Checking blank usage")
@@ -474,9 +467,12 @@ class mcprep_testing():
 			else:
 				missing_images += 1
 		if count_images != 1:
-			return "Should have only 1 pass after simple load - had " + str(count_images)
+			return "Should have only 1 pass after simple load - had {}".format(
+				count_images)
 		if missing_images != 0:
-			return "Should have only 0 unloaded passes after simple load - had " + str(count_images)
+			return (
+				"Should have only 0 unloaded passes after simple load - "
+				"had {}".format(count_images))
 
 		# Now try pbr load, should find the adjacent _n and _s passes and auto
 		# load it in.
@@ -506,9 +502,11 @@ class mcprep_testing():
 				missing_images += 1
 		self._debug_save_file_state()
 		if count_images != 3:
-			return "Should have all 3 passes after pbr load - had " + str(count_images)
+			return "Should have all 3 passes after pbr load - had {}".format(
+				count_images)
 		if missing_images != 0:
-			return "Should have 0 unloaded passes after pbr load - had " + str(count_images)
+			return "Should have 0 unloaded passes after pbr load - had {}".format(
+				count_images)
 
 	def prep_materials_cycles(self):
 		"""Cycles-specific tests"""
@@ -532,31 +530,31 @@ class mcprep_testing():
 		pre_path = node.image.filepath
 		bpy.ops.mcprep.replace_missing_textures(animateTextures=False)
 		post_path = node.image.filepath
-		canonical_path = post_path # save for later
 		if pre_path != post_path:
 			return "Pre/post path differed, should be the same"
 
 		# now save the texturefile somewhere
 		tmp_dir = tempfile.gettempdir()
 		tmp_image = os.path.join(tmp_dir, "sugar_cane.png")
-		shutil.copyfile(node.image.filepath, tmp_image) # leave original in tact
+		shutil.copyfile(node.image.filepath, tmp_image)  # leave original intact
 
 		# Test that path is unchanged even when with a non canonical path
 		node.image.filepath = tmp_image
 		if node.image.filepath != tmp_image:
 			os.remove(tmp_image)
-			return "fialed to setup test, node path not = "+tmp_image
+			return "fialed to setup test, node path not = " + tmp_image
 		pre_path = node.image.filepath
 		bpy.ops.mcprep.replace_missing_textures(animateTextures=False)
 		post_path = node.image.filepath
 		if pre_path != post_path:
 			os.remove(tmp_image)
-			return "Pre/post path differed in tmp dir when there should have been no change: pre {} vs post {}".format(
-				pre_path, post_path)
+			return (
+				"Pre/post path differed in tmp dir when there should have "
+				"been no change: pre {} vs post {}".format(pre_path, post_path))
 
 		# test that an empty node within a canonically named material is fixed
 		pre_path = node.image.filepath
-		node.image = None # remove the image from block
+		node.image = None  # remove the image from block
 		if node.image:
 			os.remove(tmp_image)
 			return "failed to setup test, image block still assigned"
@@ -603,24 +601,25 @@ class mcprep_testing():
 		unpacked_path = bpy.path.abspath(node.image.filepath)
 		# close and open, moving the file in the meantime
 		save_tmp_file = os.path.join(tmp_dir, "tmp_test.blend")
-		os.rename(unpacked_path, unpacked_path+"x")
+		os.rename(unpacked_path, unpacked_path + "x")
 		bpy.ops.wm.save_mainfile(filepath=save_tmp_file)
 		bpy.ops.wm.open_mainfile(filepath=save_tmp_file)
 		# now run the operator
 		img = bpy.data.images['sugar_cane.png']
 		pre_path = img.filepath
 		if os.path.isfile(pre_path):
-			os.remove(unpacked_path+"x")
+			os.remove(unpacked_path + "x")
 			return "Failed to setup test for save/reopn move"
 		bpy.ops.mcprep.replace_missing_textures(animateTextures=False)
 		post_path = img.filepath
 		if post_path == pre_path:
-			os.remove(unpacked_path+"x")
-			return "Did not change path from "+pre_path
+			os.remove(unpacked_path + "x")
+			return "Did not change path from " + pre_path
 		elif not os.path.isfile(post_path):
-			os.remove(unpacked_path+"x")
-			return "File for blend reloaded image does not exist: "+node.image.filepath
-		os.remove(unpacked_path+"x")
+			os.remove(unpacked_path + "x")
+			return "File for blend reloaded image does not exist: {}".format(
+				node.image.filepath)
+		os.remove(unpacked_path + "x")
 
 		# address the example of sugar_cane.png.001 not being detected as canonical
 		# as a front-end name (not image file)
@@ -630,7 +629,7 @@ class mcprep_testing():
 		bpy.context.object.active_material = mat
 
 		pre_path = node.image.filepath
-		node.image = None # remove the image from block
+		node.image = None  # remove the image from block
 		mat.name = "sugar_cane.png.001"
 		if node.image:
 			os.remove(tmp_image)
@@ -696,13 +695,13 @@ class mcprep_testing():
 
 		status = 'fail'
 		try:
-			res = bpy.ops.mcprep.applyskin(
-			filepath=skin_path,
-			new_material=False)
+			_ = bpy.ops.mcprep.applyskin(
+				filepath=skin_path,
+				new_material=False)
 		except RuntimeError as e:
 			if 'No materials found to update' in str(e):
-				status = 'success' # expect to fail when nothing selected
-		if status=='fail':
+				status = 'success'  # expect to fail when nothing selected
+		if status == 'fail':
 			return "Should have failed to skin swap with no objects selected"
 
 		# now run on a real test character, with 1 material and 2 objects
@@ -713,9 +712,10 @@ class mcprep_testing():
 			filepath=skin_path,
 			new_material=False)
 		post_mats = len(bpy.data.materials)
-		if post_mats != pre_mats: # should be unchanged
-			return "change_skin.mat counts diff despit no new mat request, {} before and {} after".format(
-				pre_mats, post_mats)
+		if post_mats != pre_mats:  # should be unchanged
+			return (
+				"change_skin.mat counts diff despit no new mat request, "
+				"{} before and {} after".format(pre_mats, post_mats))
 
 		# do counts of materials before and after to ensure they match
 		pre_mats = len(bpy.data.materials)
@@ -723,19 +723,22 @@ class mcprep_testing():
 			filepath=skin_path,
 			new_material=True)
 		post_mats = len(bpy.data.materials)
-		if post_mats != pre_mats*2: # should exactly double since in new scene
-			return "change_skin.mat counts diff mat counts, {} before and {} after".format(
-				pre_mats, post_mats)
+		if post_mats != pre_mats * 2:  # should exactly double since in new scene
+			return (
+				"change_skin.mat counts diff mat counts, "
+				"{} before and {} after".format(pre_mats, post_mats))
 
 		pre_mats = len(bpy.data.materials)
 
-		bpy.ops.mcprep.skin_swapper( # not diff operator name, this is popup browser
+		# not diff operator name, this is popup browser
+		bpy.ops.mcprep.skin_swapper(
 			filepath=skin_path,
 			new_material=False)
 		post_mats = len(bpy.data.materials)
-		if post_mats != pre_mats: # should be unchanged
-			return "change_skin.mat counts differ even though should be same, {} before and {} after".format(
-				pre_mats, post_mats)
+		if post_mats != pre_mats:  # should be unchanged
+			return (
+				"change_skin.mat counts differ even though should be same, "
+				"{} before and {} after".format(pre_mats, post_mats))
 
 		# TODO: Add test for when there is a bogus filename, responds with
 		# Image file not found in err
@@ -779,11 +782,11 @@ class mcprep_testing():
 		pre_objects = len(bpy.data.objects)
 		self._import_jmc2obj_full()
 		post_objects = len(bpy.data.objects)
-		if post_objects+1 > pre_objects:
+		if post_objects + 1 > pre_objects:
 			print("Success, had {} objs, post import {}".format(
 				pre_objects, post_objects))
 			return
-		elif post_objects+1 == pre_objects:
+		elif post_objects + 1 == pre_objects:
 			return "Only one new object imported"
 		else:
 			return "Nothing imported"
@@ -795,7 +798,7 @@ class mcprep_testing():
 		try:
 			bpy.ops.mcprep.import_world_split(filepath=obj_path)
 		except Exception as e:
-			print("Failed, as intended: "+str(e))
+			print("Failed, as intended: " + str(e))
 			return
 		return "World import should have returned an error"
 
@@ -806,18 +809,21 @@ class mcprep_testing():
 		from MCprep import util
 		from MCprep import conf
 
-		util.load_mcprep_json() # force load json cache
+		util.load_mcprep_json()  # force load json cache
 		mcprep_data = conf.json_data["blocks"][mapping_set]
 
 		# first detect alignment to the raw underlining mappings, nothing to
 		# do with canonical yet
-		mapped = [mat.name for mat in bpy.data.materials
-			if mat.name in mcprep_data] # ok!
-		unmapped = [mat.name for mat in bpy.data.materials
-			if mat.name not in mcprep_data] # not ok
-		fullset = mapped+unmapped # ie all materials
-		unleveraged = [mat for mat in mcprep_data
-			if mat not in fullset] # not ideal, means maybe missed check
+		mapped = [
+			mat.name for mat in bpy.data.materials
+			if mat.name in mcprep_data]  # ok!
+		unmapped = [
+			mat.name for mat in bpy.data.materials
+			if mat.name not in mcprep_data]  # not ok
+		fullset = mapped + unmapped  # ie all materials
+		unleveraged = [
+			mat for mat in mcprep_data
+			if mat not in fullset]  # not ideal, means maybe missed check
 
 		print("Mapped: {}, unmapped: {}, unleveraged: {}".format(
 			len(mapped), len(unmapped), len(unleveraged)))
@@ -827,7 +833,7 @@ class mcprep_testing():
 			print(err)
 			print(sorted(unmapped))
 			print("")
-			#return err
+			# return err
 		if len(unleveraged) > 20:
 			err = "Json file materials not found in obj test file, may need to update world"
 			print(err)
@@ -836,14 +842,10 @@ class mcprep_testing():
 
 		if len(mapped) == 0:
 			return "No materials mapped"
-		elif len(mapped) < len(unmapped): # +len(unleveraged), too many esp. for Mineways
+		elif len(mapped) < len(unmapped):  # too many esp. for Mineways
 			# not a very optimistic threshold, but better than none
 			return "More materials unmapped than mapped"
 		print("")
-
-		mc_count=0
-		jmc_count=0
-		mineways_count=0
 
 		# each element is [cannon_name, form], form is none if not matched
 		mapped = [get_mc_canonical_name(mat.name) for mat in bpy.data.materials]
@@ -853,26 +855,31 @@ class mcprep_testing():
 		if mats_not_canon:
 			print("Non-canon material names found: ({})".format(len(mats_not_canon)))
 			print(mats_not_canon)
-			if len(mats_not_canon)>30: # arbitrary threshold
+			if len(mats_not_canon) > 30:  # arbitrary threshold
 				return "Too many materials found without canonical name ({})".format(
 					len(mats_not_canon))
 		else:
 			print("Confirmed - no non-canon images found")
 
 		# affirm the correct mappings
-		mats_no_packimage = [find_from_texturepack(itm[0]) for itm in mapped
+		mats_no_packimage = [
+			find_from_texturepack(itm[0]) for itm in mapped
 			if itm[1] is not None]
 		mats_no_packimage = [path for path in mats_no_packimage if path]
-		print("Mapped paths: "+str(len(mats_no_packimage)))
+		print("Mapped paths: " + str(len(mats_no_packimage)))
 
 		# could not resolve image from resource pack (warn) even though in mapping
-		mats_no_packimage = [itm[0] for itm in mapped
+		mats_no_packimage = [
+			itm[0] for itm in mapped
 			if itm[1] is not None and not find_from_texturepack(itm[0])]
 		print("No resource images found for mapped items: ({})".format(
 			len(mats_no_packimage)))
 		print("These would appear to have cannon mappings, but then fail on lookup")
-		if len(mats_no_packimage)>5: # known number up front, e.g. chests, stone_slab_side, stone_slab_top
-			return "Missing images for blocks specified in mcprep_data.json: "+",".join(mats_no_packimage)
+
+		# known number up front, e.g. chests, stone_slab_side, stone_slab_top
+		if len(mats_no_packimage) > 5:
+			return "Missing images for blocks specified in mcprep_data.json: {}".format(
+				",".join(mats_no_packimage))
 
 		# also test that there are not raw image names not in mapping list
 		# but that otherwise could be added to the mapping list as file exists
@@ -890,7 +897,6 @@ class mcprep_testing():
 		self._clear_scene()
 		self._import_mineways_separated()
 
-		#mcprep_data = self._get_mcprep_data()
 		res = self.import_materials_util("block_mapping_mineways")
 		return res
 
@@ -899,7 +905,6 @@ class mcprep_testing():
 		self._clear_scene()
 		self._import_mineways_combined()
 
-		#mcprep_data = self._get_mcprep_data()
 		res = self.import_materials_util("block_mapping_mineways")
 		return res
 
@@ -907,16 +912,16 @@ class mcprep_testing():
 		"""Tests the outputs of the generalize function"""
 		from MCprep.util import nameGeneralize
 		test_sets = {
-			"ab":"ab",
-			"table.001":"table",
-			"table.100":"table",
-			"table001":"table001",
-			"fire_0":"fire_0",
+			"ab": "ab",
+			"table.001": "table",
+			"table.100": "table",
+			"table001": "table001",
+			"fire_0": "fire_0",
 			# "fire_0_0001.png":"fire_0", not current behavior, but desired?
-			"fire_0_0001":"fire_0",
-			"fire_0_0001.001":"fire_0",
-			"fire_layer_1":"fire_layer_1",
-			"cartography_table_side1":"cartography_table_side1"
+			"fire_0_0001": "fire_0",
+			"fire_0_0001.001": "fire_0",
+			"fire_layer_1": "fire_layer_1",
+			"cartography_table_side1": "cartography_table_side1"
 		}
 		errors = []
 		for key in list(test_sets):
@@ -928,7 +933,7 @@ class mcprep_testing():
 				print("{}:{} passed".format(key, res))
 
 		if errors:
-			return "Generalize failed: "+", ".join(errors)
+			return "Generalize failed: " + ", ".join(errors)
 
 	def canonical_name_no_none(self):
 		"""Ensure that MC canonical name never returns none"""
@@ -956,7 +961,7 @@ class mcprep_testing():
 		did_raise = False
 		try:
 			get_mc_canonical_name(None)
-		except:
+		except Exception:
 			did_raise = True
 		if not did_raise:
 			return "None input SHOULD raise error"
@@ -992,8 +997,8 @@ class mcprep_testing():
 		from MCprep.util import select_set
 
 		if mat_name not in bpy.data.materials:
-			return "Not a material: "+mat_name
-		print("\nAttempt meshswap of "+mat_name)
+			return "Not a material: " + mat_name
+		print("\nAttempt meshswap of " + mat_name)
 		mat = bpy.data.materials[mat_name]
 
 		obj = None
@@ -1005,14 +1010,14 @@ class mcprep_testing():
 			if obj:
 				break
 		if not obj:
-			return "Failed to find obj for "+mat_name
-		print("Found the object - "+obj.name)
+			return "Failed to find obj for " + mat_name
+		print("Found the object - " + obj.name)
 
 		bpy.ops.object.select_all(action='DESELECT')
 		select_set(obj, True)
 		res = bpy.ops.mcprep.meshswap()
 		if res != {'FINISHED'}:
-			return "Meshswap returned cancelled for "+mat_name
+			return "Meshswap returned cancelled for " + mat_name
 
 	def meshswap_spawner(self):
 		"""Tests direct meshswap spawning"""
@@ -1021,50 +1026,62 @@ class mcprep_testing():
 		bpy.ops.mcprep.reload_meshswap()
 		if not scn_props.meshswap_list:
 			return "No meshswap assets loaded for spawning"
-		elif len(scn_props.meshswap_list)<15:
+		elif len(scn_props.meshswap_list) < 15:
 			return "Too few meshswap assets available"
 
 		if bpy.app.version >= (2, 80):
 			# Add with make real = False
-			bpy.ops.mcprep.meshswap_spawner(block='Collection/banner', make_real=False)
+			bpy.ops.mcprep.meshswap_spawner(
+				block='banner', method="collection", make_real=False)
 
 			# test doing two of the same one (first won't be cached, second will)
 			# Add one with make real = True
-			bpy.ops.mcprep.meshswap_spawner(block='Collection/fire', make_real=True)
+			bpy.ops.mcprep.meshswap_spawner(
+				block='fire', method="collection", make_real=True)
 			if 'fire' not in bpy.data.collections:
 				return "Fire not in collections"
 			elif not bpy.context.selected_objects:
 				return "Added made-real meshswap objects not selected"
 
-			bpy.ops.mcprep.meshswap_spawner(block='Collection/fire', make_real=False)
+			# Test that cache is properly used. Also test that the default
+			# 'method=colleciton' is used, since that's the only mode of
+			# support for meshswap spawner at the moment.
+			bpy.ops.mcprep.meshswap_spawner(block='fire', make_real=False)
 			if 'fire' not in bpy.data.collections:
 				return "Fire not in collections"
-			count_torch = sum([1 for itm in bpy.data.collections if 'fire' in itm.name])
-			if count_torch != 1:
+			count = sum([1 for itm in bpy.data.collections if 'fire' in itm.name])
+			if count != 1:
 				return "Imported extra fire group, should have cached instead!"
 
 			# test that added item ends up in location location=(1,2,3)
-			loc = (1,2,3)
-			bpy.ops.mcprep.meshswap_spawner(block='Collection/fire', make_real=False, location=loc)
+			loc = (1, 2, 3)
+			bpy.ops.mcprep.meshswap_spawner(
+				block='fire', method="collection", make_real=False, location=loc)
 			if not bpy.context.object:
 				return "Added meshswap object not added as active"
 			elif not bpy.context.selected_objects:
 				return "Added meshswap object not selected"
 			if bpy.context.object.location != Vector(loc):
 				return "Location not properly applied"
+			count = sum([1 for itm in bpy.data.collections if 'fire' in itm.name])
+			if count != 1:
+				return "Should have 1 fire groups exactly, did not cache"
 		else:
 			# Add with make real = False
-			bpy.ops.mcprep.meshswap_spawner(block='Group/banner', make_real=False)
+			bpy.ops.mcprep.meshswap_spawner(
+				block='banner', method="collection", make_real=False)
 
 			# test doing two of the same one (first won't be cached, second will)
 			# Add one with make real = True
-			bpy.ops.mcprep.meshswap_spawner(block='Group/fire', make_real=True)
+			bpy.ops.mcprep.meshswap_spawner(
+				block='fire', method="collection", make_real=True)
 			if 'fire' not in bpy.data.groups:
 				return "Fire not in groups"
 			elif not bpy.context.selected_objects:
 				return "Added made-real meshswap objects not selected"
 
-			bpy.ops.mcprep.meshswap_spawner(block='Group/fire', make_real=False)
+			bpy.ops.mcprep.meshswap_spawner(
+				block='fire', method="collection", make_real=False)
 			if 'fire' not in bpy.data.groups:
 				return "Fire not in groups"
 			count_torch = sum([1 for itm in bpy.data.groups if 'fire' in itm.name])
@@ -1072,8 +1089,9 @@ class mcprep_testing():
 				return "Imported extra fire group, should have cached instead!"
 
 			# test that added item ends up in location location=(1,2,3)
-			loc = (1,2,3)
-			bpy.ops.mcprep.meshswap_spawner(block='Group/fire', make_real=False, location=loc)
+			loc = (1, 2, 3)
+			bpy.ops.mcprep.meshswap_spawner(
+				block='fire', method="collection", make_real=False, location=loc)
 			if not bpy.context.object:
 				return "Added meshswap object not added as active"
 			elif not bpy.context.selected_objects:
@@ -1093,7 +1111,7 @@ class mcprep_testing():
 			"fire",
 			"lantern",
 			"cactus_side",
-			"vines", # plural
+			"vines",  # plural
 			"enchant_table_top",
 			"redstone_torch_on",
 			"glowstone",
@@ -1118,14 +1136,14 @@ class mcprep_testing():
 				res = self.meshswap_util(mat_name)
 			except Exception as err:
 				err = str(err)
-				if len(err)>15:
+				if len(err) > 15:
 					res = err[:15].replace("\n", "")
 				else:
 					res = err
 			if res:
-				errors.append(mat_name+":"+res)
+				errors.append(mat_name + ":" + res)
 		if errors:
-			return "Meshswap failed: "+", ".join(errors)
+			return "Meshswap failed: " + ", ".join(errors)
 
 	def meshswap_mineways_separated(self):
 		"""Tests jmc2obj meshswapping"""
@@ -1142,7 +1160,7 @@ class mcprep_testing():
 			"MWO_double_chest_top_left",
 			# "lantern", not in test object
 			"cactus_side",
-			"vine", # singular
+			"vine",  # singular
 			"enchanting_table_top",
 			# "redstone_torch_on", no separate "on" for Mineways separated exports
 			"glowstone",
@@ -1164,14 +1182,14 @@ class mcprep_testing():
 				res = self.meshswap_util(mat_name)
 			except Exception as err:
 				err = str(err)
-				if len(err)>15:
+				if len(err) > 15:
 					res = err[:15].replace("\n", "")
 				else:
 					res = err
 			if res:
-				errors.append(mat_name+":"+res)
+				errors.append(mat_name + ":" + res)
 		if errors:
-			return "Meshswap failed: "+", ".join(errors)
+			return "Meshswap failed: " + ", ".join(errors)
 
 	def meshswap_mineways_combined(self):
 		"""Tests jmc2obj meshswapping"""
@@ -1186,7 +1204,7 @@ class mcprep_testing():
 			"Redstone_Torch_(active)",
 			"Lantern",
 			"Dark_Oak_Sapling",
-			"Sapling", # should map to oak sapling
+			"Sapling",  # should map to oak sapling
 			"Birch_Sapling",
 			"Cactus",
 			"White_Tulip",
@@ -1206,14 +1224,14 @@ class mcprep_testing():
 				res = self.meshswap_util(mat_name)
 			except Exception as err:
 				err = str(err)
-				if len(err)>15:
+				if len(err) > 15:
 					res = err[:15].replace("\n", "")
 				else:
 					res = err
 			if res:
-				errors.append(mat_name+":"+res)
+				errors.append(mat_name + ":" + res)
 		if errors:
-			return "Meshswap combined failed: "+", ".join(errors)
+			return "Meshswap combined failed: " + ", ".join(errors)
 
 	def detect_desaturated_images(self):
 		"""Checks the desaturate images function works"""
@@ -1221,9 +1239,9 @@ class mcprep_testing():
 
 		base = self.get_mcprep_path()
 		print("Raw base", base)
-		base = os.path.join(base, "MCprep_resources",
-			"resourcepacks", "mcprep_default", "assets", "minecraft", "textures",
-			"block")
+		base = os.path.join(
+			base, "MCprep_resources", "resourcepacks", "mcprep_default",
+			"assets", "minecraft", "textures", "block")
 		print("Remapped base: ", base)
 
 		# known images that ARE desaturated:
@@ -1240,13 +1258,15 @@ class mcprep_testing():
 			if not img:
 				raise Exception('Failed to load img ' + str(tex))
 			if is_image_grayscale(img) is True:
-				raise Exception('Image {} detected as grayscale, should be saturated'.format(tex))
+				raise Exception(
+					'Image {} detected as grayscale, should be saturated'.format(tex))
 		for tex in desaturated:
 			img = bpy.data.images.load(os.path.join(base, tex))
 			if not img:
 				raise Exception('Failed to load img ' + str(tex))
 			if is_image_grayscale(img) is False:
-				raise Exception('Image {} detected as saturated - should be grayscale'.format(tex))
+				raise Exception(
+					'Image {} detected as saturated - should be grayscale'.format(tex))
 
 		# test that it is caching as expected.. by setting a false
 		# value for cache flag and seeing it's returning the property value
@@ -1254,7 +1274,6 @@ class mcprep_testing():
 	def detect_extra_passes(self):
 		"""Ensure only the correct pbr file matches are found for input file"""
 		from MCprep.materials.generate import find_additional_passes
-
 
 		tmp_dir = tempfile.gettempdir()
 
@@ -1281,7 +1300,7 @@ class mcprep_testing():
 			for tmp in tmp_files:
 				try:
 					os.remove(os.path.join(tmp_dir, tmp))
-				except:
+				except Exception:
 					pass
 
 		# assert setup was successful
@@ -1297,12 +1316,12 @@ class mcprep_testing():
 				"diffuse": os.path.join(tmp_dir, "oak_log_top.png"),
 				"specular": os.path.join(tmp_dir, "oak_log_top-s.png"),
 				"normal": os.path.join(tmp_dir, "oak_log_top_n.png"),
-			},{
+			}, {
 				"diffuse": os.path.join(tmp_dir, "oak_log.jpg"),
 				"specular": os.path.join(tmp_dir, "oak_log_s.jpg"),
 				"normal": os.path.join(tmp_dir, "oak_log_n.jpeg"),
 				"displace": os.path.join(tmp_dir, "oak_log_disp.jpeg"),
-			},{
+			}, {
 				"diffuse": os.path.join(tmp_dir, "stonecutter_saw.tiff"),
 				"normal": os.path.join(tmp_dir, "stonecutter_saw n.tiff"),
 			}
@@ -1326,12 +1345,13 @@ class mcprep_testing():
 			cleanup()
 			raise Exception("Fake file should not have any return")
 
-
 	def qa_meshswap_file(self):
 		"""Open the meshswap file, assert there are no relative paths"""
-		blendfile = os.path.join("MCprep_addon", "MCprep_resources", "mcprep_meshSwap.blend")
 		basepath = os.path.join("MCprep_addon", "MCprep_resources")
-		basepath = os.path.abspath(basepath) # relative to the dev git folder
+		basepath = os.path.abspath(basepath)  # relative to the dev git folder
+		blendfile = os.path.join(basepath, "mcprep_meshSwap.blend")
+		if not os.path.isfile(blendfile):
+			return blendfile + ": missing tests dir local meshswap file"
 		bpy.ops.wm.open_mainfile(filepath=blendfile)
 		# do NOT save this file!
 
@@ -1576,7 +1596,7 @@ class mcprep_testing():
 		post_len = len(bpy.data.materials)
 		if not list(imported):
 			return "No new materials found"
-		elif len(list(imported))>1:
+		elif len(list(imported)) > 1:
 			return "More than one material generated"
 		elif list(imported)[0].library:
 			return "Material linked should not be a library"
@@ -1608,7 +1628,7 @@ class mcprep_testing():
 		post_len = len(bpy.data.materials)
 		if not list(imported):
 			return "No new materials found"
-		elif len(list(imported))>1:
+		elif len(list(imported)) > 1:
 			return "More than one material generated"
 		elif list(imported)[0].library:
 			return "Material linked should not be a library"
@@ -1659,7 +1679,7 @@ class mcprep_testing():
 		scn_props = bpy.context.scene.mcprep_props
 		mat_item = scn_props.material_list[scn_props.material_list_index]
 		if mat_item.name not in mat.name:
-			return "Material name not loaded "+mat.name
+			return "Material name not loaded " + mat.name
 
 	def uv_transform_detection(self):
 		"""Ensure proper detection and transforms for Mineways all-in-one images"""
@@ -1679,15 +1699,15 @@ class mcprep_testing():
 
 		uv_bounds = get_uv_bounds_per_material(bpy.context.object)
 		mname = bpy.context.object.active_material.name
-		if uv_bounds != {mname: [0,1,0,1]}:
+		if uv_bounds != {mname: [0, 1, 0, 1]}:
 			return "UV transform for default cube should have max bounds"
 
 		bpy.ops.object.editmode_toggle()
 		bpy.ops.mesh.select_all(action='SELECT')
-		bpy.ops.uv.sphere_project() # will ensure more irregular UV map, not bounded
+		bpy.ops.uv.sphere_project()  # will ensure more irregular UV map, not bounded
 		bpy.ops.object.editmode_toggle()
 		uv_bounds = get_uv_bounds_per_material(bpy.context.object)
-		if uv_bounds == {mname: [0,1,0,1]}:
+		if uv_bounds == {mname: [0, 1, 0, 1]}:
 			return "UV mapping is irregular, should have different min/max"
 
 	def uv_transform_no_alert(self):
@@ -1698,9 +1718,9 @@ class mcprep_testing():
 		self._import_mineways_separated()
 		invalid, invalid_objs = detect_invalid_uvs_from_objs(
 			bpy.context.selected_objects)
-		prt = ",".join([obj.name for obj in invalid_objs]) # obj.name.split("_")[-1]
+		prt = ",".join([obj.name for obj in invalid_objs])  # obj.name.split("_")[-1]
 		if invalid is True:
-			return "Mineways separated tiles export should not alert: "+prt
+			return "Mineways separated tiles export should not alert: " + prt
 
 		self._clear_scene()
 		self._import_jmc2obj_full()
@@ -1708,7 +1728,7 @@ class mcprep_testing():
 			bpy.context.selected_objects)
 		prt = ",".join([obj.name.split("_")[-1] for obj in invalid_objs])
 		if invalid is True:
-			return "jmc2obj export should not alert: "+prt
+			return "jmc2obj export should not alert: " + prt
 
 	def uv_transform_combined_alert(self):
 		"""Ensure that uv transform alert goes off for Mineways all-in-one"""
@@ -1729,8 +1749,10 @@ class mcprep_testing():
 		# (yes, appears cutoff; and yes includes the flowing too)
 		# NOTE! in 2.7x, will be named "Stationary_Water", but in 2.9 it is
 		# "Test_MCprep_1.16.4__-145_4_1271_to_-118_255_1311_Stationary_Wat"
-		water_obj = [obj for obj in bpy.data.objects if "Stationary_Wat" in obj.name][0]
-		lava_obj = [obj for obj in bpy.data.objects if "Stationary_Lav" in obj.name][0]
+		water_obj = [
+			obj for obj in bpy.data.objects if "Stationary_Wat" in obj.name][0]
+		lava_obj = [
+			obj for obj in bpy.data.objects if "Stationary_Lav" in obj.name][0]
 
 		invalid, invalid_objs = detect_invalid_uvs_from_objs([lava_obj, water_obj])
 		if invalid is False:
@@ -1812,7 +1834,7 @@ def suffix_chars(string, max_char):
 	"""Returns passed string or the last max_char characters if longer"""
 	string = string.replace('\n', '\\n ')
 	string = string.replace(',', ' ')
-	if len(string)>max_char:
+	if len(string) > max_char:
 		return string[-max_char:]
 	return string
 
@@ -1851,19 +1873,20 @@ class MCPTEST_PT_test_panel(bpy.types.Panel):
 	"""MCprep test panel"""
 	bl_label = "MCprep Test Panel"
 	bl_space_type = 'VIEW_3D'
-	bl_region_type = 'TOOLS' if bpy.app.version < (2,80) else 'UI'
+	bl_region_type = 'TOOLS' if bpy.app.version < (2, 80) else 'UI'
 	bl_category = "MCprep"
 
 	def draw_header(self, context):
 		col = self.layout.column()
-		col.label("",icon="ERROR")
+		col.label("", icon="ERROR")
 
 	def draw(self, context):
 		layout = self.layout
 		col = layout.column()
 		col.label(text="Select test case:")
 		col.prop(context.window_manager, "mcprep_test_index")
-		col.operator("mcpreptest.run_test").index = context.window_manager.mcprep_test_index
+		ops = col.operator("mcpreptest.run_test")
+		ops.index = context.window_manager.mcprep_test_index
 		col.prop(context.window_manager, "mcprep_test_autorun")
 		col.label(text="")
 
@@ -1874,21 +1897,20 @@ class MCPTEST_PT_test_panel(bpy.types.Panel):
 		for i, itm in enumerate(test_class.test_cases):
 			row = subc.row(align=True)
 
-			if test_class.test_cases[i][1]["check"]==1:
+			if test_class.test_cases[i][1]["check"] == 1:
 				icn = "COLOR_GREEN"
-			elif test_class.test_cases[i][1]["check"]==-1:
+			elif test_class.test_cases[i][1]["check"] == -1:
 				icn = "COLOR_GREEN"
-			elif test_class.test_cases[i][1]["check"]==-2:
+			elif test_class.test_cases[i][1]["check"] == -2:
 				icn = "QUESTION"
 			else:
 				icn = "MESH_CIRCLE"
-			row.operator("mcpreptest.run_test", icon=icn, text="").index=i
+			row.operator("mcpreptest.run_test", icon=icn, text="").index = i
 			row.label("{}-{} | {}".format(
 				test_class.test_cases[i][1]["type"],
 				test_class.test_cases[i][0],
 				test_class.test_cases[i][1]["res"]
-				)
-			)
+			))
 		col.label(text="")
 		col.operator("mcpreptest.self_destruct")
 
@@ -1963,7 +1985,7 @@ if __name__ == "__main__":
 	if "-run" in args:
 		ind = args.index("-run")
 		if len(args) > ind:
-			test_class.run_only = args[ind+1]
+			test_class.run_only = args[ind + 1]
 
 	if "--auto_run" in args:
 		test_class.run_all_tests()

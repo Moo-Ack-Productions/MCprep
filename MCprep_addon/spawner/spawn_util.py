@@ -25,10 +25,68 @@ from .. import util
 from .. import tracking
 from . import mobs
 
+# Top-level names used for inclusion or exclusions when filtering through
+# collections in blend files for spawners: mobs, meshswap, and entities.
+INCLUDE_COLL = "mcprep"
+SKIP_COLL = "mcskip"
+SKIP_COLL_LEGACY = "noimport"  # Supporting older MCprep Meshswap lib.
+
 
 # -----------------------------------------------------------------------------
 # Reusable functions for spawners
 # -----------------------------------------------------------------------------
+
+
+def filter_collections(data_from):
+	"""Generalized way to prefilter collections in a blend file.
+
+	Enforces the awareness of inclusion and exlcusion collection names, and
+	some hard coded cases to always ignore.
+
+	Args:
+		data_from: The `from` part a bpy file reader scope.
+	"""
+	if hasattr(data_from, "groups"):  # blender 2.7
+		get_attr = "groups"
+	else:  # 2.8
+		get_attr = "collections"
+
+	coll_list = [name for name in getattr(data_from, get_attr)]
+
+	all_names = []
+	mcprep_names = []
+
+	# Do a check to see if there are any collections that explicitly
+	# do include the text "MCprep" as a way of filtering which
+	# collections to include. Additionally, skip any rigs containing
+	# the special text for skipping.
+	any_mcprep = False
+
+	for name in coll_list:
+		# special cases, skip some groups
+		if util.nameGeneralize(name).lower() == "Rigidbodyworld".lower():
+			continue
+		if name.lower().startswith("collection"):
+			continue  # will drop e.g. "Collection 1" from blender 2.7x
+
+		short = name.replace(" ", "").replace("-", "").replace("_", "")
+		if SKIP_COLL in short.lower():
+			conf.log("Skipping collection: " + name)
+			continue
+		if SKIP_COLL_LEGACY in short.lower():
+			conf.log("Skipping legacy collection: " + name)
+			continue
+		elif INCLUDE_COLL in name.lower():
+			any_mcprep = True
+			mcprep_names.append(name)
+		all_names.append(name)
+
+	if any_mcprep:
+		conf.log("Filtered from {} down to {} MCprep collections".format(
+			len(all_names), len(mcprep_names)))
+		all_names = mcprep_names
+	return all_names
+
 
 def attemptScriptLoad(path):
 	"""Search for script that matches name of the blend file"""
@@ -623,7 +681,15 @@ class ListMobAssets(bpy.types.PropertyGroup):
 
 class ListMeshswapAssets(bpy.types.PropertyGroup):
 	"""For UI drawing of meshswap assets and holding data"""
-	block = bpy.props.StringProperty()  # virtual enum, Group/name
+	block = bpy.props.StringProperty()  # block name only like "fire"
+	method = bpy.props.EnumProperty(
+		name="Import method",
+		# Collection intentionally first to be default for operator calls.
+		items=[
+			("collection", "Collection/group asset", "Collection/group asset"),
+			("object", "Object asset", "Object asset"),
+		]
+	)
 	description = bpy.props.StringProperty()
 
 

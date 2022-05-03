@@ -113,7 +113,8 @@ class ListMaterials(bpy.types.PropertyGroup):
 class MCPREP_OT_reset_texturepack_path(bpy.types.Operator):
 	bl_idname = "mcprep.reset_texture_path"
 	bl_label = "Reset texture pack path"
-	bl_description = "Resets the texture pack folder to the MCprep default saved in preferences"
+	bl_description = (
+		"Resets the texture pack folder to the MCprep default saved in preferences")
 	bl_options = {'REGISTER', 'UNDO'}
 
 	@tracking.report_error
@@ -137,7 +138,8 @@ class MCPREP_OT_reload_materials(bpy.types.Operator):
 class MCPREP_OT_combine_materials(bpy.types.Operator):
 	bl_idname = "mcprep.combine_materials"
 	bl_label = "Combine materials"
-	bl_description = "Consolidate the same materials together e.g. mat.001 and mat.002"
+	bl_description = (
+		"Consolidate the same materials together e.g. mat.001 and mat.002")
 	bl_options = {'REGISTER', 'UNDO'}
 
 	# arg to auto-force remove old? versus just keep as 0-users
@@ -145,9 +147,7 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 		name="Selection only",
 		description="Build materials to consoldiate based on selected objects only",
 		default=True)
-	skipUsage = bpy.props.BoolProperty(
-		default=False,
-		options={'HIDDEN'})
+	skipUsage = bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	track_function = "combine_materials"
 	@tracking.report_error
@@ -279,7 +279,8 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 	# arg to auto-force remove old? versus just keep as 0-users
 	selection_only = bpy.props.BoolProperty(
 		name="Selection only",
-		description="Build images to consoldiate based on selected objects' materials only",
+		description=(
+			"Build images to consoldiate based on selected objects' materials only"),
 		default=False)
 	skipUsage = bpy.props.BoolProperty(
 		default=False,
@@ -304,9 +305,9 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 			return {'CANCELLED'}
 
 		if self.selection_only is True:
-			self.report(
-				{'ERROR'},
-				"Combine images does not yet work for selection only, retry with option disabled")
+			self.report({'ERROR'}, (
+				"Combine images does not yet work for selection only, retry "
+				"with option disabled"))
 			return {'CANCELLED'}
 
 		name_cat = {}
@@ -325,11 +326,11 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 				conf.log("Skipping, already added image", vv_only=True)
 
 		# pre 2.78 solution, deep loop
-		if bpy.app.version < (2,78):
+		if bpy.app.version < (2, 78):
 			for ob in bpy.data.objects:
 				for sl in ob.material_slots:
 					if sl is None or sl.material is None or sl.material not in data:
-						continue # selection only
+						continue  # selection only
 					sl.material = data[name_cat[util.nameGeneralize(sl.material.name)][0]]
 			# doesn't remove old textures, but gets it to zero users
 
@@ -359,8 +360,10 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 
 			# Final step.. rename to not have .001 if it does
 			if baseImg.name != util.nameGeneralize(baseImg.name):
-				if util.nameGeneralize(baseImg.name) in data and \
-						bpy.data.images[util.nameGeneralize(baseImg.name)].users!=0:
+				gen = util.nameGeneralize(baseImg.name)
+				in_data = gen in data
+				has_users = in_data and bpy.data.images[gen].users != 0
+				if has_users:
 					pass
 				else:
 					baseImg.name = util.nameGeneralize(baseImg.name)

@@ -28,9 +28,11 @@ import bpy
 
 from . import conf
 
+
 # -----------------------------------------------------------------------------
 # GENERAL SUPPORTING FUNCTIONS (no registration required)
 # -----------------------------------------------------------------------------
+
 
 def apply_colorspace(node, color_enum):
 	"""Apply color space in a cross compatible way, for version and language.
@@ -44,9 +46,9 @@ def apply_colorspace(node, color_enum):
 		conf.log("Node has no image applied yet, cannot change colorspace")
 
 	# For later 2.8, fix images color space user
-	if hasattr(node, "color_space"): # 2.7 and earlier 2.8 versions
+	if hasattr(node, "color_space"):  # 2.7 and earlier 2.8 versions
 		node.color_space = 'NONE'  # for better interpretation of specmaps
-	elif hasattr(node.image, "colorspace_settings"): # later 2.8 versions
+	elif hasattr(node.image, "colorspace_settings"):  # later 2.8 versions
 		# try default 'Non-color', fall back to best guess 'Non-Colour Data'
 		if color_enum == 'Non-color' and noncolor_override is not None:
 			node.image.colorspace_settings.name = noncolor_override
@@ -60,8 +62,8 @@ def apply_colorspace(node, color_enum):
 
 def nameGeneralize(name):
 	"""Get base name from datablock, accounts for duplicates and animated tex."""
-	if duplicatedDatablock(name) == True:
-		name = name[:-4] # removes .001
+	if duplicatedDatablock(name) is True:
+		name = name[:-4]  # removes .001
 	if name.endswith(".png"):
 		name = name[:-4]
 
@@ -73,7 +75,7 @@ def nameGeneralize(name):
 	if len(name) < 5:
 		return name
 	any_nonnumbs = [1 if ltr in nums else 0 for ltr in name[-4:]]
-	if sum(any_nonnumbs)==4: # all leters are numbers
+	if sum(any_nonnumbs) == 4:  # all leters are numbers
 		if name[-5] in ["-", "_", " "]:
 			name = name[:-5]
 		else:
@@ -89,11 +91,11 @@ def materialsFromObj(obj_list):
 	mat_list = []
 	for obj in obj_list:
 		# also capture obj materials from dupliverts/instances on e.g. empties
-		if hasattr(obj, "dupli_group") and obj.dupli_group: # 2.7
+		if hasattr(obj, "dupli_group") and obj.dupli_group:  # 2.7
 			for dup_obj in obj.dupli_group.objects:
 				if dup_obj not in obj_list:
 					obj_list.append(dup_obj)
-		elif hasattr(obj, "instance_collection") and obj.instance_collection: # 2.8
+		elif hasattr(obj, "instance_collection") and obj.instance_collection:  # 2.8
 			for dup_obj in obj.instance_collection.objects:
 				if dup_obj not in obj_list:
 					obj_list.append(dup_obj)
@@ -134,16 +136,14 @@ def bAppendLink(directory, name, toLink, active_layer=True):
 			bpy.ops.wm.link(directory=directory, filename=name)
 		elif bv28():
 			bpy.ops.wm.append(
-					directory=directory,
-					filename=name
-					)
+				directory=directory,
+				filename=name)
 		else:
 			conf.log("{} {} {}".format(directory, name, active_layer))
 			bpy.ops.wm.append(
-					directory=directory,
-					filename=name,
-					active_layer=active_layer
-					) #, activelayer=True
+				directory=directory,
+				filename=name,
+				active_layer=active_layer)
 
 
 def obj_copy(base, context=None, vertex_groups=True, modifiers=True):
@@ -175,8 +175,9 @@ def obj_copy(base, context=None, vertex_groups=True, modifiers=True):
 			dest = new_ob.modifiers.get(mod_src.name, None)
 			if not dest:
 				dest = new_ob.modifiers.new(mod_src.name, mod_src.type)
-			properties = [p.identifier for p in mod_src.bl_rna.properties
-					  if not p.is_readonly]
+			properties = [
+				p.identifier for p in mod_src.bl_rna.properties
+				if not p.is_readonly]
 			for prop in properties:
 				setattr(dest, prop, getattr(mod_src, prop))
 	return new_ob
@@ -193,7 +194,7 @@ def bv28():
 
 def face_on_edge(faceLoc):
 	"""Check if a face is on the boundary between two blocks (local coordinates)."""
-	face_decimals = [loc - loc//1 for loc in faceLoc]
+	face_decimals = [loc - loc // 1 for loc in faceLoc]
 	if face_decimals[0] > 0.4999 and face_decimals[0] < 0.501:
 		return True
 	elif face_decimals[1] > 0.499 and face_decimals[1] < 0.501:
@@ -203,26 +204,30 @@ def face_on_edge(faceLoc):
 	return False
 
 
-def randomizeMeshSawp(swap,variations):
+def randomizeMeshSawp(swap, variations):
 	"""Randomization for model imports, add extra statements for exta cases."""
-	randi=''
+	randi = ''
 	if swap == 'torch':
-		randomized = random.randint(0,variations-1)
+		randomized = random.randint(0, variations - 1)
 		if randomized != 0:
 			randi = ".{x}".format(x=randomized)
 	elif swap == 'Torch':
-		randomized = random.randint(0,variations-1)
-		if randomized != 0: randi = ".{x}".format(x=randomized)
-	return swap+randi
+		randomized = random.randint(0, variations - 1)
+		if randomized != 0:
+			randi = ".{x}".format(x=randomized)
+	return swap + randi
 
 
 def duplicatedDatablock(name):
 	"""Check if datablock is a duplicate or not, e.g. ending in .00# """
 	try:
-		if name[-4]!=".": return False
-		int(name[-3:])
+		if name[-4] != ".":
+			return False
+		int(name[-3:])  # Will force ValueError if not a number.
 		return True
-	except:
+	except IndexError:
+		return False
+	except ValueError:
 		return False
 
 
@@ -230,7 +235,8 @@ def loadTexture(texture):
 	"""Load texture once, reusing existing texture if present."""
 	base = nameGeneralize(bpy.path.basename(texture))
 	if base in bpy.data.images:
-		if bpy.path.abspath(bpy.data.images[base].filepath) == bpy.path.abspath(texture):
+		base_filepath = bpy.path.abspath(bpy.data.images[base].filepath)
+		if base_filepath == bpy.path.abspath(texture):
 			data_img = bpy.data.images[base]
 			data_img.reload()
 			conf.log("Using already loaded texture", vv_only=True)
@@ -273,7 +279,7 @@ def link_selected_objects_to_scene():
 def open_program(executable):
 	# Open an external program from filepath/executbale
 	executable = bpy.path.abspath(executable)
-	conf.log("Open program request: "+executable)
+	conf.log("Open program request: " + executable)
 
 	# input could be .app file, which appears as if a folder
 	if not os.path.isfile(executable):
@@ -284,7 +290,8 @@ def open_program(executable):
 			return -1
 
 	# try to open with wine, if available
-	osx_or_linux = platform.system() == "Darwin" or 'linux' in platform.system().lower()
+	osx_or_linux = platform.system() == "Darwin"
+	osx_or_linux = osx_or_linux or 'linux' in platform.system().lower()
 	if executable.lower().endswith('.exe') and osx_or_linux:
 		conf.log("Opening program via wine")
 		p = Popen(['which', 'wine'], stdin=PIPE, stdout=PIPE, stderr=PIPE)
@@ -294,7 +301,8 @@ def open_program(executable):
 		if has_wine:
 			# wine is installed; this will hang blender until mineways closes.
 			p = Popen(['wine', executable], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-			conf.log("Opening via wine + direct executable, will hang blender till closed")
+			conf.log(
+				"Opening via wine + direct executable, will hang blender till closed")
 
 			# communicating with process makes it hang, so trust it works
 			# stdout, err = p.communicate(b"")
@@ -321,7 +329,7 @@ def open_program(executable):
 		p = Popen(['open', executable], stdin=PIPE, stdout=PIPE, stderr=PIPE)
 		stdout, err = p.communicate(b"")
 		if err != b"":
-			return "Error occured while trying to open executable: "+str(err)
+			return "Error occured while trying to open executable: " + str(err)
 	return "Failed to open executable"
 
 
@@ -358,32 +366,10 @@ def open_folder_crossplatform(folder):
 		return False
 
 
-def exec_path_expand(self, context):
-	"""Fix/update the mineways path for any oddities"""
-
-	# code may trigger twice
-	path = self.open_mineways_path
-
-	# # if not .app, assume valid found
-	# if ".	app" not in path: return
-
-	# dirs = path.split(os.path.sep)
-	# for d in dirs:
-
-		# # if Contents in x, os.path.join(x,"Contents")
-		# path = os.path.join(path, "Contents")
-		# if "MacOS" not in [listdirs]: return # failed?
-		# path = os.path.join(path, "MacOS")
-		# if "startwine" not in [listdirs]: return # failed?
-		# path = os.path.join(path, "startwine")
-
-		# >> end command SHOULD be open Mineways.app.
-
-
 def addGroupInstance(group_name, loc, select=True):
 	"""Add object instance not working, so workaround function."""
 	# The built in method fails, bpy.ops.object.group_instance_add(...)
-	#UPDATE: I reported the bug, and they fixed it nearly instantly =D
+	# UPDATE: I reported the bug, and they fixed it nearly instantly =D
 	# but it was recommended to do the below anyways.
 
 	scene = bpy.context.scene
@@ -405,17 +391,17 @@ def load_mcprep_json():
 	"""Load in the json file, defered so not at addon enable time."""
 	path = conf.json_path
 	default = {
-		"blocks":{
-			"reflective":[],
-			"water":[],
-			"solid":[],
-			"emit":[],
-			"desaturated":[],
-			"animated":[],
-			"block_mapping_mc":{},
-			"block_mapping_jmc":{},
-			"block_mapping_mineways":{},
-			"canon_mapping_block":{}
+		"blocks": {
+			"reflective": [],
+			"water": [],
+			"solid": [],
+			"emit": [],
+			"desaturated": [],
+			"animated": [],
+			"block_mapping_mc": {},
+			"block_mapping_jmc": {},
+			"block_mapping_mineways": {},
+			"canon_mapping_block": {}
 		}
 	}
 	if not os.path.isfile(path):
@@ -441,72 +427,9 @@ def ui_scale():
 	elif hasattr(prefs.view, "ui_scale") and hasattr(prefs.view, "pixel_size"):
 		return prefs.view.ui_scale * prefs.system.pixel_size
 	elif hasattr(prefs.system, "dpi"):
-		return prefs.system.dpi/72
+		return prefs.system.dpi / 72
 	else:
 		return 1
-
-
-class event_stream():
-	"""Class for reuse in streaming modals
-
-	or instead of this, a class which keeps record of inputs and interprets
-	the state output as per blender norm, e.g. transformmodal(3d=False) keeps stream
-	of the transform operations and options, ignoring the rest, including interpreting
-	of toggles of axis etc. stream output in standard way, e.g. [val, mods]
-	Examples of transform stream:
-	-/2x becomes [-0.5, 'x']
-	-/2x/ becomes [-2, 'x']
-	but! it shouldn't just append the string... that could become memory leak...
-	it should save the STATE of the stream at any given moment internally
-	should it should be an instance of a class variable, with functions on that class
-	shared
-	"""
-
-	# global event vars
-	nums = ['NUMPAD_0','zero',
-			'NUMPAD_1','one',
-			'NUMPAD_2','two',
-			'NUMPAD_3','three',
-			'NUMPAD_4','four',
-			'NUMPAD_5','five',
-			'NUMPAD_6','six',
-			'NUMPAD_7','seven',
-			'NUMPAD_8','eight',
-			'NUMPAD_9','nine',
-		]
-	nums_eval = [0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9]
-
-	# text = []
-	neg_vals = ['MINUS','NUMPAD_MINUS']
-
-	# modifiers
-	mods = ['shift?','alt?','ctrl?','OSKEY',"etc....."]
-
-	def __init__(self):
-		"""Object initialization"""
-		self.x=False
-		self.y=False
-		self.z=False
-		self.neg=None # can have negative modified without specifying value
-		self.value=None # if None, then no value initially set
-		self.valuestr=None # not sure if needed, but keep value as string for padding
-
-	def stream_transform(self, val,two_dim=False):
-		"""Streaming functions"""
-		# interpret val, and update state
-		if val in self.neg_vals:
-			# if not yet initialized for use, set to True, else toggle
-			self.neg = True if self.neg == None else not self.neg
-		# elif val in ...
-
-	def getKeyval(self, event):
-		"""Key evaluations for modal"""
-		if event.type in self.nums:
-			return ["INTEGER", self.nums_eval[self.nums.index(event.type)]]
-		elif event.type in self.neg:
-			return ["NEGATIVE",""]
-		elif event.type == "X":
-			return ["X",""]
 
 
 def uv_select(obj, action='TOGGLE'):
@@ -515,8 +438,7 @@ def uv_select(obj, action='TOGGLE'):
 	Actions are: SELECT, DESELECT, TOGGLE.
 	"""
 	if not obj.data.uv_layers.active:
-		return# consider raising error
-	uv_layer = obj.data.uv_layers.active
+		return  # consider raising error
 	if action == 'TOGGLE':
 		for face in obj.data.polygons:
 			face.select = not face.select
@@ -625,9 +547,9 @@ def get_preferences(context=None):
 def set_active_object(context, obj):
 	"""Get the active object in a 2.7 and 2.8 compatible way"""
 	if hasattr(context, "view_layer"):
-		context.view_layer.objects.active = obj # the 2.8 way
+		context.view_layer.objects.active = obj  # the 2.8 way
 	else:
-		context.scene.objects.active = obj # the 2.7 way
+		context.scene.objects.active = obj  # the 2.7 way
 
 
 def select_get(obj):
@@ -649,7 +571,7 @@ def select_set(obj, state):
 def hide_viewport(obj, state):
 	"""Multi version compatibility for setting the viewport hide state"""
 	if hasattr(obj, "hide_viewport"):
-		obj.hide_viewport = state # where state is a boolean True or False
+		obj.hide_viewport = state  # where state is a boolean True or False
 	else:
 		obj.hide = state
 
@@ -667,12 +589,12 @@ def viewport_textured(context=None):
 	if not context:
 		context = bpy.context
 
-	if hasattr(context.space_data, "show_textured_solid"): # 2.7
+	if hasattr(context.space_data, "show_textured_solid"):  # 2.7
 		return context.space_data.show_textured_solid
-	elif hasattr(context.scene, "display"): # 2.8
+	elif hasattr(context.scene, "display"):  # 2.8
 		# makes textured if any
 		return context.scene.display.shading.color_type == "TEXTURE"
-	return None # unsure
+	return None  # unsure
 
 
 def get_cuser_location(context=None):
@@ -695,7 +617,7 @@ def set_cuser_location(loc, context=None):
 	"""Returns the location vector of the 3D cursor"""
 	if not context:
 		context = bpy.context
-	if hasattr(context.scene, "cursor_location"): # 2.7
+	if hasattr(context.scene, "cursor_location"):  # 2.7
 		context.scene.cursor_location = loc
 	else:
 		context.scene.cursor.location = loc
@@ -730,7 +652,7 @@ def obj_unlink_remove(obj, remove, context=None):
 		try:
 			context.scene.collection.objects.unlink(obj)
 		except RuntimeError:
-			pass # if not in master collection
+			pass  # if not in master collection
 		colls = list(obj.users_collection)
 		for coll in colls:
 			coll.objects.unlink(obj)
@@ -748,9 +670,13 @@ def users_collection(obj):
 
 
 def matmul(v1, v2, v3=None):
-	"""Multiplciation of matrix and/or vectors in cross compatible way"""
+	"""Multiplciation of matrix and/or vectors in cross compatible way.
+
+	This is a workaround for the syntax that otherwise could be used a @ b.
+	"""
 	if bv28():
-		mtm = getattr(operator, "matmul") # does not exist pre 2.7<#?>, syntax error
+		# does not exist pre 2.7<#?>, syntax error
+		mtm = getattr(operator, "matmul")
 		if v3:
 			return mtm(v1, mtm(v2, v3))
 		return mtm(v1, v2)
@@ -760,15 +686,15 @@ def matmul(v1, v2, v3=None):
 
 
 def scene_update(context=None):
-	"""Update scene, such as after loading new objects or ensuring dep. graph refresh"""
+	"""Update scene in cross compatible way, to update desp graph"""
 	if not context:
 		context = bpy.context
-	if hasattr(context.scene, "update"): # 2.7
+	if hasattr(context.scene, "update"):  # 2.7
 		context.scene.update()
-	elif hasattr(context, "view_layer"): # 2.8
+	elif hasattr(context, "view_layer"):  # 2.8
 		context.view_layer.update()
 
-		
+
 def move_assets_to_excluded_layer(context, collections):
 	"""Utility to move source collections to excluded layer to not be rendered"""
 	initial_view_coll = context.view_layer.active_layer_collection
@@ -780,6 +706,6 @@ def move_assets_to_excluded_layer(context, collections):
 
 	for grp in collections:
 		if grp.name not in initial_view_coll.collection.children:
-			continue # not linked, likely a sub-group not added to scn
+			continue  # not linked, likely a sub-group not added to scn
 		spawner_exclude_vl.collection.children.link(grp)
 		initial_view_coll.collection.children.unlink(grp)

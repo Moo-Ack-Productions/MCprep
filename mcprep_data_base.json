@@ -19,7 +19,19 @@
 		"Beacon","Fire","Glowstone","Redstone_Lamp_(active)","Sea_Lantern",
 		"Stationary_Lava",
 
-		"torch_flame", "lava_flowing"
+		"torch_flame", "lava_flowing",
+
+		"torch", "soul_torch", "lantern", "soul_lantern", "redstone_torch", "sea_pickle", "end_rod",
+		"beacon", "entity/beacon_beam", "cave_vines_lit", "cave_vines_plant_lit",
+		"respawn_anchor_bottom", "respawn_anchor_side0", "respawn_anchor_side1",
+		"respawn_anchor_side2", "respawn_anchor_side3", "respawn_anchor_side4","respawn_anchor_top",
+		"candle_lit", "*_candle_lit",
+		"large_amethyst_bud", "medium_amethyst_bud", "small_amethyst_bud",
+		"amethyst_cluster",
+		"campfire_log_lit", "soul_campfire_log_lit", "jack_o_lantern",
+		"blast_furnace_front_on", "furnace_front_on", "crying_obsidian",
+		"entity/squid/glow_squid", "glow_lichen", "smoker_front_on", "nether_portal",
+		"entity/end_portal"
 	],
 	"desaturated":{
 		"vine": [0.227161, 0.614651, 0.089036],

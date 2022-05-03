@@ -1,58 +1,62 @@
-# Run tests and update the latest material mapping files
-
-# Update the material mapping file, highlight misses
-# python3 mcprep_data_refresh.py --auto
-
-# Run all tests but only on the first blender instance
+#!/usr/bin/env bash
+#
+# Run all blender addon tests.
+#
+# Run all tests for only the first executable listed in blender_execs.txt
 # ./run_tests.sh
-# ./run_tests.sh -v # to include verobse printouts
-
-# Run all tests on all versions of blender
+#
+# Run all tests on all versions of blender listed in blender_execs.txt
 # ./run_tests.sh -all
-
+#
 # Run only a single unit test within the first version of blender listed
 # ./run_tests.sh -run change_skin
-
+#
 # Run only a single unit test, but across all blender versions
 # ./run_tests.sh -all -run change_skin
 
-TEST_ALL=$1 # pass in -all or only does first
+# File containing 1 line per blender executable complete path. The first
+# line is the blender executable that will be used in 'quick' (-single) tests.
+# All executables will run all tests if TEST_ALL == "-all".
+BLENDER_EXECS=blender_execs.txt
+IFS=$'\n' read -d '' -r -a VERSIONS < $BLENDER_EXECS
+
+TEST_ALL=$1 # Check later if this is -all or not
 
 
-VERSIONS=(
-	"/Applications/blender 3.00/Blender.app/Contents/MacOS/Blender"
-	"/Applications/blender 2.93/Blender.app/Contents/MacOS/Blender"
-	"/Applications/blender 2.92/Blender.app/Contents/MacOS/Blender"
-	"/Applications/blender 2.90/Blender.app/Contents/MacOS/Blender"
-	"/Applications/blender 2.80/Blender.app/Contents/MacOS/Blender"
-	# "/Applications/blender 2.79/Blender.app/Contents/MacOS/Blender"
-	)
+TEST_RUNNERS=(
+    "test_files/addon_tests.py"
+)
 
-# update the mappings
+# Update the mappings.
 ./mcprep_data_refresh.py -auto
 
-# first, do a soft reload of python files
+# First, do a soft reload of python files.
 echo "Soft py file reload"
-cd MCprep_addon
-./reload.py -light
-cd ../
+./compile.sh -fast
 
-# remove old test results
+
+# Remove old test results.
 rm test_results.tsv
 echo -e "blender\tfailed_test\tshort_err" > test_results.tsv
 
 for ((i = 0; i < ${#VERSIONS[@]}; i++))
 do
     echo "RUNNING TESTS with blender: ${VERSIONS[$i]}"
-    # -b for background, -y for auto run py scripts, -P for running test script
-	"${VERSIONS[$i]}" -b -y -P test_files/addon_tests.py -- --auto_run $1 $2 $3 $4
-	echo "FINISHED ALL TESTS FOR blender: ${VERSIONS[$i]}"
-	echo ""
-	if [ -z "$TEST_ALL" ] || [ "$TEST_ALL" != "-all" ]
-	then
-		echo "-all not specified, skipping further blender version tests"
-		exit
-	fi
+    for ((j = 0; j < ${#TEST_RUNNERS[@]}; j++))
+    do
+        echo "Running test ${TEST_RUNNERS[$j]}"
+        # -b for background, -y for auto run scripts, -P to run specific script
+        "${VERSIONS[$i]}" -b -y -P "${TEST_RUNNERS[$j]}" -- --auto_run $1 $2 $3 $4
+    done
+
+    echo "FINISHED ALL TESTS FOR blender: ${VERSIONS[$i]}"
+    echo ""
+    if [ -z "$TEST_ALL" ] || [ "$TEST_ALL" != "-all" ]
+    then
+        echo "-all not specified, skipping further blender version tests"
+        exit
+    fi
 done
 
+echo "View results in:  test_results.csv"
 open test_results.tsv

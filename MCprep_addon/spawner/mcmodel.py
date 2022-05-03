@@ -229,12 +229,13 @@ def add_model(model_filepath, obj_name="MinecraftModel"):
 	elements, textures = read_model(bpy.context, model_filepath)
 
 	materials = []
-	for img in textures:
-		if img != "particle":
-			tex_pth = locate_image(bpy.context, textures, img, model_filepath)
-			mat = add_material(obj_name + "_" + img, tex_pth)
-			obj.data.materials.append(mat)
-			materials.append("#" + img)
+	if textures:
+		for img in textures:
+			if img != "particle":
+				tex_pth = locate_image(bpy.context, textures, img, model_filepath)
+				mat = add_material(obj_name + "_" + img, tex_pth)
+				obj.data.materials.append(mat)
+				materials.append("#" + img)
 
 	if elements is None:
 		elements = [
@@ -299,7 +300,7 @@ def add_model(model_filepath, obj_name="MinecraftModel"):
 				face.loops[j][uv_layer].uv = uvs[(j + uv_idx) % len(uvs)]
 
 			face_mat = d_face.get("texture")
-			if face_mat is not None:
+			if face_mat is not None and face_mat in materials:
 				face.material_index = materials.index(face_mat)
 
 	# make the bmesh the object's mesh

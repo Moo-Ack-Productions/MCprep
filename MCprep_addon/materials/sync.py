@@ -28,7 +28,7 @@ from .. import util
 
 
 # -----------------------------------------------------------------------------
-#	Utilities
+# Utilities
 # -----------------------------------------------------------------------------
 
 @persistent
@@ -85,10 +85,11 @@ def sync_material(context, material, link, replace):
 
 	imported = set(bpy.data.materials[:]) - set(init_mats)
 	if not imported:
-		return 0, "Could not import "+str(material.name)
+		return 0, "Could not import " + str(material.name)
 	new_material = list(imported)[0]
 
-	res = util.remap_users(material, new_material) # 2.78+ only, else silent failure
+	# 2.78+ only, else silent failure
+	res = util.remap_users(material, new_material)
 	if res != 0:
 		# try a fallback where we at least go over the selected objects
 		return 0, res
@@ -99,7 +100,7 @@ def sync_material(context, material, link, replace):
 
 
 # -----------------------------------------------------------------------------
-#	Operator
+# Operator
 # -----------------------------------------------------------------------------
 
 
@@ -110,25 +111,22 @@ class MCPREP_OT_sync_materials(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 
 	selected = bpy.props.BoolProperty(
-		name = "Only selected",
-		description = ("Affect only the materials on selected objects, otherwise "
+		name="Only selected",
+		description=(
+			"Affect only the materials on selected objects, otherwise "
 			"sync all materials in blend file"),
-		default = True
-		)
+		default=True)
 	link = bpy.props.BoolProperty(
-		name = "Link",
-		description = "Link instead of appending material",
-		default = False
-		)
+		name="Link",
+		description="Link instead of appending material",
+		default=False)
 	replace_materials = bpy.props.BoolProperty(
-		name = "Replace",
-		description = "Delete the local materials being synced, where matched",
-		default = False
-		)
+		name="Replace",
+		description="Delete the local materials being synced, where matched",
+		default=False)
 	skipUsage = bpy.props.BoolProperty(
-		default = False,
-		options = {'HIDDEN'}
-		)
+		default=False,
+		options={'HIDDEN'})
 
 	track_function = "sync_materials"
 	track_param = None
@@ -140,7 +138,7 @@ class MCPREP_OT_sync_materials(bpy.types.Operator):
 		sync_file = get_sync_blend(context)
 		if not os.path.isfile(sync_file):
 			if not self.skipUsage:
-				self.report({'ERROR'}, "Sync file not found: "+sync_file)
+				self.report({'ERROR'}, "Sync file not found: " + sync_file)
 			return {'CANCELLED'}
 
 		if sync_file == bpy.data.filepath:
@@ -172,15 +170,15 @@ class MCPREP_OT_sync_materials(bpy.types.Operator):
 		for mat in mat_list:
 			if not material_in_sync_library(mat, context):
 				continue
-			affected, err = sync_material(context, mat, self.link,
-				self.replace_materials)
+			affected, err = sync_material(
+				context, mat, self.link, self.replace_materials)
 			eligible += 1
 			modified += affected
 			if err:
 				last_err = err
 
 		if last_err:
-			conf.log("Most recent error during sync:"+str(last_err))
+			conf.log("Most recent error during sync:" + str(last_err))
 
 		# Re-establish initial state, as append material clears selections
 		for obj in inital_selection:
@@ -192,8 +190,9 @@ class MCPREP_OT_sync_materials(bpy.types.Operator):
 			return {'CANCELLED'}
 		elif modified == 0:
 			if not self.skipUsage:
-				self.report({'ERROR'}, ("No materials modified, though some "
-					"detected in the sync library: ")+last_err)
+				self.report({'ERROR'}, (
+					"No materials modified, though some "
+					"detected in the sync library: ") + last_err)
 			# raise exception? This shouldn't occur
 			return {'CANCELLED'}
 		elif modified == 1:
@@ -204,7 +203,7 @@ class MCPREP_OT_sync_materials(bpy.types.Operator):
 
 
 # -----------------------------------------------------------------------------
-#	Registration
+# Registration
 # -----------------------------------------------------------------------------
 
 
