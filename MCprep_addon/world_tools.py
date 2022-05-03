@@ -286,10 +286,12 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		if "obj" not in dir(bpy.ops.import_scene):
 			try:
 				bpy.ops.preferences.addon_enable(module="io_scene_obj")
+				self.report(
+					{"INFO"},
+					"FYI: had to enable OBJ imports in user preferences")
 			except RuntimeError:
 				self.report({"ERROR"}, "Built-in OBJ importer could not be enabled")
 				return {'CANCELLED'}
-			self.report({"INFO"}, "FYI: had to enable OBJ imports in user preferences")
 
 		# There are a number of bug reports that come from the generic call
 		# of obj importing. If this fails, should notify the user to try again

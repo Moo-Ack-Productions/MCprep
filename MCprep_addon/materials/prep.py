@@ -505,6 +505,11 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 	def execute(self, context):
 		scn_props = context.scene.mcprep_props
 		mat_item = scn_props.material_list[scn_props.material_list_index]
+		if not os.path.isfile(mat_item.path):
+			self.report({"ERROR"}, (
+				"File not found! Reset the resource pack under advanced "
+				"settings (return arrow icon) and press reload materials"))
+			return {'CANCELLED'}
 		mat, err = self.generate_base_material(
 			context, mat_item.name, mat_item.path)
 		if mat is None and err:
