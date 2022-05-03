@@ -330,7 +330,10 @@ def export_image_to_sequence(image_path, params, output_folder=None, form=None):
 			start = int(pxlen / tiles * revi)
 			end = int(pxlen / tiles * (revi + 1))
 			img_tile.pixels = image.pixels[start:end]
+
+			# Could have OS issues here in form of RuntimeError.
 			img_tile.save()
+
 			# verify it now exists
 			if not os.path.isfile(out_path):
 				raise Exception("Did not successfully save tile frame from sequence")
