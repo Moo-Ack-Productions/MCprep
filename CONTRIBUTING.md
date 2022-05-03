@@ -81,6 +81,33 @@ Working on a new test? Or maybe one specific test is failing? It's convenient to
 In order to run these tests, **you must ensure your git folder with your MCprep code is in a safe spot, outside of the blender install folders**. This is because the install script will attempt to remove and then copy the addon back into the blender addons folder. Tests will directly load some modules from the git repo folder structure (not from the addons folder), others which use operator calls are using the installed module code in blender itself.
 
 
+## Releasing MCprep
+
+At the moment, only the project lead (TheDuckCow) should ever mint new releases for MCprep. However, the steps are noted here for completeness:
+
+1. All releases need a correpsonding milestone, like v3.3.1
+1. Create a pull request and merge dev into master (without deleting the dev branch). Close out any remaining corresponding milestones. Add this pull request to the milestone, only merging when all other tasks are completed or moved out of the milestone.
+1. Check out master, git pull
+1. Make sure the version is the correct number for the release (should match a corresponding milestone)
+1. Make sure that `"dev" = False` in conf.py, so that prod resources are used for reporting
+1. Create [a draft release](https://github.com/TheDuckCow/MCprep/releases/new) on GitHub
+   - Tag is in the form `3.3.1`, no leading `v`.
+   - The title however is in the form `MCprep v3.3.0 | ShortName` where version has a leading `v`.
+   - Copy the body fo the description from the prior release, and then update the text and splash screen (if a major release). Edit a prior release without making changes to get the raw markdown code, e.g. [from here](https://github.com/TheDuckCow/MCprep/releases/edit/3.3.0).
+1. Run `compile.sh` or `compile.bat` with no fast flag, so it does the full build
+1. Run all tests, ideally on two different operating systems. Use the `./run_tests.sh -all` flag to run on all versions of blender
+1. If all tests pass, again DOUBLE CHECK that "dev" = false in conf.py, then
+1. Drag and drop the generated updated zip file onto github.
+1. Rename so it's in the form including its version number, e.g. `MCprep_addon_v3.3.0.zip`
+1. Press publish release
+   1. **Immediately** download and install an old release MCprep, and install into blender (restart blender too)
+   1. Make sure that the trigger to update MCprep to the new version is working.
+   1. If it works, then **immediately update** the https://theduckcow.com/dev/blender/mcprep-download/ page to point to the new number (must be manually updated by TheDuckCow).
+   1. Anything wrong? Immediately delete the entire release, and as a second step, also delete the tag (you likely want to copy the markdown text of the release though to a safe temporary space, so you don't lose that). You can do both steps from the github UI.
+1. After release, enter hypercare by monitoring the discord channel and the datastudio dashboard for error reporting (only core contributors will have access to this)
+
+
+
 ## Creating your blender_installs.txt and blender_exects.txt
 
 
