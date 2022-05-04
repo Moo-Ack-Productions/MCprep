@@ -1,7 +1,7 @@
 TO INSTALL MCprep
 ======
 
-### Click the link below and download the .zip file (re-zip if auto-unzipped into a folder necessary), install into blender (2.72 through 3.0 supported)
+### Click the link below and download the .zip file (re-zip if auto-unzipped into a folder necessary), install into blender (2.78 through 3.2 supported)
 
 [![Install MCprep](/visuals/mcprep_download.png)](https://theduckcow.com/dev/blender/mcprep-download/)
 
