@@ -122,7 +122,7 @@ def locate_image(context, textures, img, model_filepath):
 	"""Finds and returns the filepath of the image texture."""
 	resource_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
 
-	local_path = textures[img]
+	local_path = textures[img]  # Can fail lookup.
 	if local_path[0] == '#':  # reference to another texture
 		return locate_image(context, textures, local_path[1:], model_filepath)
 		# note this will result in multiple materials that use the same texture
@@ -154,8 +154,19 @@ def read_model(context, model_filepath):
 	with open(model_filepath, 'r') as f:
 		obj_data = json.load(f)
 
+	addon_prefs = util.get_user_preferences(context)
+
+	# Go from:      pack/assets/minecraft/models/block/block.json
+	# to 5 dirs up: pack/
+	targets_folder = bpy.path.abspath(
+		os.path.dirname(
+			os.path.dirname(
+				os.path.dirname(
+					os.path.dirname(
+						os.path.dirname(model_filepath))))))
+	# Fallback directories, which should already be resource pack paths.
 	resource_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
-	fallback_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
+	fallback_folder = bpy.path.abspath(addon_prefs.custom_texturepack_path)
 
 	elements = None
 	textures = None
@@ -179,9 +190,12 @@ def read_model(context, model_filepath):
 			# resource_folder
 			models_dir = os.path.join(
 				"assets", namespace, "models", parent_filepath + ".json")
+			target_path = os.path.join(targets_folder, models_dir)
 			active_path = os.path.join(resource_folder, models_dir)
 			base_path = os.path.join(fallback_folder, models_dir)
 
+			if os.path.isfile(target_path):
+				elements, textures = read_model(context, target_path)
 			if os.path.isfile(active_path):
 				elements, textures = read_model(context, active_path)
 			elif os.path.isfile(base_path):
@@ -444,7 +458,7 @@ class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 	@tracking.report_error
 	def execute(self, context):
 		name = os.path.basename(os.path.splitext(self.filepath)[0])
-		if not self.filepath:
+		if not self.filepath or not os.path.isfile(self.filepath):
 			self.report({"ERROR"}, "Filepath not found")
 			return {'CANCELLED'}
 		obj = add_model(os.path.normpath(self.filepath), name)
@@ -472,7 +486,7 @@ class MCPREP_OT_import_minecraft_model_file(
 	@tracking.report_error
 	def execute(self, context):
 		filename = os.path.splitext(os.path.basename(self.filepath))[0]
-		if not self.filepath:
+		if not self.filepath or not os.path.isfile(self.filepath):
 			self.report({"ERROR"}, "Filepath not found")
 			return {'CANCELLED'}
 		obj = add_model(os.path.normpath(self.filepath), filename)
