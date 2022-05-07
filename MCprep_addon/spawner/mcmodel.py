@@ -34,6 +34,9 @@ from .. import tracking
 # Core MC model functions and implementation
 # -----------------------------------------------------------------------------
 
+class ModelException(Exception):
+	"""Custom exception type for model loading."""
+
 
 def rotate_around(
 	d, pos, origin, axis='z', offset=[8, 0, 8], scale=[0.063, 0.063, 0.063]):
@@ -151,8 +154,15 @@ def read_model(context, model_filepath):
 	the parent's elements individual textures from the child will overwrite the
 	same texture from the parent.
 	"""
-	with open(model_filepath, 'r') as f:
-		obj_data = json.load(f)
+	try:
+		with open(model_filepath, 'r') as f:
+			obj_data = json.load(f)
+	except PermissionError as e:
+		print(e)
+		raise ModelException("Permission error, try running as admin") from e
+	except UnicodeDecodeError as e:
+		print(e)
+		raise ModelException("Could not read file, select valid json file") from e
 
 	addon_prefs = util.get_user_preferences(context)
 
@@ -240,6 +250,7 @@ def add_model(model_filepath, obj_name="MinecraftModel"):
 	uv_layer = bm.loops.layers.uv.verify()
 
 	# Called recursively!
+	# Can raise ModelException due to permission or corrupted file data.
 	elements, textures = read_model(bpy.context, model_filepath)
 
 	materials = []
@@ -461,7 +472,17 @@ class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 		if not self.filepath or not os.path.isfile(self.filepath):
 			self.report({"ERROR"}, "Filepath not found")
 			return {'CANCELLED'}
-		obj = add_model(os.path.normpath(self.filepath), name)
+		if not self.filepath.lower().endswith(".json"):
+			self.report(
+				{"ERROR"}, "File is not json: " + self.filepath)
+			return {'CANCELLED'}
+
+		try:
+			obj = add_model(os.path.normpath(self.filepath), name)
+		except ModelException as e:
+			self.report({"ERROR"}, "Encountered error: " + str(e))
+			return {'CANCELLED'}
+
 		self.place_model(obj)
 		self.post_spawn(context, obj)
 		return {'FINISHED'}
@@ -489,7 +510,17 @@ class MCPREP_OT_import_minecraft_model_file(
 		if not self.filepath or not os.path.isfile(self.filepath):
 			self.report({"ERROR"}, "Filepath not found")
 			return {'CANCELLED'}
-		obj = add_model(os.path.normpath(self.filepath), filename)
+		if not self.filepath.lower().endswith(".json"):
+			self.report(
+				{"ERROR"}, "File is not json: " + self.filepath)
+			return {'CANCELLED'}
+
+		try:
+			obj = add_model(os.path.normpath(self.filepath), filename)
+		except ModelException as e:
+			self.report({"ERROR"}, "Encountered error: " + str(e))
+			return {'CANCELLED'}
+
 		self.place_model(obj)
 		self.post_spawn(context, obj)
 		return {'FINISHED'}
