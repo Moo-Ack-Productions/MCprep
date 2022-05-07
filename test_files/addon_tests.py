@@ -73,6 +73,7 @@ class mcprep_testing():
 			self.find_missing_images_cycles,
 			self.qa_meshswap_file,
 			self.item_spawner,
+			self.item_spawner_resize,
 			self.entity_spawner,
 			self.model_spawner,
 			self.sync_materials,
@@ -1421,6 +1422,38 @@ class mcprep_testing():
 		# test after changing resource pack
 		# test that with an image of more than 1k pixels, it's truncated as expected
 		# test with different
+
+	def item_spawner_resize(self):
+		"""Test spawning an item that requires resizing."""
+		self._clear_scene()
+		bpy.ops.mcprep.reload_items()
+
+		# Create a tmp file
+		tmp_img = bpy.data.images.new("tmp_item_spawn", 32, 32, alpha=True)
+		tmp_img.filepath = os.path.join(bpy.app.tempdir, "tmp_item.png")
+		tmp_img.save()
+
+		# spawn with whatever default index
+		pre_objs = len(bpy.data.objects)
+		bpy.ops.mcprep.spawn_item_file(
+			max_pixels=16,
+			filepath=tmp_img.filepath
+		)
+		post_objs = len(bpy.data.objects)
+
+		if post_objs == pre_objs:
+			return "No items spawned"
+		elif post_objs > pre_objs + 1:
+			return "More than one item spawned"
+
+		# Now check that this item spawned has the expected face count.
+		obj = bpy.context.object
+		polys = len(obj.data.polygons)
+		print("Poly's count: ", polys)
+		if polys > 16:
+			return "Didn't scale enough to fewer pixels, facecount: " + str(polys)
+		elif polys < 16:
+			return "Over-scaled down facecount: " + str(polys)
 
 	def entity_spawner(self):
 		"""Test entity spawning and reloading"""

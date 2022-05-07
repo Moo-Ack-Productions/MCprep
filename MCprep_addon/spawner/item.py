@@ -127,12 +127,15 @@ def spawn_item_from_filepath(
 	# Scale image
 	pix = len(image.pixels) / 4
 	if pix > max_pixels:
-		# TODO: remove loop and do more direct resizing
-		while pix > max_pixels:
-			width = image.size[0]
-			height = image.size[1]
-			image.scale(width / 1.5, height / 1.5)
-			pix = len(image.pixels) / 4
+		# Find new pixel sizes keeping aspect ratio, equation of:
+		# max_pixels = nwith * nheight
+		# max_pixels = (nheight * aspect) * nheight
+		# nheight = sqrtoot(max_pixels / aspect)
+		aspect = image.size[0] / image.size[1]
+		nheight = (max_pixels / aspect)**0.5
+		image.scale(int(nheight * aspect), int(nheight))
+		pix = len(image.pixels)
+
 	width = image.size[0]  # ie columns.
 	height = image.size[1]  # ie rows.
 
