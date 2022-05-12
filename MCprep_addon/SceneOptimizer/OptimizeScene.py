@@ -184,6 +184,10 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
                 MinimumSamples = 10
                 FilterGlossy = 1
                 MaxSteps = 50
+                
+            if util.getCycles() == 2:
+                bpy.context.scene.render.tile_x = 32
+                bpy.context.scene.render.tile_y = 32
         
         elif CyclesComputeDeviceType == "CUDA" or CyclesComputeDeviceType == "HIP":
             if CurrentRenderDevice == "CPU":
@@ -203,6 +207,10 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
                 MinimumSamples = 15
                 FilterGlossy = 1
                 MaxSteps = 70
+            
+            if util.getCycles() == 2:
+                bpy.context.scene.render.tile_x = 256
+                bpy.context.scene.render.tile_y = 256
 
         elif CyclesComputeDeviceType == "OPTIX":
             if CurrentRenderDevice == "CPU":
@@ -222,6 +230,10 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
                 MinimumSamples = 20
                 FilterGlossy = 0.8
                 MaxSteps = 80
+            
+            if util.getCycles() == 2:
+                bpy.context.scene.render.tile_x = 256
+                bpy.context.scene.render.tile_y = 256
         
         if util.getCycles() == 2:
             if CyclesComputeDeviceType == "OPENCL":
@@ -232,16 +244,19 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
                         
                 Samples = 128 
                 if Quality:
-                    NoiseThreshold = 0.02
+                    NoiseThreshold = 0.2
                     MinimumSamples = 32 
-                    FilterGlossy = 0.5
-                    MaxSteps = 200
+                    FilterGlossy = 0.9
+                    MaxSteps = 100
                     
                 else:
                     NoiseThreshold = 0.06
                     MinimumSamples = 15
                     FilterGlossy = 1
                     MaxSteps = 70
+                
+                bpy.context.scene.render.tile_x = 256
+                bpy.context.scene.render.tile_y = 256
         """
         Cycles Render Settings Optimizations
         """
@@ -270,7 +285,6 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         bpy.context.scene.cycles.preview_samples = 32
         bpy.context.scene.render.use_simplify = True
         bpy.context.scene.render.simplify_subdivision = 0
-        
         return {'FINISHED'}
 
 classes = (
