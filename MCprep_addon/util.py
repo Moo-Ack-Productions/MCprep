@@ -185,8 +185,10 @@ def obj_copy(base, context=None, vertex_groups=True, modifiers=True):
 
 
 CURRENT_VERSION = None
+CYCLES_VERSION = None
 BV_IS_28 = None  # global initialization
 BV_IS_30 = None  # global initialization
+        
 
 def getBV():
 	"""Get the current Blender Version"""
@@ -210,13 +212,14 @@ def bv30():
         BV_IS_30 = getBV() >= (3, 00)
     return BV_IS_30
 
-SUPPORTED_ENGINES = ("RPR")
-
-def bvSupportedExternalEngine(engine):
-    global SUPPORTED_ENGINES
-    if engine in SUPPORTED_ENGINES:
-        return True 
-    return False
+def getCycles():
+    if CYCLES_VERSION is not None:
+        return CYCLES_VERSION
+    if bv30():
+        CYCLES_VERSION = 2
+    else:
+        CYCLES_VERSION = 1
+    return CYCLES_VERSION
 
 def face_on_edge(faceLoc):
 	"""Check if a face is on the boundary between two blocks (local coordinates)."""

@@ -222,7 +222,26 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
                 MinimumSamples = 20
                 FilterGlossy = 0.8
                 MaxSteps = 80
-                
+        
+        if util.getCycles() == 2:
+            if CyclesComputeDeviceType == "OPENCL":
+                if CurrentRenderDevice == "CPU":
+                    if bpy.context.preferences.addons["cycles"].preferences.has_active_device():
+                        print("Detected GPU: Switching to GPU...")
+                        CurrentRenderDevice = "GPU"
+                        
+                Samples = 128 
+                if Quality:
+                    NoiseThreshold = 0.02
+                    MinimumSamples = 32 
+                    FilterGlossy = 0.5
+                    MaxSteps = 200
+                    
+                else:
+                    NoiseThreshold = 0.06
+                    MinimumSamples = 15
+                    FilterGlossy = 1
+                    MaxSteps = 70
         """
         Cycles Render Settings Optimizations
         """

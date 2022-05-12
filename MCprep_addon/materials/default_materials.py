@@ -66,7 +66,6 @@ def sync_default_material(context, material, default_material, engine):
         
     # Copy the material and change the name
     NewDefaultMaterial = new_material.copy()
-    NewDefaultMaterial.name = material.name
     
     if not material.node_tree.nodes:
         return "Material has no nodes"
@@ -75,11 +74,11 @@ def sync_default_material(context, material, default_material, engine):
     NewDefaultMaterial_nodes = NewDefaultMaterial.node_tree.nodes
     material_nodes = material.node_tree.nodes
     
-    if not material_nodes.get("Diffuse Texture"):
-        return "Material has no Diffuse Texture node"
+    if not material_nodes.get("Image Texture"):
+        return "Material has no Image Texture node"
     
     DefaultTextureNode = NewDefaultMaterial_nodes.get("Default Texture")
-    ImageTexture = material_nodes.get("Diffuse Texture").image.name
+    ImageTexture = material_nodes.get("Image Texture").image.name
     TextureFile = bpy.data.images.get(ImageTexture)
     DefaultTextureNode.image = TextureFile
     
@@ -95,6 +94,7 @@ def sync_default_material(context, material, default_material, engine):
     # remove the old material since we're changing the default and we don't
     # want to overwhelm users
     bpy.data.materials.remove(material)
+    NewDefaultMaterial.name = material.name
     return None
 
 class MCPREP_OT_default_material(bpy.types.Operator):
@@ -124,6 +124,10 @@ class MCPREP_OT_default_material(bpy.types.Operator):
         if not os.path.isfile(sync_file):
             self.report({'ERROR'}, "Sync file not found: " + sync_file)
             return {'CANCELLED'}
+        
+        if sync_file == bpy.data.filepath:
+			
+            return {'CANCELLED'}
 
         # ------------------------- Find the default material ------------------------ #
         MaterialName = f"default_{self.SIMPLE if not self.UsePBR else self.PBR}_{self.Engine}"
@@ -143,8 +147,57 @@ class MCPREP_OT_default_material(bpy.types.Operator):
                 
         return {'FINISHED'}
     
+    
+    
+
+class MCPREP_OT_create_default_material(bpy.types.Operator):
+    bl_idname = "mcprep.create_default_material"
+    bl_label = "Create Default Material"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    SIMPLE = "simple"
+    PBR = "pbr"
+    
+    def execute(self, context):        
+        engine = context.scene.render.engine
+        self.create_default_material(context, engine.lower(), "simple")
+        return {'FINISHED'}
+    
+    def create_default_material(self, context, engine, type):
+        """
+        create_default_material: takes 3 arguments and returns nothing
+        context: Blender Context
+        engine: the render engine in lowercase
+        type: the type of texture that's being dealed with
+        """
+        MaterialName = f"default_{type}_{engine}"
+        DefaultMaterial = bpy.data.materials.new(name=MaterialName)
+        DefaultMaterial.use_nodes = True
+        nodes = DefaultMaterial.node_tree.nodes
+        links = DefaultMaterial.node_tree.links
+        nodes.clear()
+        
+        """
+        If there's no selected objects
+        """
+        if not len(bpy.context.selected_objects):
+            self.report({'ERROR'}, "Select an object to create the material")
+            return 
+        bpy.context.object.active_material = DefaultMaterial
+        
+        DefaultTextureNode = nodes.new(type="ShaderNodeTexImage")
+        nodeOut = nodes.new("ShaderNodeOutputMaterial")
+        
+        DefaultTextureNode.name = "Default Texture"
+        DefaultTextureNode.label = "Default Texture"
+        DefaultTextureNode.location = (120, 0)
+        nodeOut.location = (820, 0)
+        
+        links.new(DefaultTextureNode.outputs["Color"], nodeOut.inputs[0])
+
 classes = (
 	MCPREP_OT_default_material,
+    MCPREP_OT_create_default_material,
 )
 
 def register():

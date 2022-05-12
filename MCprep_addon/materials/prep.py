@@ -192,6 +192,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 				conf.log(
 					"During prep, found null material:" + str(mat), vv_only=True)
 				continue
+
 			elif mat.library:
 				count_lib_skipped += 1
 				continue
@@ -224,39 +225,37 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 					if res > 0:
 						mat["texture_swapped"] = True  # used to apply saturation
 
-			if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
-				res = generate.matprep_internal(
-					mat, passes, self.useReflections, self.makeSolid)
-				if res == 0:
-					count += 1
+			if self.newDefault is True:
+				bpy.ops.mcprep.sync_default_materials(UsePBR=False, Engine=engine.lower())
 
-
-			elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
-				res = generate.matprep_cycles(
-					mat, passes, self.useReflections,
-					self.usePrincipledShader, self.makeSolid, self.packFormat)
-				if res == 0:
-					count += 1
-
-			elif util.bvSupportedExternalEngine(engine=engine):
-				res = generate.matprep_cycles(
-					mat, passes, self.useReflections,
-					self.usePrincipledShader, self.makeSolid, self.packFormat)
-				if res == 0:
-					count += 1
 			else:
-				self.report(
-					{'ERROR'},
-					"Only Blender Internal, Cycles, Eevee, or Radeon Prorender supported")
-				return {'CANCELLED'}
+				if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
+					res = generate.matprep_internal(
+						mat, passes, self.useReflections, self.makeSolid)
+					if res == 0:
+						count += 1
+
+
+				elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+					res = generate.matprep_cycles(
+						mat, passes, self.useReflections,
+						self.usePrincipledShader, self.makeSolid, self.packFormat)
+					if res == 0:
+						count += 1
+				else:
+					try:
+						bpy.ops.mcprep.sync_default_materials(UsePBR=False, Engine=engine.lower())
+					except Exception:
+						self.report(
+							{'ERROR'},
+							"Only Blender Internal, Cycles, and Eevee are supported")
+						return {'CANCELLED'}
 
 			if self.animateTextures:
 				sequences.animate_single_material(
 					mat, context.scene.render.engine)
     
 		# ----------------------- Use a custom default material ---------------------- #
-		if self.newDefault is True:
-			bpy.ops.mcprep.sync_default_materials(UsePBR=False, Engine=engine.lower())
 
 		# ------------------------------ Sync materials ------------------------------ #
 		if self.syncMaterials is True:
