@@ -498,7 +498,7 @@ class MCPREP_OT_prep_animated_textures(bpy.types.Operator):
 			self.report(
 				{'ERROR'},
 				("Detected scaled UV's (all in one texture), be sure to use "
-					"Mineway's 'Export Tiles for textures'"))
+					"Mineway's 'Export Individual Textures To..' feature"))
 			conf.log("Detected scaled UV's, incompatible with animate textures")
 			return {'FINISHED'}
 		else:

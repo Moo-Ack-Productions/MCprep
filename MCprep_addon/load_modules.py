@@ -102,6 +102,11 @@ if "item" in locals():
 else:
 	from .spawner import item
 
+if "effects" in locals():
+	importlib.reload(effects)
+else:
+	from .spawner import effects
+
 # if "bridge" in locals():
 # 	importlib.reload(bridge)
 # else:
@@ -153,6 +158,7 @@ module_list = (
 	entities,
 	mcmodel,
 	item,
+	effects,
 	world_tools,
 	# bridge,
 	mcprep_ui,
