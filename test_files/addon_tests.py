@@ -76,6 +76,11 @@ class mcprep_testing():
 			self.item_spawner_resize,
 			self.entity_spawner,
 			self.model_spawner,
+			self.geonode_effect_spawner,
+			self.particle_area_effect_spawner,
+			self.collection_effect_spawner,
+			self.img_sequence_effect_spawner,
+			self.particle_plane_effect_spawner,
 			self.sync_materials,
 			self.sync_materials_link,
 			self.load_material,
@@ -1512,6 +1517,112 @@ class mcprep_testing():
 
 		# Test collection/group added
 		# Test loading from file.
+
+	def geonode_effect_spawner(self):
+		"""Test the geo node variant of effect spawning works."""
+		self._clear_scene()
+		scn_props = bpy.context.scene.mcprep_props
+		etype = "geo_area"
+
+		pre_count = len([
+			x for x in scn_props.effects_list if x.effect_type == etype])
+		bpy.ops.mcprep.reload_effects()
+		post_count = len([
+			x for x in scn_props.effects_list if x.effect_type == etype])
+
+		if pre_count != 0:
+			return "Should start with no effects loaded"
+		if post_count == 0:
+			return "Should have more effects loaded after reload"
+
+		effect = [x for x in scn_props.effects_list if x.effect_type == etype][0]
+		res = bpy.ops.mcprep.spawn_global_effect(effect_id=str(effect.index))
+		if res != {'FINISHED'}:
+			return "Did not end with finished result"
+
+		# TODO: Further checks it actually loaded the effect.
+
+	def particle_area_effect_spawner(self):
+		"""Test the particle area variant of effect spawning works."""
+		self._clear_scene()
+		scn_props = bpy.context.scene.mcprep_props
+		etype = "particle_area"
+
+		pre_count = len([
+			x for x in scn_props.effects_list if x.effect_type == etype])
+		bpy.ops.mcprep.reload_effects()
+		post_count = len([
+			x for x in scn_props.effects_list if x.effect_type == etype])
+
+		if pre_count != 0:
+			return "Should start with no effects loaded"
+		if post_count == 0:
+			return "Should have more effects loaded after reload"
+
+		effect = [x for x in scn_props.effects_list if x.effect_type == etype][0]
+		res = bpy.ops.mcprep.spawn_global_effect(effect_id=str(effect.index))
+		if res != {'FINISHED'}:
+			return "Did not end with finished result"
+
+		# TODO: Further checks it actually loaded the effect.
+
+	def collection_effect_spawner(self):
+		"""Test the collection variant of effect spawning works."""
+		self._clear_scene()
+		scn_props = bpy.context.scene.mcprep_props
+		etype = "img_seq"
+
+		pre_count = len([
+			x for x in scn_props.effects_list if x.effect_type == etype])
+		bpy.ops.mcprep.reload_effects()
+		post_count = len([
+			x for x in scn_props.effects_list if x.effect_type == etype])
+
+		if pre_count != 0:
+			return "Should start with no effects loaded"
+		if post_count == 0:
+			return "Should have more effects loaded after reload"
+
+		effect = [x for x in scn_props.effects_list if x.effect_type == etype][0]
+		res = bpy.ops.mcprep.spawn_instant_effect(effect_id=str(effect.index))
+		if res != {'FINISHED'}:
+			return "Did not end with finished result"
+
+		# TODO: Further checks it actually loaded the effect.
+
+	def img_sequence_effect_spawner(self):
+		"""Test the image sequence variant of effect spawning works."""
+		self._clear_scene()
+		scn_props = bpy.context.scene.mcprep_props
+		etype = "img_seq"
+
+		pre_count = len([
+			x for x in scn_props.effects_list if x.effect_type == etype])
+		bpy.ops.mcprep.reload_effects()
+		post_count = len([
+			x for x in scn_props.effects_list if x.effect_type == etype])
+
+		if pre_count != 0:
+			return "Should start with no effects loaded"
+		if post_count == 0:
+			return "Should have more effects loaded after reload"
+
+		effect = [x for x in scn_props.effects_list if x.effect_type == etype][0]
+		res = bpy.ops.mcprep.spawn_instant_effect(effect_id=str(effect.index))
+		if res != {'FINISHED'}:
+			return "Did not end with finished result"
+
+		# TODO: Further checks it actually loaded the effect.
+
+	def particle_plane_effect_spawner(self):
+		"""Test the particle plane variant of effect spawning works."""
+		self._clear_scene()
+		res = bpy.ops.mcprep.spawn_particle_planes()
+
+		if res != {'FINISHED'}:
+			return "Did not end with finished result"
+
+		# TODO: Further checks it actually loaded the effect.
 
 	def world_tools(self):
 		"""Test adding skies, prepping the world, etc"""

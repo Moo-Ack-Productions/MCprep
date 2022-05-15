@@ -483,7 +483,7 @@ class MCPREP_OT_swap_texture_pack(
 		if invalid_uv:
 			self.report({'ERROR'}, (
 				"Detected scaled UV's (all in one texture), be sure to use "
-				"Mineway's 'Export Tiles for textures'"))
+				"Mineway's 'Export Individual Textures To..'' feature"))
 			conf.log("Detected scaledd UV's, incompatible with swap textures")
 			conf.log([ob.name for ob in affected_objs], vv_only=True)
 		else:

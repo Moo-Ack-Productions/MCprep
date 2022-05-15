@@ -532,6 +532,7 @@ class MCPREP_OT_reload_spawners(bpy.types.Operator):
 		bpy.ops.mcprep.reload_meshswap()
 		bpy.ops.mcprep.reload_mobs()
 		bpy.ops.mcprep.reload_items()
+		bpy.ops.mcprep.reload_effects()
 		bpy.ops.mcprep.reload_entities()
 		bpy.ops.mcprep.reload_models()
 
@@ -639,6 +640,39 @@ class MCPREP_UL_item(bpy.types.UIList):
 				layout.label(text="", icon='QUESTION')
 
 
+class MCPREP_UL_effects(bpy.types.UIList):
+	"""For effects asset listing UIList drawing"""
+	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
+		icon = "effects-{}".format(set.index)
+		if self.layout_type in {'DEFAULT', 'COMPACT'}:
+
+			# Add icons based on the type of effect.
+			if set.effect_type == "geo_area":
+				layout.label(text=set.name, icon="NODETREE")
+			elif set.effect_type == "particle_area":
+				layout.label(text=set.name, icon="PARTICLES")
+			elif set.effect_type == "collection":
+				layout.label(text=set.name, icon="OUTLINER_COLLECTION")
+			elif set.effect_type == "img_seq":
+				if conf.use_icons and icon in conf.preview_collections["effects"]:
+					layout.label(
+						text=set.name,
+						icon_value=conf.preview_collections["effects"][icon].icon_id)
+				else:
+					layout.label(text=set.name, icon="RENDER_RESULT")
+			else:
+				layout.label(text=set.name, icon="BLANK1")
+
+		elif self.layout_type in {'GRID'}:
+			layout.alignment = 'CENTER'
+			if conf.use_icons and icon in conf.preview_collections["effects"]:
+				layout.label(
+					text="",
+					icon_value=conf.preview_collections["effects"][icon].icon_id)
+			else:
+				layout.label(text="", icon='QUESTION')
+
+
 class MCPREP_UL_material(bpy.types.UIList):
 	"""For material library UIList drawing"""
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
@@ -711,7 +745,23 @@ class ListModelAssets(bpy.types.PropertyGroup):
 	"""For UI drawing of mc model assets and holding data"""
 	filepath = bpy.props.StringProperty(subtype="FILE_PATH")
 	description = bpy.props.StringProperty()
-	# index = bpy.props.IntProperty(min=0, default=0)  # for icon drawing
+	# index = bpy.props.IntProperty(min=0, default=0)  # icon pulled by name.
+
+
+class ListEffectsAssets(bpy.types.PropertyGroup):
+	"""For UI drawing for different kinds of effects"""
+	# inherited: name
+	filepath = bpy.props.StringProperty(subtype="FILE_PATH")
+	description = bpy.props.StringProperty()
+	effect_type = bpy.props.EnumProperty(
+		name="Effect type",
+		items=(
+			('geo_area', 'Geonode area', 'Instance wide-area geonodes effect'),
+			('particle_area', 'Particle area', 'Instance wide-area particle effect'),
+			('collection', 'Collection effect', 'Instance pre-animated collection'),
+			('img_seq', 'Image sequence', 'Instance an animated image sequence effect'),
+		))
+	index = bpy.props.IntProperty(min=0, default=0)  # for icon drawing
 
 
 # -----------------------------------------------------------------------------
@@ -726,12 +776,14 @@ classes = (
 	ListItemAssets,
 	ListEntityAssets,
 	ListModelAssets,
+	ListEffectsAssets,
 	MCPREP_UL_material,
 	MCPREP_UL_mob,
 	MCPREP_UL_meshswap,
 	MCPREP_UL_entity,
 	MCPREP_UL_model,
 	MCPREP_UL_item,
+	MCPREP_UL_effects,
 	MCPREP_OT_reload_spawners,
 	MCPREP_OT_spawn_path_reset,
 )
