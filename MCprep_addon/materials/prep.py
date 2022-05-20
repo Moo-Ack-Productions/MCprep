@@ -226,7 +226,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 						mat["texture_swapped"] = True  # used to apply saturation
 
 			if self.newDefault is True:
-				bpy.ops.mcprep.sync_default_materials(UsePBR=False, Engine=engine.lower())
+				bpy.ops.mcprep.sync_default_materials(use_pbr=False, engine=engine.lower())
 
 			else:
 				if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
@@ -244,7 +244,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 						count += 1
 				else:
 					try:
-						bpy.ops.mcprep.sync_default_materials(UsePBR=False, Engine=engine.lower())
+						bpy.ops.mcprep.sync_default_materials(use_pbr=False, engine=engine.lower())
 					except Exception:
 						self.report(
 							{'ERROR'},

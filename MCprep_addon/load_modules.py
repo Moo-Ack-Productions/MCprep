@@ -47,10 +47,10 @@ if "prep" in locals():
 else:
 	from .materials import prep
 
-if "OptimizeScene" in locals():
-	importlib.reload(prep)
+if "optimize_scene" in locals():
+	importlib.reload(optimize_scene)
 else:
-	from .SceneOptimizer import OptimizeScene
+	from .MCprep_resources import optimize_scene
 
 if "sequences" in locals():
 	importlib.reload(sequences)

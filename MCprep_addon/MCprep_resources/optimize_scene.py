@@ -1,58 +1,72 @@
+# ##### BEGIN GPL LICENSE BLOCK #####
+#
+#  This program is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU General Public License
+#  as published by the Free Software Foundation; either version 2
+#  of the License, or (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software Foundation,
+#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# ##### END GPL LICENSE BLOCK #####
+
 import bpy
 from .. import util
 
-
-# ---------------------------------------------------------------------------- #
-#                   Optimizer code by StandingPad Animations                   #
-# ---------------------------------------------------------------------------- #
 class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 
-	def TimeInScene(self, context):
+	def scene_brightness(self, context):
 		itms = [
-        ("Day", "Day time", ""), 
-        ("Night", "Night time", "")
+        ("bright", "scene is bright", ""), 
+        ("dark", "scene is dark", "")
         ]
 		return itms
 
     # --------------------------------- Caustics --------------------------------- #
-	CausticsBool = bpy.props.BoolProperty(
+	caustics_bool = bpy.props.BoolProperty(
 		name="Caustics (Increases render times)",
         default=False
 	)
     
     # -------------------------------- Motion Blur ------------------------------- #
-	MotionBlurBool = bpy.props.BoolProperty(
+	motionblur_bool = bpy.props.BoolProperty(
 		name="Motion Blur (increases render times)",
         default=False
 	)
 
     # ---------------------------------- Fast GI --------------------------------- #
-	FastGIBool = bpy.props.BoolProperty(
+	fastGI_bool = bpy.props.BoolProperty(
 		name="Fast GI (Decreases render times)",
         default=False
 	)
     
     # -------------------------- Materials in the scene -------------------------- #
-	GlossyBool = bpy.props.BoolProperty(
+	glossy_bool = bpy.props.BoolProperty(
 		name="Glossy Materials",
         default=False
 	)
     
-	TransmissiveBool = bpy.props.BoolProperty(
+	transmissive_bool = bpy.props.BoolProperty(
 		name="Glass Materials",
         default=False
 	)
 
-	VolumetricBool = bpy.props.BoolProperty(
+	volumetric_bool = bpy.props.BoolProperty(
 		name="Volumetrics" if util.bv30() else "Volumetrics (Increases render times)",
         default=False
 	)
     
     # ------------------------- Time of day in the scene ------------------------- #
-	TimeInScene : bpy.props.EnumProperty(
+	scene_brightness : bpy.props.EnumProperty(
 		name="",
 		description="Time of day in the scene",
-		items=TimeInScene
+		items=scene_brightness
 	)
 
 def panel_draw(self, context):
@@ -65,30 +79,30 @@ def panel_draw(self, context):
             col.label(text="Materials in Scene")
             
             # ---------------------------------- Glossy ---------------------------------- #
-            if scn_props.GlossyBool:
-                col.prop(scn_props, "GlossyBool", icon="INDIRECT_ONLY_ON")
+            if scn_props.glossy_bool:
+                col.prop(scn_props, "glossy_bool", icon="INDIRECT_ONLY_ON")
             else:
-                col.prop(scn_props, "GlossyBool", icon="INDIRECT_ONLY_OFF")
+                col.prop(scn_props, "glossy_bool", icon="INDIRECT_ONLY_OFF")
             
             # ------------------------------- Transmissive ------------------------------- #
-            if scn_props.TransmissiveBool:
-                col.prop(scn_props, "TransmissiveBool", icon="FULLSCREEN_EXIT")
+            if scn_props.transmissive_bool:
+                col.prop(scn_props, "transmissive_bool", icon="FULLSCREEN_EXIT")
             else:
-                col.prop(scn_props, "TransmissiveBool", icon="FULLSCREEN_ENTER")
+                col.prop(scn_props, "transmissive_bool", icon="FULLSCREEN_ENTER")
                 
             # -------------------------------- Volumetric -------------------------------- #
-            if scn_props.VolumetricBool:
-                col.prop(scn_props, "VolumetricBool", icon="OUTLINER_OB_VOLUME")
+            if scn_props.volumetric_bool:
+                col.prop(scn_props, "volumetric_bool", icon="OUTLINER_OB_VOLUME")
             else:
-                col.prop(scn_props, "VolumetricBool", icon="OUTLINER_DATA_VOLUME")
+                col.prop(scn_props, "volumetric_bool", icon="OUTLINER_DATA_VOLUME")
                 
             # ---------------------------------- Options --------------------------------- #
             col.label(text="Options")
             col.label(text="Time of Day")
-            col.prop(scn_props, "TimeInScene")
-            col.prop(scn_props, "CausticsBool", icon="TRIA_UP")
-            col.prop(scn_props, "MotionBlurBool", icon="TRIA_UP")
-            col.prop(scn_props, "FastGIBool", icon="TRIA_DOWN")
+            col.prop(scn_props, "scene_brightness")
+            col.prop(scn_props, "caustics_bool", icon="TRIA_UP")
+            col.prop(scn_props, "motionblur_bool", icon="TRIA_UP")
+            col.prop(scn_props, "fastGI_bool", icon="TRIA_DOWN")
             col.operator("mcprep.optimize_scene", text="Optimize Scene")
         else:
             col.label(text= "Cycles Only >:C")
@@ -145,27 +159,27 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         
         
         # -------------------------- Render engine settings -------------------------- #
-        if scn_props.CausticsBool:
+        if scn_props.caustics_bool:
             ReflectiveCaustics = True 
             RefractiveCaustics = True 
         
-        if scn_props.MotionBlurBool:
+        if scn_props.motionblur_bool:
             MotionBlur = True
             
-        if scn_props.FastGIBool:
+        if scn_props.fastGI_bool:
             FastGI = True
         # ------------------------------ Scene materials ----------------------------- #
-        if scn_props.GlossyBool:
+        if scn_props.glossy_bool:
             Glossy = 3
             
-        if scn_props.VolumetricBool:
+        if scn_props.volumetric_bool:
             Volume = 2
             
-        if scn_props.TransmissiveBool:
+        if scn_props.transmissive_bool:
             Transmissive = 3
             
         # -------------------------------- Time of day ------------------------------- #
-        if scn_props.TimeInScene == "Day":
+        if scn_props.scene_brightness == "bright":
             NoiseThreshold = 0.2
         else:
             NoiseThreshold = 0.02
@@ -185,13 +199,13 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
                 FilterGlossy = 1
                 MaxSteps = 50
                 
-            if util.getCycles() == 2:
+            if util.get_cycles_version() == 2:
                 bpy.context.scene.render.tile_x = 32
                 bpy.context.scene.render.tile_y = 32
         
         elif CyclesComputeDeviceType == "CUDA" or CyclesComputeDeviceType == "HIP":
             if CurrentRenderDevice == "CPU":
-                if bpy.context.preferences.addons["cycles"].preferences.has_active_device():
+                if util.get_preferences("cycles").preferences.has_active_device():
                     print("Detected GPU: Switching to GPU...")
                     CurrentRenderDevice = "GPU"
                     
@@ -208,13 +222,13 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
                 FilterGlossy = 1
                 MaxSteps = 70
             
-            if util.getCycles() == 2:
+            if util.get_cycles_version() == 2:
                 bpy.context.scene.render.tile_x = 256
                 bpy.context.scene.render.tile_y = 256
 
         elif CyclesComputeDeviceType == "OPTIX":
             if CurrentRenderDevice == "CPU":
-                if bpy.context.preferences.addons["cycles"].preferences.has_active_device():
+                if util.get_preferences("cycles").preferences.has_active_device():
                     print("Detected GPU: Switching to GPU...") 
                     CurrentRenderDevice = "GPU"
                     
@@ -231,14 +245,14 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
                 FilterGlossy = 0.8
                 MaxSteps = 80
             
-            if util.getCycles() == 2:
+            if util.get_cycles_version() == 2:
                 bpy.context.scene.render.tile_x = 256
                 bpy.context.scene.render.tile_y = 256
         
-        if util.getCycles() == 2:
+        if util.get_cycles_version() == 2:
             if CyclesComputeDeviceType == "OPENCL":
                 if CurrentRenderDevice == "CPU":
-                    if bpy.context.preferences.addons["cycles"].preferences.has_active_device():
+                    if util.get_preferences("cycles").preferences.has_active_device():
                         print("Detected GPU: Switching to GPU...")
                         CurrentRenderDevice = "GPU"
                         

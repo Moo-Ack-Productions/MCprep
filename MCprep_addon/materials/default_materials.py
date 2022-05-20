@@ -61,32 +61,32 @@ def sync_default_material(context, material, default_material, engine):
     
     # checking if there's a node with the label Texture
     new_material_nodes = new_material.node_tree.nodes
-    if not new_material_nodes.get("Default Texture"):
-        return "Material has no Default Texture node"
+    if not new_material_nodes.get("MCPREP_diffuse"):
+        return "Material has no MCPREP_diffuse node"
         
     # Copy the material and change the name
-    NewDefaultMaterial = new_material.copy()
+    Newdefault_material = new_material.copy()
     
     if not material.node_tree.nodes:
         return "Material has no nodes"
     
     # Change the texture
-    NewDefaultMaterial_nodes = NewDefaultMaterial.node_tree.nodes
+    new_default_material_nodes = Newdefault_material.node_tree.nodes
     material_nodes = material.node_tree.nodes
     
     if not material_nodes.get("Image Texture"):
         return "Material has no Image Texture node"
     
-    DefaultTextureNode = NewDefaultMaterial_nodes.get("Default Texture")
+    default_texture_node = new_default_material_nodes.get("MCPREP_diffuse")
     ImageTexture = material_nodes.get("Image Texture").image.name
     TextureFile = bpy.data.images.get(ImageTexture)
-    DefaultTextureNode.image = TextureFile
+    default_texture_node.image = TextureFile
     
     if engine is "cycles" or engine is "blender_eevee":
-        DefaultTextureNode.interpolation = 'Closest'
+        default_texture_node.interpolation = 'Closest'
     
     # 2.78+ only, else silent failure
-    res = util.remap_users(material, NewDefaultMaterial)
+    res = util.remap_users(material, Newdefault_material)
     if res != 0:
         # try a fallback where we at least go over the selected objects
         return res
@@ -94,7 +94,7 @@ def sync_default_material(context, material, default_material, engine):
     # remove the old material since we're changing the default and we don't
     # want to overwhelm users
     bpy.data.materials.remove(material)
-    NewDefaultMaterial.name = material.name
+    Newdefault_material.name = material.name
     return None
 
 class MCPREP_OT_default_material(bpy.types.Operator):
@@ -102,13 +102,13 @@ class MCPREP_OT_default_material(bpy.types.Operator):
     bl_label = "Sync Default Materials"
     bl_options = {'REGISTER', 'UNDO'}
     
-    UsePBR = bpy.props.BoolProperty(
+    use_pbr = bpy.props.BoolProperty(
     name="Use PBR",
     description="Use PBR or not",
     default=False)
 
-    Engine = bpy.props.StringProperty(
-    name="Engine To Use",
+    engine = bpy.props.StringProperty(
+    name="engine To Use",
     description="Defines the engine to use",
     default="cycles")
     
@@ -126,12 +126,11 @@ class MCPREP_OT_default_material(bpy.types.Operator):
             return {'CANCELLED'}
         
         if sync_file == bpy.data.filepath:
-			
             return {'CANCELLED'}
 
         # ------------------------- Find the default material ------------------------ #
-        MaterialName = f"default_{self.SIMPLE if not self.UsePBR else self.PBR}_{self.Engine}"
-        if not default_material_in_sync_library(MaterialName, context):
+        material_name = f"default_{self.SIMPLE if not self.UsePBR else self.PBR}_{self.engine}"
+        if not default_material_in_sync_library(material_name, context):
             self.report({'ERROR'}, "No default material found")
             return {'CANCELLED'}
         
@@ -139,7 +138,7 @@ class MCPREP_OT_default_material(bpy.types.Operator):
         mat_list = list(bpy.data.materials)
         for mat in mat_list:
             try:
-                err = sync_default_material(context, mat, MaterialName, self.Engine) # no linking
+                err = sync_default_material(context, mat, material_name, self.engine) # no linking
                 if err:
                     conf.log(err)
             except Exception as e:
@@ -170,11 +169,11 @@ class MCPREP_OT_create_default_material(bpy.types.Operator):
         engine: the render engine in lowercase
         type: the type of texture that's being dealed with
         """
-        MaterialName = f"default_{type}_{engine}"
-        DefaultMaterial = bpy.data.materials.new(name=MaterialName)
-        DefaultMaterial.use_nodes = True
-        nodes = DefaultMaterial.node_tree.nodes
-        links = DefaultMaterial.node_tree.links
+        material_name = f"default_{type}_{engine}"
+        default_material = bpy.data.materials.new(name=material_name)
+        default_material.use_nodes = True
+        nodes = default_material.node_tree.nodes
+        links = default_material.node_tree.links
         nodes.clear()
         
         """
@@ -183,17 +182,17 @@ class MCPREP_OT_create_default_material(bpy.types.Operator):
         if not len(bpy.context.selected_objects):
             self.report({'ERROR'}, "Select an object to create the material")
             return 
-        bpy.context.object.active_material = DefaultMaterial
+        bpy.context.object.active_material = default_material
         
-        DefaultTextureNode = nodes.new(type="ShaderNodeTexImage")
+        default_texture_node = nodes.new(type="ShaderNodeTexImage")
         nodeOut = nodes.new("ShaderNodeOutputMaterial")
         
-        DefaultTextureNode.name = "Default Texture"
-        DefaultTextureNode.label = "Default Texture"
-        DefaultTextureNode.location = (120, 0)
+        default_texture_node.name = "MCPREP_diffuse"
+        default_texture_node.label = "Diffuse Texture"
+        default_texture_node.location = (120, 0)
         nodeOut.location = (820, 0)
         
-        links.new(DefaultTextureNode.outputs["Color"], nodeOut.inputs[0])
+        links.new(default_texture_node.outputs["Color"], nodeOut.inputs[0])
 
 classes = (
 	MCPREP_OT_default_material,

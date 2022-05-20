@@ -24,6 +24,7 @@ import random
 import subprocess
 from subprocess import Popen, PIPE
 from attr import has
+import functools
 
 import bpy
 
@@ -182,44 +183,26 @@ def obj_copy(base, context=None, vertex_groups=True, modifiers=True):
 			for prop in properties:
 				setattr(dest, prop, getattr(mod_src, prop))
 	return new_ob
-
-
-CURRENT_VERSION = None
-CYCLES_VERSION = None
-BV_IS_28 = None  # global initialization
-BV_IS_30 = None  # global initialization
         
 
+@functools.cache
 def getBV():
-	"""Get the current Blender Version"""
-	global CURRENT_VERSION
-	if not CURRENT_VERSION:
-		if hasattr(bpy.app, "version"):
-			CURRENT_VERSION = bpy.app.version
-	return CURRENT_VERSION
+	if hasattr(bpy.app, "version"):
+		return bpy.app.version
 
+@functools.cache
 def bv28():
 	"""Check if blender 2.8, for layouts, UI, and properties. """
-	global BV_IS_28
-	if not BV_IS_28:
-		BV_IS_28 = getBV() >= (2, 80)
-	return BV_IS_28
+	return getBV() >= (2, 80)
 
+@functools.cache
 def bv30():
     """Check if we're dealing with Blender 3.0"""
-    global BV_IS_30
-    if not BV_IS_30:
-        BV_IS_30 = getBV() >= (3, 00)
-    return BV_IS_30
+    return getBV() >= (3, 00)
 
-def getCycles():
-    if CYCLES_VERSION is not None:
-        return CYCLES_VERSION
-    if bv30():
-        CYCLES_VERSION = 2
-    else:
-        CYCLES_VERSION = 1
-    return CYCLES_VERSION
+@functools.cache
+def get_cycles_version():
+    return 2 if bv30() else 1
 
 def face_on_edge(faceLoc):
 	"""Check if a face is on the boundary between two blocks (local coordinates)."""
