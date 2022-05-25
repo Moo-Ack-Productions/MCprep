@@ -24,6 +24,7 @@ from .. import conf
 from .. import util
 from .. import tracking
 from . import mobs
+from . import effects
 
 # Top-level names used for inclusion or exclusions when filtering through
 # collections in blend files for spawners: mobs, meshswap, and entities.
@@ -647,13 +648,13 @@ class MCPREP_UL_effects(bpy.types.UIList):
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
 
 			# Add icons based on the type of effect.
-			if set.effect_type == "geo_area":
+			if set.effect_type == effects.GEO_AREA:
 				layout.label(text=set.name, icon="NODETREE")
-			elif set.effect_type == "particle_area":
+			elif set.effect_type == effects.PARTICLE_AREA:
 				layout.label(text=set.name, icon="PARTICLES")
-			elif set.effect_type == "collection":
+			elif set.effect_type == effects.COLLECTION:
 				layout.label(text=set.name, icon="OUTLINER_COLLECTION")
-			elif set.effect_type == "img_seq":
+			elif set.effect_type == effects.IMG_SEQ:
 				if conf.use_icons and icon in conf.preview_collections["effects"]:
 					layout.label(
 						text=set.name,
@@ -756,10 +757,10 @@ class ListEffectsAssets(bpy.types.PropertyGroup):
 	effect_type = bpy.props.EnumProperty(
 		name="Effect type",
 		items=(
-			('geo_area', 'Geonode area', 'Instance wide-area geonodes effect'),
-			('particle_area', 'Particle area', 'Instance wide-area particle effect'),
-			('collection', 'Collection effect', 'Instance pre-animated collection'),
-			('img_seq', 'Image sequence', 'Instance an animated image sequence effect'),
+			(effects.GEO_AREA, 'Geonode area', 'Instance wide-area geonodes effect'),
+			(effects.PARTICLE_AREA, 'Particle area', 'Instance wide-area particle effect'),
+			(effects.COLLECTION, 'Collection effect', 'Instance pre-animated collection'),
+			(effects.IMG_SEQ, 'Image sequence', 'Instance an animated image sequence effect'),
 		))
 	index = bpy.props.IntProperty(min=0, default=0)  # for icon drawing
 
