@@ -24,6 +24,16 @@ from .. import conf
 from .. import util
 from .. import tracking
 
+# -----------------------------------------------------------------------------
+# Global enum values
+# -----------------------------------------------------------------------------
+
+# Enum values for effect_type for safe string comparisons.
+GEO_AREA = "geo_area"
+PARTICLE_AREA = "particle_area"
+COLLECTION = "collection"
+IMG_SEQ = "img_seq"
+
 
 # -----------------------------------------------------------------------------
 # Core effects types
@@ -40,6 +50,81 @@ def add_geonode_area_effect(context, effect):
 	the camera can be zooming through an area and not need to give time for a
 	particle system to let some particles fall first).
 	"""
+	existing_geonodes = [
+		ndg for ndg in bpy.data.node_groups
+		if ndg.type == "GEOMETRY" and ndg.name == effect.name]
+
+	# Load this geo node if it doesn't already exist.
+	if not existing_geonodes:
+		with bpy.data.libraries.load(effect.filepath) as (data_from, data_to):
+
+			for this_group in data_from.node_groups:
+				if this_group != effect.name:
+					continue
+				data_to.node_groups.append(this_group)
+				break
+		# Post
+		post_geonodes = [
+			ndg for ndg in bpy.data.node_groups
+			if ndg.type == "GEOMETRY" and ndg.name == effect.name]
+		diff = list(set(post_geonodes) - set(existing_geonodes))
+		print("DIFF OF geo node groups:", diff)
+		this_nodegroup = diff[0]
+	else:
+		this_nodegroup = existing_geonodes[0]
+
+	mesh = bpy.data.meshes.new(effect.name + " empty mesh")
+	new_obj = bpy.data.objects.new(effect.name, mesh)
+
+	# TODO: consider trying to pick up the current collection setting,
+	# or placing into an explicit effects collection.
+	util.obj_link_scene(new_obj)
+
+	geo_mod = new_obj.modifiers.new(effect.name, "NODES")
+	geo_mod.node_group = this_nodegroup
+
+	# TODO: Conditionally create an empty, only if 'follow' input exists.
+	center_empty = bpy.data.objects.new(
+		name="{} origin".format(effect.name),
+		object_data=None)
+	util.obj_link_scene(center_empty)
+	camera = context.scene.camera
+	if camera:
+		center_empty.parent = camera
+		center_empty.location = (0, 0, -10)
+	else:
+		center_empty.location = util.get_cuser_location()
+
+	# Update geo node inputs based on socket name.
+	geo_fields = {
+		"Camera Rotation": None,
+		"Weather Folower": None,
+		"Weather Grid Size x": None,
+		"Weather Grid Size y": None
+	}
+	for inp in geo_mod.node_group.inputs:
+		if inp.name in list(geo_fields):
+			geo_fields[inp.name] = inp.identifier
+
+	if geo_fields["Camera Rotation"] is None:
+		print("Failed to update geonode camera input")
+	else:
+		geo_mod[geo_fields["Camera Rotation"]] = camera
+
+	if geo_fields["Weather Folower"] is None:
+		print("Failed to update geonode follow input")
+	else:
+		geo_mod[geo_fields["Weather Folower"]] = center_empty
+
+	if geo_fields["Weather Grid Size x"] is None:
+		print("Failed to update geonode follow input")
+	else:
+		geo_mod[geo_fields["Weather Grid Size x"]] = 33
+
+	if geo_fields["Weather Grid Size y"] is None:
+		print("Failed to update geonode follow input")
+	else:
+		geo_mod[geo_fields["Weather Grid Size y"]] = 33
 
 
 def add_area_particle_effect(context, effect, location):
@@ -96,6 +181,12 @@ def add_particle_planes_effect(context, image_path, location, frame):
 # -----------------------------------------------------------------------------
 
 
+def update_effects_path(self, context):
+	"""List for UI effects callback ."""
+	conf.log("Updating effects path", vv_only=True)
+	update_effects_list(context)
+
+
 def update_effects_list(context):
 	"""Update the effects list."""
 	mcprep_props = context.scene.mcprep_props
@@ -116,13 +207,32 @@ def update_effects_list(context):
 
 def load_geonode_effect_list(context):
 	"""Load effects defined by geonodes for wide area effects."""
+	if bpy.app.version < (3, 0):  # Validate if should be 3.1
+		print("Not loading geonode effects")
+		# TODO: Test on 3.0 too in case it does work somehow.
+		return
+
 	mcprep_props = context.scene.mcprep_props
-	effects_list = ["rain", "snow"]
-	for itm in effects_list:
-		effect = mcprep_props.effects_list.add()
-		effect.effect_type = "geo_area"
-		effect.name = itm.capitalize()
-		effect.index = len(mcprep_props.effects_list) - 1  # For icon index.
+	path = context.scene.mcprep_effects_path
+	path = os.path.join(path, "geonodes")
+
+	# Find all files with geonodes.
+	blends = [
+		os.path.join(path, blend) for blend in os.listdir(path)
+		if os.path.isfile(os.path.join(path, blend))
+		and blend.lower().endswith("blend")
+	]
+
+	for bfile in blends:
+		with bpy.data.libraries.load(bfile) as (data_from, _):
+			node_groups = list(data_from.node_groups)
+
+		for itm in node_groups:
+			effect = mcprep_props.effects_list.add()
+			effect.effect_type = GEO_AREA
+			effect.name = itm
+			effect.filepath = bfile
+			effect.index = len(mcprep_props.effects_list) - 1  # For icon index.
 
 
 def load_area_particle_effects(context):
@@ -133,23 +243,51 @@ def load_area_particle_effects(context):
 	particles.
 	"""
 	mcprep_props = context.scene.mcprep_props
-	effects_list = ["rain", "snow"]
-	for itm in effects_list:
-		effect = mcprep_props.effects_list.add()
-		effect.effect_type = "particle_area"
-		effect.name = itm.capitalize()
-		effect.index = len(mcprep_props.effects_list) - 1  # For icon index.
+	path = context.scene.mcprep_effects_path
+	path = os.path.join(path, "particle")
+
+	# Find all files with geonodes.
+	blends = [
+		os.path.join(path, blend) for blend in os.listdir(path)
+		if os.path.isfile(os.path.join(path, blend))
+		and blend.lower().endswith("blend")
+	]
+
+	for bfile in blends:
+		with bpy.data.libraries.load(bfile) as (data_from, _):
+			particles = list(data_from.particles)
+
+		for itm in particles:
+			effect = mcprep_props.effects_list.add()
+			effect.effect_type = PARTICLE_AREA
+			effect.name = itm
+			effect.filepath = bfile
+			effect.index = len(mcprep_props.effects_list) - 1  # For icon index.
 
 
 def load_collection_effects(context):
 	"""Load effects defined by collections saved to an effects blend file."""
 	mcprep_props = context.scene.mcprep_props
-	effects_list = ["TNT Explosion"]
-	for itm in effects_list:
-		effect = mcprep_props.effects_list.add()
-		effect.effect_type = "collection"
-		effect.name = itm.capitalize()
-		effect.index = len(mcprep_props.effects_list) - 1  # For icon index.
+	path = context.scene.mcprep_effects_path
+	path = os.path.join(path, "collection")
+
+	# Find all files with geonodes.
+	blends = [
+		os.path.join(path, blend) for blend in os.listdir(path)
+		if os.path.isfile(os.path.join(path, blend))
+		and blend.lower().endswith("blend")
+	]
+
+	for bfile in blends:
+		with bpy.data.libraries.load(bfile) as (data_from, _):
+			collections = list(data_from.collections)
+
+		for itm in collections:
+			effect = mcprep_props.effects_list.add()
+			effect.effect_type = "collection"
+			effect.name = itm
+			effect.filepath = bfile
+			effect.index = len(mcprep_props.effects_list) - 1  # For icon index.
 
 
 def load_image_sequence_effects(context):
@@ -267,13 +405,18 @@ class MCPREP_OT_global_effect(bpy.types.Operator):
 		mcprep_props = context.scene.mcprep_props
 		elist = []
 		for effect in mcprep_props.effects_list:
-			if effect.effect_type not in ('geo_node', 'particle_area'):
+			if effect.effect_type not in (GEO_AREA, PARTICLE_AREA):
 				continue
+			if effect.effect_type == GEO_AREA:
+				display_type = "geometry node effect"
+			else:
+				display_type = "particle system effect"
 			elist.append((
-				effect.index,
+				str(effect.index),
 				effect.name,
-				"Add {} from {}".format(
+				"Add {} {} from {}".format(
 					effect.name,
+					display_type,
 					os.path.basename(effect.filepath))
 			))
 		return elist
@@ -293,10 +436,12 @@ class MCPREP_OT_global_effect(bpy.types.Operator):
 	def execute(self, context):
 		mcprep_props = context.scene.mcprep_props
 		effect = mcprep_props.effects_list[int(self.effect_id)]
-		if effect.effect_type == "geo_area":
+		if effect.effect_type == GEO_AREA:
 			add_geonode_area_effect(context, effect)
-			self.report({"ERROR"}, "Not yet implemented")
-		elif effect.effect_type == "particle_area":
+			self.report(
+				{"INFO"},
+				"Added geo nodes, edit modifier for further control")
+		elif effect.effect_type == PARTICLE_AREA:
 			cam = context.scene.camera
 			if cam:
 				location = context.scene.camera.location
@@ -305,7 +450,7 @@ class MCPREP_OT_global_effect(bpy.types.Operator):
 			add_area_particle_effect(context, effect, location)
 			self.report({"ERROR"}, "Not yet implemented")
 		self.track_param = effect.name
-		return {'CANCELLED'}
+		return {'FINISHED'}
 
 
 class MCPREP_OT_instant_effect(bpy.types.Operator):
@@ -321,11 +466,16 @@ class MCPREP_OT_instant_effect(bpy.types.Operator):
 		for effect in mcprep_props.effects_list:
 			if effect.effect_type not in ('collection', 'img_seq'):
 				continue
+			if effect.effect_type == COLLECTION:
+				display_type = "preanimated collection effect"
+			else:
+				display_type = "image sequence effect"
 			elist.append((
 				str(effect.index),
 				effect.name,
-				"Add {} from {}".format(
+				"Add {} {} from {}".format(
 					effect.name,
+					display_type,
 					os.path.basename(effect.filepath))
 			))
 		return elist
@@ -380,7 +530,7 @@ class MCPREP_OT_spawn_particle_planes(bpy.types.Operator):
 	@tracking.report_error
 	def execute(self, context):
 		path = bpy.path.abspath(self.filepath)
-		name = os.path.base_name(path)
+		name = os.path.basename(path)
 		name = os.path.splitext(name)[0]
 
 		add_particle_planes_effect(

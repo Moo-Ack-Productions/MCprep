@@ -22,20 +22,21 @@ import bpy
 import os
 
 # addon imports
+from . import addon_updater_ops
 from . import conf
+from . import optimize_scene
+from . import tracking
 from . import util
-from .spawner import mobs
-from .spawner import meshswap
-from .spawner import spawn_util
+from . import world_tools
+from .materials import material_manager
+from .materials.generate import update_mcprep_texturepack_path
+from .materials.skin import update_skin_path
+from .spawner import effects
 from .spawner import entities
 from .spawner import mcmodel
-from . import world_tools
-from . import addon_updater_ops
-from . import tracking
-from . import optimize_scene
-from .materials.skin import update_skin_path
-from .materials.generate import update_mcprep_texturepack_path
-from .materials import material_manager
+from .spawner import meshswap
+from .spawner import mobs
+from .spawner import spawn_util
 # from .import_bridge import bridge
 
 # blender 2.7 vs 2.8 icon selections
@@ -308,6 +309,11 @@ class McprepPreference(bpy.types.AddonPreferences):
 		description="Folder for skin textures, used in skin swapping",
 		subtype='DIR_PATH',
 		default=scriptdir + "/MCprep_resources/skins/")
+	effects_path = bpy.props.StringProperty(
+		name="Effects path",
+		description="Folder for effects blend files and assets",
+		subtype='DIR_PATH',
+		default=scriptdir + "/MCprep_resources/effects/")
 	world_obj_path = bpy.props.StringProperty(
 		name="World Folder",
 		description=(
@@ -1831,6 +1837,12 @@ def register():
 		subtype='FILE_PATH',
 		update=meshswap.update_meshswap_path,
 		default=addon_prefs.meshswap_path)
+	bpy.types.Scene.mcprep_effects_path = bpy.props.StringProperty(
+		name="Effects folder",
+		description="Folder for handcrafted effects like particles and geonodes",
+		subtype='DIR_PATH',
+		update=effects.update_effects_path,
+		default=addon_prefs.effects_path)
 	bpy.types.Scene.entity_path = bpy.props.StringProperty(
 		name="Entity file",
 		description="File for entity library",
