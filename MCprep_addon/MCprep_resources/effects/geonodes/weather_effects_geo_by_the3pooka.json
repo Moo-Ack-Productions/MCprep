@@ -1,0 +1,25 @@
+{
+	"Camera Weather Nodes":{
+		"Snow": {
+			"Camera Rotation": "CAMER_OBJ",
+			"Weather Folower": "FOLLOW_OBJ",
+			"Weather Type": 0,
+			"Weather Grid Size x": 33,
+			"Weather Grid Size y": 33,
+			"Density": 0.710,
+			"Main Directioanl XYZ": [0, 0, -34.9],
+			"Chaos Ratio": 6.7,
+			"Time": 5.8
+		},
+		"Rain": {
+			"Camera Rotation": "CAMER_OBJ",
+			"Weather Folower": "FOLLOW_OBJ",
+			"Weather Type": 2,
+			"Weather Grid Size x": 33,
+			"Weather Grid Size y": 33,
+			"Main Directioanl XYZ": [0, 0, -100],
+			"Chaos Ratio": 1.0,
+			"Time": 1.3
+		}
+	}
+}

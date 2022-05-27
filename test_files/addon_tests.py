@@ -1541,6 +1541,17 @@ class mcprep_testing():
 			return "Did not end with finished result"
 
 		# TODO: Further checks it actually loaded the effect.
+		# Check that the geonode inputs are updated.
+		obj = bpy.context.object
+		if not obj:
+			return "Geo node added object not selected"
+
+		geo_nodes = [mod for mod in obj.modifiers if mod.type == "NODES"]
+		if not geo_nodes:
+			return "No geonode modifier found"
+
+		# Now validate that one of the settings was updated.
+		# todo: exampel where we assert the active effect `subpath` is non empty
 
 	def particle_area_effect_spawner(self):
 		"""Test the particle area variant of effect spawning works."""

@@ -16,6 +16,7 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+import json
 import os
 
 import bpy
@@ -23,6 +24,8 @@ import bpy
 from .. import conf
 from .. import util
 from .. import tracking
+
+from . import spawn_util
 
 # -----------------------------------------------------------------------------
 # Global enum values
@@ -52,21 +55,21 @@ def add_geonode_area_effect(context, effect):
 	"""
 	existing_geonodes = [
 		ndg for ndg in bpy.data.node_groups
-		if ndg.type == "GEOMETRY" and ndg.name == effect.name]
+		if ndg.type == "GEOMETRY" and ndg.name == effect.subpath]
 
 	# Load this geo node if it doesn't already exist.
 	if not existing_geonodes:
 		with bpy.data.libraries.load(effect.filepath) as (data_from, data_to):
 
 			for this_group in data_from.node_groups:
-				if this_group != effect.name:
+				if this_group != effect.subpath:
 					continue
 				data_to.node_groups.append(this_group)
 				break
 		# Post
 		post_geonodes = [
 			ndg for ndg in bpy.data.node_groups
-			if ndg.type == "GEOMETRY" and ndg.name == effect.name]
+			if ndg.type == "GEOMETRY" and ndg.name == effect.subpath]
 		diff = list(set(post_geonodes) - set(existing_geonodes))
 		print("DIFF OF geo node groups:", diff)
 		this_nodegroup = diff[0]
@@ -83,48 +86,14 @@ def add_geonode_area_effect(context, effect):
 	geo_mod = new_obj.modifiers.new(effect.name, "NODES")
 	geo_mod.node_group = this_nodegroup
 
-	# TODO: Conditionally create an empty, only if 'follow' input exists.
-	center_empty = bpy.data.objects.new(
-		name="{} origin".format(effect.name),
-		object_data=None)
-	util.obj_link_scene(center_empty)
-	camera = context.scene.camera
-	if camera:
-		center_empty.parent = camera
-		center_empty.location = (0, 0, -10)
-	else:
-		center_empty.location = util.get_cuser_location()
+	geo_update_params(context, effect, geo_mod)
 
-	# Update geo node inputs based on socket name.
-	geo_fields = {
-		"Camera Rotation": None,
-		"Weather Folower": None,
-		"Weather Grid Size x": None,
-		"Weather Grid Size y": None
-	}
-	for inp in geo_mod.node_group.inputs:
-		if inp.name in list(geo_fields):
-			geo_fields[inp.name] = inp.identifier
-
-	if geo_fields["Camera Rotation"] is None:
-		print("Failed to update geonode camera input")
-	else:
-		geo_mod[geo_fields["Camera Rotation"]] = camera
-
-	if geo_fields["Weather Folower"] is None:
-		print("Failed to update geonode follow input")
-	else:
-		geo_mod[geo_fields["Weather Folower"]] = center_empty
-
-	if geo_fields["Weather Grid Size x"] is None:
-		print("Failed to update geonode follow input")
-	else:
-		geo_mod[geo_fields["Weather Grid Size x"]] = 33
-
-	if geo_fields["Weather Grid Size y"] is None:
-		print("Failed to update geonode follow input")
-	else:
-		geo_mod[geo_fields["Weather Grid Size y"]] = 33
+	# Deselect everything and set newly added geonodes as active.
+	for ob in context.scene.objects:
+		if util.select_get(ob):
+			util.select_set(ob, False)
+	util.set_active_object(context, new_obj)
+	util.select_set(new_obj, True)
 
 
 def add_area_particle_effect(context, effect, location):
@@ -175,9 +144,106 @@ def add_particle_planes_effect(context, image_path, location, frame):
 	period of time. Ideal for footfalls, impacts, etc.
 	"""
 
+# -----------------------------------------------------------------------------
+# Core effects supportive functions
+# -----------------------------------------------------------------------------
+
+
+def geo_update_params(context, effect, geo_mod):
+	"""Update the paramters of the applied geonode effect.
+
+	Loads fields to apply based on json file where necessary.
+	"""
+
+	base_file = os.path.splitext(os.path.basename(effect.filepath))[0]
+	base_dir = os.path.dirname(effect.filepath)
+	jpath = os.path.join(base_dir, base_file + ".json")
+	geo_fields = {}
+	if os.path.isfile(jpath):
+		geo_fields = geo_fields_from_json(effect, jpath)
+	else:
+		conf.log("No json params path for geonode effects", vv_only=True)
+		return
+
+	# Determine if these special keywords exist.
+	has_followkey = False
+	for input_name in geo_fields.keys():
+		if geo_fields[input_name] == "FOLLOW_OBJ":
+			has_followkey = True
+	conf.log("geonode has_followkey field? " + str(has_followkey), vv_only=True)
+
+	# Create follow empty if required by the group.
+	camera = context.scene.camera
+	center_empty = None
+	if has_followkey:
+		center_empty = bpy.data.objects.new(
+			name="{} origin".format(effect.name),
+			object_data=None)
+		util.obj_link_scene(center_empty)
+		if camera:
+			center_empty.parent = camera
+			center_empty.location = (0, 0, -10)
+		else:
+			center_empty.location = util.get_cuser_location()
+
+	# Cache mapping of names like "Weather Type" to "Input_1" internals.
+	geo_inp_id = {}
+	for inp in geo_mod.node_group.inputs:
+		if inp.name in list(geo_fields):
+			geo_inp_id[inp.name] = inp.identifier
+
+	# Now update the final geo node inputs based gathered settings.
+	for inp in geo_mod.node_group.inputs:
+		if inp.name in list(geo_fields):
+			value = geo_fields[inp.name]
+			if value == "CAMER_OBJ":
+				conf.log("Set cam for geonode input", vv_only=True)
+				geo_mod[geo_inp_id[inp.name]] = camera
+			elif value == "FOLLOW_OBJ":
+				if not center_empty:
+					print(">> Center empty missing, not in preset in preset!")
+				else:
+					conf.log("Set follow for geonode input", vv_only=True)
+					geo_mod[geo_inp_id[inp.name]] = center_empty
+			else:
+				conf.log("Set {} for geonode input".format(inp.name), vv_only=True)
+				geo_mod[geo_inp_id[inp.name]] = value
+		# TODO: check if any socket name in json specified not found in node.
+
+
+def geo_fields_from_json(effect, jpath):
+	"""Extract json values from a file for a given effect.
+
+	Parse for a json structure with a hierarhcy of:
+
+	geo node group name:
+		sub effect name e.g. "rain":
+			input setting name: value
+
+	Special values for given keys (where key is the geonode UI name):
+		CAMER_OBJ: Tells MCprep to assign the active camera object to slot.
+		FOLLOW_OBJ: Tells MCprep to assign a generated empty to this slot.
+	"""
+	conf.log("Loading geo fields form json: " + jpath)
+	with open(jpath) as fopen:
+		jdata = json.load(fopen)
+
+	# Find the matching
+	geo_fields = {}
+	for geonode_name in list(jdata):
+		if geonode_name != effect.subpath:
+			continue
+		for effect_preset in list(jdata[geonode_name]):
+			if effect_preset == effect.name:
+				geo_fields = jdata[geonode_name][effect_preset]
+				break
+	if not geo_fields:
+		print("Failed to load presets for this effect from json")
+	return geo_fields
+
 
 # -----------------------------------------------------------------------------
-# Load functions
+# List UI load functions
 # -----------------------------------------------------------------------------
 
 
@@ -220,19 +286,59 @@ def load_geonode_effect_list(context):
 	blends = [
 		os.path.join(path, blend) for blend in os.listdir(path)
 		if os.path.isfile(os.path.join(path, blend))
-		and blend.lower().endswith("blend")
+		and blend.lower().endswith(".blend")
+	]
+	json_files = [
+		os.path.join(path, jsf) for jsf in os.listdir(path)
+		if os.path.isfile(os.path.join(path, jsf))
+		and jsf.lower().endswith(".json")
 	]
 
-	for bfile in blends:
-		with bpy.data.libraries.load(bfile) as (data_from, _):
-			node_groups = list(data_from.node_groups)
+	conf.log("json pairs of blend files", vv_only=True)
+	conf.log(json_files, vv_only=True)
 
-		for itm in node_groups:
-			effect = mcprep_props.effects_list.add()
-			effect.effect_type = GEO_AREA
-			effect.name = itm
-			effect.filepath = bfile
-			effect.index = len(mcprep_props.effects_list) - 1  # For icon index.
+	for bfile in blends:
+		row_items = []
+		using_json = False
+		js_equiv = os.path.splitext(bfile)[0] + ".json"
+		if js_equiv in json_files:
+			conf.log("Loading json preset for geonode for " + bfile)
+			# Read nodegroups to include from json presets file.
+			jpath = os.path.splitext(bfile)[0] + ".json"
+			with open(jpath) as jopen:
+				jdata = json.load(jopen)
+			row_items = jdata.keys()
+			using_json = True
+		else:
+			conf.log("Loading nodegroups from blend for geonode effects: " + bfile)
+			# Read nodegroup names from blend file directly.
+			with bpy.data.libraries.load(bfile) as (data_from, _):
+				row_items = list(data_from.node_groups)
+
+		for itm in row_items:
+			if spawn_util.SKIP_COLL in itm.lower():  # mcskip
+				continue
+
+			if using_json:
+				# First key in index is nodegroup, save to subpath, but then
+				# the present name (list of keys within) are the actual names
+				for preset in jdata[itm]:
+					conf.log("\tgeonode preset: " + preset, vv_only=True)
+					effect = mcprep_props.effects_list.add()
+					effect.name = preset  # This is the assign json preset name.
+					effect.subpath = itm  # This is the node group name.
+					effect.effect_type = GEO_AREA
+					effect.filepath = bfile
+					effect.index = len(mcprep_props.effects_list) - 1  # For icon index.
+
+			else:
+				# Using the nodegroup name itself as the key, no subpath
+				effect = mcprep_props.effects_list.add()
+				effect.name = itm
+				effect.subpath = itm  # Always the nodegroup name.
+				effect.effect_type = GEO_AREA
+				effect.filepath = bfile
+				effect.index = len(mcprep_props.effects_list) - 1  # For icon index.
 
 
 def load_area_particle_effects(context):
