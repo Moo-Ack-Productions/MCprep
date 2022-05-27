@@ -29,7 +29,7 @@ from . import effects
 # Top-level names used for inclusion or exclusions when filtering through
 # collections in blend files for spawners: mobs, meshswap, and entities.
 INCLUDE_COLL = "mcprep"
-SKIP_COLL = "mcskip"
+SKIP_COLL = "mcskip"  # Used for geometry and particle skips too.
 SKIP_COLL_LEGACY = "noimport"  # Supporting older MCprep Meshswap lib.
 
 
@@ -753,6 +753,9 @@ class ListEffectsAssets(bpy.types.PropertyGroup):
 	"""For UI drawing for different kinds of effects"""
 	# inherited: name
 	filepath = bpy.props.StringProperty(subtype="FILE_PATH")
+	subpath = bpy.props.StringProperty(
+		description="Collection/particle/nodegroup within this file",
+		default="")
 	description = bpy.props.StringProperty()
 	effect_type = bpy.props.EnumProperty(
 		name="Effect type",
