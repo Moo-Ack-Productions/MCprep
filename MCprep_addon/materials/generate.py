@@ -1334,6 +1334,9 @@ def matgen_cycles_simple(
 	else:
 		principled.inputs["Metallic"].default_value = 0
 
+	# Specular tends to cause some issues with how blocks look, so let's disable it
+	principled.inputs["Specular"].default_value = 0
+
 	# Connect nodes.
 	links.new(nodeSaturateMix.outputs[0], principled.inputs[0])
 	links.new(principled.outputs["BSDF"], node_out.inputs[0])
@@ -1464,6 +1467,9 @@ def matgen_cycles_principled(
 			principled.inputs["Roughness"].default_value = 0.2
 	else:
 		principled.inputs["Metallic"].default_value = 0
+
+	# Specular tends to cause some issues with how blocks look, so let's disable it
+	principled.inputs["Specular"].default_value = 0
 
 	# Connect nodes
 	links.new(principled.outputs["BSDF"], nodeMixEmit.inputs[1])
