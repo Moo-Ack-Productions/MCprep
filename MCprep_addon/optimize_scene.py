@@ -123,12 +123,12 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         """
         Get the compute device type
         """
-        CyclesComputeDeviceType = None
-        CurrentRenderDevice = None
+        cycles_compute_device_type = None
+        current_render_device = None
         HasActiveDevice = cprefs.preferences.has_active_device()
         if cprefs is not None and HasActiveDevice:
-            CyclesComputeDeviceType = cprefs.preferences.compute_device_type
-            CurrentRenderDevice = bpy.context.scene.cycles.device
+            cycles_compute_device_type = cprefs.preferences.compute_device_type
+            current_render_device = bpy.context.scene.cycles.device
             
         """
         Sampling Settings
@@ -197,7 +197,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
             NoiseThreshold = 0.02
         
         # ------------------------------ Compute device ------------------------------ #
-        if CyclesComputeDeviceType == "NONE":
+        if cycles_compute_device_type == "NONE":
             Samples = 128 
             if Quality:
                 NoiseThreshold = 0.05
@@ -215,11 +215,11 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
                 bpy.context.scene.render.tile_x = 32
                 bpy.context.scene.render.tile_y = 32
         
-        elif CyclesComputeDeviceType == "CUDA" or CyclesComputeDeviceType == "HIP":
-            if CurrentRenderDevice == "CPU":
+        elif cycles_compute_device_type == "CUDA" or cycles_compute_device_type == "HIP":
+            if current_render_device == "CPU":
                 if HasActiveDevice:
                     print("Detected GPU: Switching to GPU...")
-                    CurrentRenderDevice = "GPU"
+                    current_render_device = "GPU"
                     
             Samples = 128 
             if Quality:
@@ -238,11 +238,11 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
                 bpy.context.scene.render.tile_x = 256
                 bpy.context.scene.render.tile_y = 256
 
-        elif CyclesComputeDeviceType == "OPTIX":
-            if CurrentRenderDevice == "CPU":
+        elif cycles_compute_device_type == "OPTIX":
+            if current_render_device == "CPU":
                 if HasActiveDevice:
                     print("Detected GPU: Switching to GPU...") 
-                    CurrentRenderDevice = "GPU"
+                    current_render_device = "GPU"
                     
             Samples = 128 
             if Quality:
@@ -262,11 +262,11 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
                 bpy.context.scene.render.tile_y = 256
         
         if util.get_cycles_version() == 2:
-            if CyclesComputeDeviceType == "OPENCL":
-                if CurrentRenderDevice == "CPU":
+            if cycles_compute_device_type == "OPENCL":
+                if current_render_device == "CPU":
                     if HasActiveDevice:
                         print("Detected GPU: Switching to GPU...")
-                        CurrentRenderDevice = "GPU"
+                        current_render_device = "GPU"
                         
                 Samples = 128 
                 if Quality:
