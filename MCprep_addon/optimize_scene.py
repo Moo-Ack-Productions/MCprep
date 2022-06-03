@@ -17,7 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import bpy
-from .. import util
+from . import util
 
 class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 
@@ -116,8 +116,20 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
     
     def execute(self, context):
-        CyclesComputeDeviceType = bpy.context.preferences.addons["cycles"].preferences.compute_device_type, bpy.context.scene.cycles.device
+        prefs = util.get_preferences(context)
+        cprefs = prefs.addons.get("cycles")
         scn_props = context.scene.optimizer_props
+        
+        """
+        Get the compute device type
+        """
+        CyclesComputeDeviceType = None
+        CurrentRenderDevice = None
+        HasActiveDevice = cprefs.preferences.has_active_device()
+        if cprefs is not None and HasActiveDevice:
+            CyclesComputeDeviceType = cprefs.preferences.compute_device_type
+            CurrentRenderDevice = bpy.context.scene.cycles.device
+            
         """
         Sampling Settings
         """
@@ -205,7 +217,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         
         elif CyclesComputeDeviceType == "CUDA" or CyclesComputeDeviceType == "HIP":
             if CurrentRenderDevice == "CPU":
-                if util.get_preferences("cycles").preferences.has_active_device():
+                if HasActiveDevice:
                     print("Detected GPU: Switching to GPU...")
                     CurrentRenderDevice = "GPU"
                     
@@ -228,7 +240,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 
         elif CyclesComputeDeviceType == "OPTIX":
             if CurrentRenderDevice == "CPU":
-                if util.get_preferences("cycles").preferences.has_active_device():
+                if HasActiveDevice:
                     print("Detected GPU: Switching to GPU...") 
                     CurrentRenderDevice = "GPU"
                     
@@ -252,7 +264,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         if util.get_cycles_version() == 2:
             if CyclesComputeDeviceType == "OPENCL":
                 if CurrentRenderDevice == "CPU":
-                    if util.get_preferences("cycles").preferences.has_active_device():
+                    if HasActiveDevice:
                         print("Detected GPU: Switching to GPU...")
                         CurrentRenderDevice = "GPU"
                         

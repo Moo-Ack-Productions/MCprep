@@ -129,7 +129,10 @@ class MCPREP_OT_default_material(bpy.types.Operator):
             return {'CANCELLED'}
 
         # ------------------------- Find the default material ------------------------ #
-        material_name = f"default_{self.SIMPLE if not self.UsePBR else self.PBR}_{self.engine}"
+        material_name = material_name = "default_{form}_{engine}".format(
+                                            form=self.SIMPLE if not self.UsePBR else self.PBR,
+                                            engine=self.engine
+                                        )
         if not default_material_in_sync_library(material_name, context):
             self.report({'ERROR'}, "No default material found")
             return {'CANCELLED'}
@@ -169,7 +172,10 @@ class MCPREP_OT_create_default_material(bpy.types.Operator):
         engine: the render engine in lowercase
         type: the type of texture that's being dealed with
         """
-        material_name = f"default_{type}_{engine}"
+        material_name = "default_{type}_{engine}".format(
+                            type=type,
+                            engine=engine
+                        )
         default_material = bpy.data.materials.new(name=material_name)
         default_material.use_nodes = True
         nodes = default_material.node_tree.nodes

@@ -50,7 +50,7 @@ else:
 if "optimize_scene" in locals():
 	importlib.reload(optimize_scene)
 else:
-	from .MCprep_resources import optimize_scene
+	from . import optimize_scene
 
 if "sequences" in locals():
 	importlib.reload(sequences)
@@ -167,7 +167,7 @@ module_list = (
 	world_tools,
 	# bridge,
 	mcprep_ui,
- 	OptimizeScene
+ 	optimize_scene
 )
 
 
