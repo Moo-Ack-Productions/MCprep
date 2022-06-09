@@ -32,7 +32,7 @@ from .spawner import mcmodel
 from . import world_tools
 from . import addon_updater_ops
 from . import tracking
-from .SceneOptimizer import OptimizeScene
+from . import optimize_scene
 from .materials.skin import update_skin_path
 from .materials.generate import update_mcprep_texturepack_path
 from .materials import material_manager
@@ -735,7 +735,7 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			row.prop(
 				scn_props, "show_settings_optimizer",
 				text="Cycles Optimizer Settings", icon="TRIA_DOWN")
-			OptimizeScene.panel_draw(self, context)
+			optimize_scene.panel_draw(self, context)
 
 		layout = self.layout  # clear out the box formatting
 		split = layout.split()

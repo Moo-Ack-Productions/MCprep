@@ -65,13 +65,13 @@ def sync_default_material(context, material, default_material, engine):
         return "Material has no MCPREP_diffuse node"
         
     # Copy the material and change the name
-    Newdefault_material = new_material.copy()
+    new_default_material = new_material.copy()
     
     if not material.node_tree.nodes:
         return "Material has no nodes"
     
     # Change the texture
-    new_default_material_nodes = Newdefault_material.node_tree.nodes
+    new_default_material_nodes = new_default_material.node_tree.nodes
     material_nodes = material.node_tree.nodes
     
     if not material_nodes.get("Image Texture"):
@@ -82,11 +82,11 @@ def sync_default_material(context, material, default_material, engine):
     TextureFile = bpy.data.images.get(ImageTexture)
     default_texture_node.image = TextureFile
     
-    if engine is "cycles" or engine is "blender_eevee":
+    if engine == "cycles" or engine == "blender_eevee":
         default_texture_node.interpolation = 'Closest'
     
     # 2.78+ only, else silent failure
-    res = util.remap_users(material, Newdefault_material)
+    res = util.remap_users(material, new_default_material)
     if res != 0:
         # try a fallback where we at least go over the selected objects
         return res
@@ -94,7 +94,7 @@ def sync_default_material(context, material, default_material, engine):
     # remove the old material since we're changing the default and we don't
     # want to overwhelm users
     bpy.data.materials.remove(material)
-    Newdefault_material.name = material.name
+    new_default_material.name = material.name
     return None
 
 class MCPREP_OT_default_material(bpy.types.Operator):
@@ -129,27 +129,27 @@ class MCPREP_OT_default_material(bpy.types.Operator):
             return {'CANCELLED'}
 
         # ------------------------- Find the default material ------------------------ #
-        material_name = material_name = "default_{form}_{engine}".format(
-                                            form=self.SIMPLE if not self.UsePBR else self.PBR,
-                                            engine=self.engine
-                                        )
+        # material_name = material_name = "default_{form}_{engine}".format(
+        #                                     form=self.SIMPLE if not self.use_pbr else self.PBR,
+        #                                     engine=self.engine
+        #                                 )
+        material_name = material_name = f"default_{self.SIMPLE if not self.use_pbr else self.PBR}_{self.engine}"
         if not default_material_in_sync_library(material_name, context):
             self.report({'ERROR'}, "No default material found")
             return {'CANCELLED'}
         
         # ------------------------------ Sync materials ------------------------------ #
         mat_list = list(bpy.data.materials)
-        for mat in mat_list:
-            try:
-                err = sync_default_material(context, mat, material_name, self.engine) # no linking
-                if err:
-                    conf.log(err)
-            except Exception as e:
-                print(e)
+        print(mat_list)
+        # for mat in mat_list:
+        #     try:
+        #         err = sync_default_material(context, mat, material_name, self.engine) # no linking
+        #         if err:
+        #             conf.log(err)
+        #     except Exception as e:
+        #         print(e)
                 
         return {'FINISHED'}
-    
-    
     
 
 class MCPREP_OT_create_default_material(bpy.types.Operator):

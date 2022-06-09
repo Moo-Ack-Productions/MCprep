@@ -17,14 +17,15 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import bpy
+import addon_utils
 from . import util
 
 class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 
 	def scene_brightness(self, context):
 		itms = [
-        ("bright", "scene is bright", ""), 
-        ("dark", "scene is dark", "")
+        ("bright", "Scene is bright", "Use this setting if your scene is mostly bright"), 
+        ("dark", "Scene is dark", "Use this setting if your scene is mostly dark")
         ]
 		return itms
 
@@ -74,40 +75,37 @@ def panel_draw(self, context):
     col = row.column()
     engine = context.scene.render.engine
     scn_props = context.scene.optimizer_props
-    if util.bv30:
-        if engine == 'CYCLES':
-            col.label(text="Materials in Scene")
-            
-            # ---------------------------------- Glossy ---------------------------------- #
-            if scn_props.glossy_bool:
-                col.prop(scn_props, "glossy_bool", icon="INDIRECT_ONLY_ON")
-            else:
-                col.prop(scn_props, "glossy_bool", icon="INDIRECT_ONLY_OFF")
-            
-            # ------------------------------- Transmissive ------------------------------- #
-            if scn_props.transmissive_bool:
-                col.prop(scn_props, "transmissive_bool", icon="FULLSCREEN_EXIT")
-            else:
-                col.prop(scn_props, "transmissive_bool", icon="FULLSCREEN_ENTER")
-                
-            # -------------------------------- Volumetric -------------------------------- #
-            if scn_props.volumetric_bool:
-                col.prop(scn_props, "volumetric_bool", icon="OUTLINER_OB_VOLUME")
-            else:
-                col.prop(scn_props, "volumetric_bool", icon="OUTLINER_DATA_VOLUME")
-                
-            # ---------------------------------- Options --------------------------------- #
-            col.label(text="Options")
-            col.label(text="Time of Day")
-            col.prop(scn_props, "scene_brightness")
-            col.prop(scn_props, "caustics_bool", icon="TRIA_UP")
-            col.prop(scn_props, "motionblur_bool", icon="TRIA_UP")
-            col.prop(scn_props, "fastGI_bool", icon="TRIA_DOWN")
-            col.operator("mcprep.optimize_scene", text="Optimize Scene")
+    if engine == 'CYCLES':
+        col.label(text="Materials in Scene")
+        
+        # ---------------------------------- Glossy ---------------------------------- #
+        if scn_props.glossy_bool:
+            col.prop(scn_props, "glossy_bool", icon="INDIRECT_ONLY_ON")
         else:
-            col.label(text= "Cycles Only >:C")
+            col.prop(scn_props, "glossy_bool", icon="INDIRECT_ONLY_OFF")
+        
+        # ------------------------------- Transmissive ------------------------------- #
+        if scn_props.transmissive_bool:
+            col.prop(scn_props, "transmissive_bool", icon="FULLSCREEN_EXIT")
+        else:
+            col.prop(scn_props, "transmissive_bool", icon="FULLSCREEN_ENTER")
+            
+        # -------------------------------- Volumetric -------------------------------- #
+        if scn_props.volumetric_bool:
+            col.prop(scn_props, "volumetric_bool", icon="OUTLINER_OB_VOLUME")
+        else:
+            col.prop(scn_props, "volumetric_bool", icon="OUTLINER_DATA_VOLUME")
+            
+        # ---------------------------------- Options --------------------------------- #
+        col.label(text="Options")
+        col.label(text="Time of Day")
+        col.prop(scn_props, "scene_brightness")
+        col.prop(scn_props, "caustics_bool", icon="TRIA_UP")
+        col.prop(scn_props, "motionblur_bool", icon="TRIA_UP")
+        col.prop(scn_props, "fastGI_bool", icon="TRIA_DOWN")
+        col.operator("mcprep.optimize_scene", text="Optimize Scene")
     else:
-        col.label(text= "Old Cycles Support Still a WIP")
+        col.label(text= "Cycles Only >:C")
 
 
 class MCPrep_OT_optimize_scene(bpy.types.Operator):
@@ -211,9 +209,10 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
                 FilterGlossy = 1
                 MaxSteps = 50
                 
-            if util.get_cycles_version() == 2:
-                bpy.context.scene.render.tile_x = 32
-                bpy.context.scene.render.tile_y = 32
+            if util.get_cycles_version() == 1:
+                addon_utils.enable("render_auto_tile_size", default_set=True)
+                bpy.context.scene.ats_settings.cpu_choice = '32'
+
         
         elif cycles_compute_device_type == "CUDA" or cycles_compute_device_type == "HIP":
             if current_render_device == "CPU":
@@ -234,9 +233,9 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
                 FilterGlossy = 1
                 MaxSteps = 70
             
-            if util.get_cycles_version() == 2:
-                bpy.context.scene.render.tile_x = 256
-                bpy.context.scene.render.tile_y = 256
+            if util.get_cycles_version() == 1:
+                addon_utils.enable("render_auto_tile_size", default_set=True)
+                bpy.context.scene.ats_settings.gpu_choice = '256'
 
         elif cycles_compute_device_type == "OPTIX":
             if current_render_device == "CPU":
@@ -257,11 +256,11 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
                 FilterGlossy = 0.8
                 MaxSteps = 80
             
-            if util.get_cycles_version() == 2:
-                bpy.context.scene.render.tile_x = 256
-                bpy.context.scene.render.tile_y = 256
+            if util.get_cycles_version() == 1:
+                addon_utils.enable("render_auto_tile_size", default_set=True)
+                bpy.context.scene.ats_settings.gpu_choice = '256'
         
-        if util.get_cycles_version() == 2:
+        elif util.get_cycles_version() == 1:
             if cycles_compute_device_type == "OPENCL":
                 if current_render_device == "CPU":
                     if HasActiveDevice:
@@ -280,9 +279,9 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
                     MinimumSamples = 15
                     FilterGlossy = 1
                     MaxSteps = 70
-                
-                bpy.context.scene.render.tile_x = 256
-                bpy.context.scene.render.tile_y = 256
+                    
+                addon_utils.enable("render_auto_tile_size", default_set=True)
+                bpy.context.scene.ats_settings.gpu_choice = '256'
         """
         Cycles Render Settings Optimizations
         """
@@ -290,7 +289,8 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         """
         Unique changes
         """
-        bpy.context.scene.cycles.samples = Samples
+        
+        # bpy.context.scene.cycles.samples = Samples # ! It's best if we hold off on this until result based optimization is added
         bpy.context.scene.cycles.adaptive_threshold = NoiseThreshold
         bpy.context.scene.cycles.adaptive_min_samples = MinimumSamples
         bpy.context.scene.cycles.blur_glossy = FilterGlossy

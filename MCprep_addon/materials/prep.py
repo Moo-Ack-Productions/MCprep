@@ -224,10 +224,8 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 					res = generate.replace_missing_texture(passes[pass_name])
 					if res > 0:
 						mat["texture_swapped"] = True  # used to apply saturation
-
 			if self.newDefault is True:
 				bpy.ops.mcprep.sync_default_materials(use_pbr=False, engine=engine.lower())
-
 			else:
 				if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
 					res = generate.matprep_internal(
