@@ -133,7 +133,7 @@ def draw_mats_common(self, context):
 	row.prop(self, "useExtraMaps")
 	row.prop(self, "syncMaterials")
 	row = self.layout.row()
-	row.prop(self, "newDefault")
+	# row.prop(self, "newDefault")
 
 	# col = row.column()
 	# col.prop(self, "normalIntensity", slider=True)
@@ -225,33 +225,30 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 					if res > 0:
 						mat["texture_swapped"] = True  # used to apply saturation
 
-			if self.newDefault == True:
-				if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
-					res = generate.matprep_internal(
-						mat, passes, self.useReflections, self.makeSolid)
-					if res == 0:
-						count += 1
-				elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
-					res = generate.matprep_cycles(
-						mat, passes, self.useReflections,
-						self.usePrincipledShader, self.makeSolid, self.packFormat)
-					if res == 0:
-						count += 1
-				else:
-					try:
-						bpy.ops.mcprep.sync_default_materials(use_pbr=False, engine=engine.lower())
-					except Exception:
-						self.report(
-							{'ERROR'},
-							"Only Blender Internal, Cycles, and Eevee are supported")
-						return {'CANCELLED'}
+			if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
+				res = generate.matprep_internal(
+					mat, passes, self.useReflections, self.makeSolid)
+				if res == 0:
+					count += 1
+			elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+				res = generate.matprep_cycles(
+					mat, passes, self.useReflections,
+					self.usePrincipledShader, self.makeSolid, self.packFormat)
+				if res == 0:
+					count += 1
+			else:
+				try:
+					bpy.ops.mcprep.sync_default_materials(use_pbr=False, engine=engine.lower())
+				except Exception:
+					self.report(
+						{'ERROR'},
+						"Only Blender Internal, Cycles, and Eevee are supported")
+					return {'CANCELLED'}
 
 			if self.animateTextures:
 				sequences.animate_single_material(
 					mat, context.scene.render.engine)
 
-		if self.newDefault is True:
-			bpy.ops.mcprep.sync_default_materials(use_pbr=False, engine=engine.lower())
 		# ------------------------------ Sync materials ------------------------------ #
 		if self.syncMaterials is True:
 			bpy.ops.mcprep.sync_materials(
