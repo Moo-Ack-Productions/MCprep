@@ -18,6 +18,8 @@
 
 import bpy
 import addon_utils
+import json
+from . import conf
 from . import util
 
 class MCprepOptimizerProperties(bpy.types.PropertyGroup):
@@ -139,8 +141,8 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         Light Bounces
         """
         Diffuse = 2 # This is default because diffuse bounces don't need to be high 
-        Glossy = 1
-        Transmissive = 1
+        Glossy = 0
+        Transmissive = 0
         Volume = 0  
         FastGI = False;
         
@@ -179,14 +181,8 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         if scn_props.fastGI_bool:
             FastGI = True
         # ------------------------------ Scene materials ----------------------------- #
-        if scn_props.glossy_bool:
-            Glossy = 3
-            
         if scn_props.volumetric_bool:
             Volume = 2
-            
-        if scn_props.transmissive_bool:
-            Transmissive = 3
             
         # -------------------------------- Time of day ------------------------------- #
         if scn_props.scene_brightness == "bright":
@@ -282,9 +278,19 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
                     
                 addon_utils.enable("render_auto_tile_size", default_set=True)
                 bpy.context.scene.ats_settings.gpu_choice = '256'
+                
         """
         Cycles Render Settings Optimizations
         """
+        mat_list = list(bpy.data.materials)
+        
+        for reflect_mat in conf.json_data["blocks"]["reflective"]:
+            if reflect_mat in mat_list:
+                Glossy += 1
+        
+        for glass_mat in conf.json_data["blocks"]["glass"]:
+            if glass_mat in mat_list:
+                Transmissive += 1
         
         """
         Unique changes
