@@ -23,7 +23,6 @@ import platform
 import random
 import subprocess
 from subprocess import Popen, PIPE
-from attr import has
 import functools
 
 import bpy
