@@ -140,14 +140,13 @@ class MCPREP_OT_default_material(bpy.types.Operator):
         
         # ------------------------------ Sync materials ------------------------------ #
         mat_list = list(bpy.data.materials)
-        print(mat_list)
-        # for mat in mat_list:
-        #     try:
-        #         err = sync_default_material(context, mat, material_name, self.engine) # no linking
-        #         if err:
-        #             conf.log(err)
-        #     except Exception as e:
-        #         print(e)
+        for mat in mat_list:
+            try:
+                err = sync_default_material(context, mat, material_name, self.engine) # no linking
+                if err:
+                    conf.log(err)
+            except Exception as e:
+                print(e)
                 
         return {'FINISHED'}
     
@@ -172,6 +171,13 @@ class MCPREP_OT_create_default_material(bpy.types.Operator):
         engine: the render engine in lowercase
         type: the type of texture that's being dealed with
         """
+        if not len(bpy.context.selected_objects):
+            """
+            If there's no selected objects
+            """
+            self.report({'ERROR'}, "Select an object to create the material")
+            return 
+        
         material_name = "default_{type}_{engine}".format(
                             type=type,
                             engine=engine
@@ -182,23 +188,27 @@ class MCPREP_OT_create_default_material(bpy.types.Operator):
         links = default_material.node_tree.links
         nodes.clear()
         
-        """
-        If there's no selected objects
-        """
-        if not len(bpy.context.selected_objects):
-            self.report({'ERROR'}, "Select an object to create the material")
-            return 
-        bpy.context.object.active_material = default_material
-        
         default_texture_node = nodes.new(type="ShaderNodeTexImage")
+        principled = nodes.new("ShaderNodeBsdfPrincipled")
         nodeOut = nodes.new("ShaderNodeOutputMaterial")
         
         default_texture_node.name = "MCPREP_diffuse"
         default_texture_node.label = "Diffuse Texture"
         default_texture_node.location = (120, 0)
+        
+        principled.inputs["Specular"].default_value = 0
+        principled.location = (600, 0)
+        
         nodeOut.location = (820, 0)
         
-        links.new(default_texture_node.outputs["Color"], nodeOut.inputs[0])
+        links.new(default_texture_node.outputs[0], principled.inputs[0])
+        links.new(principled.outputs["BSDF"], nodeOut.inputs[0])
+        
+        if engine is "eevee":
+            if hasattr(default_material, "blend_method"):
+                default_material.blend_method = 'HASHED'
+            if hasattr(default_material, "shadow_method"):
+                default_material.shadow_method = 'HASHED'
 
 classes = (
 	MCPREP_OT_default_material,

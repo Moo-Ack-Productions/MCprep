@@ -927,7 +927,7 @@ class MCPREP_PT_materials(bpy.types.Panel):
 
 		layout = self.layout
 		row = layout.row()
-		row.operator("mcprep.create_default_material")
+		# row.operator("mcprep.create_default_material")
 		split = layout.split()
 		col = split.column(align=True)
 

@@ -106,10 +106,10 @@ class McprepMaterialProps():
 			"Synchronize materials with those in the active "
 			"pack's materials.blend file"),
 		default=True)
-	newDefault = bpy.props.BoolProperty(
-		name="Use custom default material",
-		description="Use a custom default material if you have one set up",
-		default=False)
+	# newDefault = bpy.props.BoolProperty(
+	# 	name="Use custom default material",
+	# 	description="Use a custom default material if you have one set up",
+	# 	default=False)
 	packFormat = bpy.props.EnumProperty(
 		name="Pack Format",
 		description="Change the pack format when using a PBR resource pack.",
@@ -224,16 +224,13 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 					res = generate.replace_missing_texture(passes[pass_name])
 					if res > 0:
 						mat["texture_swapped"] = True  # used to apply saturation
-			if self.newDefault is True:
-				bpy.ops.mcprep.sync_default_materials(use_pbr=False, engine=engine.lower())
-			else:
+
+			if self.newDefault == True:
 				if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
 					res = generate.matprep_internal(
 						mat, passes, self.useReflections, self.makeSolid)
 					if res == 0:
 						count += 1
-
-
 				elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 					res = generate.matprep_cycles(
 						mat, passes, self.useReflections,
@@ -252,9 +249,9 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 			if self.animateTextures:
 				sequences.animate_single_material(
 					mat, context.scene.render.engine)
-    
-		# ----------------------- Use a custom default material ---------------------- #
 
+		if self.newDefault is True:
+			bpy.ops.mcprep.sync_default_materials(use_pbr=False, engine=engine.lower())
 		# ------------------------------ Sync materials ------------------------------ #
 		if self.syncMaterials is True:
 			bpy.ops.mcprep.sync_materials(
