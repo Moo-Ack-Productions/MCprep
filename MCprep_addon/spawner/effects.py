@@ -196,7 +196,7 @@ def geo_update_params(context, effect, geo_mod):
 	for inp in geo_mod.node_group.inputs:
 		if inp.name in list(geo_fields):
 			value = geo_fields[inp.name]
-			if value == "CAMER_OBJ":
+			if value == "CAMERA_OBJ":
 				conf.log("Set cam for geonode input", vv_only=True)
 				geo_mod[geo_inp_id[inp.name]] = camera
 			elif value == "FOLLOW_OBJ":
@@ -221,7 +221,7 @@ def geo_fields_from_json(effect, jpath):
 			input setting name: value
 
 	Special values for given keys (where key is the geonode UI name):
-		CAMER_OBJ: Tells MCprep to assign the active camera object to slot.
+		CAMERA_OBJ: Tells MCprep to assign the active camera object to slot.
 		FOLLOW_OBJ: Tells MCprep to assign a generated empty to this slot.
 	"""
 	conf.log("Loading geo fields form json: " + jpath)
