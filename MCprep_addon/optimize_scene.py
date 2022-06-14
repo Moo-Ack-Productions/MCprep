@@ -178,7 +178,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
                 FilterGlossy = 1
                 MaxSteps = 50
                 
-            if util.get_cycles_version() == 1:
+            if util.bv30() is False:
                 addon_utils.enable("render_auto_tile_size", default_set=True)
 
         
@@ -201,7 +201,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
                 FilterGlossy = 1
                 MaxSteps = 70
             
-            if util.get_cycles_version() == 1:
+            if util.bv30() is False:
                 addon_utils.enable("render_auto_tile_size", default_set=True)
 
         elif cycles_compute_device_type == "OPTIX":
@@ -223,10 +223,10 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
                 FilterGlossy = 0.8
                 MaxSteps = 80
             
-            if util.get_cycles_version() == 1:
+            if util.bv30() is False:
                 addon_utils.enable("render_auto_tile_size", default_set=True)
         
-        elif util.get_cycles_version() == 1:
+        elif util.bv30() is False:
             if cycles_compute_device_type == "OPENCL":
                 if current_render_device == "CPU":
                     if has_active_device:
