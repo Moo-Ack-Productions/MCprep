@@ -183,11 +183,6 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 
         
         elif cycles_compute_device_type == "CUDA" or cycles_compute_device_type == "HIP":
-            if current_render_device == "CPU":
-                if has_active_device:
-                    print("Detected GPU: Switching to GPU...")
-                    bpy.context.scene.cycles.device = "GPU"
-                    
             Samples = 128 
             if Quality:
                 NoiseThreshold = 0.02
@@ -205,11 +200,6 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
                 addon_utils.enable("render_auto_tile_size", default_set=True)
 
         elif cycles_compute_device_type == "OPTIX":
-            if current_render_device == "CPU":
-                if has_active_device:
-                    print("Detected GPU: Switching to GPU...") 
-                    bpy.context.scene.cycles.device = "GPU"
-                    
             Samples = 128 
             if Quality:
                 NoiseThreshold = 0.02
@@ -228,11 +218,6 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         
         elif util.bv30() is False:
             if cycles_compute_device_type == "OPENCL":
-                if current_render_device == "CPU":
-                    if has_active_device:
-                        print("Detected GPU: Switching to GPU...")
-                        bpy.context.scene.cycles.device = "GPU"
-                        
                 Samples = 128 
                 if Quality:
                     NoiseThreshold = 0.2
@@ -241,7 +226,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
                     MaxSteps = 100
                     
                 else:
-                    NoiseThreshold = 0.06
+                    NoiseThreshold = 0.6
                     MinimumSamples = 15
                     FilterGlossy = 1
                     MaxSteps = 70
