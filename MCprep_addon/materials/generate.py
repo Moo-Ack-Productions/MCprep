@@ -1468,9 +1468,6 @@ def matgen_cycles_principled(
 	else:
 		principled.inputs["Metallic"].default_value = 0
 
-	# Specular tends to cause some issues with how blocks look, so let's disable it
-	principled.inputs["Specular"].default_value = 0
-
 	# Connect nodes
 	links.new(principled.outputs["BSDF"], nodeMixEmit.inputs[1])
 	links.new(nodeLightPath.outputs["Is Camera Ray"], nodeMixCam.inputs["Fac"])
