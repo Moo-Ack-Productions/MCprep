@@ -28,8 +28,8 @@ MAX_BOUNCES = 8
 class MCprepOptimizerProperties(bpy.types.PropertyGroup):
     def scene_brightness(self, context):
         itms = [
-            ("BRIGHT", "Scene is bright", "Use this setting if your scene is mostly bright"), 
-            ("DARK", "Scene is dark", "Use this setting if your scene is mostly dark")
+            ("BRIGHT", "Scene is bright", "Use this setting if your scene is mostly bright\nEx. outside during the day"), 
+            ("DARK", "Scene is dark", "Use this setting if your scene is mostly dark\nEx. caves, interiors, and outside at night")
         ]
         return itms
 
