@@ -102,8 +102,8 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         """
         cycles_compute_device_type = None
         current_render_device = None
-        HasActiveDevice = cprefs.preferences.has_active_device()
-        if cprefs is not None and HasActiveDevice:
+        has_active_device = cprefs.preferences.has_active_device()
+        if cprefs is not None and has_active_device:
             cycles_compute_device_type = cprefs.preferences.compute_device_type
             current_render_device = bpy.context.scene.cycles.device
             
@@ -185,7 +185,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         
         elif cycles_compute_device_type == "CUDA" or cycles_compute_device_type == "HIP":
             if current_render_device == "CPU":
-                if HasActiveDevice:
+                if has_active_device:
                     print("Detected GPU: Switching to GPU...")
                     current_render_device = "GPU"
                     
@@ -208,7 +208,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 
         elif cycles_compute_device_type == "OPTIX":
             if current_render_device == "CPU":
-                if HasActiveDevice:
+                if has_active_device:
                     print("Detected GPU: Switching to GPU...") 
                     current_render_device = "GPU"
                     
@@ -232,7 +232,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         elif util.get_cycles_version() == 1:
             if cycles_compute_device_type == "OPENCL":
                 if current_render_device == "CPU":
-                    if HasActiveDevice:
+                    if has_active_device:
                         print("Detected GPU: Switching to GPU...")
                         current_render_device = "GPU"
                         
