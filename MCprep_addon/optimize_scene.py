@@ -21,7 +21,10 @@ import addon_utils
 import json
 from . import conf
 from . import util
+from .materials import generate
 
+
+MAX_BOUNCES = 8
 class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 
 	def scene_brightness(self, context):
@@ -34,32 +37,18 @@ class MCprepOptimizerProperties(bpy.types.PropertyGroup):
     # --------------------------------- Caustics --------------------------------- #
 	caustics_bool = bpy.props.BoolProperty(
 		name="Caustics (Increases render times)",
-        default=False
+        default=False,
+        description="If checked allows cautics to be enabled"
 	)
     
     # -------------------------------- Motion Blur ------------------------------- #
 	motionblur_bool = bpy.props.BoolProperty(
 		name="Motion Blur (increases render times)",
-        default=False
-	)
-
-    # ---------------------------------- Fast GI --------------------------------- #
-	fastGI_bool = bpy.props.BoolProperty(
-		name="Fast GI (Decreases render times)",
-        default=False
+        default=False,
+        description="If checked allows motion blur to be enabled"
 	)
     
     # -------------------------- Materials in the scene -------------------------- #
-	glossy_bool = bpy.props.BoolProperty(
-		name="Glossy Materials",
-        default=False
-	)
-    
-	transmissive_bool = bpy.props.BoolProperty(
-		name="Glass Materials",
-        default=False
-	)
-
 	volumetric_bool = bpy.props.BoolProperty(
 		name="Volumetrics" if util.bv30() else "Volumetrics (Increases render times)",
         default=False
@@ -78,33 +67,14 @@ def panel_draw(self, context):
     engine = context.scene.render.engine
     scn_props = context.scene.optimizer_props
     if engine == 'CYCLES':
-        col.label(text="Materials in Scene")
-        
-        # ---------------------------------- Glossy ---------------------------------- #
-        if scn_props.glossy_bool:
-            col.prop(scn_props, "glossy_bool", icon="INDIRECT_ONLY_ON")
-        else:
-            col.prop(scn_props, "glossy_bool", icon="INDIRECT_ONLY_OFF")
-        
-        # ------------------------------- Transmissive ------------------------------- #
-        if scn_props.transmissive_bool:
-            col.prop(scn_props, "transmissive_bool", icon="FULLSCREEN_EXIT")
-        else:
-            col.prop(scn_props, "transmissive_bool", icon="FULLSCREEN_ENTER")
-            
-        # -------------------------------- Volumetric -------------------------------- #
-        if scn_props.volumetric_bool:
-            col.prop(scn_props, "volumetric_bool", icon="OUTLINER_OB_VOLUME")
-        else:
-            col.prop(scn_props, "volumetric_bool", icon="OUTLINER_DATA_VOLUME")
-            
-        # ---------------------------------- Options --------------------------------- #
         col.label(text="Options")
+        volumetric_icon = "OUTLINER_OB_VOLUME" if scn_props.volumetric_bool else "OUTLINER_DATA_VOLUME"
+        col.prop(scn_props, "volumetric_bool", icon=volumetric_icon)
+        
         col.label(text="Time of Day")
         col.prop(scn_props, "scene_brightness")
         col.prop(scn_props, "caustics_bool", icon="TRIA_UP")
         col.prop(scn_props, "motionblur_bool", icon="TRIA_UP")
-        col.prop(scn_props, "fastGI_bool", icon="TRIA_DOWN")
         col.operator("mcprep.optimize_scene", text="Optimize Scene")
     else:
         col.label(text= "Cycles Only >:C")
@@ -116,6 +86,13 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
     
     def execute(self, context):
+        global MAX_BOUNCES
+        MAX_BOUNCES = 8
+        
+        # ! Calling this twice seems to remove all unused materials
+        # TODO: find a better way of doing this
+        bpy.ops.outliner.orphans_purge()
+        bpy.ops.outliner.orphans_purge()
         prefs = util.get_preferences(context)
         cprefs = prefs.addons.get("cycles")
         scn_props = context.scene.optimizer_props
@@ -144,7 +121,6 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         Glossy = 0
         Transmissive = 0
         Volume = 0  
-        FastGI = False;
         
         """
         Volumetric Settings
@@ -178,9 +154,6 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         if scn_props.motionblur_bool:
             MotionBlur = True
             
-        if scn_props.fastGI_bool:
-            FastGI = True
-        # ------------------------------ Scene materials ----------------------------- #
         if scn_props.volumetric_bool:
             Volume = 2
             
@@ -282,15 +255,20 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         """
         Cycles Render Settings Optimizations
         """
-        mat_list = list(bpy.data.materials)
-        
-        for reflect_mat in conf.json_data["blocks"]["reflective"]:
-            if reflect_mat in mat_list:
+        for mat in bpy.data.materials:
+            matGen = util.nameGeneralize(mat.name)
+            canon, form = generate.get_mc_canonical_name(matGen)
+            if generate.checklist(canon, "reflective"):
+                print("found glossy")
                 Glossy += 1
-        
-        for glass_mat in conf.json_data["blocks"]["glass"]:
-            if glass_mat in mat_list:
+            if generate.checklist(canon, "glass"):
                 Transmissive += 1
+                
+        if Glossy > MAX_BOUNCES:
+            MAX_BOUNCES = Glossy
+        
+        if Transmissive > MAX_BOUNCES:
+            MAX_BOUNCES = Transmissive
         
         """
         Unique changes
@@ -309,11 +287,10 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         bpy.context.scene.render.use_motion_blur = MotionBlur
         bpy.context.scene.cycles.volume_bounces = Volume
         bpy.context.scene.cycles.diffuse_bounces = Diffuse
-        bpy.context.scene.cycles.use_fast_gi = FastGI
 
 
         """Other changes"""
-        bpy.context.scene.cycles.max_bounces = 8 
+        bpy.context.scene.cycles.max_bounces = MAX_BOUNCES 
         bpy.context.scene.cycles.preview_samples = 32
         bpy.context.scene.render.use_simplify = True
         bpy.context.scene.render.simplify_subdivision = 0
