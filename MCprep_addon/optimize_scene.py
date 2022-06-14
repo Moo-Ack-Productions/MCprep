@@ -26,40 +26,45 @@ from .materials import generate
 
 MAX_BOUNCES = 8
 class MCprepOptimizerProperties(bpy.types.PropertyGroup):
-
-	def scene_brightness(self, context):
-		itms = [
-        ("bright", "Scene is bright", "Use this setting if your scene is mostly bright"), 
-        ("dark", "Scene is dark", "Use this setting if your scene is mostly dark")
+    def scene_brightness(self, context):
+        itms = [
+            ("BRIGHT", "Scene is bright", "Use this setting if your scene is mostly bright"), 
+            ("DARK", "Scene is dark", "Use this setting if your scene is mostly dark")
         ]
-		return itms
+        return itms
 
     # --------------------------------- Caustics --------------------------------- #
-	caustics_bool = bpy.props.BoolProperty(
-		name="Caustics (Increases render times)",
+    caustics_bool = bpy.props.BoolProperty(
+        name="Caustics (Increases render times)",
         default=False,
         description="If checked allows cautics to be enabled"
-	)
-    
+    )
+
     # -------------------------------- Motion Blur ------------------------------- #
-	motionblur_bool = bpy.props.BoolProperty(
-		name="Motion Blur (increases render times)",
+    motionblur_bool = bpy.props.BoolProperty(
+        name="Motion Blur (increases render times)",
         default=False,
         description="If checked allows motion blur to be enabled"
-	)
-    
+    )
+
     # -------------------------- Materials in the scene -------------------------- #
-	volumetric_bool = bpy.props.BoolProperty(
-		name="Volumetrics" if util.bv30() else "Volumetrics (Increases render times)",
+    volumetric_bool = bpy.props.BoolProperty(
+        name="Volumetrics" if util.bv30() else "Volumetrics (Increases render times)",
         default=False
-	)
-    
+    )
+
     # ------------------------- Time of day in the scene ------------------------- #
-	scene_brightness : bpy.props.EnumProperty(
-		name="",
-		description="Time of day in the scene",
-		items=scene_brightness
-	)
+    scene_brightness : bpy.props.EnumProperty(
+        name="",
+        description="Time of day in the scene",
+        items=scene_brightness
+    )
+
+    # ----------------------------- Quality or speed ----------------------------- #
+    quality_vs_speed = bpy.props.BoolProperty(
+        name="Optimize based on Quality",
+        default=True
+    )
 
 def panel_draw(self, context):
     row = self.layout.row()
@@ -69,7 +74,9 @@ def panel_draw(self, context):
     if engine == 'CYCLES':
         col.label(text="Options")
         volumetric_icon = "OUTLINER_OB_VOLUME" if scn_props.volumetric_bool else "OUTLINER_DATA_VOLUME"
+        quality_icon    = "INDIRECT_ONLY_ON" if scn_props.quality_vs_speed else "INDIRECT_ONLY_OFF"
         col.prop(scn_props, "volumetric_bool", icon=volumetric_icon)
+        col.prop(scn_props, "quality_vs_speed", icon=quality_icon)
         
         col.label(text="Time of Day")
         col.prop(scn_props, "scene_brightness")
@@ -136,29 +143,22 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         """
         Motion blur, caustics, etc
         """
-        MotionBlur = False
-        ReflectiveCaustics = False 
-        RefractiveCaustics = False 
+        MotionBlur = scn_props.motionblur_bool
+        ReflectiveCaustics = scn_props.caustics_bool 
+        RefractiveCaustics = scn_props.caustics_bool 
         
         """
         Optimizer Settings
         """
-        Quality = True 
+        Quality = scn_props.quality_vs_speed 
         
         
         # -------------------------- Render engine settings -------------------------- #
-        if scn_props.caustics_bool:
-            ReflectiveCaustics = True 
-            RefractiveCaustics = True 
-        
-        if scn_props.motionblur_bool:
-            MotionBlur = True
-            
         if scn_props.volumetric_bool:
             Volume = 2
             
         # -------------------------------- Time of day ------------------------------- #
-        if scn_props.scene_brightness == "bright":
+        if scn_props.scene_brightness == "BRIGHT":
             NoiseThreshold = 0.2
         else:
             NoiseThreshold = 0.02
@@ -167,13 +167,11 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         if cycles_compute_device_type == "NONE":
             Samples = 128 
             if Quality:
-                NoiseThreshold = 0.05
                 MinimumSamples = 25 
                 FilterGlossy = 0.5
                 MaxSteps = 200
                 
             else:
-                NoiseThreshold = 0.09
                 MinimumSamples = 10
                 FilterGlossy = 1
                 MaxSteps = 50
@@ -185,13 +183,11 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         elif cycles_compute_device_type == "CUDA" or cycles_compute_device_type == "HIP":
             Samples = 128 
             if Quality:
-                NoiseThreshold = 0.02
                 MinimumSamples = 32 
                 FilterGlossy = 0.5
                 MaxSteps = 200
                 
             else:
-                NoiseThreshold = 0.06
                 MinimumSamples = 15
                 FilterGlossy = 1
                 MaxSteps = 70
@@ -202,13 +198,11 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         elif cycles_compute_device_type == "OPTIX":
             Samples = 128 
             if Quality:
-                NoiseThreshold = 0.02
                 MinimumSamples = 64 
                 FilterGlossy = 0.2
                 MaxSteps = 250
                 
             else:
-                NoiseThreshold = 0.04
                 MinimumSamples = 20
                 FilterGlossy = 0.8
                 MaxSteps = 80
@@ -220,13 +214,11 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
             if cycles_compute_device_type == "OPENCL":
                 Samples = 128 
                 if Quality:
-                    NoiseThreshold = 0.2
                     MinimumSamples = 32 
                     FilterGlossy = 0.9
                     MaxSteps = 100
                     
                 else:
-                    NoiseThreshold = 0.6
                     MinimumSamples = 15
                     FilterGlossy = 1
                     MaxSteps = 70
