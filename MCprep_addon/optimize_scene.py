@@ -180,14 +180,13 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
                 
             if util.get_cycles_version() == 1:
                 addon_utils.enable("render_auto_tile_size", default_set=True)
-                bpy.context.scene.ats_settings.cpu_choice = '32'
 
         
         elif cycles_compute_device_type == "CUDA" or cycles_compute_device_type == "HIP":
             if current_render_device == "CPU":
                 if has_active_device:
                     print("Detected GPU: Switching to GPU...")
-                    current_render_device = "GPU"
+                    bpy.context.scene.cycles.device = "GPU"
                     
             Samples = 128 
             if Quality:
@@ -204,13 +203,12 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
             
             if util.get_cycles_version() == 1:
                 addon_utils.enable("render_auto_tile_size", default_set=True)
-                bpy.context.scene.ats_settings.gpu_choice = '256'
 
         elif cycles_compute_device_type == "OPTIX":
             if current_render_device == "CPU":
                 if has_active_device:
                     print("Detected GPU: Switching to GPU...") 
-                    current_render_device = "GPU"
+                    bpy.context.scene.cycles.device = "GPU"
                     
             Samples = 128 
             if Quality:
@@ -227,14 +225,13 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
             
             if util.get_cycles_version() == 1:
                 addon_utils.enable("render_auto_tile_size", default_set=True)
-                bpy.context.scene.ats_settings.gpu_choice = '256'
         
         elif util.get_cycles_version() == 1:
             if cycles_compute_device_type == "OPENCL":
                 if current_render_device == "CPU":
                     if has_active_device:
                         print("Detected GPU: Switching to GPU...")
-                        current_render_device = "GPU"
+                        bpy.context.scene.cycles.device = "GPU"
                         
                 Samples = 128 
                 if Quality:
@@ -250,7 +247,6 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
                     MaxSteps = 70
                     
                 addon_utils.enable("render_auto_tile_size", default_set=True)
-                bpy.context.scene.ats_settings.gpu_choice = '256'
                 
         """
         Cycles Render Settings Optimizations
