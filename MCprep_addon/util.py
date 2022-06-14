@@ -185,19 +185,19 @@ def obj_copy(base, context=None, vertex_groups=True, modifiers=True):
         
 
 @functools.cache
-def getBV(major_version, minor_version):
+def min_bv(version):
 	if hasattr(bpy.app, "version"):
-		return True if bpy.app.version >= (major_version, minor_version) else False
+		return bpy.app.version >= version
 
 @functools.cache
 def bv28():
 	"""Check if blender 2.8, for layouts, UI, and properties. """
-	return getBV(2, 80)
+	return min_bv((2, 80))
 
 @functools.cache
 def bv30():
     """Check if we're dealing with Blender 3.0"""
-    return getBV(3, 00)
+    return min_bv((3, 00))
 
 @functools.cache
 def get_cycles_version():
