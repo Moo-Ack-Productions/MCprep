@@ -125,8 +125,8 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         Light Bounces
         """
         Diffuse = 2 # This is default because diffuse bounces don't need to be high 
-        Glossy = 0
-        Transmissive = 0
+        Glossy = 1
+        Transmissive = 1
         Volume = 0  
         
         """
