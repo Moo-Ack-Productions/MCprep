@@ -117,9 +117,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         """
         Sampling Settings
         """
-        Samples = 128
         NoiseThreshold = 0.2
-        MinimumSamples = 64
         
         """
         Light Bounces
@@ -181,14 +179,11 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 
         
         elif cycles_compute_device_type == "CUDA" or cycles_compute_device_type == "HIP":
-            Samples = 128 
             if Quality:
-                MinimumSamples = 32 
                 FilterGlossy = 0.5
                 MaxSteps = 200
                 
             else:
-                MinimumSamples = 15
                 FilterGlossy = 1
                 MaxSteps = 70
             
@@ -196,14 +191,11 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
                 addon_utils.enable("render_auto_tile_size", default_set=True)
 
         elif cycles_compute_device_type == "OPTIX":
-            Samples = 128 
             if Quality:
-                MinimumSamples = 64 
                 FilterGlossy = 0.2
                 MaxSteps = 250
                 
             else:
-                MinimumSamples = 20
                 FilterGlossy = 0.8
                 MaxSteps = 80
             
@@ -212,14 +204,11 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         
         elif util.bv30() is False:
             if cycles_compute_device_type == "OPENCL":
-                Samples = 128 
                 if Quality:
-                    MinimumSamples = 32 
                     FilterGlossy = 0.9
                     MaxSteps = 100
                     
                 else:
-                    MinimumSamples = 15
                     FilterGlossy = 1
                     MaxSteps = 70
                     
@@ -247,9 +236,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         Unique changes
         """
         
-        # bpy.context.scene.cycles.samples = Samples # ! It's best if we hold off on this until result based optimization is added
         bpy.context.scene.cycles.adaptive_threshold = NoiseThreshold
-        bpy.context.scene.cycles.adaptive_min_samples = MinimumSamples
         bpy.context.scene.cycles.blur_glossy = FilterGlossy
         bpy.context.scene.cycles.volume_max_steps = MaxSteps
         bpy.context.scene.cycles.glossy_bounces = Glossy
@@ -264,7 +251,6 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 
         """Other changes"""
         bpy.context.scene.cycles.max_bounces = MAX_BOUNCES 
-        bpy.context.scene.cycles.preview_samples = 32
         bpy.context.scene.render.use_simplify = True
         bpy.context.scene.render.simplify_subdivision = 0
         return {'FINISHED'}
