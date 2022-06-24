@@ -23,6 +23,7 @@ import random
 import bmesh
 from bpy_extras.io_utils import ImportHelper
 import bpy
+from mathutils import Vector
 
 from .. import conf
 from .. import util
@@ -48,6 +49,8 @@ IMG_SEQ = "img_seq"
 
 def add_geonode_area_effect(context, effect):
 	"""Create a persistent effect which is meant to emulate a wide-area effect.
+
+	Effect is of type: ListEffectsAssets.
 
 	Import a geonode collection from the effects_geonodes.blend file, and then
 	parent it to the camera. These geonodes should function such that the
@@ -97,9 +100,13 @@ def add_geonode_area_effect(context, effect):
 	util.set_active_object(context, new_obj)
 	util.select_set(new_obj, True)
 
+	return new_obj
+
 
 def add_area_particle_effect(context, effect, location):
 	"""Create a persistent effect over wide area using traditional particles.
+
+	Effect is of type: ListEffectsAssets.
 
 	Where geo nodes are not available (older blender versions) or if the user
 	prefers to have more control of the particle system being created after.
@@ -108,6 +115,52 @@ def add_area_particle_effect(context, effect, location):
 	amount per unit area. Ideally, the system could auto update the emission
 	count even as this object is scaled.
 	"""
+
+	# Create the plane.
+	mesh = get_or_create_plane_mesh("particle_plane")
+	obj = bpy.data.objects.new(effect.name, mesh)
+	util.obj_link_scene(obj, context)
+	obj.location = location
+	obj.scale = (40, 40, 40)
+
+	# Load the indicated particle system.
+	pre_systems = list(bpy.data.particles)
+	with bpy.data.libraries.load(effect.filepath) as (data_from, data_to):
+		for itm in data_from.particles:
+			if itm == effect.name:
+				data_to.particles.append(itm)
+	post_systems = list(bpy.data.particles)
+	imported_particles = list(set(post_systems) - set(pre_systems))[0]
+
+	# Assign the active object and selection state.
+	for sel_obj in bpy.context.selected_objects:
+		util.select_set(sel_obj, False)
+	util.set_active_object(context, obj)
+	util.select_set(obj, True)
+
+	# Assign the newly imported system, assign generalied settings.
+	bpy.ops.object.particle_system_add()
+	psystem = obj.particle_systems[-1]
+	psystem.settings = imported_particles
+	if util.bv28():
+		obj.show_instancer_for_render = False
+	else:
+		psystem.settings.use_render_emitter = False
+
+	# Update particle density to match the current timeline.
+	frames = psystem.settings.frame_end - psystem.settings.frame_start
+	density = psystem.settings.count / frames
+
+	early_offset = 30  # Start partciles before scene start.
+	psystem.settings.frame_start = context.scene.frame_start - early_offset
+	psystem.settings.frame_end = context.scene.frame_end
+	scene_frames = psystem.settings.frame_end - psystem.settings.frame_start
+	psystem.settings.count = density * scene_frames
+
+	# TODO: Attempt to account for a target size.
+	# TODO: Potentially parent to camera.
+
+	return obj
 
 
 def add_collection_effect(context, effect, location, frame):
@@ -119,13 +172,18 @@ def add_collection_effect(context, effect, location, frame):
 	shifted by the indicated number of frames over. It is then placed as an
 	expanded collection. No instancing because there's no savings.
 
+	Effect is of type: ListEffectsAssets.
+
 	Could potentially offer to 'prebake' so that once its loaded, it auto bakes
 	any particles the collection may be using.
 	"""
 
 
 def add_image_sequence_effect(context, effect, location, frame):
-	"""Spawn a short-term sequence of individual images at a point in time."""
+	"""Spawn a short-term sequence of individual images at a point in time.
+
+	Effect is of type: ListEffectsAssets.
+	"""
 
 	# Could implement as an actual image sequence texture (lowest 'cost'),
 	# or have it do import item on each frame, and then create empty instances
@@ -302,7 +360,7 @@ def get_or_create_plane_mesh(mesh_name, uvs=[]):
 		[0.5, -0.5, 0],
 		[-0.5, -0.5, 0]
 	]
-	for v in verts:
+	for v in reversed(verts):
 		bm.verts.new(v)
 
 	if not uvs:
@@ -313,7 +371,7 @@ def get_or_create_plane_mesh(mesh_name, uvs=[]):
 	face = bm.faces.new(bm.verts)
 	face.normal_update()
 
-	for i, loop in enumerate(face.loops):
+	for i, loop in enumerate(reversed(face.loops)):
 		loop[uv_layer].uv = uvs[i]
 
 	bm.to_mesh(mesh)
@@ -696,11 +754,13 @@ class MCPREP_OT_global_effect(bpy.types.Operator):
 				continue
 			if effect.effect_type == GEO_AREA:
 				display_type = "geometry node effect"
+				short_type = " (Geo nodes)"
 			else:
 				display_type = "particle system effect"
+				short_type = " (Particles)"
 			elist.append((
 				str(effect.index),
-				effect.name,
+				effect.name + short_type,
 				"Add {} {} from {}".format(
 					effect.name,
 					display_type,
@@ -730,12 +790,21 @@ class MCPREP_OT_global_effect(bpy.types.Operator):
 				"Added geo nodes, edit modifier for further control")
 		elif effect.effect_type == PARTICLE_AREA:
 			cam = context.scene.camera
+			use_camera = False
+			vartical_offset = Vector([0, 0, 15])
 			if cam:
-				location = context.scene.camera.location
+				location = context.scene.camera.location + vartical_offset
+				use_camera = True
 			else:
 				location = util.get_cuser_location(context)
-			add_area_particle_effect(context, effect, location)
-			self.report({"ERROR"}, "Not yet implemented")
+
+			obj = add_area_particle_effect(context, effect, location)
+			if use_camera:
+				const = obj.constraints.new('COPY_LOCATION')
+				const.target = cam
+				const.use_z = False
+				obj.location = location
+
 		self.track_param = effect.name
 		return {'FINISHED'}
 
