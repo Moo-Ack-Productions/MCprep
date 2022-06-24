@@ -18,7 +18,10 @@
 
 import json
 import os
+import random
 
+import bmesh
+from bpy_extras.io_utils import ImportHelper
 import bpy
 
 from .. import conf
@@ -144,10 +147,45 @@ def add_particle_planes_effect(context, image_path, location, frame):
 	period of time. Ideal for footfalls, impacts, etc.
 	"""
 
+	# Add object, use lower level functions to make it run faster.
+	f_name = os.path.splitext(os.path.basename(image_path))[0]
+	base_name = "{}_frame_{}".format(f_name, frame)
+
+	mesh = get_or_create_plane_mesh("particle_plane")
+	obj = bpy.data.objects.new(base_name, mesh)
+	util.obj_link_scene(obj, context)
+	# TODO: link to currently active collection.
+	obj.location = location
+
+	# Select and make active.
+	# Setting active here ensures the emitter also gets the texture, making it
+	# easier to tell which particles it emits.
+	for sel_obj in bpy.context.selected_objects:
+		util.select_set(sel_obj, False)
+	util.set_active_object(context, obj)
+	util.select_set(obj, True)
+
+	# Generate the collection/group of objects to be spawned.
+	img = bpy.data.images.get(f_name)
+	img_abs_path = bpy.path.abspath(image_path)
+	if not img or not bpy.path.abspath(img.filepath) == img_abs_path:
+		# Check if any others loaded, otherwise just load new.
+		for this_img in bpy.data.images:
+			if bpy.path.abspath(this_img.filepath) == img_abs_path:
+				img = this_img
+				break
+		if not img:
+			img = bpy.data.images.load(image_path)
+
+	pcoll = get_or_create_particle_meshes_coll(
+		context, f_name, img)
+
+	apply_particle_settings(obj, frame, base_name, pcoll)
+
+
 # -----------------------------------------------------------------------------
 # Core effects supportive functions
 # -----------------------------------------------------------------------------
-
 
 def geo_update_params(context, effect, geo_mod):
 	"""Update the paramters of the applied geonode effect.
@@ -240,6 +278,153 @@ def geo_fields_from_json(effect, jpath):
 	if not geo_fields:
 		print("Failed to load presets for this effect from json")
 	return geo_fields
+
+
+def get_or_create_plane_mesh(mesh_name, uvs=[]):
+	"""Generate a 1x1 plane with UVs stretched out to ends, cache if exists.
+
+	Arg `uvs` represents the 4 coordinate values clockwise from top left of the
+	mesh, with values of 0-1.
+	"""
+
+	# Create or fetch mesh, returned existing cache if it exists.
+	mesh = bpy.data.meshes.get(mesh_name)
+	if mesh is None:
+		mesh = bpy.data.meshes.new(mesh_name)
+	else:
+		return mesh
+
+	bm = bmesh.new()
+	uv_layer = bm.loops.layers.uv.verify()
+
+	verts = [
+		[-0.5, 0.5, 0],  # Top left, clockwise down.
+		[0.5, 0.5, 0],
+		[0.5, -0.5, 0],
+		[-0.5, -0.5, 0]
+	]
+	for v in verts:
+		bm.verts.new(v)
+
+	if not uvs:
+		uvs = [[0, 0], [1, 0], [1, 1], [0, 1]]
+	if len(uvs) != 4:
+		raise Exception("Wrong number of coords for UVs: " + str(len(uvs)))
+
+	face = bm.faces.new(bm.verts)
+	face.normal_update()
+
+	for i, loop in enumerate(face.loops):
+		loop[uv_layer].uv = uvs[i]
+
+	bm.to_mesh(mesh)
+	bm.free()
+
+	return mesh
+
+
+def get_or_create_particle_meshes_coll(context, particle_name, img):
+	"""Generate a selection of subsets of a given image for use in partucles.
+
+	The goal is that instead of spawning entire, complete UVs of the texture,
+	we spawn little subsets of the particles.
+
+	Returns a collection or group depending on bpy version.
+	"""
+	# Check if it exists already, and if it has at least one object,
+	# assume we'll just use those.
+	particle_key = particle_name + "_particles"
+	particle_coll = util.collections().get(particle_key)
+	if particle_coll:
+		# Check if any objects.
+		if util.bv28() and len(particle_coll.objects) > 0:
+			return particle_coll
+
+	# Create the collection/group.
+	if util.bv28():
+		particle_view = util.get_or_create_viewlayer(context, particle_key)
+		particle_view.exclude = True
+	else:
+		particle_group = bpy.data.groups.new(name=particle_key)
+
+	# Get or create the material.
+	if particle_name in bpy.data.materials:
+		mat = bpy.data.materials.get(particle_name)
+	else:
+		bpy.ops.mcprep.load_material(filepath=img.filepath)
+		mat = bpy.data.materials.get(particle_name)
+
+	# The different variations of UV slices to create, clockwise from top left.
+	num = 4.0  # Number created is this squared.
+	uv_variants = {}
+
+	for x in range(int(num)):
+		for y in range(int(num)):
+			this_key = "{}-{}".format(x, y)
+			# Reference: [0, 0], [1, 0], [1, 1], [0, 1]
+			uv_variants[this_key] = [
+				[x / num, y / num],
+				[(x + 1) / num, y / num],
+				[(x + 1) / num, (y + 1) / num],
+				[x / num, (y + 1) / num]
+			]
+
+	# Decide randomly which ones to create (making all would be excessive).
+	while len(uv_variants) > 6:
+		keys = list(uv_variants)
+		del_index = random.randrange(len(keys))
+		print("Delete: ", del_index, keys[del_index])
+		del uv_variants[keys[del_index]]
+
+	print("all uv variants: ", list(uv_variants))
+	for key in uv_variants:
+		name = particle_name + "_particle_" + key
+		print("Gen this UV: ", uv_variants[key])
+		mesh = get_or_create_plane_mesh(name, uvs=uv_variants[key])
+		obj = bpy.data.objects.new(name, mesh)
+		obj.data.materials.append(mat)
+
+		if util.bv28():
+			util.move_to_collection(obj, particle_view.collection)
+		else:
+			particle_group.objects.link(obj)
+
+	if util.bv28():
+		return particle_view.collection
+	else:
+		return particle_group
+
+
+def apply_particle_settings(obj, frame, base_name, pcoll):
+	"""Update the particle settings for particle planes."""
+	obj.scale = (0.5, 0.5, 0.5)  # Tighen up the area it spawns over.
+
+	bpy.ops.object.particle_system_add()  # Must be active object.
+	psystem = obj.particle_systems[-1]  # = ... # How to gen new system?
+
+	psystem.name = base_name
+	psystem.seed = frame
+	psystem.settings.count = 5
+	psystem.settings.frame_start = frame
+	psystem.settings.frame_end = frame + 1
+	psystem.settings.lifetime = 30
+	psystem.settings.lifetime_random = 0.2
+	psystem.settings.emit_from = 'FACE'
+	psystem.settings.distribution = 'RAND'
+	psystem.settings.normal_factor = -1.5
+	psystem.settings.use_rotations = True
+	psystem.settings.rotation_factor_random = 1
+	psystem.settings.particle_size = 0.2
+	psystem.settings.factor_random = 1
+
+	if util.bv28():
+		obj.show_instancer_for_render = False
+		psystem.settings.render_type = 'COLLECTION'
+		psystem.settings.instance_collection = pcoll
+	else:
+		psystem.settings.use_render_emitter = False
+		psystem.settings.render_type = 'GROUP'
+		psystem.settings.dupli_group = pcoll
 
 
 # -----------------------------------------------------------------------------
@@ -615,19 +800,22 @@ class MCPREP_OT_instant_effect(bpy.types.Operator):
 		return {'CANCELLED'}
 
 
-class MCPREP_OT_spawn_particle_planes(bpy.types.Operator):
+class MCPREP_OT_spawn_particle_planes(bpy.types.Operator, ImportHelper):
 	"""Create a particle system from a selected image input"""
 	bl_idname = "mcprep.spawn_particle_planes"
 	bl_label = "Spawn Particle Planes"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	filepath = bpy.props.StringProperty(
-		default="",
-		subtype="FILE_PATH",
-		options={'HIDDEN', 'SKIP_SAVE'})
 	location = bpy.props.FloatVectorProperty(
 		default=(0, 0, 0), name="Location")
 	frame = bpy.props.IntProperty(default=0, name="Frame")
+
+	# Importer helper
+	filter_glob = bpy.props.StringProperty(
+		default="*.png;*.jpg;*.jpeg;*.tiff",
+		options={'HIDDEN'})
+	fileselectparams = "use_filter_blender"
+
 	skipUsage = bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
@@ -642,7 +830,6 @@ class MCPREP_OT_spawn_particle_planes(bpy.types.Operator):
 		add_particle_planes_effect(
 			context, self.filepath, self.location, self.frame)
 
-		self.report({"ERROR"}, "Not yet implemented")
 		self.track_param = name
 		return {'FINISHED'}
 

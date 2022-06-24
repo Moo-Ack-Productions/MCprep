@@ -30,6 +30,9 @@ import bpy
 from . import conf
 
 
+# Commonly used name for an excluded collection in Blender 2.8+
+SPAWNER_EXCLUDE = "Spawner Exclude"
+
 # -----------------------------------------------------------------------------
 # GENERAL SUPPORTING FUNCTIONS (no registration required)
 # -----------------------------------------------------------------------------
@@ -708,7 +711,7 @@ def move_assets_to_excluded_layer(context, collections):
 
 	# Then, setup the exclude view layer
 	spawner_exclude_vl = get_or_create_viewlayer(
-		context, "Spawner Exclude")
+		context, SPAWNER_EXCLUDE)
 	spawner_exclude_vl.exclude = True
 
 	for grp in collections:
