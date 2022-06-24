@@ -25,7 +25,7 @@ JMC_1_13 = "https://raw.githubusercontent.com/jmc2obj/j-mc-2-obj/0fb2bd742f0d64b
 def save_file_str(url):
 	"""Save to temp location next to script."""
 	request = urllib.request.Request(url)
-	result = urllib.request.urlopen(request)
+	result = urllib.request.urlopen(request, timeout=10)  # Fail after 5s
 	result_string = result.read()
 	result.close()
 	return result_string.decode()
