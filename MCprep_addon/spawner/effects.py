@@ -74,7 +74,6 @@ def add_geonode_area_effect(context, effect):
 			ndg for ndg in bpy.data.node_groups
 			if ndg.type == "GEOMETRY" and ndg.name == effect.subpath]
 		diff = list(set(post_geonodes) - set(existing_geonodes))
-		print("DIFF OF geo node groups:", diff)
 		this_nodegroup = diff[0]
 	else:
 		this_nodegroup = existing_geonodes[0]
@@ -351,7 +350,7 @@ def get_or_create_particle_meshes_coll(context, particle_name, img):
 	if particle_name in bpy.data.materials:
 		mat = bpy.data.materials.get(particle_name)
 	else:
-		bpy.ops.mcprep.load_material(filepath=img.filepath)
+		bpy.ops.mcprep.load_material(filepath=img.filepath, skipUsage=True)
 		mat = bpy.data.materials.get(particle_name)
 
 	# The different variations of UV slices to create, clockwise from top left.
@@ -373,13 +372,10 @@ def get_or_create_particle_meshes_coll(context, particle_name, img):
 	while len(uv_variants) > 6:
 		keys = list(uv_variants)
 		del_index = random.randrange(len(keys))
-		print("Delete: ", del_index, keys[del_index])
 		del uv_variants[keys[del_index]]
 
-	print("all uv variants: ", list(uv_variants))
 	for key in uv_variants:
 		name = particle_name + "_particle_" + key
-		print("Gen this UV: ", uv_variants[key])
 		mesh = get_or_create_plane_mesh(name, uvs=uv_variants[key])
 		obj = bpy.data.objects.new(name, mesh)
 		obj.data.materials.append(mat)
