@@ -152,6 +152,8 @@ def add_area_particle_effect(context, effect, location):
 	density = psystem.settings.count / frames
 
 	early_offset = 30  # Start partciles before scene start.
+	if "snow" in effect.name.lower():
+		early_offset = 150  # Much slower partciles need more time.
 	psystem.settings.frame_start = context.scene.frame_start - early_offset
 	psystem.settings.frame_end = context.scene.frame_end
 	scene_frames = psystem.settings.frame_end - psystem.settings.frame_start
