@@ -1628,7 +1628,11 @@ class mcprep_testing():
 	def particle_plane_effect_spawner(self):
 		"""Test the particle plane variant of effect spawning works."""
 		self._clear_scene()
-		res = bpy.ops.mcprep.spawn_particle_planes()
+
+		filepath = os.path.join(
+			bpy.context.scene.mcprep_texturepack_path,
+			"assets", "minecraft", "textures", "block", "dirt.png")
+		res = bpy.ops.mcprep.spawn_particle_planes(filepath=filepath)
 
 		if res != {'FINISHED'}:
 			return "Did not end with finished result"
@@ -1827,7 +1831,10 @@ class mcprep_testing():
 		# add object
 		bpy.ops.mesh.primitive_cube_add()
 
-		bpy.ops.mcprep.load_material()
+		scn_props = bpy.context.scene.mcprep_props
+		itm = scn_props.material_list[scn_props.material_list_index]
+		path = itm.path
+		bpy.ops.mcprep.load_material(filepath=path)
 
 		# validate that the loaded material has a name matching current list
 		mat = bpy.context.object.active_material

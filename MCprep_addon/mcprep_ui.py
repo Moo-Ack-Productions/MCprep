@@ -944,8 +944,9 @@ class MCPREP_PT_materials(bpy.types.Panel):
 			col = layout.column(align=True)
 			row = col.row(align=True)
 			row.scale_y = 1.5
-			name = scn_props.material_list[scn_props.material_list_index].name
-			row.operator("mcprep.load_material", text="Load: " + name)
+			mat = scn_props.material_list[scn_props.material_list_index]
+			ops = row.operator("mcprep.load_material", text="Load: " + mat.name)
+			ops.filepath = mat.path
 		else:
 			box = col.box()
 			b_row = box.row()
@@ -958,7 +959,7 @@ class MCPREP_PT_materials(bpy.types.Panel):
 			col.enabled = False
 			row = col.row(align=True)
 			row.scale_y = 1.5
-			row.operator("mcprep.load_material", text="Load material")
+			ops = row.operator("mcprep.load_material", text="Load material")
 
 
 class MCPREP_PT_materials_subsettings(bpy.types.Panel):
@@ -1429,6 +1430,13 @@ def effects_spawner(self, context):
 			text="Reload assets", icon="ERROR")
 
 	ops = col.operator("mcprep.spawn_particle_planes")
+	blockdir = os.path.join(
+		context.scene.mcprep_texturepack_path,
+		"assets", "minecraft", "textures", "block", "dirt.png")
+	if os.path.isfile(blockdir):
+		ops.filepath = blockdir
+	else:
+		ops.filepath = context.scene.mcprep_texturepack_path
 	ops.location = util.get_cuser_location(context)
 	ops.frame = context.scene.frame_current
 
