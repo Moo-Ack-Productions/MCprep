@@ -16,13 +16,14 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from subprocess import Popen, PIPE
 import json
 import operator
 import os
 import platform
 import random
+import re
 import subprocess
-from subprocess import Popen, PIPE
 
 import bpy
 
@@ -487,6 +488,18 @@ def get_or_create_viewlayer(context, collection_name):
 		# assumes added to scene's active view layer root via link above
 		response_vl = master_vl.children[new_coll.name]
 	return response_vl
+
+
+def natural_sort(elements):
+	"""Use human or natural sorting for subnumbers within string list."""
+	def convert(text):
+		return int(text) if text.isdigit() else text.lower()
+
+	def alphanum_key(key):
+		return [convert(c) for c in re.split('([0-9]+)', key)]
+		# or return [ convert(c) for c in re.split(r'(\d+)', text) ]
+
+	return sorted(elements, key=alphanum_key)
 
 
 # -----------------------------------------------------------------------------

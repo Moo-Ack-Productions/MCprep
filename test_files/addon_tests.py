@@ -22,16 +22,17 @@
 # ##### END GPL LICENSE BLOCK #####
 
 
-import bpy
-import traceback
-
-import os
-import sys
-import io
 from contextlib import redirect_stdout
 import importlib
-import tempfile
+import io
+import os
 import shutil
+import sys
+import tempfile
+import time
+import traceback
+
+import bpy
 from mathutils import Vector
 
 TEST_FILE = "test_results.tsv"
@@ -1618,10 +1619,28 @@ class mcprep_testing():
 		if post_count == 0:
 			return "Should have more effects loaded after reload"
 
-		effect = [x for x in scn_props.effects_list if x.effect_type == etype][0]
+		# effects = [x for x in scn_props.effects_list if x.effect_type == etype]
+
+		# Find the one with at least 10 frames
+		effect_name = "Big smoke"
+		effect = None
+		for this_effect in scn_props.effects_list:
+			if this_effect.effect_type != etype:
+				continue
+			if this_effect.name == effect_name:
+				effect = this_effect
+
+		if not effect:
+			return "Failed to fetch {} target effect".format(effect_name)
+
+		t0 = time.time()
 		res = bpy.ops.mcprep.spawn_instant_effect(effect_id=str(effect.index))
 		if res != {'FINISHED'}:
 			return "Did not end with finished result"
+
+		t1 = time.time()
+		if t1 - t0 > 1.0:
+			return "Spawning took over 1 second for sequence effect"
 
 		# TODO: Further checks it actually loaded the effect.
 
