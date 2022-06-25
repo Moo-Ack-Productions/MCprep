@@ -41,6 +41,11 @@ PARTICLE_AREA = "particle_area"
 COLLECTION = "collection"
 IMG_SEQ = "img_seq"
 
+# Collection name for effects.
+EFFECT_EXCLUDE = "Effects Exclude"
+
+EXTENSIONS = [".png", ".jpg", ".jpeg"]
+
 
 # -----------------------------------------------------------------------------
 # Core effects types
@@ -194,6 +199,7 @@ def add_image_sequence_effect(context, effect, location, frame, speed):
 	images = [
 		img for img in os.listdir(basepath)
 		if img.startswith(root) and os.path.isfile(os.path.join(basepath, img))
+		and os.path.splitext(img)[-1].lower() in EXTENSIONS
 	]
 
 	if not images:
@@ -203,10 +209,17 @@ def add_image_sequence_effect(context, effect, location, frame, speed):
 	human_sorted = util.natural_sort(images)
 
 	# Create the collection to add objects into.
-	keyname = "{}_frame_{}".format(effect.name, frame)
+	keyname = "{}_frame_{}@{:.2f}".format(effect.name, frame, speed)
+
 	if util.bv28():
-		view = util.get_or_create_viewlayer(context, keyname)
-		seq_coll = view.collection
+		# Move the source collection (world center) into excluded coll
+		effects_vl = util.get_or_create_viewlayer(context, EFFECT_EXCLUDE)
+		effects_vl.exclude = True
+
+		seq_coll = bpy.data.collections.get(keyname)
+		if not seq_coll:
+			seq_coll = bpy.data.collections.new(name=keyname)
+			effects_vl.collection.children.link(seq_coll)
 	else:
 		seq_coll = bpy.data.groups.new(keyname)
 
@@ -236,25 +249,26 @@ def add_image_sequence_effect(context, effect, location, frame, speed):
 			obj.location = Vector([0, 0, 0])
 
 			# Set the animation for visibility for the range of frames.
-			def keyframe_current_visibility(context, obj):
+			def keyframe_current_visibility(context, obj, state):
 				frame = context.scene.frame_current
+
+				obj.hide_render = state
+				if util.bv28():
+					obj.hide_viewport = state
+					obj.keyframe_insert(data_path="hide_viewport", frame=frame)
+				else:
+					obj.hide = state
+					obj.keyframe_insert(data_path="hide", frame=frame)
 				obj.keyframe_insert(data_path="hide_render", frame=frame)
-				obj.keyframe_insert(data_path="hide_viewport", frame=frame)
 
 			context.scene.frame_current = target_frame - 1
-			obj.hide_render = True
-			obj.hide_viewport = True
-			keyframe_current_visibility(context, obj)
+			keyframe_current_visibility(context, obj, True)
 
 			context.scene.frame_current = target_frame
-			obj.hide_render = False
-			obj.hide_viewport = False
-			keyframe_current_visibility(context, obj)
+			keyframe_current_visibility(context, obj, False)
 
 			context.scene.frame_current = end_frame
-			obj.hide_render = True
-			obj.hide_viewport = True
-			keyframe_current_visibility(context, obj)
+			keyframe_current_visibility(context, obj, True)
 
 			if util.bv28():
 				util.move_to_collection(obj, seq_coll)
@@ -279,6 +293,11 @@ def add_image_sequence_effect(context, effect, location, frame, speed):
 		img = os.path.join(basepath, human_sorted[img_index])
 		img_block = bpy.data.images.load(img, check_existing=True)
 		instance.data = img_block
+
+	if util.bv28():
+		# Move the new object into the active layer.
+		util.move_to_collection(instance, context.collection)
+	# TODO: if not bv28, unlink the src group objects from the scene.
 
 	return instance
 
@@ -729,7 +748,6 @@ def load_image_sequence_effects(context):
 	mcprep_props = context.scene.mcprep_props
 
 	resource_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
-	extensions = [".png", ".jpg", ".jpeg"]
 
 	# Check levels
 	lvl_0 = os.path.join(resource_folder, "particle")
@@ -755,7 +773,7 @@ def load_image_sequence_effects(context):
 		os.path.splitext(fname)[0].rsplit("_", 1)[0]
 		for fname in rfiles
 		if os.path.isfile(os.path.join(resource_folder, fname))
-		and os.path.splitext(fname)[-1].lower() in extensions
+		and os.path.splitext(fname)[-1].lower() in EXTENSIONS
 	]
 	effect_files = list(set(effect_files))
 
@@ -781,7 +799,7 @@ def load_image_sequence_effects(context):
 			for fname in rfiles
 			if os.path.isfile(os.path.join(resource_folder, fname))
 			and fname.startswith(itm)
-			and os.path.splitext(fname)[-1].lower() in extensions
+			and os.path.splitext(fname)[-1].lower() in EXTENSIONS
 		]
 		if effect_files:
 			# 0 if 1 item, otherwise greater side of median.
