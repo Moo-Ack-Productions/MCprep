@@ -181,19 +181,106 @@ def add_collection_effect(context, effect, location, frame):
 	"""
 
 
-def add_image_sequence_effect(context, effect, location, frame):
+def add_image_sequence_effect(context, effect, location, frame, speed):
 	"""Spawn a short-term sequence of individual images at a point in time.
 
 	Effect is of type: ListEffectsAssets.
 	"""
 
-	# Could implement as an actual image sequence texture (lowest 'cost'),
-	# or have it do import item on each frame, and then create empty instances
-	# placed in time so it's spaced out as desired. This would also allow for
-	# adding 'thicknes' to the effect if ever wanted, which is interesting.
+	# Get the list of explicit files.
+	basepath = os.path.dirname(effect.filepath)
+	root = os.path.basename(effect.filepath)
+	print(root, "--", effect.filepath)
+	images = [
+		img for img in os.listdir(basepath)
+		if img.startswith(root) and os.path.isfile(os.path.join(basepath, img))
+	]
 
-	# Examples include: Sword swing, bubble popping. By default loaded from
-	# the textures/particle folder, where each frame is already its own image.
+	if not images:
+		raise Exception("Failed to load images in question: " + root)
+
+	# Implement human sorting, such that img_2.png is before img_11.png
+	human_sorted = util.natural_sort(images)
+
+	# Create the collection to add objects into.
+	keyname = "{}_frame_{}".format(effect.name, frame)
+	if util.bv28():
+		view = util.get_or_create_viewlayer(context, keyname)
+		seq_coll = view.collection
+	else:
+		seq_coll = bpy.data.groups.new(keyname)
+
+	if len(seq_coll.objects) != len(human_sorted):
+		# Generate the items before instancing collection/group.
+		framerate = 1 / speed
+		frames_added = []
+
+		for i, img in enumerate(human_sorted):
+			target_frame = int(frame + i * framerate)
+			end_frame = int(frame + (i + 1) * framerate)
+			if target_frame in frames_added:
+				continue
+			else:
+				frames_added.append(target_frame)
+
+			this_file = os.path.join(basepath, img)
+			pre_objs = list(bpy.data.objects)
+			bpy.ops.mcprep.spawn_item_file(filepath=this_file, skipUsage=True)
+			post_objs = list(bpy.data.objects)
+			new = list(set(post_objs) - set(pre_objs))
+
+			if not new or len(new) != 1:
+				print("Error fetching new object for frame ", target_frame)
+				continue
+			obj = new[0]
+			obj.location = Vector([0, 0, 0])
+
+			# Set the animation for visibility for the range of frames.
+			def keyframe_current_visibility(context, obj):
+				frame = context.scene.frame_current
+				obj.keyframe_insert(data_path="hide_render", frame=frame)
+				obj.keyframe_insert(data_path="hide_viewport", frame=frame)
+
+			context.scene.frame_current = target_frame - 1
+			obj.hide_render = True
+			obj.hide_viewport = True
+			keyframe_current_visibility(context, obj)
+
+			context.scene.frame_current = target_frame
+			obj.hide_render = False
+			obj.hide_viewport = False
+			keyframe_current_visibility(context, obj)
+
+			context.scene.frame_current = end_frame
+			obj.hide_render = True
+			obj.hide_viewport = True
+			keyframe_current_visibility(context, obj)
+
+			if util.bv28():
+				util.move_to_collection(obj, seq_coll)
+			else:
+				seq_coll.objects.link(obj)
+
+	context.scene.frame_current = frame
+
+	# Finalize creation of the instances.
+	instance = util.addGroupInstance(seq_coll.name, location)
+	if hasattr(instance, "empty_draw_size"):
+		instance.empty_draw_size = 0.25
+	else:
+		instance.empty_display_size = 1.0
+		instance.empty_display_type = 'IMAGE'
+		instance.use_empty_image_alpha = True
+		instance.color[3] = 0.1
+
+		# Load in the image to display in place of the empty.
+		img_index = int(len(human_sorted) / 2)
+		img_index = min(img_index, len(human_sorted) - 1)
+		img = os.path.join(basepath, human_sorted[img_index])
+		img_block = bpy.data.images.load(img, check_existing=True)
+		instance.data = img_block
+
+	return instance
 
 
 def add_particle_planes_effect(context, image_path, location, frame):
@@ -202,7 +289,7 @@ def add_particle_planes_effect(context, image_path, location, frame):
 	This is the only effect type that does not get pre-loaded into a list. The
 	user is prompted for an image, and this is then imported, chopped into a
 	few smaller square pieces, and then this collection is used as a source for
-	a particle system that emits some number of particles over a 1-3 frame
+	a particle system that emits some number of particles over a 1 frame
 	period of time. Ideal for footfalls, impacts, etc.
 	"""
 
@@ -665,17 +752,19 @@ def load_image_sequence_effects(context):
 	# List all files and reduce to basename: fname_01.png to fname.
 	rfiles = os.listdir(resource_folder)
 	effect_files = [
-		os.path.splitext(fname)[0].split("_")[0]
+		os.path.splitext(fname)[0].rsplit("_", 1)[0]
 		for fname in rfiles
 		if os.path.isfile(os.path.join(resource_folder, fname))
 		and os.path.splitext(fname)[-1].lower() in extensions
 	]
 	effect_files = list(set(effect_files))
 
+	effect_files = sorted(effect_files)
+
 	for itm in effect_files:
 		effect = mcprep_props.effects_list.add()
 		effect.effect_type = "img_seq"
-		effect.name = itm.capitalize()
+		effect.name = itm.replace("_", " ").capitalize()
 		effect.description = "Instance the {} particle aniamted sequence".format(
 			itm)
 
@@ -841,6 +930,7 @@ class MCPREP_OT_instant_effect(bpy.types.Operator):
 	effect_id = bpy.props.EnumProperty(items=effects_enum, name="Effect")
 	location = bpy.props.FloatVectorProperty(default=(0, 0, 0), name="Location")
 	frame = bpy.props.IntProperty(default=0, name="Frame")
+	speed = bpy.props.FloatProperty(default=1.0, min=0.1, name="Speed")
 	skipUsage = bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	@classmethod
@@ -859,12 +949,12 @@ class MCPREP_OT_instant_effect(bpy.types.Operator):
 			add_collection_effect(
 				context, effect, self.location, self.frame)
 			self.report({"ERROR"}, "Not yet implemented")
+			return {'CANCELLED'}
 		elif effect.effect_type == "img_seq":
-			add_image_sequence_effect(
-				context, effect, self.location, self.frame)
-			self.report({"ERROR"}, "Not yet implemented")
+			inst = add_image_sequence_effect(
+				context, effect, self.location, self.frame, self.speed)
 		self.track_param = effect.name
-		return {'CANCELLED'}
+		return {'FINISHED'}
 
 
 class MCPREP_OT_spawn_particle_planes(bpy.types.Operator, ImportHelper):
