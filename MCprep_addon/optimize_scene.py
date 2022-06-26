@@ -105,119 +105,115 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 			current_render_device = bpy.context.scene.cycles.device
 
 		# Sampling Settings.
-		NoiseThreshold = 0.2
+		noise_threshold = 0.2
 
 		# Light Bounces.
-		Diffuse = 2 # This is default because diffuse bounces don't need to be high 
-		Glossy = 1
-		Transmissive = 1
-		Volume = 0
+		diffuse = 2  # This is default because diffuse bounces don't need to be high.
+		glossy = 1
+		transmissive = 1
+		volume = 0
 
-		"""
-		Volumetric Settings
-		"""
-		MaxSteps = 100
+		# Volumetric Settings.
+		max_steps = 100
 
-		"""
-		Filter Glossy and clamping settings
-		"""
-		FilterGlossy = 1
-		ClampingIndirect = 1
+		# Filter Glossy and clamping settings.
+		filter_glossy = 1
+		clamping_indirect = 1
 
 		# Motion blur, caustics, etc.
-		MotionBlur = scn_props.motionblur_bool
-		ReflectiveCaustics = scn_props.caustics_bool
+		motion_blur = scn_props.motionblur_bool
+		reflective_caustics = scn_props.caustics_bool
+		refractive_caustics = scn_props.caustics_bool
 
 		# Optimizer Settings.
-		Quality = scn_props.quality_vs_speed
+		quality = scn_props.quality_vs_speed
 
 		# Render engine settings.
 		if scn_props.volumetric_bool:
-			Volume = 2
+			volume = 2
 
 		# Time of day.
 		if scn_props.scene_brightness == "BRIGHT":
-			NoiseThreshold = 0.2
+			noise_threshold = 0.2
 		else:
-			NoiseThreshold = 0.02
+			noise_threshold = 0.02
 
 		# Compute device.
 		if cycles_compute_device_type == "NONE":
-			if Quality:
-				FilterGlossy = 0.5
-				MaxSteps = 200
+			if quality:
+				filter_glossy = 0.5
+				max_steps = 200
 
 			else:
-				FilterGlossy = 1
-				MaxSteps = 50
+				filter_glossy = 1
+				max_steps = 50
 
 			if util.bv30() is False:
 				addon_utils.enable("render_auto_tile_size", default_set=True)
 
 		elif cycles_compute_device_type in ("CUDA", "HIP"):
-			if Quality:
-				FilterGlossy = 0.5
-				MaxSteps = 200
+			if quality:
+				filter_glossy = 0.5
+				max_steps = 200
 
 			else:
-				FilterGlossy = 1
-				MaxSteps = 70
+				filter_glossy = 1
+				max_steps = 70
 
 			if util.bv30() is False:
 				addon_utils.enable("render_auto_tile_size", default_set=True)
 
 		elif cycles_compute_device_type == "OPTIX":
-			if Quality:
-				FilterGlossy = 0.2
-				MaxSteps = 250
+			if quality:
+				filter_glossy = 0.2
+				max_steps = 250
 
 			else:
-				FilterGlossy = 0.8
-				MaxSteps = 80
+				filter_glossy = 0.8
+				max_steps = 80
 
 			if util.bv30() is False:
 				addon_utils.enable("render_auto_tile_size", default_set=True)
 
 		elif util.bv30() is False:
 			if cycles_compute_device_type == "OPENCL":
-				if Quality:
-					FilterGlossy = 0.9
-					MaxSteps = 100
+				if quality:
+					filter_glossy = 0.9
+					max_steps = 100
 
 				else:
-					FilterGlossy = 1
-					MaxSteps = 70
+					filter_glossy = 1
+					max_steps = 70
 
 				addon_utils.enable("render_auto_tile_size", default_set=True)
 
 		# Cycles Render Settings Optimizations.
 		for mat in bpy.data.materials:
-			matGen = util.nameGeneralize(mat.name)
-			canon, form = generate.get_mc_canonical_name(matGen)
+			mat_gen = util.nameGeneralize(mat.name)
+			canon, form = generate.get_mc_canonical_name(mat_gen)
 			if generate.checklist(canon, "reflective"):
-				print("found glossy")
-				Glossy += 1
+				glossy += 1
 			if generate.checklist(canon, "glass"):
-				Transmissive += 1
+				transmissive += 1
 
-		if Glossy > MAX_BOUNCES:
-			MAX_BOUNCES = Glossy
+		if glossy > MAX_BOUNCES:
+			MAX_BOUNCES = glossy
 
-		if Transmissive > MAX_BOUNCES:
-			MAX_BOUNCES = Transmissive
+		if transmissive > MAX_BOUNCES:
+			MAX_BOUNCES = transmissive
 
 		# Unique changes.
-		bpy.context.scene.cycles.adaptive_threshold = NoiseThreshold
-		bpy.context.scene.cycles.blur_glossy = FilterGlossy
-		bpy.context.scene.cycles.volume_max_steps = MaxSteps
-		bpy.context.scene.cycles.glossy_bounces = Glossy
-		bpy.context.scene.cycles.transmission_bounces = Transmissive
-		bpy.context.scene.cycles.caustics_reflective = ReflectiveCaustics
-		bpy.context.scene.cycles.caustics_refractive = RefractiveCaustics
-		bpy.context.scene.cycles.sample_clamp_indirect = ClampingIndirect
-		bpy.context.scene.render.use_motion_blur = MotionBlur
-		bpy.context.scene.cycles.volume_bounces = Volume
-		bpy.context.scene.cycles.diffuse_bounces = Diffuse
+		bpy.context.scene.cycles.adaptive_threshold = noise_threshold
+		bpy.context.scene.cycles.blur_glossy = filter_glossy
+		bpy.context.scene.cycles.volume_max_steps = max_steps
+		bpy.context.scene.cycles.glossy_bounces = glossy
+		bpy.context.scene.cycles.transmission_bounces = transmissive
+		bpy.context.scene.cycles.caustics_reflective = reflective_caustics
+		bpy.context.scene.cycles.caustics_refractive = refractive_caustics
+		bpy.context.scene.cycles.sample_clamp_indirect = clamping_indirect
+		bpy.context.scene.render.use_motion_blur = motion_blur
+		bpy.context.scene.cycles.volume_bounces = volume
+		bpy.context.scene.cycles.diffuse_bounces = diffuse
 
 		# Other changes.
 		bpy.context.scene.cycles.max_bounces = MAX_BOUNCES

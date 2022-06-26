@@ -28,7 +28,7 @@ from . import sync
 
 
 def default_material_in_sync_library(default_material, context):
-	"""Returns true if the material is in the sync mat library blend file"""
+	"""Returns true if the material is in the sync mat library blend file."""
 	if conf.material_sync_cache is None:
 		sync.reload_material_sync_library(context)
 	if util.nameGeneralize(default_material) in conf.material_sync_cache:
@@ -39,40 +39,33 @@ def default_material_in_sync_library(default_material, context):
 
 
 def sync_default_material(context, material, default_material, engine):
-	"""
-	This is ideitical to the normal sync materials function but it also copies
-	the material and changes the name
-	"""
+	"""Normal sync material method but with duplication and name change."""
 	if default_material in conf.material_sync_cache:
 		import_name = default_material
 	elif util.nameGeneralize(default_material) in conf.material_sync_cache:
 		import_name = util.nameGeneralize(default_material)
 
-	# if link is true, check library material not already linked
+	# If link is true, check library material not already linked.
 	sync_file = sync.get_sync_blend(context)
 
-	# I'm no Python expert (I prefer C++) but Google tells me that this means to copy all the elements 
-	# -StandingPad
-	init_mats = bpy.data.materials[:]
-	util.bAppendLink(os.path.join(sync_file, "Material"), import_name, False) # no linking
+	init_mats = list(bpy.data.materials)
+	path = os.path.join(sync_file, "Material")
+	util.bAppendLink(path, import_name, False)  # No linking.
 
-	imported = set(bpy.data.materials[:]) - set(init_mats)
+	imported = set(list(bpy.data.materials)) - set(init_mats)
 	if not imported:
 		return "Could not import " + str(material.name)
-	new_material = list(imported)[0]
+	new_default_material = list(imported)[0]
 
-	# checking if there's a node with the label Texture
-	new_material_nodes = new_material.node_tree.nodes
+	# Checking if there's a node with the label Texture.
+	new_material_nodes = new_default_material.node_tree.nodes
 	if not new_material_nodes.get("MCPREP_diffuse"):
 		return "Material has no MCPREP_diffuse node"
-
-	# Copy the material and change the name
-	new_default_material = new_material.copy()
 
 	if not material.node_tree.nodes:
 		return "Material has no nodes"
 
-	# Change the texture
+	# Change the texture.
 	new_default_material_nodes = new_default_material.node_tree.nodes
 	material_nodes = material.node_tree.nodes
 
@@ -80,17 +73,17 @@ def sync_default_material(context, material, default_material, engine):
 		return "Material has no Image Texture node"
 
 	default_texture_node = new_default_material_nodes.get("MCPREP_diffuse")
-	ImageTexture = material_nodes.get("Image Texture").image.name
-	TextureFile = bpy.data.images.get(ImageTexture)
-	default_texture_node.image = TextureFile
+	image_texture = material_nodes.get("Image Texture").image.name
+	texture_file = bpy.data.images.get(image_texture)
+	default_texture_node.image = texture_file
 
 	if engine == "cycles" or engine == "blender_eevee":
 		default_texture_node.interpolation = 'Closest'
 
-	# 2.78+ only, else silent failure
+	# 2.78+ only, else silent failure.
 	res = util.remap_users(material, new_default_material)
 	if res != 0:
-		# try a fallback where we at least go over the selected objects
+		# Try a fallback where we at least go over the selected objects.
 		return res
 
 	# remove the old material since we're changing the default and we don't
@@ -132,7 +125,8 @@ class MCPREP_OT_default_material(bpy.types.Operator):
 			return {'CANCELLED'}
 
 		# Find the default material.
-		material_name = material_name = f"default_{self.SIMPLE if not self.use_pbr else self.PBR}_{self.engine}"
+		workflow = self.SIMPLE if not self.use_pbr else self.PBR
+		material_name = material_name = f"default_{workflow}_{self.engine}"
 		if not default_material_in_sync_library(material_name, context):
 			self.report({'ERROR'}, "No default material found")
 			return {'CANCELLED'}
@@ -168,12 +162,10 @@ class MCPREP_OT_create_default_material(bpy.types.Operator):
 		create_default_material: takes 3 arguments and returns nothing
 		context: Blender Context
 		engine: the render engine in lowercase
-		type: the type of texture that's being dealed with
+		type: the type of texture that's being dealt with
 		"""
 		if not len(bpy.context.selected_objects):
-			"""
-			If there's no selected objects
-			"""
+			# If there's no selected objects.
 			self.report({'ERROR'}, "Select an object to create the material")
 			return
 
@@ -203,7 +195,7 @@ class MCPREP_OT_create_default_material(bpy.types.Operator):
 		links.new(default_texture_node.outputs[0], principled.inputs[0])
 		links.new(principled.outputs["BSDF"], nodeOut.inputs[0])
 
-		if engine is "eevee":
+		if engine == "eevee":
 			if hasattr(default_material, "blend_method"):
 				default_material.blend_method = 'HASHED'
 			if hasattr(default_material, "shadow_method"):
