@@ -177,7 +177,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 				if util.bv30() is False:
 					val_1, val_2 = addon_utils.check("render_auto_tile_size")
 
-					if val_2 is True: 
+					if val_1 is True: 
 						addon_utils.enable("render_auto_tile_size", default_set=True)
 					else:
 						bpy.context.scene.render.tile_x = 32
@@ -195,7 +195,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 			
 			if util.bv30() is False:
 				val_1, val_2 = addon_utils.check("render_auto_tile_size")
-				if val_2 is True: 
+				if val_1 is True: 
 					addon_utils.enable("render_auto_tile_size", default_set=True)
 				else:
 					bpy.context.scene.render.tile_x = 256
@@ -212,7 +212,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 			
 			if util.bv30() is False:
 				val_1, val_2 = addon_utils.check("render_auto_tile_size")
-				if val_2 is True: 
+				if val_1 is True: 
 					addon_utils.enable("render_auto_tile_size", default_set=True)
 				else:
 					bpy.context.scene.render.tile_x = 256
@@ -228,7 +228,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 				MaxSteps = 70
 				
 			val_1, val_2 = addon_utils.check("render_auto_tile_size")
-			if val_2 is True: 
+			if val_1 is True: 
 				addon_utils.enable("render_auto_tile_size", default_set=True)
 			else:
 				bpy.context.scene.render.tile_x = 256
