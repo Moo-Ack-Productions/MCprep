@@ -25,6 +25,8 @@ from .materials import generate
 
 
 MAX_BOUNCES = 8
+MIN_BOUNCES = 2
+CMP_BOUNCES = MIN_BOUNCES * 2
 class MCprepOptimizerProperties(bpy.types.PropertyGroup):
     def scene_brightness(self, context):
         itms = [
@@ -159,7 +161,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
         if scn_props.scene_brightness == "BRIGHT":
             NoiseThreshold = 0.2
         else:
-            NoiseThreshold = 0.02
+            NoiseThreshold = 0.05
         
         # ------------------------------ Compute device ------------------------------ #
         if cycles_compute_device_type == "NONE":
@@ -202,17 +204,16 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
             if util.bv30() is False:
                 addon_utils.enable("render_auto_tile_size", default_set=True)
         
-        elif util.bv30() is False:
-            if cycles_compute_device_type == "OPENCL":
-                if Quality:
-                    FilterGlossy = 0.9
-                    MaxSteps = 100
-                    
-                else:
-                    FilterGlossy = 1
-                    MaxSteps = 70
-                    
-                addon_utils.enable("render_auto_tile_size", default_set=True)
+        elif cycles_compute_device_type == "OPENCL":
+            if Quality:
+                FilterGlossy = 0.9
+                MaxSteps = 100
+                
+            else:
+                FilterGlossy = 1
+                MaxSteps = 70
+                
+            addon_utils.enable("render_auto_tile_size", default_set=True)
                 
         """
         Cycles Render Settings Optimizations
@@ -225,7 +226,13 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
                 Glossy += 1
             if generate.checklist(canon, "glass"):
                 Transmissive += 1
-                
+        
+        if Glossy >= CMP_BOUNCES:
+            Glossy = Glossy // 2
+        if Transmissive >= CMP_BOUNCES:
+            Transmissive = Transmissive // 2
+            
+        
         if Glossy > MAX_BOUNCES:
             MAX_BOUNCES = Glossy
         
