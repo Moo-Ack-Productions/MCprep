@@ -16,6 +16,10 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+
+# TODO: Improving material optimization
+# TODO: Doing a very small optimization before rendering 
+# TODO: Taking advantage of more powerful optimizations that are extremely scene dependent
 import bpy
 import addon_utils
 from . import util
@@ -25,6 +29,8 @@ from .materials import generate
 MAX_BOUNCES = 8
 MIN_BOUNCES = 2
 CMP_BOUNCES = MIN_BOUNCES * 2
+MAX_FILTER_GLOSSY = 1.0
+MAX_STEPS = 200
 
 
 class MCprepOptimizerProperties(bpy.types.PropertyGroup):
@@ -96,7 +102,10 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 
 	def execute(self, context):
 		global MAX_BOUNCES
-		MAX_BOUNCES = 8
+		global MIN_BOUNCES
+		global CMP_BOUNCES
+		global MAX_FILTER_GLOSSY
+		global MAX_STEPS
 
 		# ! Calling this twice seems to remove all unused materials
 		# TODO: find a better way of doing this
@@ -113,7 +122,10 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 			cycles_compute_device_type = cprefs.preferences.compute_device_type
 
 		# Sampling Settings.
+		Samples = bpy.context.scene.cycles.samples
+		MinimumSamples = None
 		NoiseThreshold = 0.2
+
 
 		# Light Bounces.
 		Diffuse = 2  # This is default because diffuse bounces don't need to be high
@@ -137,6 +149,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		Quality = scn_props.quality_vs_speed
 
 		# Render engine settings.
+		# TODO: Add better volumetric optimizations by checking volumetric materials and enabling certain features that benifit the scene (such as homogeneous)
 		if scn_props.volumetric_bool:
 			Volume = 2
 
@@ -145,38 +158,29 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 			NoiseThreshold = 0.2
 		else:
 			NoiseThreshold = 0.05
+		
+		if Quality:
+			MinimumSamples = Samples / 2
+			FilterGlossy = MAX_FILTER_GLOSSY / 2
+			MaxSteps = MAX_STEPS # TODO: Add better volumetric optimizations
+
+		else:
+			MinimumSamples = Samples / 4
+			FilterGlossy = MAX_FILTER_GLOSSY
+			MaxSteps = MAX_STEPS / 2 # TODO: Add better volumetric optimizations
 
 		# Compute device.
 		if cycles_compute_device_type == "NONE":
-			Samples = 128
-			if Quality:
-				MinimumSamples = 25
-				FilterGlossy = 0.5
-				MaxSteps = 200
+			if util.bv30() is False:
+				val_1, val_2 = addon_utils.check("render_auto_tile_size")
 
-			else:
-				MinimumSamples = 10
-				FilterGlossy = 1
-				MaxSteps = 50
-
-				if util.bv30() is False:
-					val_1, val_2 = addon_utils.check("render_auto_tile_size")
-
-					if val_1 is True:
-						addon_utils.enable("render_auto_tile_size", default_set=True)
-					else:
-						bpy.context.scene.render.tile_x = 32
-						bpy.context.scene.render.tile_y = 32
+				if val_1 is True:
+					addon_utils.enable("render_auto_tile_size", default_set=True)
+				else:
+					bpy.context.scene.render.tile_x = 32
+					bpy.context.scene.render.tile_y = 32
 
 		elif cycles_compute_device_type in ("CUDA", "HIP"):
-			if Quality:
-				FilterGlossy = 0.5
-				MaxSteps = 200
-
-			else:
-				FilterGlossy = 1
-				MaxSteps = 70
-
 			if util.bv30() is False:
 				val_1, val_2 = addon_utils.check("render_auto_tile_size")
 				if val_1 is True:
@@ -186,14 +190,6 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 					bpy.context.scene.render.tile_y = 256
 
 		elif cycles_compute_device_type == "OPTIX":
-			if Quality:
-				FilterGlossy = 0.2
-				MaxSteps = 250
-
-			else:
-				FilterGlossy = 0.8
-				MaxSteps = 80
-
 			if util.bv30() is False:
 				val_1, val_2 = addon_utils.check("render_auto_tile_size")
 				if val_1 is True:
@@ -202,15 +198,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 					bpy.context.scene.render.tile_x = 256
 					bpy.context.scene.render.tile_y = 256
 
-		elif cycles_compute_device_type == "OPENCL":
-			if Quality:
-				FilterGlossy = 0.9
-				MaxSteps = 100
-
-			else:
-				FilterGlossy = 1
-				MaxSteps = 70
-
+		elif cycles_compute_device_type == "OPENCL": # Always in any version of Blender pre-3.0
 			val_1, val_2 = addon_utils.check("render_auto_tile_size")
 			if val_1 is True:
 				addon_utils.enable("render_auto_tile_size", default_set=True)
@@ -242,6 +230,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		# Cycles changes.
 		if util.min_bv((2, 90)):
 			bpy.context.scene.cycles.adaptive_threshold = NoiseThreshold
+			bpy.context.scene.cycles.adaptive_min_samples = MinimumSamples
 		bpy.context.scene.cycles.blur_glossy = FilterGlossy
 		bpy.context.scene.cycles.volume_max_steps = MaxSteps
 		bpy.context.scene.cycles.glossy_bounces = Glossy
