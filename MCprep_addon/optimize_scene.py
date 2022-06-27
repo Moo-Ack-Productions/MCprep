@@ -58,6 +58,10 @@ class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 		name="Optimize for Quality",
 		default=True
 	)
+	simplify = bpy.props.BoolProperty(
+		name="Simplify the viewport",
+		default=True
+	)
 
 
 def panel_draw(context, element):
@@ -251,8 +255,9 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 
 		# Render changes.
 		bpy.context.scene.render.use_motion_blur = MotionBlur
-		bpy.context.scene.render.use_simplify = True
-		bpy.context.scene.render.simplify_subdivision = 0
+		if scn_props.simplify:
+			bpy.context.scene.render.use_simplify = True
+			bpy.context.scene.render.simplify_subdivision = 0
 		return {'FINISHED'}
 
 
