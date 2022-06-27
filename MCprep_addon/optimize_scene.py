@@ -101,12 +101,6 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 
 	def execute(self, context):
-		global MAX_BOUNCES
-		global MIN_BOUNCES
-		global CMP_BOUNCES
-		global MAX_FILTER_GLOSSY
-		global MAX_STEPS
-
 		# ! Calling this twice seems to remove all unused materials
 		# TODO: find a better way of doing this
 		bpy.ops.outliner.orphans_purge()
