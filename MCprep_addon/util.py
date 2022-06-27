@@ -182,22 +182,22 @@ def obj_copy(base, context=None, vertex_groups=True, modifiers=True):
 			for prop in properties:
 				setattr(dest, prop, getattr(mod_src, prop))
 	return new_ob
-        
 
-@functools.cache
+
 def min_bv(version):
 	if hasattr(bpy.app, "version"):
 		return bpy.app.version >= version
 
-@functools.cache
+
 def bv28():
 	"""Check if blender 2.8, for layouts, UI, and properties. """
 	return min_bv((2, 80))
 
-@functools.cache
+
 def bv30():
-    """Check if we're dealing with Blender 3.0"""
-    return min_bv((3, 00))
+	"""Check if we're dealing with Blender 3.0"""
+	return min_bv((3, 00))
+
 
 def face_on_edge(faceLoc):
 	"""Check if a face is on the boundary between two blocks (local coordinates)."""

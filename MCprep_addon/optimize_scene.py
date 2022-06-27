@@ -236,7 +236,8 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 			local_max_bounce = Transmissive
 
 		# Cycles changes.
-		bpy.context.scene.cycles.adaptive_threshold = NoiseThreshold
+		if util.min_bv((2, 90)):
+			bpy.context.scene.cycles.adaptive_threshold = NoiseThreshold
 		bpy.context.scene.cycles.blur_glossy = FilterGlossy
 		bpy.context.scene.cycles.volume_max_steps = MaxSteps
 		bpy.context.scene.cycles.glossy_bounces = Glossy
