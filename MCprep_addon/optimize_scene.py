@@ -166,37 +166,32 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		# Compute device.
 		if cycles_compute_device_type == "NONE":
 			if util.bv30() is False:
+				addon_utils.enable("render_auto_tile_size", default_set=True)
 				val_1, val_2 = addon_utils.check("render_auto_tile_size")
-
-				if val_1 is True:
-					addon_utils.enable("render_auto_tile_size", default_set=True)
-				else:
+				if val_1 is not True:
 					bpy.context.scene.render.tile_x = 32
 					bpy.context.scene.render.tile_y = 32
 
 		elif cycles_compute_device_type in ("CUDA", "HIP"):
 			if util.bv30() is False:
+				addon_utils.enable("render_auto_tile_size", default_set=True)
 				val_1, val_2 = addon_utils.check("render_auto_tile_size")
-				if val_1 is True:
-					addon_utils.enable("render_auto_tile_size", default_set=True)
-				else:
+				if val_1 is not True:
 					bpy.context.scene.render.tile_x = 256
 					bpy.context.scene.render.tile_y = 256
-
+	
 		elif cycles_compute_device_type == "OPTIX":
 			if util.bv30() is False:
+				addon_utils.enable("render_auto_tile_size", default_set=True)
 				val_1, val_2 = addon_utils.check("render_auto_tile_size")
-				if val_1 is True:
-					addon_utils.enable("render_auto_tile_size", default_set=True)
-				else:
+				if val_1 is not True:
 					bpy.context.scene.render.tile_x = 512
 					bpy.context.scene.render.tile_y = 512
 
 		elif cycles_compute_device_type == "OPENCL": # Always in any version of Blender pre-3.0
+			addon_utils.enable("render_auto_tile_size", default_set=True)
 			val_1, val_2 = addon_utils.check("render_auto_tile_size")
-			if val_1 is True:
-				addon_utils.enable("render_auto_tile_size", default_set=True)
-			else:
+			if val_1 is not True:
 				bpy.context.scene.render.tile_x = 256
 				bpy.context.scene.render.tile_y = 256
 
