@@ -272,9 +272,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 				print("Failed to improve UI with error: " + str(err))
 
 		if self.optimizeScene and engine == 'CYCLES':
-			# Optimiation is only a 3.0 feature for now
-			if util.bv30():
-				bpy.ops.mcprep.optimize_scene()
+			bpy.ops.mcprep.optimize_scene()
 
 		if self.skipUsage is True:
 			pass  # Don't report if a meta-call.
