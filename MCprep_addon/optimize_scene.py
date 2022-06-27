@@ -36,17 +36,17 @@ class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 		return itms
 
 	caustics_bool = bpy.props.BoolProperty(
-		name="Caustics (Increases render times)",
+		name="Caustics (slower)",
 		default=False,
 		description="If checked allows cautics to be enabled"
 	)
 	motionblur_bool = bpy.props.BoolProperty(
-		name="Motion Blur (increases render times)",
+		name="Motion Blur (slower)",
 		default=False,
 		description="If checked allows motion blur to be enabled"
 	)
 	volumetric_bool = bpy.props.BoolProperty(
-		name="Volumetrics" + " (Increases render time)" if util.bv30() else "",
+		name="Volumetrics" + " (slower)" if util.bv30() else "",
 		default=False
 	)
 	scene_brightness = bpy.props.EnumProperty(
@@ -55,29 +55,34 @@ class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 		items=scene_brightness
 	)
 	quality_vs_speed = bpy.props.BoolProperty(
-		name="Optimize based on Quality",
+		name="Optimize for Quality",
 		default=True
 	)
 
-	def panel_draw(self, context):
-		row = self.layout.row()
-		col = row.column()
-		engine = context.scene.render.engine
-		scn_props = context.scene.optimizer_props
-		if engine == 'CYCLES':
-			col.label(text="Options")
-			volumetric_icon = "OUTLINER_OB_VOLUME" if scn_props.volumetric_bool else "OUTLINER_DATA_VOLUME"
-			quality_icon = "INDIRECT_ONLY_ON" if scn_props.quality_vs_speed else "INDIRECT_ONLY_OFF"
-			col.prop(scn_props, "volumetric_bool", icon=volumetric_icon)
-			col.prop(scn_props, "quality_vs_speed", icon=quality_icon)
 
-			col.label(text="Time of Day")
-			col.prop(scn_props, "scene_brightness")
-			col.prop(scn_props, "caustics_bool", icon="TRIA_UP")
-			col.prop(scn_props, "motionblur_bool", icon="TRIA_UP")
-			col.operator("mcprep.optimize_scene", text="Optimize Scene")
-		else:
-			col.label(text="Cycles Only :C")
+def panel_draw(context, element):
+	box = element.box()
+	col = box.column()
+	engine = context.scene.render.engine
+	scn_props = context.scene.optimizer_props
+	if engine == 'CYCLES':
+		col.label(text="Options")
+		volumetric_icon = "OUTLINER_OB_VOLUME" if scn_props.volumetric_bool else "OUTLINER_DATA_VOLUME"
+		quality_icon = "INDIRECT_ONLY_ON" if scn_props.quality_vs_speed else "INDIRECT_ONLY_OFF"
+		col.prop(scn_props, "volumetric_bool", icon=volumetric_icon)
+		col.prop(scn_props, "quality_vs_speed", icon=quality_icon)
+
+		col.label(text="Time of Day")
+		col.prop(scn_props, "scene_brightness")
+		col.prop(scn_props, "caustics_bool", icon="TRIA_UP")
+		col.prop(scn_props, "motionblur_bool", icon="TRIA_UP")
+		col.row()
+		col.label(text="")
+		subrow = col.row()
+		subrow.scale_y = 1.5
+		subrow.operator("mcprep.optimize_scene", text="Optimize Scene")
+	else:
+		col.label(text="Cycles Only :C")
 
 
 class MCPrep_OT_optimize_scene(bpy.types.Operator):

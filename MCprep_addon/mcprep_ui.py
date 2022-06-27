@@ -675,6 +675,17 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			col.operator(
 				"mcprep.improve_ui", text="Improve UI", icon='SETTINGS')
 
+		# Optimizer Panel.
+		row = col.row(align=True)
+		icon = "TRIA_DOWN" if scn_props.show_settings_optimizer else "TRIA_RIGHT"
+		row.prop(
+			scn_props, "show_settings_optimizer",
+			text="Cycles Optimizer", icon=icon)
+		if scn_props.show_settings_optimizer:
+			row = col.row(align=True)
+			optimize_scene.panel_draw(context, row)
+
+		# Advanced settings.
 		row = col.row(align=True)
 		if not scn_props.show_settings_material:
 			row.prop(
@@ -719,23 +730,6 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 				b_col.label(text="MeshSwap file must be .blend", icon="ERROR")
 			if not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
 				b_col.label(text="MeshSwap file not found", icon="ERROR")
-    
-		"""
-		Optimizer Panel
-		"""
-		row = col.row(align=True)
-		if not scn_props.show_settings_optimizer:
-			row.prop(
-				scn_props, "show_settings_optimizer",
-				text="Cycles Optimizer Settings", icon="TRIA_RIGHT")
-			row.operator(
-				"mcprep.open_preferences",
-				text="", icon="PREFERENCES").tab = "settings"
-		else:
-			row.prop(
-				scn_props, "show_settings_optimizer",
-				text="Cycles Optimizer Settings", icon="TRIA_DOWN")
-			optimize_scene.panel_draw(self, context)
 
 		layout = self.layout  # clear out the box formatting
 		split = layout.split()
