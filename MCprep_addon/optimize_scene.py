@@ -160,14 +160,14 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 			NoiseThreshold = 0.05
 		
 		if Quality:
-			MinimumSamples = Samples / 2
-			FilterGlossy = MAX_FILTER_GLOSSY / 2
+			MinimumSamples = Samples // 2
+			FilterGlossy = MAX_FILTER_GLOSSY // 2
 			MaxSteps = MAX_STEPS # TODO: Add better volumetric optimizations
 
 		else:
-			MinimumSamples = Samples / 4
+			MinimumSamples = Samples // 4
 			FilterGlossy = MAX_FILTER_GLOSSY
-			MaxSteps = MAX_STEPS / 2 # TODO: Add better volumetric optimizations
+			MaxSteps = MAX_STEPS // 2 # TODO: Add better volumetric optimizations
 
 		# Compute device.
 		if cycles_compute_device_type == "NONE":
