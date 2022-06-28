@@ -125,7 +125,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		Diffuse = 2  # This is default because diffuse bounces don't need to be high
 		Glossy = 1
 		Transmissive = 1
-		Volume = 0
+		Volume = 1
 
 		# Volumetric Settings.
 		MaxSteps = 100
@@ -166,32 +166,48 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		# Compute device.
 		if cycles_compute_device_type == "NONE":
 			if util.bv30() is False:
-				addon_utils.enable("render_auto_tile_size", default_set=True)
-				val_1, val_2 = addon_utils.check("render_auto_tile_size")
-				if val_1 is not True:
+				try:
+					addon_utils.enable("render_auto_tile_size", default_set=True)
+					val_1, val_2 = addon_utils.check("render_auto_tile_size")
+					if val_1 is not True:
+						bpy.context.scene.render.tile_x = 32
+						bpy.context.scene.render.tile_y = 32
+				except Exception:
 					bpy.context.scene.render.tile_x = 32
 					bpy.context.scene.render.tile_y = 32
 
 		elif cycles_compute_device_type in ("CUDA", "HIP"):
 			if util.bv30() is False:
-				addon_utils.enable("render_auto_tile_size", default_set=True)
-				val_1, val_2 = addon_utils.check("render_auto_tile_size")
-				if val_1 is not True:
+				try:
+					addon_utils.enable("render_auto_tile_size", default_set=True)
+					val_1, val_2 = addon_utils.check("render_auto_tile_size")
+					if val_1 is not True:
+						bpy.context.scene.render.tile_x = 256
+						bpy.context.scene.render.tile_y = 256
+				except Exception:
 					bpy.context.scene.render.tile_x = 256
 					bpy.context.scene.render.tile_y = 256
 	
 		elif cycles_compute_device_type == "OPTIX":
 			if util.bv30() is False:
-				addon_utils.enable("render_auto_tile_size", default_set=True)
-				val_1, val_2 = addon_utils.check("render_auto_tile_size")
-				if val_1 is not True:
+				try:
+					addon_utils.enable("render_auto_tile_size", default_set=True)
+					val_1, val_2 = addon_utils.check("render_auto_tile_size")
+					if val_1 is not True:
+						bpy.context.scene.render.tile_x = 512
+						bpy.context.scene.render.tile_y = 512
+				except Exception:
 					bpy.context.scene.render.tile_x = 512
 					bpy.context.scene.render.tile_y = 512
 
 		elif cycles_compute_device_type == "OPENCL": # Always in any version of Blender pre-3.0
-			addon_utils.enable("render_auto_tile_size", default_set=True)
-			val_1, val_2 = addon_utils.check("render_auto_tile_size")
-			if val_1 is not True:
+			try:
+				addon_utils.enable("render_auto_tile_size", default_set=True)
+				val_1, val_2 = addon_utils.check("render_auto_tile_size")
+				if val_1 is not True:
+					bpy.context.scene.render.tile_x = 256
+					bpy.context.scene.render.tile_y = 256
+			except Exception:
 				bpy.context.scene.render.tile_x = 256
 				bpy.context.scene.render.tile_y = 256
 
@@ -204,6 +220,15 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 			if generate.checklist(canon, "glass"):
 				Transmissive += 1
 
+		"""
+		The reason we divide by 2 only if the bounces are greater then or equal to CMP_BOUNCES (MIN_BOUNCES * 2) is to 
+		prevent the division operation from setting the bounces below MIN_BOUNCES.
+
+		For instance, if the Glossy bounces are 3, and we divide by 2 anyway, the Glossy bounces would be set to 1 (we're using // for integer division), which 
+		may cause issues when dealing with multiple glossy objects.
+
+		However, this is not an issue in this case since 3 is less then CMP_BOUNCES (by default anyway)
+		"""
 		if Glossy >= CMP_BOUNCES:
 			Glossy = Glossy // 2
 		if Transmissive >= CMP_BOUNCES:
@@ -216,10 +241,11 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		if Transmissive > local_max_bounce:
 			local_max_bounce = Transmissive
 
-		# Cycles changes.
+		# Adaptive sampling is something from Blender 2.9+
 		if util.min_bv((2, 90)):
 			bpy.context.scene.cycles.adaptive_threshold = NoiseThreshold
 			bpy.context.scene.cycles.adaptive_min_samples = MinimumSamples
+
 		bpy.context.scene.cycles.blur_glossy = FilterGlossy
 		bpy.context.scene.cycles.volume_max_steps = MaxSteps
 		bpy.context.scene.cycles.glossy_bounces = Glossy
@@ -231,11 +257,11 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		bpy.context.scene.cycles.diffuse_bounces = Diffuse
 		bpy.context.scene.cycles.max_bounces = local_max_bounce
 
-		# Render changes.
-		bpy.context.scene.render.use_motion_blur = MotionBlur
+		# Sometimes people don't want to use simplify because it messes with rigs
 		if scn_props.simplify:
 			bpy.context.scene.render.use_simplify = True
 			bpy.context.scene.render.simplify_subdivision = 0
+		bpy.context.scene.render.use_motion_blur = MotionBlur
 		return {'FINISHED'}
 
 
