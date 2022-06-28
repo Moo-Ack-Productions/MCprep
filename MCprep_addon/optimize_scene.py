@@ -116,7 +116,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 			cycles_compute_device_type = cprefs.preferences.compute_device_type
 
 		# Sampling Settings.
-		Samples = bpy.context.scene.cycles.samples
+		Samples = bpy.context.scene.cycles.samples # We will be doing some minor adjustments to the sample count
 		MinimumSamples = None
 		NoiseThreshold = 0.2
 
@@ -145,12 +145,14 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		# Render engine settings.
 		# TODO: Add better volumetric optimizations by checking volumetric materials and enabling certain features that benifit the scene (such as homogeneous)
 		if scn_props.volumetric_bool:
+			Samples += 50
 			Volume = 2
 
 		# Time of day.
 		if scn_props.scene_brightness == "BRIGHT":
 			NoiseThreshold = 0.2
 		else:
+			Samples += 20
 			NoiseThreshold = 0.05
 		
 		if Quality:
@@ -246,6 +248,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 			bpy.context.scene.cycles.adaptive_threshold = NoiseThreshold
 			bpy.context.scene.cycles.adaptive_min_samples = MinimumSamples
 
+		bpy.context.scene.cycles.samples = Samples
 		bpy.context.scene.cycles.blur_glossy = FilterGlossy
 		bpy.context.scene.cycles.volume_max_steps = MaxSteps
 		bpy.context.scene.cycles.glossy_bounces = Glossy
