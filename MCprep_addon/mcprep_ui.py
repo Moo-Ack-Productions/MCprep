@@ -32,6 +32,7 @@ from .spawner import mcmodel
 from . import world_tools
 from . import addon_updater_ops
 from . import tracking
+from . import optimize_scene
 from .materials.skin import update_skin_path
 from .materials.generate import update_mcprep_texturepack_path
 from .materials import material_manager
@@ -674,6 +675,17 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			col.operator(
 				"mcprep.improve_ui", text="Improve UI", icon='SETTINGS')
 
+		# Optimizer Panel.
+		row = col.row(align=True)
+		icon = "TRIA_DOWN" if scn_props.show_settings_optimizer else "TRIA_RIGHT"
+		row.prop(
+			scn_props, "show_settings_optimizer",
+			text="Cycles Optimizer", icon=icon)
+		if scn_props.show_settings_optimizer:
+			row = col.row(align=True)
+			optimize_scene.panel_draw(context, row)
+
+		# Advanced settings.
 		row = col.row(align=True)
 		if not scn_props.show_settings_material:
 			row.prop(
@@ -737,7 +749,6 @@ class MCPREP_PT_bridge(bpy.types.Panel):
 
 	def draw(self, context):
 		bridge.panel_draw(self, context)
-
 
 class MCPREP_PT_world_tools(bpy.types.Panel):
 	"""World settings and tools"""
@@ -909,6 +920,8 @@ class MCPREP_PT_materials(bpy.types.Panel):
 		scn_props = context.scene.mcprep_props
 
 		layout = self.layout
+		row = layout.row()
+		# row.operator("mcprep.create_default_material")
 		split = layout.split()
 		col = split.column(align=True)
 
@@ -1600,6 +1613,10 @@ class McprepProps(bpy.types.PropertyGroup):
 		default=False)
 	show_settings_skin = bpy.props.BoolProperty(
 		name="show skin settings",
+		description="Show extra MCprep panel settings",
+		default=False)
+	show_settings_optimizer = bpy.props.BoolProperty(
+		name="show optimizer settings",
 		description="Show extra MCprep panel settings",
 		default=False)
 	show_settings_spawner = bpy.props.BoolProperty(

@@ -23,6 +23,7 @@ import platform
 import random
 import subprocess
 from subprocess import Popen, PIPE
+import functools
 
 import bpy
 
@@ -183,13 +184,19 @@ def obj_copy(base, context=None, vertex_groups=True, modifiers=True):
 	return new_ob
 
 
-BV_IS_28 = None  # global initialization
+def min_bv(version):
+	if hasattr(bpy.app, "version"):
+		return bpy.app.version >= version
+
+
 def bv28():
 	"""Check if blender 2.8, for layouts, UI, and properties. """
-	global BV_IS_28
-	if not BV_IS_28:
-		BV_IS_28 = hasattr(bpy.app, "version") and bpy.app.version >= (2, 80)
-	return BV_IS_28
+	return min_bv((2, 80))
+
+
+def bv30():
+	"""Check if we're dealing with Blender 3.0"""
+	return min_bv((3, 00))
 
 
 def face_on_edge(faceLoc):

@@ -29,7 +29,6 @@ from .. import tracking
 from .. import util
 from . import uv_tools
 
-
 # -----------------------------------------------------------------------------
 # Material class functions
 # -----------------------------------------------------------------------------
@@ -73,6 +72,10 @@ class McprepMaterialProps():
 		name="Improve UI",
 		description="Automatically improve relevant UI settings",
 		default=True)
+	optimizeScene = bpy.props.BoolProperty(
+		name="Optimize scene (cycles)",
+		description="Optimize the scene for faster cycles rendering",
+		default=False)
 	usePrincipledShader = bpy.props.BoolProperty(
 		name="Use Principled Shader (if available)",
 		description=(
@@ -107,6 +110,10 @@ class McprepMaterialProps():
 			"Synchronize materials with those in the active "
 			"pack's materials.blend file"),
 		default=True)
+	# newDefault = bpy.props.BoolProperty(
+	# 	name="Use custom default material",
+	# 	description="Use a custom default material if you have one set up",
+	# 	default=False)
 	packFormat = bpy.props.EnumProperty(
 		name="Pack Format",
 		description="Change the pack format when using a PBR resource pack.",
@@ -129,6 +136,8 @@ def draw_mats_common(self, context):
 	row = self.layout.row()
 	row.prop(self, "useExtraMaps")
 	row.prop(self, "syncMaterials")
+	row = self.layout.row()
+	# row.prop(self, "newDefault")
 
 	# col = row.column()
 	# col.prop(self, "normalIntensity", slider=True)
@@ -138,6 +147,8 @@ def draw_mats_common(self, context):
 	col.prop(self, "improveUiSettings")
 	col = row.column()
 	col.prop(self, "combineMaterials")
+	row = self.layout.row()
+	row.prop(self, "optimizeScene")
 
 
 class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
@@ -187,6 +198,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 				conf.log(
 					"During prep, found null material:" + str(mat), vv_only=True)
 				continue
+
 			elif mat.library:
 				count_lib_skipped += 1
 				continue
@@ -231,25 +243,36 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 				if res == 0:
 					count += 1
 			else:
-				self.report(
-					{'ERROR'},
-					"Only Blender Internal, Cycles, or Eevee supported")
-				return {'CANCELLED'}
+				try:
+					bpy.ops.mcprep.sync_default_materials(use_pbr=False, engine=engine.lower())
+				except Exception:
+					self.report(
+						{'ERROR'},
+						"Only Blender Internal, Cycles, and Eevee are supported")
+					return {'CANCELLED'}
 
 			if self.animateTextures:
 				sequences.animate_single_material(
 					mat, context.scene.render.engine)
 
+		# Sync materials.
 		if self.syncMaterials is True:
 			bpy.ops.mcprep.sync_materials(
 				selected=True, link=False, replace_materials=False, skipUsage=True)
+
+		# Combine materials.
 		if self.combineMaterials is True:
 			bpy.ops.mcprep.combine_materials(selection_only=True, skipUsage=True)
+
+		# Improve UI.
 		if self.improveUiSettings:
 			try:
 				bpy.ops.mcprep.improve_ui()
 			except RuntimeError as err:
 				print("Failed to improve UI with error: " + str(err))
+
+		if self.optimizeScene and engine == 'CYCLES':
+			bpy.ops.mcprep.optimize_scene()
 
 		if self.skipUsage is True:
 			pass  # Don't report if a meta-call.
