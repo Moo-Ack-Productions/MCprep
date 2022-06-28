@@ -81,6 +81,7 @@ def panel_draw(context, element):
 		quality_icon = "INDIRECT_ONLY_ON" if scn_props.quality_vs_speed else "INDIRECT_ONLY_OFF"
 		col.prop(scn_props, "volumetric_bool", icon=volumetric_icon)
 		col.prop(scn_props, "quality_vs_speed", icon=quality_icon)
+		col.prop(scn_props, "simplify", icon=quality_icon)
 
 		col.label(text="Time of Day")
 		col.prop(scn_props, "scene_brightness")
