@@ -249,8 +249,10 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 						density_socket = node.inputs["Density"] # Grab the density
 						if not density_socket.is_linked:
 							SteppingRate = SteppingRate + 2
+							mat.cycles.homogeneous_volume = True
 						else:
 							SteppingRate = SteppingRate - 2 if SteppingRate > 1 else SteppingRate # We do not want to set the stepping rate below one
+							mat.cycles.homogeneous_volume = False
 
 						ScramblingMultiplier += 0.5
 						if ScramblingMultiplier >= CMP_SCRAMBLING_MULTIPLIER: # at this point, it's worthless to keep it enabled 
