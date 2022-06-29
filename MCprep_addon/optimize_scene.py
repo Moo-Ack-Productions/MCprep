@@ -154,6 +154,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		Quality = scn_props.quality_vs_speed
 		UseScrambling = scn_props.scrambling_unsafe
 		PreviewScrambling = scn_props.preview_scrambling
+		ScramblingMultiplier = 0.35
 
 		# Time of day.
 		if scn_props.scene_brightness == "BRIGHT":
@@ -174,6 +175,11 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 
 		# Compute device.
 		if cycles_compute_device_type == "NONE":
+			if UseScrambling:
+				UseScrambling = False # Automatic scrambling distance is useless on CPU
+				PreviewScrambling = False
+				ScramblingMultiplier = 1
+				print("Disabling Automatic Scrambling Distance as it is useless for CPU rendering!")
 			if util.bv30() is False:
 				try:
 					addon_utils.enable("render_auto_tile_size", default_set=True)
@@ -224,10 +230,13 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		for mat in bpy.data.materials:
 			matGen = util.nameGeneralize(mat.name)
 			canon, form = generate.get_mc_canonical_name(matGen)
+			mat_type = None
 			if generate.checklist(canon, "reflective"):
 				Glossy += 1
+				mat_type = "reflective"
 			if generate.checklist(canon, "glass"):
 				Transmissive += 1
+				mat_type = "glass"
 
 			if mat.use_nodes:
 				nodes = mat.node_tree.nodes
@@ -240,6 +249,17 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 							SteppingRate = SteppingRate + 2
 						else:
 							SteppingRate = SteppingRate - 2 if SteppingRate > 1 else SteppingRate # We do not want to set the stepping rate below one
+					# Not the best check, but better then nothing
+					elif node.bl_idname == "ShaderNodeBsdfPrincipled":
+						if mat_type == "reflective":
+							roughness_socket = node.inputs["Roughness"]
+							if not roughness_socket.is_linked and roughness_socket.default_value >= 0.2:
+								Glossy = Glossy - 1 if Glossy > 1 else Glossy
+						elif mat_type == "glass":
+							transmission_socket = node.inputs["Transmission"]
+							if not transmission_socket.is_linked and transmission_socket.default_value >= 0:
+								Transmissive = Transmissive - 1 if Transmissive > 1 else Transmissive
+						
 
 		"""
 		The reason we divide by 2 only if the bounces are greater then or equal to CMP_BOUNCES (MIN_BOUNCES * 2) is to 
@@ -267,6 +287,11 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		if util.min_bv((2, 90)):
 			bpy.context.scene.cycles.adaptive_threshold = NoiseThreshold
 			bpy.context.scene.cycles.adaptive_min_samples = MinimumSamples
+		# Scrambling distance is a 3.0 feature
+		if util.bv30():
+			bpy.context.scene.cycles.auto_scrambling_distance = UseScrambling
+			bpy.context.scene.cycles.preview_scrambling_distance = PreviewScrambling
+			bpy.context.scene.cycles.scrambling_distance = ScramblingMultiplier
 		bpy.context.scene.cycles.samples = Samples
 
 		# Volumetric settings 
