@@ -248,7 +248,9 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 						node.bl_idname == "ShaderNodeVolumeAbsorption" or \
 						node.bl_idname == "ShaderNodeVolumePrincipled":
 						density_socket = node.inputs["Density"] # Grab the density
-						if not density_socket.is_linked:
+						# Sometimes there may be something linked to the density but it's fine to treat it as a homogeneous volume
+						# This allows the user to control the addon at the node level
+						if (not density_socket.is_linked and node.name != "MCPREP_NOT_HOMOGENOUS_VOLUME") or node.name == "MCPREP_HOMOGENOUS_VOLUME":
 							SteppingRate = SteppingRate + 2
 							mat.cycles.homogeneous_volume = True
 						else:
