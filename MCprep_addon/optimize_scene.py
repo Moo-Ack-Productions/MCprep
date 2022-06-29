@@ -311,6 +311,11 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 			bpy.context.scene.cycles.auto_scrambling_distance = UseScrambling
 			bpy.context.scene.cycles.preview_scrambling_distance = PreviewScrambling
 			bpy.context.scene.cycles.scrambling_distance = ScramblingMultiplier
+
+			if UseScrambling is not False:
+				bpy.context.scene.cycles.min_light_bounces = 1
+				bpy.context.scene.cycles.min_transparent_bounces = 2
+
 		bpy.context.scene.cycles.samples = Samples
 
 		# Volumetric settings 
