@@ -32,6 +32,7 @@ CMP_BOUNCES = MIN_BOUNCES * 2
 MAX_FILTER_GLOSSY = 1.0
 MAX_STEPS = 200
 MIN_SCRAMBLING_MULTIPLIER = 0.35
+SCRAMBLING_MULTIPLIER_ADD = 0.05
 CMP_SCRAMBLING_MULTIPLIER = MIN_SCRAMBLING_MULTIPLIER * 2
 
 
@@ -254,7 +255,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 							SteppingRate = SteppingRate - 2 if SteppingRate > 1 else SteppingRate # We do not want to set the stepping rate below one
 							mat.cycles.homogeneous_volume = False
 
-						ScramblingMultiplier += 0.5
+						ScramblingMultiplier += SCRAMBLING_MULTIPLIER_ADD
 						if ScramblingMultiplier >= CMP_SCRAMBLING_MULTIPLIER: # at this point, it's worthless to keep it enabled 
 							UseScrambling = False
 							PreviewScrambling = False
