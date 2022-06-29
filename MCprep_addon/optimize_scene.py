@@ -31,6 +31,8 @@ MIN_BOUNCES = 2
 CMP_BOUNCES = MIN_BOUNCES * 2
 MAX_FILTER_GLOSSY = 1.0
 MAX_STEPS = 200
+MIN_SCRAMBLING_MULTIPLIER = 0.35
+CMP_SCRAMBLING_MULTIPLIER = MIN_SCRAMBLING_MULTIPLIER * 2
 
 
 class MCprepOptimizerProperties(bpy.types.PropertyGroup):
@@ -154,7 +156,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		Quality = scn_props.quality_vs_speed
 		UseScrambling = scn_props.scrambling_unsafe
 		PreviewScrambling = scn_props.preview_scrambling
-		ScramblingMultiplier = 0.35
+		ScramblingMultiplier = MIN_SCRAMBLING_MULTIPLIER
 
 		# Time of day.
 		if scn_props.scene_brightness == "BRIGHT":
@@ -249,6 +251,12 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 							SteppingRate = SteppingRate + 2
 						else:
 							SteppingRate = SteppingRate - 2 if SteppingRate > 1 else SteppingRate # We do not want to set the stepping rate below one
+
+						ScramblingMultiplier += 0.5
+						if ScramblingMultiplier >= CMP_SCRAMBLING_MULTIPLIER: # at this point, it's worthless to keep it enabled 
+							UseScrambling = False
+							PreviewScrambling = False
+							ScramblingMultiplier = 1.0
 					# Not the best check, but better then nothing
 					elif node.bl_idname == "ShaderNodeBsdfPrincipled":
 						if mat_type == "reflective":
