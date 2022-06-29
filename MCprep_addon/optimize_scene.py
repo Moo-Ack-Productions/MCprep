@@ -326,9 +326,8 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		bpy.context.scene.cycles.sample_clamp_indirect = ClampingIndirect
 
 		# Sometimes people don't want to use simplify because it messes with rigs
-		if scn_props.simplify:
-			bpy.context.scene.render.use_simplify = True
-			bpy.context.scene.render.simplify_subdivision = 0
+		bpy.context.scene.render.use_simplify = scn_props.simplify
+		bpy.context.scene.render.simplify_subdivision = 0
 		bpy.context.scene.render.use_motion_blur = MotionBlur
 		return {'FINISHED'}
 
