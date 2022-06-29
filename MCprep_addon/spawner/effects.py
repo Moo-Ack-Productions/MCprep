@@ -201,6 +201,13 @@ def add_collection_effect(context, effect, location, frame):
 	if util.bv28():
 		util.move_to_collection(obj, context.collection)
 
+	# Deselect everything and set newly added empty as active.
+	for ob in context.scene.objects:
+		if util.select_get(ob):
+			util.select_set(ob, False)
+	util.set_active_object(context, obj)
+	util.select_set(obj, True)
+
 
 def add_image_sequence_effect(context, effect, location, frame, speed):
 	"""Spawn a short-term sequence of individual images at a point in time.
@@ -1038,8 +1045,7 @@ class MCPREP_OT_instant_effect(bpy.types.Operator):
 		if effect.effect_type == "collection":
 			add_collection_effect(
 				context, effect, self.location, self.frame)
-			self.report({"ERROR"}, "Not yet implemented")
-			return {'CANCELLED'}
+			return {'FINISHED'}
 		elif effect.effect_type == "img_seq":
 			inst = add_image_sequence_effect(
 				context, effect, self.location, self.frame, self.speed)
