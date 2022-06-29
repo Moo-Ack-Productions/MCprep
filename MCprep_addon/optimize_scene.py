@@ -35,6 +35,10 @@ MIN_SCRAMBLING_MULTIPLIER = 0.35
 SCRAMBLING_MULTIPLIER_ADD = 0.05
 CMP_SCRAMBLING_MULTIPLIER = MIN_SCRAMBLING_MULTIPLIER * 2
 
+# MCprep Node Settings
+MCPREP_HOMOGENOUS_VOLUME = "MCPREP_HOMOGENOUS_VOLUME"
+MCPREP_NOT_HOMOGENOUS_VOLUME = "MCPREP_NOT_HOMOGENOUS_VOLUME"
+
 
 class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 	def scene_brightness(self, context):
@@ -248,12 +252,13 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 						node.bl_idname == "ShaderNodeVolumeAbsorption" or \
 						node.bl_idname == "ShaderNodeVolumePrincipled":
 						density_socket = node.inputs["Density"] # Grab the density
-						node_name = util.nameGeneralize(node.name) # Get the name (who knew this could be used on nodes?) without any indexing
+						node_name = util.nameGeneralize(node.name)[:-1]  # Get the name (who knew this could be used on nodes?) without any indexing and remove the leftover space
 						# Sometimes there may be something linked to the density but it's fine to treat it as a homogeneous volume
 						# This allows the user to control the addon at the node level
-						if (not density_socket.is_linked and node_name != "MCPREP_NOT_HOMOGENOUS_VOLUME") or node_name == "MCPREP_HOMOGENOUS_VOLUME":
-							SteppingRate = SteppingRate + 2
-							mat.cycles.homogeneous_volume = True
+						if not density_socket.is_linked or node_name == MCPREP_HOMOGENOUS_VOLUME:
+							if node_name != MCPREP_NOT_HOMOGENOUS_VOLUME or node_name == MCPREP_HOMOGENOUS_VOLUME:
+								SteppingRate = SteppingRate + 2
+								mat.cycles.homogeneous_volume = True
 						else:
 							SteppingRate = SteppingRate - 2 if SteppingRate > 1 else SteppingRate # We do not want to set the stepping rate below one
 							mat.cycles.homogeneous_volume = False
