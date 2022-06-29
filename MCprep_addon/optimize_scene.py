@@ -65,8 +65,12 @@ class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 		default=True
 	)
 	scrambling_unsafe = bpy.props.BoolProperty(
-		name="Scrambling Distance",
+		name="Automatic Scrambling Distance",
 		default=False
+	)
+	preview_scrambling = bpy.props.BoolProperty(
+		name="Preview Scrambling",
+		default=True
 	)
 
 
@@ -85,9 +89,13 @@ def panel_draw(context, element):
 		col.prop(scn_props, "scene_brightness")
 		col.prop(scn_props, "caustics_bool", icon="TRIA_UP")
 		col.prop(scn_props, "motionblur_bool", icon="TRIA_UP")
+		col.row()
 		col.label(text="Unsafe Options! Use at your own risk!")
 		if util.bv30():
-			col.prop(scn_props, "scrambling_unsafe")
+			scrambling_unsafe_icon = "TRIA_DOWN" if scn_props.scrambling_unsafe else "TRIA_RIGHT"
+			col.prop(scn_props, "scrambling_unsafe", icon=scrambling_unsafe_icon)
+			if scn_props.scrambling_unsafe:
+				col.prop(scn_props, "preview_scrambling")
 		col.row()
 		col.label(text="")
 		subrow = col.row()
@@ -144,6 +152,8 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 
 		# Optimizer Settings.
 		Quality = scn_props.quality_vs_speed
+		UseScrambling = scn_props.scrambling_unsafe
+		PreviewScrambling = scn_props.preview_scrambling
 
 		# Time of day.
 		if scn_props.scene_brightness == "BRIGHT":
@@ -153,12 +163,12 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 			NoiseThreshold = 0.05
 		
 		if Quality:
-			MinimumSamples = Samples // 2
+			MinimumSamples = Samples // 4
 			FilterGlossy = MAX_FILTER_GLOSSY // 2
 			MaxSteps = MAX_STEPS # TODO: Add better volumetric optimizations
 
 		else:
-			MinimumSamples = Samples // 4
+			MinimumSamples = Samples // 8
 			FilterGlossy = MAX_FILTER_GLOSSY
 			MaxSteps = MAX_STEPS // 2 # TODO: Add better volumetric optimizations
 
