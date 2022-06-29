@@ -130,6 +130,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 
 		# Volumetric Settings.
 		MaxSteps = 100
+		SteppingRate = 5
 
 		# Filter Glossy and clamping settings.
 		FilterGlossy = 1
@@ -223,6 +224,18 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 			if generate.checklist(canon, "glass"):
 				Transmissive += 1
 
+			if mat.use_nodes:
+				nodes = mat.node_tree.nodes
+				for node in nodes:
+					if node.bl_idname == "ShaderNodeVolumeScatter" or \
+						node.bl_idname == "ShaderNodeVolumeAbsorption" or \
+						node.bl_idname == "ShaderNodeVolumePrincipled":
+						density_socket = node.inputs["Density"] # Grab the density
+						if not density_socket.is_linked:
+							SteppingRate = SteppingRate + 2
+						else:
+							SteppingRate = SteppingRate - 2 if SteppingRate > 1 else SteppingRate # We do not want to set the stepping rate below one
+
 		"""
 		The reason we divide by 2 only if the bounces are greater then or equal to CMP_BOUNCES (MIN_BOUNCES * 2) is to 
 		prevent the division operation from setting the bounces below MIN_BOUNCES.
@@ -244,22 +257,30 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		if Transmissive > local_max_bounce:
 			local_max_bounce = Transmissive
 
+		# Sampling settings
 		# Adaptive sampling is something from Blender 2.9+
 		if util.min_bv((2, 90)):
 			bpy.context.scene.cycles.adaptive_threshold = NoiseThreshold
 			bpy.context.scene.cycles.adaptive_min_samples = MinimumSamples
-
 		bpy.context.scene.cycles.samples = Samples
-		bpy.context.scene.cycles.blur_glossy = FilterGlossy
+
+		# Volumetric settings 
 		bpy.context.scene.cycles.volume_max_steps = MaxSteps
+		bpy.context.scene.cycles.volume_step_rate = SteppingRate
+		bpy.context.scene.cycles.volume_preview_step_rate = SteppingRate
+
+		# Bounce settings
+		bpy.context.scene.cycles.max_bounces = local_max_bounce
+		bpy.context.scene.cycles.diffuse_bounces = Diffuse
+		bpy.context.scene.cycles.volume_bounces = Volume
 		bpy.context.scene.cycles.glossy_bounces = Glossy
 		bpy.context.scene.cycles.transmission_bounces = Transmissive
+
+		# Settings related to glossy and transmissive materials
+		bpy.context.scene.cycles.blur_glossy = FilterGlossy
 		bpy.context.scene.cycles.caustics_reflective = ReflectiveCaustics
 		bpy.context.scene.cycles.caustics_refractive = RefractiveCaustics
 		bpy.context.scene.cycles.sample_clamp_indirect = ClampingIndirect
-		bpy.context.scene.cycles.volume_bounces = Volume
-		bpy.context.scene.cycles.diffuse_bounces = Diffuse
-		bpy.context.scene.cycles.max_bounces = local_max_bounce
 
 		# Sometimes people don't want to use simplify because it messes with rigs
 		if scn_props.simplify:
