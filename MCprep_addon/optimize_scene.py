@@ -51,10 +51,6 @@ class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 		default=False,
 		description="If checked allows motion blur to be enabled"
 	)
-	volumetric_bool = bpy.props.BoolProperty(
-		name="Volumetrics" + " (slower)" if util.bv30() else "",
-		default=False
-	)
 	scene_brightness = bpy.props.EnumProperty(
 		name="",
 		description="Time of day in the scene",
@@ -68,6 +64,10 @@ class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 		name="Simplify the viewport",
 		default=True
 	)
+	scrambling_unsafe = bpy.props.BoolProperty(
+		name="Scrambling Distance",
+		default=False
+	)
 
 
 def panel_draw(context, element):
@@ -77,9 +77,7 @@ def panel_draw(context, element):
 	scn_props = context.scene.optimizer_props
 	if engine == 'CYCLES':
 		col.label(text="Options")
-		volumetric_icon = "OUTLINER_OB_VOLUME" if scn_props.volumetric_bool else "OUTLINER_DATA_VOLUME"
 		quality_icon = "INDIRECT_ONLY_ON" if scn_props.quality_vs_speed else "INDIRECT_ONLY_OFF"
-		col.prop(scn_props, "volumetric_bool", icon=volumetric_icon)
 		col.prop(scn_props, "quality_vs_speed", icon=quality_icon)
 		col.prop(scn_props, "simplify", icon=quality_icon)
 
@@ -87,6 +85,9 @@ def panel_draw(context, element):
 		col.prop(scn_props, "scene_brightness")
 		col.prop(scn_props, "caustics_bool", icon="TRIA_UP")
 		col.prop(scn_props, "motionblur_bool", icon="TRIA_UP")
+		col.label(text="Unsafe Options! Use at your own risk!")
+		if util.bv30():
+			col.prop(scn_props, "scrambling_unsafe")
 		col.row()
 		col.label(text="")
 		subrow = col.row()
@@ -126,7 +127,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		Diffuse = 2  # This is default because diffuse bounces don't need to be high
 		Glossy = 1
 		Transmissive = 1
-		Volume = 1
+		Volume = 2
 
 		# Volumetric Settings.
 		MaxSteps = 100
@@ -143,12 +144,6 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 
 		# Optimizer Settings.
 		Quality = scn_props.quality_vs_speed
-
-		# Render engine settings.
-		# TODO: Add better volumetric optimizations by checking volumetric materials and enabling certain features that benifit the scene (such as homogeneous)
-		if scn_props.volumetric_bool:
-			Samples += 50
-			Volume = 2
 
 		# Time of day.
 		if scn_props.scene_brightness == "BRIGHT":
