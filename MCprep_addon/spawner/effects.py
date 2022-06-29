@@ -656,10 +656,43 @@ def offset_animation_to_frame(collection, frame):
 	"""Offset all animations and particles based on the given frame."""
 	if frame == 1:
 		return
+	frame -= 1
 
 	objs = []
-	particles = []
-	anim_nodes = []
+	actions = []
+
+	if util.bv28():
+		objs = list(collection.all_objects)
+	else:
+		objs = list(collection.objects)
+
+	# Expand the list by checking for any empties instancing other collections.
+	for obj in objs:
+		if util.bv28():
+			if obj.instance_collection:
+				objs.extend(list(obj.instance_collection.all_objects))
+		else:
+			if obj.dupli_group:
+				objs.extend(list(obj.dupli_group.objects))
+
+	# Make unique.
+	objs = list(set(objs))
+
+	for obj in objs:
+		if obj.animation_data and obj.animation_data.action:
+			actions.append(obj.animation_data.action)
+		for sys in obj.particle_systems:
+			# Be sure to change end frame first, otherwise its overridden.
+			sys.settings.frame_end += frame
+			sys.settings.frame_start += frame
+
+	for action in actions:
+		for fcurve in action.fcurves:
+			# TODO: ensure we do this in reverse order.
+			for point in fcurve.keyframe_points:
+				point.co.x += frame
+				point.handle_left.x += frame
+				point.handle_right.x += frame
 
 
 # -----------------------------------------------------------------------------
