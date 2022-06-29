@@ -185,6 +185,22 @@ def add_collection_effect(context, effect, location, frame):
 	any particles the collection may be using.
 	"""
 
+	keyname = "{}_frame_{}".format(effect.name, frame)
+	if keyname in util.collections():
+		coll = util.collections()[keyname]
+	else:
+		coll = import_animated_coll(context, effect, keyname)
+
+		# Update the animation per intended frame.
+		offset_animation_to_frame(coll, frame)
+
+	# Create the object instance
+	obj = util.addGroupInstance(coll.name, location)
+	obj.location = location
+	obj.name = keyname
+	if util.bv28():
+		util.move_to_collection(obj, context.collection)
+
 
 def add_image_sequence_effect(context, effect, location, frame, speed):
 	"""Spawn a short-term sequence of individual images at a point in time.
@@ -195,7 +211,6 @@ def add_image_sequence_effect(context, effect, location, frame, speed):
 	# Get the list of explicit files.
 	basepath = os.path.dirname(effect.filepath)
 	root = os.path.basename(effect.filepath)
-	print(root, "--", effect.filepath)
 	images = [
 		img for img in os.listdir(basepath)
 		if img.startswith(root) and os.path.isfile(os.path.join(basepath, img))
@@ -236,9 +251,13 @@ def add_image_sequence_effect(context, effect, location, frame, speed):
 			else:
 				frames_added.append(target_frame)
 
+			if end_frame == target_frame:
+				end_frame += 1
+
 			this_file = os.path.join(basepath, img)
 			pre_objs = list(bpy.data.objects)
-			bpy.ops.mcprep.spawn_item_file(filepath=this_file, skipUsage=True)
+			bpy.ops.mcprep.spawn_item_file(
+				filepath=this_file, thickness=0, skipUsage=True)
 			post_objs = list(bpy.data.objects)
 			new = list(set(post_objs) - set(pre_objs))
 
@@ -279,7 +298,7 @@ def add_image_sequence_effect(context, effect, location, frame, speed):
 
 	# Finalize creation of the instances.
 	instance = util.addGroupInstance(seq_coll.name, location)
-	if hasattr(instance, "empty_draw_size"):
+	if hasattr(instance, "empty_draw_size"):  # Older blender versions.
 		instance.empty_draw_size = 0.25
 	else:
 		instance.empty_display_size = 1.0
@@ -404,7 +423,7 @@ def geo_update_params(context, effect, geo_mod):
 				geo_mod[geo_inp_id[inp.name]] = camera
 			elif value == "FOLLOW_OBJ":
 				if not center_empty:
-					print(">> Center empty missing, not in preset in preset!")
+					print(">> Center empty missing, not in preset!")
 				else:
 					conf.log("Set follow for geonode input", vv_only=True)
 					geo_mod[geo_inp_id[inp.name]] = center_empty
@@ -589,6 +608,53 @@ def apply_particle_settings(obj, frame, base_name, pcoll):
 		psystem.settings.dupli_group = pcoll
 
 
+def import_animated_coll(context, effect, keyname):
+	"""Import and return a new animated collection given a specific key."""
+	init_colls = list(util.collections())
+	with bpy.data.libraries.load(effect.filepath) as (data_from, data_to):
+		collections = spawn_util.filter_collections(data_from)
+		for itm in collections:
+			if itm != effect.name:
+				continue
+			if util.bv28():
+				data_to.collections.append(itm)
+			else:
+				data_to.groups.append(itm)
+
+	final_colls = list(util.collections())
+	new_colls = list(set(final_colls) - set(init_colls))
+	if not new_colls:
+		raise Exception("No collections imported")
+	elif len(new_colls) > 1:
+		# Pick the closest fitting one. At worst, will pick a random one.
+		coll = None
+		for this_coll in new_colls:
+			if util.nameGeneralize(this_coll.name) == effect.name:
+				coll = this_coll
+		if not coll:
+			raise Exception("Could not import required collection")
+	else:
+		coll = new_colls[0]
+
+	if util.bv28():
+		# Move the source collection (world center) into excluded coll
+		effects_vl = util.get_or_create_viewlayer(context, EFFECT_EXCLUDE)
+		effects_vl.exclude = True
+		effects_vl.collection.children.link(coll)
+
+	return coll
+
+
+def offset_animation_to_frame(collection, frame):
+	"""Offset all animations and particles based on the given frame."""
+	if frame == 1:
+		return
+
+	objs = []
+	particles = []
+	anim_nodes = []
+
+
 # -----------------------------------------------------------------------------
 # List UI load functions
 # -----------------------------------------------------------------------------
@@ -733,7 +799,7 @@ def load_collection_effects(context):
 
 	for bfile in blends:
 		with bpy.data.libraries.load(bfile) as (data_from, _):
-			collections = list(data_from.collections)
+			collections = spawn_util.filter_collections(data_from)
 
 		for itm in collections:
 			effect = mcprep_props.effects_list.add()
@@ -849,7 +915,7 @@ class MCPREP_OT_reload_effects(bpy.types.Operator):
 
 
 class MCPREP_OT_global_effect(bpy.types.Operator):
-	"""Spawn an global effect such as weather particles"""
+	"""Spawn a global effect such as weather particles"""
 	bl_idname = "mcprep.spawn_global_effect"
 	bl_label = "Global effect"
 	bl_options = {'REGISTER', 'UNDO'}
@@ -929,12 +995,12 @@ class MCPREP_OT_instant_effect(bpy.types.Operator):
 		mcprep_props = context.scene.mcprep_props
 		elist = []
 		for effect in mcprep_props.effects_list:
-			if effect.effect_type not in ('collection', 'img_seq'):
-				continue
 			if effect.effect_type == COLLECTION:
 				display_type = "preanimated collection effect"
-			else:
+			elif effect.effect_type == IMG_SEQ:
 				display_type = "image sequence effect"
+			else:
+				continue
 			elist.append((
 				str(effect.index),
 				effect.name,
@@ -947,8 +1013,14 @@ class MCPREP_OT_instant_effect(bpy.types.Operator):
 
 	effect_id = bpy.props.EnumProperty(items=effects_enum, name="Effect")
 	location = bpy.props.FloatVectorProperty(default=(0, 0, 0), name="Location")
-	frame = bpy.props.IntProperty(default=0, name="Frame")
-	speed = bpy.props.FloatProperty(default=1.0, min=0.1, name="Speed")
+	frame = bpy.props.IntProperty(
+		default=0, name="Frame", description="Start frame for animation")
+	speed = bpy.props.FloatProperty(
+		default=1.0, min=0.1, name="Speed",
+		description="Make the effect run faster (skip frames) or slower (hold frames)")
+	show_image = bpy.props.BoolProperty(
+		default=True, name="Show image preview",
+		description="Show a middle animation frame as a viewport preview")
 	skipUsage = bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	@classmethod
@@ -971,6 +1043,9 @@ class MCPREP_OT_instant_effect(bpy.types.Operator):
 		elif effect.effect_type == "img_seq":
 			inst = add_image_sequence_effect(
 				context, effect, self.location, self.frame, self.speed)
+
+			if not self.show_image:
+				inst.data = None
 		self.track_param = effect.name
 		return {'FINISHED'}
 

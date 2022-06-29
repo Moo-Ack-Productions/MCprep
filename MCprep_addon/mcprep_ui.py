@@ -1428,68 +1428,72 @@ def effects_spawner(self, context):
 
 	layout = self.layout
 	col = layout.column(align=True)
+	col.label(text="Load/generate effects")
 
-	if scn_props.effects_list:
-		col.operator("mcprep.spawn_global_effect")
-
-		ops = col.operator("mcprep.spawn_instant_effect")
-		ops.location = util.get_cuser_location(context)
-		ops.frame = context.scene.frame_current
-	else:
-		b_row = col.row(align=True)
-		b_row.scale_y = 2
-		b_row.operator(
-			"mcprep.reload_spawners",
-			text="Reload assets", icon="ERROR")
-
-	ops = col.operator("mcprep.spawn_particle_planes")
-	blockdir = os.path.join(
-		context.scene.mcprep_texturepack_path,
-		"assets", "minecraft", "textures", "block", "dirt.png")
-	if os.path.isfile(blockdir):
-		ops.filepath = blockdir
-	else:
-		ops.filepath = context.scene.mcprep_texturepack_path
-	ops.location = util.get_cuser_location(context)
-	ops.frame = context.scene.frame_current
-
-	# Alternate draw approach, using UI list.
 	# if scn_props.effects_list:
-	# 	col.template_list(
-	# 		"MCPREP_UL_effects", "",
-	# 		scn_props, "effects_list",
-	# 		scn_props, "effects_list_index",
-	# 		rows=4)
-	# 	col = layout.column(align=True)
-	# 	row = col.row(align=True)
-	# 	row.scale_y = 1.5
-	# 	effect = scn_props.effects_list[scn_props.effects_list_index]
-	# 	ops = row.operator("mcprep.spawn_effect", text="Add: " + effect.name)
-	# 	ops.filepath = effect.filepath
-	# 	ops.effect_type = effect.effect_type
+	# 	col.operator("mcprep.spawn_global_effect")
+
+	# 	ops = col.operator("mcprep.spawn_instant_effect")
 	# 	ops.location = util.get_cuser_location(context)
 	# 	ops.frame = context.scene.frame_current
-	# 	# ops.frame
-	# 	row = col.row(align=True)
 	# else:
-	# 	box = col.box()
-	# 	b_row = box.row()
-	# 	b_row.label(text="No effects loaded")
-	# 	b_row = box.row()
+	# 	b_row = col.row(align=True)
 	# 	b_row.scale_y = 2
 	# 	b_row.operator(
 	# 		"mcprep.reload_spawners",
 	# 		text="Reload assets", icon="ERROR")
 
-	# 	col = layout.column(align=True)
-	# 	row = col.row(align=True)
-	# 	row.scale_y = 1.5
-	# 	row.enabled = False
-	# 	row.operator("mcprep.spawn_item", text="Add effect")
-	# row = col.row(align=True)
-	# ops = row.operator("mcprep.spawn_particle_planes")
+	# ops = col.operator("mcprep.spawn_particle_planes")
+	# blockdir = os.path.join(
+	# 	context.scene.mcprep_texturepack_path,
+	# 	"assets", "minecraft", "textures", "block", "dirt.png")
+	# if os.path.isfile(blockdir):
+	# 	ops.filepath = blockdir
+	# else:
+	# 	ops.filepath = context.scene.mcprep_texturepack_path
 	# ops.location = util.get_cuser_location(context)
 	# ops.frame = context.scene.frame_current
+
+	# Alternate draw approach, using UI list.
+	if scn_props.effects_list:
+		col.template_list(
+			"MCPREP_UL_effects", "",
+			scn_props, "effects_list",
+			scn_props, "effects_list_index",
+			rows=4)
+		col = layout.column(align=True)
+		row = col.row(align=True)
+		row.scale_y = 1.5
+		effect = scn_props.effects_list[scn_props.effects_list_index]
+		if effect.effect_type in (effects.GEO_AREA, effects.PARTICLE_AREA):
+			ops = row.operator(
+				"mcprep.spawn_global_effect", text="Add: " + effect.name)
+			ops.effect_id = str(effect.index)
+		elif effect.effect_type in (effects.COLLECTION, effects.IMG_SEQ):
+			ops = row.operator(
+				"mcprep.spawn_instant_effect", text="Add: " + effect.name)
+			ops.effect_id = str(effect.index)
+			ops.location = util.get_cuser_location(context)
+			ops.frame = context.scene.frame_current
+	else:
+		box = col.box()
+		b_row = box.row()
+		b_row.label(text="No effects loaded")
+		b_row = box.row()
+		b_row.scale_y = 2
+		b_row.operator(
+			"mcprep.reload_spawners",
+			text="Reload assets", icon="ERROR")
+
+		col = layout.column(align=True)
+		row = col.row(align=True)
+		row.scale_y = 1.5
+		row.enabled = False
+		row.operator("mcprep.spawn_item", text="Add effect")
+	row = col.row(align=True)
+	ops = row.operator("mcprep.spawn_particle_planes")
+	ops.location = util.get_cuser_location(context)
+	ops.frame = context.scene.frame_current
 
 
 class MCPREP_PT_spawn(bpy.types.Panel):
