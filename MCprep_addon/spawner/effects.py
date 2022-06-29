@@ -688,8 +688,11 @@ def offset_animation_to_frame(collection, frame):
 
 	for action in actions:
 		for fcurve in action.fcurves:
-			# TODO: ensure we do this in reverse order.
-			for point in fcurve.keyframe_points:
+			# Ensure we move points in reverse order, otherwise adjacent frames
+			# will overwrite each other.
+			points = list(fcurve.keyframe_points)
+			points.sort(key=lambda x: x.co.x)
+			for point in points:
 				point.co.x += frame
 				point.handle_left.x += frame
 				point.handle_right.x += frame
