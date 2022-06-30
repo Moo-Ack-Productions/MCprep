@@ -464,10 +464,18 @@ To add your own rigs to the Mob Spawner:
     
 - **Preview Scrambling:** Enabled by default if you enable `Automatic Scrambling Distance`. This can cause a lot of flickering in rendered view (which is how Automatic Scrambling Distance works in the first place).
 
+![Optimizer panel](/visuals/optimizer-panel-settings.png?raw=true)
+
+
 #### Cycles Optimizer Node Settings
 The Cycles optimizer also comes with it some special node names to control how it interprets certain nodes. They are the following:
 - `MCPREP_HOMOGENOUS_VOLUME`: if applied to a Volume Scatter, Volume Absorbtion, or Pricipled Volume node, it is treated as a homogenous volume 
 - `MCPREP_NOT_HOMOGENOUS_VOLUME`: if applied to a Volume Scatter, Volume Absorbtion, or Pricipled Volume node, it is not treated as a homogenous volume 
+
+To use these settings, simply click on the node you want to edit, press N, and then edit the Name of the node
+
+**Important:** Make sure you edit the **Name** of the node, not the **Label**
+![Using optimizer node settings](/visuals/optimizer-node-settings.png?raw=true)
 
 Known Bugs
 ======
