@@ -238,6 +238,8 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 			matGen = util.nameGeneralize(mat.name)
 			canon, form = generate.get_mc_canonical_name(matGen)
 			mat_type = None
+			homogenous_volumes = 0
+			not_homogenous_volumes = 0
 			if generate.checklist(canon, "reflective"):
 				Glossy += 1
 				mat_type = "reflective"
@@ -257,11 +259,9 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 						# This allows the user to control the addon at the node level
 						if not density_socket.is_linked or node_name == MCPREP_HOMOGENOUS_VOLUME:
 							if node_name != MCPREP_NOT_HOMOGENOUS_VOLUME or node_name == MCPREP_HOMOGENOUS_VOLUME:
-								SteppingRate = SteppingRate + 2
-								mat.cycles.homogeneous_volume = True
+								homogenous_volumes += 1
 						else:
-							SteppingRate = SteppingRate - 2 if SteppingRate > 1 else SteppingRate # We do not want to set the stepping rate below one
-							mat.cycles.homogeneous_volume = False
+							not_homogenous_volumes += 1
 
 						ScramblingMultiplier += SCRAMBLING_MULTIPLIER_ADD
 						if ScramblingMultiplier >= CMP_SCRAMBLING_MULTIPLIER: # at this point, it's worthless to keep it enabled 
@@ -278,7 +278,17 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 							transmission_socket = node.inputs["Transmission"]
 							if not transmission_socket.is_linked and transmission_socket.default_value >= 0:
 								Transmissive = Transmissive - 1 if Transmissive > 1 else Transmissive
-						
+				
+				if homogenous_volumes > 0 or not_homogenous_volumes > 0:
+					volumes_rate = homogenous_volumes - not_homogenous_volumes
+					if volumes_rate > 0:
+						SteppingRate += 2 * volumes_rate
+						mat.cycles.homogenous_volume = True
+					else:
+						SteppingRate -= 2 * abs(volumes_rate) # get the absolute value of volumes_rate since it's negative
+						if SteppingRate < 2:
+							SteppingRate = 2 # 2 is the lowest stepping rate
+
 
 		"""
 		The reason we divide by 2 only if the bounces are greater then or equal to CMP_BOUNCES (MIN_BOUNCES * 2) is to 
