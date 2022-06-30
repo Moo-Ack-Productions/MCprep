@@ -254,14 +254,19 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 						node.bl_idname == "ShaderNodeVolumeAbsorption" or \
 						node.bl_idname == "ShaderNodeVolumePrincipled":
 						density_socket = node.inputs["Density"] # Grab the density
-						node_name = util.nameGeneralize(node.name)[:-1]  # Get the name (who knew this could be used on nodes?) without any indexing and remove the leftover space
+						node_name = util.nameGeneralize(node.name).rstrip()  # Get the name (who knew this could be used on nodes?)
 						# Sometimes there may be something linked to the density but it's fine to treat it as a homogeneous volume
 						# This allows the user to control the addon at the node level
-						if not density_socket.is_linked or node_name == MCPREP_HOMOGENOUS_VOLUME:
-							if node_name != MCPREP_NOT_HOMOGENOUS_VOLUME or node_name == MCPREP_HOMOGENOUS_VOLUME:
+						if not density_socket.is_linked:
+							if node_name == MCPREP_NOT_HOMOGENOUS_VOLUME:
+								not_homogenous_volumes -= 1
+							else:
 								homogenous_volumes += 1
 						else:
-							not_homogenous_volumes += 1
+							if node_name == MCPREP_HOMOGENOUS_VOLUME:
+								homogenous_volumes += 1
+							else:
+								not_homogenous_volumes += 1
 
 						ScramblingMultiplier += SCRAMBLING_MULTIPLIER_ADD
 						if ScramblingMultiplier >= CMP_SCRAMBLING_MULTIPLIER: # at this point, it's worthless to keep it enabled 
