@@ -1430,30 +1430,6 @@ def effects_spawner(self, context):
 	col = layout.column(align=True)
 	col.label(text="Load/generate effects")
 
-	# if scn_props.effects_list:
-	# 	col.operator("mcprep.spawn_global_effect")
-
-	# 	ops = col.operator("mcprep.spawn_instant_effect")
-	# 	ops.location = util.get_cuser_location(context)
-	# 	ops.frame = context.scene.frame_current
-	# else:
-	# 	b_row = col.row(align=True)
-	# 	b_row.scale_y = 2
-	# 	b_row.operator(
-	# 		"mcprep.reload_spawners",
-	# 		text="Reload assets", icon="ERROR")
-
-	# ops = col.operator("mcprep.spawn_particle_planes")
-	# blockdir = os.path.join(
-	# 	context.scene.mcprep_texturepack_path,
-	# 	"assets", "minecraft", "textures", "block", "dirt.png")
-	# if os.path.isfile(blockdir):
-	# 	ops.filepath = blockdir
-	# else:
-	# 	ops.filepath = context.scene.mcprep_texturepack_path
-	# ops.location = util.get_cuser_location(context)
-	# ops.frame = context.scene.frame_current
-
 	# Alternate draw approach, using UI list.
 	if scn_props.effects_list:
 		col.template_list(

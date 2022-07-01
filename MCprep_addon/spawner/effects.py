@@ -195,7 +195,7 @@ def add_collection_effect(context, effect, location, frame):
 		# Update the animation per intended frame.
 		offset_animation_to_frame(coll, frame)
 
-	# Create the object instance
+	# Create the object instance.
 	obj = util.addGroupInstance(coll.name, location)
 	obj.location = location
 	obj.name = keyname
@@ -797,7 +797,7 @@ def load_geonode_effect_list(context):
 
 			if using_json:
 				# First key in index is nodegroup, save to subpath, but then
-				# the present name (list of keys within) are the actual names
+				# the present name (list of keys within) are the actual names.
 				for preset in jdata[itm]:
 					conf.log("\tgeonode preset: " + preset, vv_only=True)
 					effect = mcprep_props.effects_list.add()
@@ -808,7 +808,7 @@ def load_geonode_effect_list(context):
 					effect.index = len(mcprep_props.effects_list) - 1  # For icon index.
 
 			else:
-				# Using the nodegroup name itself as the key, no subpath
+				# Using the nodegroup name itself as the key, no subpath.
 				effect = mcprep_props.effects_list.add()
 				effect.name = itm
 				effect.subpath = itm  # Always the nodegroup name.
@@ -878,7 +878,7 @@ def load_image_sequence_effects(context):
 
 	resource_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
 
-	# Check levels
+	# Check levels.
 	lvl_0 = os.path.join(resource_folder, "particle")
 	lvl_1 = os.path.join(resource_folder, "textures", "particle")
 	lvl_2 = os.path.join(resource_folder, "minecraft", "textures", "particle")

@@ -1554,7 +1554,7 @@ class mcprep_testing():
 			return "No geonode modifier found"
 
 		# Now validate that one of the settings was updated.
-		# todo: exampel where we assert the active effect `subpath` is non empty
+		# TODO: example where we assert the active effect `subpath` is non empty
 
 	def particle_area_effect_spawner(self):
 		"""Test the particle area variant of effect spawning works."""
@@ -1635,9 +1635,7 @@ class mcprep_testing():
 		if post_count == 0:
 			return "Should have more effects loaded after reload"
 
-		# effects = [x for x in scn_props.effects_list if x.effect_type == etype]
-
-		# Find the one with at least 10 frames
+		# Find the one with at least 10 frames.
 		effect_name = "Big smoke"
 		effect = None
 		for this_effect in scn_props.effects_list:
