@@ -190,6 +190,7 @@ def add_collection_effect(context, effect, location, frame):
 		coll = util.collections()[keyname]
 	else:
 		coll = import_animated_coll(context, effect, keyname)
+		coll.name = effect.name + "_" + str(frame)
 
 		# Update the animation per intended frame.
 		offset_animation_to_frame(coll, frame)
@@ -660,6 +661,7 @@ def offset_animation_to_frame(collection, frame):
 
 	objs = []
 	actions = []
+	mats = []
 
 	if util.bv28():
 		objs = list(collection.all_objects)
@@ -685,7 +687,25 @@ def offset_animation_to_frame(collection, frame):
 			# Be sure to change end frame first, otherwise its overridden.
 			sys.settings.frame_end += frame
 			sys.settings.frame_start += frame
+		for slot in obj.material_slots:
+			if slot.material:
+				mats.append(slot.material)
+	mats = list(set(mats))
 
+	for mat in mats:
+		if mat.animation_data:
+			# Materials with animation data
+			actions.append(mat.animation_data.action)
+		if mat.node_tree.animation_data:
+			actions.append(mat.node_tree.animation_data.action)
+		for node in mat.node_tree.nodes:
+			# Nodegroups that contain animations within.
+			if hasattr(node, "node_tree") and node.node_tree.animation_data:
+				actions.append(node.node_tree.animation_data.action)
+
+	actions = list(set(actions))
+
+	# Finally, perform the main operation of shifting keyframes.
 	for action in actions:
 		for fcurve in action.fcurves:
 			# Ensure we move points in reverse order, otherwise adjacent frames
@@ -993,9 +1013,6 @@ class MCPREP_OT_global_effect(bpy.types.Operator):
 	def poll(cls, context):
 		return context.mode == 'OBJECT'
 
-	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self)
-
 	track_function = "effect_global"
 	@tracking.report_error
 	def execute(self, context):
@@ -1069,9 +1086,6 @@ class MCPREP_OT_instant_effect(bpy.types.Operator):
 	@classmethod
 	def poll(cls, context):
 		return context.mode == 'OBJECT'
-
-	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self)
 
 	track_function = "effect_instant"
 	@tracking.report_error
