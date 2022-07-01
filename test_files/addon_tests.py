@@ -1521,6 +1521,8 @@ class mcprep_testing():
 
 	def geonode_effect_spawner(self):
 		"""Test the geo node variant of effect spawning works."""
+		if bpy.app.version < (3, 0):
+			return  # Not supported before 3.0 anyways.
 		self._clear_scene()
 		scn_props = bpy.context.scene.mcprep_props
 		etype = "geo_area"
