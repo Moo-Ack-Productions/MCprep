@@ -23,7 +23,6 @@ import platform
 import random
 import subprocess
 from subprocess import Popen, PIPE
-import functools
 
 import bpy
 
@@ -184,8 +183,17 @@ def obj_copy(base, context=None, vertex_groups=True, modifiers=True):
 	return new_ob
 
 
-def min_bv(version):
+def max_bv(version, *, up_to=None):
 	if hasattr(bpy.app, "version"):
+		if up_to is not None:
+			return bpy.app.version < version
+		return bpy.app.version <= version
+
+
+def min_bv(version, *, above=None):
+	if hasattr(bpy.app, "version"):
+		if above is not None:
+			return bpy.app.version > version
 		return bpy.app.version >= version
 
 
