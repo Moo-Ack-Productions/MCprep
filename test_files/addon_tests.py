@@ -1582,7 +1582,7 @@ class mcprep_testing():
 		"""Test the collection variant of effect spawning works."""
 		self._clear_scene()
 		scn_props = bpy.context.scene.mcprep_props
-		etype = "img_seq"
+		etype = "collection"
 
 		pre_count = len([
 			x for x in scn_props.effects_list if x.effect_type == etype])
@@ -1595,10 +1595,24 @@ class mcprep_testing():
 		if post_count == 0:
 			return "Should have more effects loaded after reload"
 
+		init_objs = list(bpy.data.objects)
+
 		effect = [x for x in scn_props.effects_list if x.effect_type == etype][0]
-		res = bpy.ops.mcprep.spawn_instant_effect(effect_id=str(effect.index))
+		res = bpy.ops.mcprep.spawn_instant_effect(effect_id=str(effect.index), frame=2)
 		if res != {'FINISHED'}:
 			return "Did not end with finished result"
+
+		final_objs = list(bpy.data.objects)
+		new_objs = list(set(final_objs) - set(init_objs))
+		if len(new_objs) == 0:
+			return "didn't crate new objects"
+		if bpy.context.object not in new_objs:
+			return "Selected obj is not a new object"
+
+		is_empty = bpy.context.object.type == 'EMPTY'
+		is_coll_inst = bpy.context.object.instance_type == 'COLLECTION'
+		if not is_empty or not is_coll_inst:
+			return "Didn't end up with selected collection instance"
 
 		# TODO: Further checks it actually loaded the effect.
 
