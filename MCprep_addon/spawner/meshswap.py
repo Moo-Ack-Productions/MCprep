@@ -303,6 +303,8 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 			for obj in util.get_objects_conext(context):
 				util.select_set(obj, False)
 			ob = util.addGroupInstance(group.name, self.location)
+			if util.bv28():
+				util.move_to_collection(ob, context.collection)
 			if self.snapping == "center":
 				offset = 0  # could be 0.5
 				ob.location = [round(x + offset) - offset for x in self.location]

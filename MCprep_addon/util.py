@@ -16,11 +16,13 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from subprocess import Popen, PIPE
 import json
 import operator
 import os
 import platform
 import random
+import re
 import subprocess
 from subprocess import Popen, PIPE
 
@@ -28,6 +30,9 @@ import bpy
 
 from . import conf
 
+
+# Commonly used name for an excluded collection in Blender 2.8+
+SPAWNER_EXCLUDE = "Spawner Exclude"
 
 # -----------------------------------------------------------------------------
 # GENERAL SUPPORTING FUNCTIONS (no registration required)
@@ -493,6 +498,18 @@ def get_or_create_viewlayer(context, collection_name):
 	return response_vl
 
 
+def natural_sort(elements):
+	"""Use human or natural sorting for subnumbers within string list."""
+	def convert(text):
+		return int(text) if text.isdigit() else text.lower()
+
+	def alphanum_key(key):
+		return [convert(c) for c in re.split('([0-9]+)', key)]
+		# or return [ convert(c) for c in re.split(r'(\d+)', text) ]
+
+	return sorted(elements, key=alphanum_key)
+
+
 # -----------------------------------------------------------------------------
 # Cross blender 2.7 and 2.8 functions
 # -----------------------------------------------------------------------------
@@ -708,7 +725,7 @@ def move_assets_to_excluded_layer(context, collections):
 
 	# Then, setup the exclude view layer
 	spawner_exclude_vl = get_or_create_viewlayer(
-		context, "Spawner Exclude")
+		context, SPAWNER_EXCLUDE)
 	spawner_exclude_vl.exclude = True
 
 	for grp in collections:

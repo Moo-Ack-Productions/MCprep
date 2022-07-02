@@ -483,7 +483,7 @@ class MCPREP_OT_swap_texture_pack(
 		if invalid_uv:
 			self.report({'ERROR'}, (
 				"Detected scaled UV's (all in one texture), be sure to use "
-				"Mineway's 'Export Tiles for textures'"))
+				"Mineway's 'Export Individual Textures To..'' feature"))
 			conf.log("Detected scaledd UV's, incompatible with swap textures")
 			conf.log([ob.name for ob in affected_objs], vv_only=True)
 		else:
@@ -509,11 +509,12 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 		"Generate and apply the selected material based on active resource pack")
 	bl_options = {'REGISTER', 'UNDO'}
 
+	filepath = bpy.props.StringProperty(default="")
 	skipUsage = bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	@classmethod
 	def poll(cls, context):
-		return context.object and context.scene.mcprep_props.material_list
+		return context.object
 
 	def invoke(self, context, event):
 		return context.window_manager.invoke_props_dialog(
@@ -526,15 +527,14 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 	track_param = None
 	@tracking.report_error
 	def execute(self, context):
-		scn_props = context.scene.mcprep_props
-		mat_item = scn_props.material_list[scn_props.material_list_index]
-		if not os.path.isfile(mat_item.path):
+		mat_name = os.path.splitext(os.path.basename(self.filepath))[0]
+		if not os.path.isfile(self.filepath):
 			self.report({"ERROR"}, (
 				"File not found! Reset the resource pack under advanced "
 				"settings (return arrow icon) and press reload materials"))
 			return {'CANCELLED'}
 		mat, err = self.generate_base_material(
-			context, mat_item.name, mat_item.path)
+			context, mat_name, self.filepath)
 		if mat is None and err:
 			self.report({"ERROR"}, err)
 			return {'CANCELLED'}
