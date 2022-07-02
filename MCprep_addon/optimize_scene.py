@@ -249,11 +249,6 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 
 		# Compute device.
 		if cycles_compute_device_type == "NONE":
-			if self.uses_scrambling:
-				self.uses_scrambling = False # Automatic scrambling distance is useless on CPU
-				self.preview_scrambling = False
-				self.scrambling_multiplier = 1
-				print("Disabling Automatic Scrambling Distance as it is useless for CPU rendering!")
 			if util.bv30() is False:
 				try:
 					addon_utils.enable("render_auto_tile_size", default_set=True)
