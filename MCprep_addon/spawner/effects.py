@@ -44,7 +44,7 @@ IMG_SEQ = "img_seq"
 # Collection name for effects.
 EFFECT_EXCLUDE = "Effects Exclude"
 
-EXTENSIONS = [".png", ".jpg", ".jpeg"]
+EXTENSIONS = [".png", ".jpg", ".jpeg", ".tiff"]
 
 
 # -----------------------------------------------------------------------------
@@ -749,9 +749,8 @@ def update_effects_list(context):
 
 def load_geonode_effect_list(context):
 	"""Load effects defined by geonodes for wide area effects."""
-	if bpy.app.version < (3, 0):  # Validate if should be 3.1
+	if not util.bv30():
 		print("Not loading geonode effects")
-		# TODO: Test on 3.0 too in case it does work somehow.
 		return
 
 	mcprep_props = context.scene.mcprep_props
@@ -938,30 +937,6 @@ def load_image_sequence_effects(context):
 
 
 # -----------------------------------------------------------------------------
-# Support functions
-# -----------------------------------------------------------------------------
-
-
-def create_auto_footfall_particle_plane():
-	"""Create particle effects at every point in time the object hits another.
-
-	This would be an advanced feature, using particle plans as the base. It
-	should be the resultant instances of particle planes into its own single
-	collection which can be regenerated if the animation of the object/rig is
-	ever updated. The detector should be a footfall empty that ends up being
-	parented via copy-location constraint (with an offset) based on the
-	selected bone or mesh.
-
-	When processing, it should know to hide the objects in the same parent
-	structure (e.g. legs, shoe meshes, armature) so it only does ray casting
-	against other items in the scene. Should be based on what is visible so
-	the artist has more control of what it tries to detect.
-	"""
-
-	# TODO: Implement this after the core particle plane effect exists.
-
-
-# -----------------------------------------------------------------------------
 # Operator classes
 # -----------------------------------------------------------------------------
 
@@ -1117,8 +1092,9 @@ class MCPREP_OT_spawn_particle_planes(bpy.types.Operator, ImportHelper):
 	frame = bpy.props.IntProperty(default=0, name="Frame")
 
 	# Importer helper
+	exts = ";".join(["*" + ext for ext in EXTENSIONS])
 	filter_glob = bpy.props.StringProperty(
-		default="*.png;*.jpg;*.jpeg;*.tiff",
+		default=exts,
 		options={'HIDDEN'})
 	fileselectparams = "use_filter_blender"
 
