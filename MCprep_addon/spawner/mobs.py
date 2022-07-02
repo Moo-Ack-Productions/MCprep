@@ -50,7 +50,7 @@ def get_rig_list(context):
 
 
 def update_rig_path(self, context):
-	"""List for UI items callback of property spawn_rig_category."""
+	"""List for UI mobs callback of property spawn_rig_category."""
 	conf.log("Updating rig path", vv_only=True)
 	conf.rig_categories = []
 	update_rig_list(context)
