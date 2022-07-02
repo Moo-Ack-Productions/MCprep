@@ -23,11 +23,11 @@ from . import util
 from .materials import generate
 
 
-MAX_BOUNCES = 8
-MIN_BOUNCES = 2
+MAX_BOUNCES = 8 # 8 is generally the standard for light bounces
+MIN_BOUNCES = 2 # 2 is the lowest as it avoids issues regarding glossy
 CMP_BOUNCES = MIN_BOUNCES * 2 # To avoid bounces from going bellow 2
 MAX_FILTER_glossy = 1.0 # Standard in Blender
-MAX_STEPS = 200
+MAX_STEPS = 200 # 200 is fine for most scenes
 MIN_SCRAMBLING_MULTIPLIER = 0.35 # 0.35 seems to help performance a lot, but we'll do edits to this value depending on materials
 SCRAMBLING_MULTIPLIER_ADD = 0.05 # This is how much we'll add to the srambling distance multiplier 
 CMP_SCRAMBLING_MULTIPLIER = MIN_SCRAMBLING_MULTIPLIER * 3 # The max since beyond this performance doesn't improve as much
