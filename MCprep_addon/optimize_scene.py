@@ -17,20 +17,25 @@
 # ##### END GPL LICENSE BLOCK #####
 
 
-# TODO: Improving material optimization
-# TODO: Doing a very small optimization before rendering 
-# TODO: Taking advantage of more powerful optimizations that are extremely scene dependent
 import bpy
 import addon_utils
 from . import util
 from .materials import generate
 
 
-MAX_BOUNCES = 8
-MIN_BOUNCES = 2
-CMP_BOUNCES = MIN_BOUNCES * 2
-MAX_FILTER_GLOSSY = 1.0
-MAX_STEPS = 200
+MAX_BOUNCES = 8 # 8 is generally the standard for light bounces
+MIN_BOUNCES = 2 # 2 is the lowest as it avoids issues regarding glossy
+CMP_BOUNCES = MIN_BOUNCES * 2 # To avoid bounces from going bellow 2
+MAX_FILTER_glossy = 1.0 # Standard in Blender
+MAX_STEPS = 200 # 200 is fine for most scenes
+MIN_SCRAMBLING_MULTIPLIER = 0.35 # 0.35 seems to help performance a lot, but we'll do edits to this value depending on materials
+SCRAMBLING_MULTIPLIER_ADD = 0.05 # This is how much we'll add to the srambling distance multiplier 
+CMP_SCRAMBLING_MULTIPLIER = MIN_SCRAMBLING_MULTIPLIER * 3 # The max since beyond this performance doesn't improve as much
+VOLUMETRIC_NODES = ["ShaderNodeVolumeScatter", "ShaderNodeVolumeAbsorption", "ShaderNodeVolumePrincipled"]
+
+# MCprep Node Settings
+MCPREP_HOMOGENOUS_volume = "MCPREP_HOMOGENOUS_VOLUME"
+MCPREP_NOT_HOMOGENOUS_volume = "MCPREP_NOT_HOMOGENOUS_VOLUME"
 
 
 class MCprepOptimizerProperties(bpy.types.PropertyGroup):
@@ -46,14 +51,10 @@ class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 		default=False,
 		description="If checked allows cautics to be enabled"
 	)
-	motionblur_bool = bpy.props.BoolProperty(
+	motion_blur_bool = bpy.props.BoolProperty(
 		name="Motion Blur (slower)",
 		default=False,
 		description="If checked allows motion blur to be enabled"
-	)
-	volumetric_bool = bpy.props.BoolProperty(
-		name="Volumetrics" + " (slower)" if util.bv30() else "",
-		default=False
 	)
 	scene_brightness = bpy.props.EnumProperty(
 		name="",
@@ -61,11 +62,19 @@ class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 		items=scene_brightness
 	)
 	quality_vs_speed = bpy.props.BoolProperty(
-		name="Optimize for Quality",
+		name="Optimize for quality",
 		default=True
 	)
 	simplify = bpy.props.BoolProperty(
 		name="Simplify the viewport",
+		default=True
+	)
+	scrambling_unsafe = bpy.props.BoolProperty(
+		name="Automatic Scrambling Distance",
+		default=False
+	)
+	preview_scrambling = bpy.props.BoolProperty(
+		name="Preview Scrambling",
 		default=True
 	)
 
@@ -77,16 +86,21 @@ def panel_draw(context, element):
 	scn_props = context.scene.optimizer_props
 	if engine == 'CYCLES':
 		col.label(text="Options")
-		volumetric_icon = "OUTLINER_OB_VOLUME" if scn_props.volumetric_bool else "OUTLINER_DATA_VOLUME"
 		quality_icon = "INDIRECT_ONLY_ON" if scn_props.quality_vs_speed else "INDIRECT_ONLY_OFF"
-		col.prop(scn_props, "volumetric_bool", icon=volumetric_icon)
 		col.prop(scn_props, "quality_vs_speed", icon=quality_icon)
 		col.prop(scn_props, "simplify", icon=quality_icon)
 
 		col.label(text="Time of Day")
 		col.prop(scn_props, "scene_brightness")
 		col.prop(scn_props, "caustics_bool", icon="TRIA_UP")
-		col.prop(scn_props, "motionblur_bool", icon="TRIA_UP")
+		col.prop(scn_props, "motion_blur_bool", icon="TRIA_UP")
+		col.row()
+		col.label(text="Unsafe Options! Use at your own risk!")
+		if util.bv30():
+			scrambling_unsafe_icon = "TRIA_DOWN" if scn_props.scrambling_unsafe else "TRIA_RIGHT"
+			col.prop(scn_props, "scrambling_unsafe", icon=scrambling_unsafe_icon)
+			if scn_props.scrambling_unsafe:
+				col.prop(scn_props, "preview_scrambling")
 		col.row()
 		col.label(text="")
 		subrow = col.row()
@@ -100,6 +114,73 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 	bl_idname = "mcprep.optimize_scene"
 	bl_label = "Optimize Scene"
 	bl_options = {'REGISTER', 'UNDO'}
+
+	def __init__(self):
+		# Sampling Settings.
+		self.samples = bpy.context.scene.cycles.samples # We will be doing some minor adjustments to the sample count
+		self.minimum_samples = None
+		self.noise_threshold = 0.2
+
+		# Light Bounces.
+		self.diffuse = 2  # This is default because diffuse bounces don't need to be high
+		self.glossy = 1
+		self.transmissive = 1
+		self.volume = 2
+
+		# volumetric Settings.
+		self.max_steps = 100
+		self.stepping_rate = 5
+		self.homogenous_volumes = 0
+		self.not_homogenous_volumes = 0
+
+		# Filter glossy and clamping settings.
+		self.filter_glossy = 1
+		self.clamping_indirect = 1
+
+		# Motion blur, caustics, etc.
+		self.motion_blur = None
+		self.reflective_caustics = None
+		self.refractive_caustics = None
+
+		# Optimizer Settings.
+		self.quality = None
+		self.uses_scrambling = None
+		self.preview_scrambling = None
+		self.scrambling_multiplier = MIN_SCRAMBLING_MULTIPLIER
+	
+	def is_vol(self, context, node):
+		density_socket = node.inputs["Density"] # Grab the density
+		node_name = util.nameGeneralize(node.name).rstrip()  # Get the name (who knew this could be used on nodes?)
+		# Sometimes there may be something linked to the density but it's fine to treat it as a homogeneous volume
+		# This allows the user to control the addon at the node level
+		if not density_socket.is_linked:
+			if node_name == MCPREP_NOT_HOMOGENOUS_volume:
+				self.not_homogenous_volumes -= 1
+			else:
+				self.homogenous_volumes += 1
+		else:
+			if node_name == MCPREP_HOMOGENOUS_volume:
+				self.homogenous_volumes += 1
+			else:
+				self.not_homogenous_volumes += 1
+
+		self.scrambling_multiplier += SCRAMBLING_MULTIPLIER_ADD
+		if self.scrambling_multiplier >= CMP_SCRAMBLING_MULTIPLIER: # at this point, it's worthless to keep it enabled 
+			self.uses_scrambling = False
+			self.preview_scrambling = False
+			self.scrambling_multiplier = 1.0
+
+		print(self.homogenous_volumes, " ", self.not_homogenous_volumes)
+
+	def is_pricipled(self, context, mat_type, node):
+		if mat_type == "reflective":
+			roughness_socket = node.inputs["Roughness"]
+			if not roughness_socket.is_linked and roughness_socket.default_value >= 0.2:
+				self.glossy = self.glossy - 1 if self.glossy > 2 else 2
+		elif mat_type == "glass":
+			transmission_socket = node.inputs["Transmission"]
+			if not transmission_socket.is_linked and transmission_socket.default_value >= 0:
+				self.transmissive = self.transmissive - 2 if self.transmissive > 1 else 2
 
 	def execute(self, context):
 		# ! Calling this twice seems to remove all unused materials
@@ -117,54 +198,54 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 			cycles_compute_device_type = cprefs.preferences.compute_device_type
 
 		# Sampling Settings.
-		Samples = bpy.context.scene.cycles.samples # We will be doing some minor adjustments to the sample count
-		MinimumSamples = None
-		NoiseThreshold = 0.2
+		self.samples = bpy.context.scene.cycles.samples # We will be doing some minor adjustments to the sample count
+		self.minimum_samples = None
+		self.noise_threshold = 0.2
 
 
 		# Light Bounces.
-		Diffuse = 2  # This is default because diffuse bounces don't need to be high
-		Glossy = 1
-		Transmissive = 1
-		Volume = 1
+		self.diffuse = 2  # This is default because diffuse bounces don't need to be high
+		self.glossy = 1
+		self.transmissive = 1
+		self.volume = 2
 
-		# Volumetric Settings.
-		MaxSteps = 100
+		# volumetric Settings.
+		self.max_steps = 100
+		self.stepping_rate = 5
+		self.homogenous_volumes = 0
+		self.not_homogenous_volumes = 0
 
-		# Filter Glossy and clamping settings.
-		FilterGlossy = 1
-		ClampingIndirect = 1
+		# Filter glossy and clamping settings.
+		self.filter_glossy = 1
+		self.clamping_indirect = 1
 
 		# Motion blur, caustics, etc.
-		MotionBlur = scn_props.motionblur_bool
-		ReflectiveCaustics = scn_props.caustics_bool
-		RefractiveCaustics = scn_props.caustics_bool
+		self.motion_blur = scn_props.motion_blur_bool
+		self.reflective_caustics = scn_props.caustics_bool
+		self.refractive_caustics = scn_props.caustics_bool
 
 		# Optimizer Settings.
-		Quality = scn_props.quality_vs_speed
-
-		# Render engine settings.
-		# TODO: Add better volumetric optimizations by checking volumetric materials and enabling certain features that benifit the scene (such as homogeneous)
-		if scn_props.volumetric_bool:
-			Samples += 50
-			Volume = 2
+		self.quality = scn_props.quality_vs_speed
+		self.uses_scrambling = scn_props.scrambling_unsafe
+		self.preview_scrambling = scn_props.preview_scrambling
+		self.scrambling_multiplier = MIN_SCRAMBLING_MULTIPLIER
 
 		# Time of day.
 		if scn_props.scene_brightness == "BRIGHT":
-			NoiseThreshold = 0.2
+			self.noise_threshold = 0.2
 		else:
-			Samples += 20
-			NoiseThreshold = 0.05
+			self.samples += 20
+			self.noise_threshold = 0.05
 		
-		if Quality:
-			MinimumSamples = Samples // 2
-			FilterGlossy = MAX_FILTER_GLOSSY // 2
-			MaxSteps = MAX_STEPS # TODO: Add better volumetric optimizations
+		if self.quality:
+			self.minimum_samples = self.samples // 4
+			self.filter_glossy = MAX_FILTER_glossy // 2
+			self.max_steps = MAX_STEPS # TODO: Add better volumetric optimizations
 
 		else:
-			MinimumSamples = Samples // 4
-			FilterGlossy = MAX_FILTER_GLOSSY
-			MaxSteps = MAX_STEPS // 2 # TODO: Add better volumetric optimizations
+			self.minimum_samples = self.samples // 8
+			self.filter_glossy = MAX_FILTER_glossy
+			self.max_steps = MAX_STEPS // 2 # TODO: Add better volumetric optimizations
 
 		# Compute device.
 		if cycles_compute_device_type == "NONE":
@@ -213,59 +294,101 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 			except Exception:
 				bpy.context.scene.render.tile_x = 256
 				bpy.context.scene.render.tile_y = 256
-
+    
 		# Cycles Render Settings Optimizations.
 		for mat in bpy.data.materials:
 			matGen = util.nameGeneralize(mat.name)
 			canon, form = generate.get_mc_canonical_name(matGen)
+			mat_type = None
 			if generate.checklist(canon, "reflective"):
-				Glossy += 1
+				self.glossy += 1
+				mat_type = "reflective"
 			if generate.checklist(canon, "glass"):
-				Transmissive += 1
+				self.transmissive += 1
+				mat_type = "glass"
+
+			if mat.use_nodes:
+				nodes = mat.node_tree.nodes
+				for node in nodes:
+					print(node.bl_idname)
+					if node.bl_idname in VOLUMETRIC_NODES:
+						self.is_vol(context, node)
+
+					# Not the best check, but better then nothing
+					if node.bl_idname == "ShaderNodeBsdfPrincipled":
+						self.is_pricipled(context, mat_type, node)
+				
+				if self.homogenous_volumes > 0 or self.not_homogenous_volumes > 0:
+					volumes_rate = self.homogenous_volumes - self.not_homogenous_volumes
+					if volumes_rate > 0:
+						self.stepping_rate += 2 * volumes_rate
+						mat.cycles.homogenous_volume = True
+					elif volumes_rate < 0:
+						self.stepping_rate -= 2 * abs(volumes_rate) # get the absolute value of volumes_rate since it's negative
+						if self.stepping_rate < 2:
+							self.stepping_rate = 2 # 2 is the lowest stepping rate
+
 
 		"""
 		The reason we divide by 2 only if the bounces are greater then or equal to CMP_BOUNCES (MIN_BOUNCES * 2) is to 
 		prevent the division operation from setting the bounces below MIN_BOUNCES.
 
-		For instance, if the Glossy bounces are 3, and we divide by 2 anyway, the Glossy bounces would be set to 1 (we're using // for integer division), which 
+		For instance, if the glossy bounces are 3, and we divide by 2 anyway, the glossy bounces would be set to 1 (we're using // for integer division), which 
 		may cause issues when dealing with multiple glossy objects.
 
 		However, this is not an issue in this case since 3 is less then CMP_BOUNCES (by default anyway)
 		"""
-		if Glossy >= CMP_BOUNCES:
-			Glossy = Glossy // 2
-		if Transmissive >= CMP_BOUNCES:
-			Transmissive = Transmissive // 2
+		if self.glossy >= CMP_BOUNCES:
+			self.glossy = self.glossy // 2
+		if self.transmissive >= CMP_BOUNCES:
+			self.transmissive = self.transmissive // 2
 
 		local_max_bounce = MAX_BOUNCES
-		if Glossy > MAX_BOUNCES:
-			local_max_bounce = Glossy
+		if self.glossy > local_max_bounce:
+			local_max_bounce = self.glossy
 
-		if Transmissive > local_max_bounce:
-			local_max_bounce = Transmissive
+		if self.transmissive > local_max_bounce:
+			local_max_bounce = self.transmissive
 
+		# Sampling settings
 		# Adaptive sampling is something from Blender 2.9+
 		if util.min_bv((2, 90)):
-			bpy.context.scene.cycles.adaptive_threshold = NoiseThreshold
-			bpy.context.scene.cycles.adaptive_min_samples = MinimumSamples
+			bpy.context.scene.cycles.adaptive_threshold = self.noise_threshold
+			bpy.context.scene.cycles.adaptive_min_samples = self.minimum_samples
+		# Scrambling distance is a 3.0 feature
+		if util.bv30():
+			bpy.context.scene.cycles.auto_scrambling_distance = self.uses_scrambling
+			bpy.context.scene.cycles.preview_scrambling_distance = self.preview_scrambling
+			bpy.context.scene.cycles.scrambling_distance = self.scrambling_multiplier
 
-		bpy.context.scene.cycles.samples = Samples
-		bpy.context.scene.cycles.blur_glossy = FilterGlossy
-		bpy.context.scene.cycles.volume_max_steps = MaxSteps
-		bpy.context.scene.cycles.glossy_bounces = Glossy
-		bpy.context.scene.cycles.transmission_bounces = Transmissive
-		bpy.context.scene.cycles.caustics_reflective = ReflectiveCaustics
-		bpy.context.scene.cycles.caustics_refractive = RefractiveCaustics
-		bpy.context.scene.cycles.sample_clamp_indirect = ClampingIndirect
-		bpy.context.scene.cycles.volume_bounces = Volume
-		bpy.context.scene.cycles.diffuse_bounces = Diffuse
+			if self.uses_scrambling is not False:
+				bpy.context.scene.cycles.min_light_bounces = 1
+				bpy.context.scene.cycles.min_transparent_bounces = 2
+
+		bpy.context.scene.cycles.samples = self.samples
+
+		# volumetric settings 
+		bpy.context.scene.cycles.volume_max_steps = self.max_steps
+		bpy.context.scene.cycles.volume_step_rate = self.stepping_rate
+		bpy.context.scene.cycles.volume_preview_step_rate = self.stepping_rate
+
+		# Bounce settings
 		bpy.context.scene.cycles.max_bounces = local_max_bounce
+		bpy.context.scene.cycles.diffuse_bounces = self.diffuse
+		bpy.context.scene.cycles.volume_bounces = self.volume
+		bpy.context.scene.cycles.glossy_bounces = self.glossy
+		bpy.context.scene.cycles.transmission_bounces = self.transmissive
+
+		# Settings related to glossy and transmissive materials
+		bpy.context.scene.cycles.blur_glossy = self.filter_glossy
+		bpy.context.scene.cycles.caustics_reflective = self.reflective_caustics
+		bpy.context.scene.cycles.caustics_refractive = self.refractive_caustics
+		bpy.context.scene.cycles.sample_clamp_indirect = self.clamping_indirect
 
 		# Sometimes people don't want to use simplify because it messes with rigs
-		if scn_props.simplify:
-			bpy.context.scene.render.use_simplify = True
-			bpy.context.scene.render.simplify_subdivision = 0
-		bpy.context.scene.render.use_motion_blur = MotionBlur
+		bpy.context.scene.render.use_simplify = scn_props.simplify
+		bpy.context.scene.render.simplify_subdivision = 0
+		bpy.context.scene.render.use_motion_blur = self.motion_blur
 		return {'FINISHED'}
 
 

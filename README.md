@@ -452,6 +452,30 @@ To add your own rigs to the Mob Spawner:
   - Alpha Threshold: At this level or lower of alpha values (0.0-1.0), delete the face from the resulting mesh.
   - Use transparent pixels: If enabled, will setup the material so that transparent pixels will appear transparent in the render, othwise will be solid.
 
+### Cycles Optimizer
+- **Purpose:** To optimize Cycles render settings without sacrificing much quality
+- **Step 1:** Navigate to the World Imports panel and find the "Cycles Optimizer" panel
+- **Step 2:** Select the features you want to use
+- **Step 3:** Hit the "Optimize Scene" button (**It is recommended to do this twice. Once when prepping materials and once before rendering your final render)
+
+**Warning**: There is a section called unsafe features which contains options that may cause render issues. These features can being massive performance boosts but it's not recommended to use them unless you know what you're doing. Unsafe options include:
+
+- **Automatic Scrambling Distance:** Improves GPU performance but can cause artifacts. As such, if you're using a CPU to render or reach a scrambling multiplier of 0.7+, MCprep will automatically disable it. Please enable this before rendering your final render to reduce the chances of having artifacts:
+    
+- **Preview Scrambling:** Enabled by default if you enable `Automatic Scrambling Distance`. This can cause a lot of flickering in rendered view (which is how Automatic Scrambling Distance works in the first place).
+
+![Optimizer panel](/visuals/optimizer-panel-settings.png?raw=true)
+
+
+#### Cycles Optimizer Node Settings
+The Cycles optimizer also comes with it some special node names to control how it interprets certain nodes. They are the following:
+- `MCPREP_HOMOGENOUS_VOLUME`: if applied to a Volume Scatter, Volume Absorbtion, or Pricipled Volume node, it is treated as a homogenous volume 
+- `MCPREP_NOT_HOMOGENOUS_VOLUME`: if applied to a Volume Scatter, Volume Absorbtion, or Pricipled Volume node, it is not treated as a homogenous volume 
+
+To use these settings, simply click on the node you want to edit, press N, and then edit the Name of the node
+
+**Important:** Make sure you edit the **Name** of the node, not the **Label**
+![Using optimizer node settings](/visuals/optimizer-node-settings.png?raw=true)
 
 Known Bugs
 ======

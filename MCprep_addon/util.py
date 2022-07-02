@@ -24,6 +24,7 @@ import platform
 import random
 import re
 import subprocess
+from subprocess import Popen, PIPE
 
 import bpy
 
@@ -186,9 +187,10 @@ def obj_copy(base, context=None, vertex_groups=True, modifiers=True):
 				setattr(dest, prop, getattr(mod_src, prop))
 	return new_ob
 
-
-def min_bv(version):
+def min_bv(version, *, inclusive=True):
 	if hasattr(bpy.app, "version"):
+		if inclusive is False:
+			return bpy.app.version > version
 		return bpy.app.version >= version
 
 

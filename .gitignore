@@ -1,5 +1,4 @@
 .DS_Store
-*.png
 *.blend
 __pycache__
 MCprep_addon/mcprep_addon_tracker.json
