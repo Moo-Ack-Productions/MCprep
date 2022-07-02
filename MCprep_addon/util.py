@@ -182,17 +182,9 @@ def obj_copy(base, context=None, vertex_groups=True, modifiers=True):
 				setattr(dest, prop, getattr(mod_src, prop))
 	return new_ob
 
-
-def max_bv(version, *, up_to=None):
+def min_bv(version, *, inclusive=True):
 	if hasattr(bpy.app, "version"):
-		if up_to is not None:
-			return bpy.app.version < version
-		return bpy.app.version <= version
-
-
-def min_bv(version, *, above=None):
-	if hasattr(bpy.app, "version"):
-		if above is not None:
+		if inclusive is False:
 			return bpy.app.version > version
 		return bpy.app.version >= version
 
