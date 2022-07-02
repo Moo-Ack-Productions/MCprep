@@ -356,7 +356,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 			bpy.context.scene.cycles.adaptive_threshold = self.noise_threshold
 			bpy.context.scene.cycles.adaptive_min_samples = self.minimum_samples
 		# Scrambling distance is a 3.0 feature
-		if util.bv30():
+		if util.bv30() and self.uses_scrambling:
 			bpy.context.scene.cycles.auto_scrambling_distance = self.uses_scrambling
 			bpy.context.scene.cycles.preview_scrambling_distance = self.preview_scrambling
 			bpy.context.scene.cycles.scrambling_distance = self.scrambling_multiplier
