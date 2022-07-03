@@ -1005,7 +1005,6 @@ class MCPREP_OT_render_panorama(bpy.types.Operator):
 
 	def draw(self, context):
 		self.layout.prop(self, "panorama_resolution")
-		self.layout.prop(self, "save_path")
 
 	def execute(self, context):
 		pi_half = math.pi / 2
