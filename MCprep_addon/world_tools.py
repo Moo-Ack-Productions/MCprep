@@ -1013,15 +1013,24 @@ class MCPREP_OT_render_panorama(bpy.types.Operator):
 		default=512
 	)
 
+	save_path = bpy.props.StringProperty(
+		name="Output Folder",
+		description="The folder to output the renders to",
+		subtype="DIR_PATH",
+		default="/tmp\\"
+	)
+
 	def invoke(self, context, event):
 		return context.window_manager.invoke_props_dialog(self, width=400 * util.ui_scale())
 
 	def draw(self, context):
 		self.layout.prop(self, "panorama_resolution")
+		self.layout.prop(self, "save_path")
 
 	def execute(self, context):
-		# Temp workaround while finding workaround for file explorer closing modal dialogue
-		save_path = "G:\\My Drive\\Blender-Projects\\2022\\06\\mc panorama\\mcpreptest\\"
+
+		# # Temp workaround while finding workaround for file explorer closing modal dialogue
+		# save_path = "G:\\My Drive\\Blender-Projects\\2022\\06\\mc panorama\\mcpreptest\\"
 
 		pi_half = math.pi / 2
 		active_camera = bpy.context.scene.camera
@@ -1039,7 +1048,7 @@ class MCPREP_OT_render_panorama(bpy.types.Operator):
 		bpy.context.scene.render.resolution_y = self.panorama_resolution
 
 		for i in range(6):
-			render_camera(cameras[i], os.path.join(save_path, "panorama_" + str(i) + ".png"))
+			render_camera(cameras[i], os.path.join(self.save_path, "panorama_" + str(i) + ".png"))
 			util.obj_unlink_remove(cameras[i], True)
 
 		bpy.context.scene.render.resolution_x = old_res_x
