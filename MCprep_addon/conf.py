@@ -134,7 +134,7 @@ def icons_init():
 	global v
 
 	collection_sets = [
-		"main", "skins", "mobs", "entities", "blocks", "items", "materials"]
+		"main", "skins", "mobs", "entities", "blocks", "items", "effects", "materials"]
 
 	try:
 		for iconset in collection_sets:
@@ -157,6 +157,10 @@ def icons_init():
 		preview_collections["main"].load(
 			"sword_icon",
 			os.path.join(icons_dir, "sword_icon.png"),
+			'IMAGE')
+		preview_collections["main"].load(
+			"effects_icon",
+			os.path.join(icons_dir, "effects_icon.png"),
 			'IMAGE')
 		preview_collections["main"].load(
 			"entity_icon",

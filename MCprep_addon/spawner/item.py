@@ -47,7 +47,8 @@ def reload_items(context):
 	if conf.use_icons and conf.preview_collections["items"]:
 		try:
 			bpy.utils.previews.remove(conf.preview_collections["items"])
-		except:
+		except Exception as e:
+			print(e)
 			conf.log("MCPREP: Failed to remove icon set, items")
 
 	# Check levels
@@ -345,6 +346,7 @@ class ItemSpawnBase():
 		description="Scale individual UV faces of the generated item")
 	filepath = bpy.props.StringProperty(
 		default="",
+		subtype="FILE_PATH",
 		options={'HIDDEN', 'SKIP_SAVE'})
 	skipUsage = bpy.props.BoolProperty(
 		default=False,

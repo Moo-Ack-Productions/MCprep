@@ -47,6 +47,11 @@ if "prep" in locals():
 else:
 	from .materials import prep
 
+if "optimize_scene" in locals():
+	importlib.reload(optimize_scene)
+else:
+	from . import optimize_scene
+
 if "sequences" in locals():
 	importlib.reload(sequences)
 else:
@@ -102,6 +107,11 @@ if "item" in locals():
 else:
 	from .spawner import item
 
+if "effects" in locals():
+	importlib.reload(effects)
+else:
+	from .spawner import effects
+
 # if "bridge" in locals():
 # 	importlib.reload(bridge)
 # else:
@@ -153,9 +163,11 @@ module_list = (
 	entities,
 	mcmodel,
 	item,
+	effects,
 	world_tools,
 	# bridge,
 	mcprep_ui,
+ 	optimize_scene
 )
 
 

@@ -34,6 +34,10 @@ Disclaimer: This is not an official Google product
 
 """
 
+# ----------------------------- For any developer ---------------------------- #
+# Increment this number for each time you get a "inconsistent use of spaces and tab error"
+# 								error = 51
+
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",

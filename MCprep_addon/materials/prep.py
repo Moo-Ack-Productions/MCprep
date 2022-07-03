@@ -29,7 +29,6 @@ from .. import tracking
 from .. import util
 from . import uv_tools
 
-
 # -----------------------------------------------------------------------------
 # Material class functions
 # -----------------------------------------------------------------------------
@@ -73,6 +72,10 @@ class McprepMaterialProps():
 		name="Improve UI",
 		description="Automatically improve relevant UI settings",
 		default=True)
+	optimizeScene = bpy.props.BoolProperty(
+		name="Optimize scene (cycles)",
+		description="Optimize the scene for faster cycles rendering",
+		default=False)
 	usePrincipledShader = bpy.props.BoolProperty(
 		name="Use Principled Shader (if available)",
 		description=(
@@ -107,6 +110,10 @@ class McprepMaterialProps():
 			"Synchronize materials with those in the active "
 			"pack's materials.blend file"),
 		default=True)
+	# newDefault = bpy.props.BoolProperty(
+	# 	name="Use custom default material",
+	# 	description="Use a custom default material if you have one set up",
+	# 	default=False)
 	packFormat = bpy.props.EnumProperty(
 		name="Pack Format",
 		description="Change the pack format when using a PBR resource pack.",
@@ -129,6 +136,8 @@ def draw_mats_common(self, context):
 	row = self.layout.row()
 	row.prop(self, "useExtraMaps")
 	row.prop(self, "syncMaterials")
+	row = self.layout.row()
+	# row.prop(self, "newDefault")
 
 	# col = row.column()
 	# col.prop(self, "normalIntensity", slider=True)
@@ -138,6 +147,8 @@ def draw_mats_common(self, context):
 	col.prop(self, "improveUiSettings")
 	col = row.column()
 	col.prop(self, "combineMaterials")
+	row = self.layout.row()
+	row.prop(self, "optimizeScene")
 
 
 class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
@@ -187,6 +198,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 				conf.log(
 					"During prep, found null material:" + str(mat), vv_only=True)
 				continue
+
 			elif mat.library:
 				count_lib_skipped += 1
 				continue
@@ -231,25 +243,36 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 				if res == 0:
 					count += 1
 			else:
-				self.report(
-					{'ERROR'},
-					"Only Blender Internal, Cycles, or Eevee supported")
-				return {'CANCELLED'}
+				try:
+					bpy.ops.mcprep.sync_default_materials(use_pbr=False, engine=engine.lower())
+				except Exception:
+					self.report(
+						{'ERROR'},
+						"Only Blender Internal, Cycles, and Eevee are supported")
+					return {'CANCELLED'}
 
 			if self.animateTextures:
 				sequences.animate_single_material(
 					mat, context.scene.render.engine)
 
+		# Sync materials.
 		if self.syncMaterials is True:
 			bpy.ops.mcprep.sync_materials(
 				selected=True, link=False, replace_materials=False, skipUsage=True)
+
+		# Combine materials.
 		if self.combineMaterials is True:
 			bpy.ops.mcprep.combine_materials(selection_only=True, skipUsage=True)
+
+		# Improve UI.
 		if self.improveUiSettings:
 			try:
 				bpy.ops.mcprep.improve_ui()
 			except RuntimeError as err:
 				print("Failed to improve UI with error: " + str(err))
+
+		if self.optimizeScene and engine == 'CYCLES':
+			bpy.ops.mcprep.optimize_scene()
 
 		if self.skipUsage is True:
 			pass  # Don't report if a meta-call.
@@ -460,7 +483,7 @@ class MCPREP_OT_swap_texture_pack(
 		if invalid_uv:
 			self.report({'ERROR'}, (
 				"Detected scaled UV's (all in one texture), be sure to use "
-				"Mineway's 'Export Tiles for textures'"))
+				"Mineway's 'Export Individual Textures To..'' feature"))
 			conf.log("Detected scaledd UV's, incompatible with swap textures")
 			conf.log([ob.name for ob in affected_objs], vv_only=True)
 		else:
@@ -486,11 +509,12 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 		"Generate and apply the selected material based on active resource pack")
 	bl_options = {'REGISTER', 'UNDO'}
 
+	filepath = bpy.props.StringProperty(default="")
 	skipUsage = bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	@classmethod
 	def poll(cls, context):
-		return context.object and context.scene.mcprep_props.material_list
+		return context.object
 
 	def invoke(self, context, event):
 		return context.window_manager.invoke_props_dialog(
@@ -503,15 +527,14 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 	track_param = None
 	@tracking.report_error
 	def execute(self, context):
-		scn_props = context.scene.mcprep_props
-		mat_item = scn_props.material_list[scn_props.material_list_index]
-		if not os.path.isfile(mat_item.path):
+		mat_name = os.path.splitext(os.path.basename(self.filepath))[0]
+		if not os.path.isfile(self.filepath):
 			self.report({"ERROR"}, (
 				"File not found! Reset the resource pack under advanced "
 				"settings (return arrow icon) and press reload materials"))
 			return {'CANCELLED'}
 		mat, err = self.generate_base_material(
-			context, mat_item.name, mat_item.path)
+			context, mat_name, self.filepath)
 		if mat is None and err:
 			self.report({"ERROR"}, err)
 			return {'CANCELLED'}
