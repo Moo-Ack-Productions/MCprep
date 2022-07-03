@@ -97,6 +97,19 @@ def create_panorama_cam(name, rot, loc):
 	return camera
 
 
+def render_camera(camera, out_path):
+	"""Render the camera"""
+
+	prev_cam = bpy.context.scene.camera
+	bpy.context.scene.camera = camera
+
+	# The render thing :tm:
+	# bpy.ops.render.render("INVOKE_DEFAULT", write_still=True)
+	# Logic that waits/starts render after render finished
+
+	bpy.context.scene.camera = prev_cam
+
+
 # -----------------------------------------------------------------------------
 # open mineways/jmc2obj related
 # -----------------------------------------------------------------------------
@@ -1007,6 +1020,9 @@ class MCPREP_OT_render_panorama(bpy.types.Operator):
 		self.layout.prop(self, "panorama_resolution")
 
 	def execute(self, context):
+		# Temp workaround while finding workaround for file explorer closing modal dialogue
+		save_path = "G:\\My Drive\\Blender-Projects\\2022\\06\\mc panorama\\mcpreptest\\"
+
 		pi_half = math.pi / 2
 		active_camera = bpy.context.scene.camera
 		cameras = [None] * 6
@@ -1016,6 +1032,18 @@ class MCPREP_OT_render_panorama(bpy.types.Operator):
 		cameras[3] = create_panorama_cam("panorama_3", (pi_half, 0.0, pi_half), active_camera.location)
 		cameras[4] = create_panorama_cam("panorama_4", (math.pi, 0.0, 0.0), active_camera.location)
 		cameras[5] = create_panorama_cam("panorama_5", (0.0, 0.0, 0.0), active_camera.location)
+
+		old_res_x = bpy.context.scene.render.resolution_x
+		old_res_y = bpy.context.scene.render.resolution_y
+		bpy.context.scene.render.resolution_x = self.panorama_resolution
+		bpy.context.scene.render.resolution_y = self.panorama_resolution
+
+		for i in range(6):
+			render_camera(cameras[i], os.path.join(save_path, "panorama_" + str(i) + ".png"))
+			util.obj_unlink_remove(cameras[i], True)
+
+		bpy.context.scene.render.resolution_x = old_res_x
+		bpy.context.scene.render.resolution_y = old_res_y
 
 		return {'FINISHED'}
 
