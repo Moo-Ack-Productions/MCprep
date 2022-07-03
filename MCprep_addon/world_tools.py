@@ -17,6 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import os
+import math
 
 import bpy
 from bpy_extras.io_utils import ImportHelper
@@ -81,6 +82,19 @@ def detect_world_exporter(filepath):
 		# form of: # Wavefront OBJ file made by Mineways version 5.10...
 		return 'Mineways'
 	return 'jmc2obj'
+
+
+def create_panorama_cam(name, rot, loc):
+	"""Create a camera"""
+
+	camera_data = bpy.data.cameras.new(name=name)
+	camera_data.angle = math.pi / 2
+
+	camera = bpy.data.objects.new(name, camera_data)
+	camera.rotation_euler = rot
+	camera.location = loc
+	util.obj_link_scene(camera)
+	return camera
 
 
 # -----------------------------------------------------------------------------
@@ -980,6 +994,12 @@ class MCPREP_OT_render_panorama(bpy.types.Operator):
 	bl_description = "Render Panorama for texture Pack"
 	bl_options = {'REGISTER', 'UNDO'}
 
+	panorama_resolution = bpy.props.IntProperty(
+		name="Render resolution",
+		description="The resolution of the output images",
+		default=512
+	)
+
 	def invoke(self, context, event):
 		return context.window_manager.invoke_props_dialog(self, width=400 * util.ui_scale())
 
@@ -988,6 +1008,16 @@ class MCPREP_OT_render_panorama(bpy.types.Operator):
 		self.layout.prop(self, "save_path")
 
 	def execute(self, context):
+		pi_half = math.pi / 2
+		active_camera = bpy.context.scene.camera
+		cameras = [None] * 6
+		cameras[0] = create_panorama_cam("panorama_0", (pi_half, 0.0, 0.0), active_camera.location)
+		cameras[1] = create_panorama_cam("panorama_1", (pi_half, 0.0, math.pi + pi_half), active_camera.location)
+		cameras[2] = create_panorama_cam("panorama_2", (pi_half, 0.0, math.pi), active_camera.location)
+		cameras[3] = create_panorama_cam("panorama_3", (pi_half, 0.0, pi_half), active_camera.location)
+		cameras[4] = create_panorama_cam("panorama_4", (math.pi, 0.0, 0.0), active_camera.location)
+		cameras[5] = create_panorama_cam("panorama_5", (0.0, 0.0, 0.0), active_camera.location)
+
 		return {'FINISHED'}
 
 
@@ -1006,7 +1036,8 @@ classes = (
 	MCPREP_OT_add_mc_world,
 	MCPREP_OT_add_mc_sky,
 	MCPREP_OT_time_set,
-	MCPREP_OT_import_world_split
+	MCPREP_OT_import_world_split,
+	MCPREP_OT_render_panorama,
 )
 
 
