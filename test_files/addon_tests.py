@@ -1996,6 +1996,9 @@ class mcprep_testing():
 		if not gen_files:
 			return "No images generated"
 
+		# Now do cleanup.
+		shutil.rmtree(result_dir)
+
 	def test_enable_obj_importer(self):
 		"""Ensure module name is correct, since error won't be reported."""
 		bpy.ops.preferences.addon_enable(module="io_scene_obj")
