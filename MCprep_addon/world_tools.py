@@ -84,32 +84,6 @@ def detect_world_exporter(filepath):
 	return 'jmc2obj'
 
 
-def create_panorama_cam(name, rot, loc):
-	"""Create a camera"""
-
-	camera_data = bpy.data.cameras.new(name=name)
-	camera_data.angle = math.pi / 2
-
-	camera = bpy.data.objects.new(name, camera_data)
-	camera.rotation_euler = rot
-	camera.location = loc
-	util.obj_link_scene(camera)
-	return camera
-
-
-def render_camera(camera, out_path):
-	"""Render the camera"""
-
-	prev_cam = bpy.context.scene.camera
-	bpy.context.scene.camera = camera
-
-	# The render thing :tm:
-	# bpy.ops.render.render("INVOKE_DEFAULT", write_still=True)
-	# Logic that waits/starts render after render finished
-
-	bpy.context.scene.camera = prev_cam
-
-
 # -----------------------------------------------------------------------------
 # open mineways/jmc2obj related
 # -----------------------------------------------------------------------------
@@ -1020,6 +994,10 @@ class MCPREP_OT_render_panorama(bpy.types.Operator):
 		default="/tmp\\"
 	)
 
+	render_queue = []
+
+	camera_data = None
+
 	def invoke(self, context, event):
 		return context.window_manager.invoke_props_dialog(self, width=400 * util.ui_scale())
 
@@ -1028,33 +1006,56 @@ class MCPREP_OT_render_panorama(bpy.types.Operator):
 		self.layout.prop(self, "save_path")
 
 	def execute(self, context):
-
-		# # Temp workaround while finding workaround for file explorer closing modal dialogue
-		# save_path = "G:\\My Drive\\Blender-Projects\\2022\\06\\mc panorama\\mcpreptest\\"
-
-		pi_half = math.pi / 2
-		active_camera = bpy.context.scene.camera
-		cameras = [None] * 6
-		cameras[0] = create_panorama_cam("panorama_0", (pi_half, 0.0, 0.0), active_camera.location)
-		cameras[1] = create_panorama_cam("panorama_1", (pi_half, 0.0, math.pi + pi_half), active_camera.location)
-		cameras[2] = create_panorama_cam("panorama_2", (pi_half, 0.0, math.pi), active_camera.location)
-		cameras[3] = create_panorama_cam("panorama_3", (pi_half, 0.0, pi_half), active_camera.location)
-		cameras[4] = create_panorama_cam("panorama_4", (math.pi, 0.0, 0.0), active_camera.location)
-		cameras[5] = create_panorama_cam("panorama_5", (0.0, 0.0, 0.0), active_camera.location)
-
+		# Save old Values
+		prev_cam = bpy.context.scene.camera
 		old_res_x = bpy.context.scene.render.resolution_x
 		old_res_y = bpy.context.scene.render.resolution_y
+
+		self.camera_data = bpy.data.cameras.new(name="panorama_cam")
+		self.camera_data.angle = math.pi / 2
+
+		pi_half = math.pi / 2
+		self.render_queue.append(self.create_panorama_cam("panorama_0", (pi_half, 0.0, 0.0), prev_cam.location))
+		self.render_queue.append(self.create_panorama_cam("panorama_1", (pi_half, 0.0, math.pi + pi_half), prev_cam.location))
+		self.render_queue.append(self.create_panorama_cam("panorama_2", (pi_half, 0.0, math.pi), prev_cam.location))
+		self.render_queue.append(self.create_panorama_cam("panorama_3", (pi_half, 0.0, pi_half), prev_cam.location))
+		self.render_queue.append(self.create_panorama_cam("panorama_4", (math.pi, 0.0, 0.0), prev_cam.location))
+		self.render_queue.append(self.create_panorama_cam("panorama_5", (0.0, 0.0, 0.0), prev_cam.location))
+
+		# Do the renderage
 		bpy.context.scene.render.resolution_x = self.panorama_resolution
 		bpy.context.scene.render.resolution_y = self.panorama_resolution
+		# 	render_next_in_queue(cameras, )
+		# os.path.join(self.save_path, "panorama_" + str(i) + ".png")
 
+		# Clean up
 		for i in range(6):
-			render_camera(cameras[i], os.path.join(self.save_path, "panorama_" + str(i) + ".png"))
-			util.obj_unlink_remove(cameras[i], True)
+			util.obj_unlink_remove(self.render_queue[i], True)
 
 		bpy.context.scene.render.resolution_x = old_res_x
 		bpy.context.scene.render.resolution_y = old_res_y
+		bpy.context.scene.camera = prev_cam
 
 		return {'FINISHED'}
+
+	def create_panorama_cam(self, name, rot, loc):
+		"""Create a camera"""
+
+		camera = bpy.data.objects.new(name, self.camera_data)
+		camera.rotation_euler = rot
+		camera.location = loc
+		util.obj_link_scene(camera)
+		return camera
+
+	def render_next_in_queue(self, out_path):
+		"""Render the next image in the queue"""
+
+		current_render = self.render_queue.pop()
+
+		bpy.context.scene.camera = current_render.camera
+
+		print("Rendering large pass")
+		bpy.ops.render.render('INVOKE_DEFAULT', write_still=True, use_viewport=True)
 
 
 # -----------------------------------------------------------------------------
