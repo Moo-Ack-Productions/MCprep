@@ -995,8 +995,13 @@ class MCPREP_OT_render_panorama(bpy.types.Operator):
 	)
 
 	render_queue = []
+	render_queue_cleanup = []
 
 	camera_data = None
+
+	old_res_x = None
+	old_res_y = None
+	original_cam = None
 
 	def invoke(self, context, event):
 		return context.window_manager.invoke_props_dialog(self, width=400 * util.ui_scale())
@@ -1007,36 +1012,59 @@ class MCPREP_OT_render_panorama(bpy.types.Operator):
 
 	def execute(self, context):
 		# Save old Values
-		prev_cam = bpy.context.scene.camera
-		old_res_x = bpy.context.scene.render.resolution_x
-		old_res_y = bpy.context.scene.render.resolution_y
+		self.original_cam = bpy.context.scene.camera
+		self.old_res_x = bpy.context.scene.render.resolution_x
+		self.old_res_y = bpy.context.scene.render.resolution_y
 
 		self.camera_data = bpy.data.cameras.new(name="panorama_cam")
 		self.camera_data.angle = math.pi / 2
 
 		pi_half = math.pi / 2
-		self.render_queue.append(self.create_panorama_cam("panorama_0", (pi_half, 0.0, 0.0), prev_cam.location))
-		self.render_queue.append(self.create_panorama_cam("panorama_1", (pi_half, 0.0, math.pi + pi_half), prev_cam.location))
-		self.render_queue.append(self.create_panorama_cam("panorama_2", (pi_half, 0.0, math.pi), prev_cam.location))
-		self.render_queue.append(self.create_panorama_cam("panorama_3", (pi_half, 0.0, pi_half), prev_cam.location))
-		self.render_queue.append(self.create_panorama_cam("panorama_4", (math.pi, 0.0, 0.0), prev_cam.location))
-		self.render_queue.append(self.create_panorama_cam("panorama_5", (0.0, 0.0, 0.0), prev_cam.location))
+		self.render_queue.append({
+			"camera": self.create_panorama_cam("panorama_0", (pi_half, 0.0, 0.0), self.original_cam.location),
+			"filename": "panorama_0.png"
+		})
+		self.render_queue.append({
+			"camera": self.create_panorama_cam("panorama_1", (pi_half, 0.0, math.pi + pi_half), self.original_cam.location),
+			"filename": "panorama_1.png"
+		})
+		self.render_queue.append({
+			"camera": self.create_panorama_cam("panorama_2", (pi_half, 0.0, math.pi), self.original_cam.location),
+			"filename": "panorama_2.png"
+		})
+		self.render_queue.append({
+			"camera": self.create_panorama_cam("panorama_3", (pi_half, 0.0, pi_half), self.original_cam.location),
+			"filename": "panorama_3.png"
+		})
+		self.render_queue.append({
+			"camera": self.create_panorama_cam("panorama_4", (math.pi, 0.0, 0.0), self.original_cam.location),
+			"filename": "panorama_4.png"
+		})
+		self.render_queue.append({
+			"camera": self.create_panorama_cam("panorama_5", (0.0, 0.0, 0.0), self.original_cam.location),
+			"filename": "panorama_5.png"
+		})
+
+		self.render_queue_cleanup = self.render_queue.copy()
 
 		# Do the renderage
 		bpy.context.scene.render.resolution_x = self.panorama_resolution
 		bpy.context.scene.render.resolution_y = self.panorama_resolution
-		# 	render_next_in_queue(cameras, )
-		# os.path.join(self.save_path, "panorama_" + str(i) + ".png")
+		bpy.app.handlers.render_cancel.append(self.cancel_render)
+		bpy.app.handlers.render_complete.append(self.render_next_in_queue)
 
-		# Clean up
-		for i in range(6):
-			util.obj_unlink_remove(self.render_queue[i], True)
-
-		bpy.context.scene.render.resolution_x = old_res_x
-		bpy.context.scene.render.resolution_y = old_res_y
-		bpy.context.scene.camera = prev_cam
+		self.render_next_in_queue(None, None)
 
 		return {'FINISHED'}
+
+	def cleanup_scene(self):
+		# Clean up
+		for i in range(len(self.render_queue_cleanup)):
+			util.obj_unlink_remove(self.render_queue_cleanup[i]["camera"], True)
+
+		bpy.context.scene.render.resolution_x = self.old_res_x
+		bpy.context.scene.render.resolution_y = self.old_res_y
+		bpy.context.scene.camera = self.original_cam
 
 	def create_panorama_cam(self, name, rot, loc):
 		"""Create a camera"""
@@ -1047,15 +1075,23 @@ class MCPREP_OT_render_panorama(bpy.types.Operator):
 		util.obj_link_scene(camera)
 		return camera
 
-	def render_next_in_queue(self, out_path):
+	def cancel_render(self, scene):
+		self.render_queue = []
+
+	def render_next_in_queue(self, scene, dummy):
 		"""Render the next image in the queue"""
+
+		if not self.render_queue:
+			print("Finished queue")
+			self.cleanup_scene()
+			return
 
 		current_render = self.render_queue.pop()
 
-		bpy.context.scene.camera = current_render.camera
+		bpy.context.scene.camera = current_render["camera"]
 
-		print("Rendering large pass")
-		bpy.ops.render.render('INVOKE_DEFAULT', write_still=True, use_viewport=True)
+		bpy.context.scene.render.filepath = os.path.join(self.save_path, current_render["filename"])
+		bpy.ops.render.render('EXEC_DEFAULT', write_still=True, use_viewport=True)
 
 
 # -----------------------------------------------------------------------------
