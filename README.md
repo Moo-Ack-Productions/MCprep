@@ -456,11 +456,11 @@ To add your own rigs to the Mob Spawner:
 - **Purpose:** To optimize Cycles render settings without sacrificing much quality
 - **Step 1:** Navigate to the World Imports panel and find the "Cycles Optimizer" panel
 - **Step 2:** Select the features you want to use
-- **Step 3:** Hit the "Optimize Scene" button (**It is recommended to do this twice. Once when prepping materials and once before rendering your final render)
+- **Step 3:** Hit the "Optimize Scene" button (It is recommended to do this twice. Once when prepping materials and once before rendering your final render)
 
 **Warning**: There is a section called unsafe features which contains options that may cause render issues. These features can being massive performance boosts but it's not recommended to use them unless you know what you're doing. Unsafe options include:
 
-- **Automatic Scrambling Distance:** Improves GPU performance but can cause artifacts. As such, if you're using a CPU to render or reach a scrambling multiplier of 0.7+, MCprep will automatically disable it. Please enable this before rendering your final render to reduce the chances of having artifacts:
+- **Automatic Scrambling Distance:** Improves GPU performance but can cause artifacts. As such, if the optimizer reaches a scrambling multiplier of 0.7+, MCprep will automatically disable it. Please enable this before rendering your final render to reduce the chances of having artifacts:
     
 - **Preview Scrambling:** Enabled by default if you enable `Automatic Scrambling Distance`. This can cause a lot of flickering in rendered view (which is how Automatic Scrambling Distance works in the first place).
 
