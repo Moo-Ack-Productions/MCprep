@@ -974,79 +974,15 @@ def world_time_update(self, context):
 	return
 
 
-class MCPREP_OT_render_panorama(bpy.types.Operator, ImportHelper):
-	"""Render the Panorama images for a texture Pack"""
-	bl_idname = "mcprep.render_panorama"
-	bl_label = "Render Panorama"
-	bl_description = "Render Panorama for texture Pack"
-	bl_options = {'REGISTER', 'UNDO'}
-
-	panorama_resolution = bpy.props.IntProperty(
-		name="Render resolution",
-		description="The resolution of the output images",
-		default=1024
-	)
-
+class MCPREP_OT_render_helper():
 	render_queue = []
 	render_queue_cleanup = []
-
-	filepath = bpy.props.StringProperty(subtype='DIR_PATH')
-
-	camera_data = None
 
 	old_res_x = None
 	old_res_y = None
 	original_cam = None
 
-	def draw(self, context):
-		self.layout.prop(self, "panorama_resolution")
-
-	def execute(self, context):
-		# Save old Values
-		self.original_cam = bpy.context.scene.camera
-		self.old_res_x = bpy.context.scene.render.resolution_x
-		self.old_res_y = bpy.context.scene.render.resolution_y
-
-		self.camera_data = bpy.data.cameras.new(name="panorama_cam")
-		self.camera_data.angle = math.pi / 2
-
-		pi_half = math.pi / 2
-		self.render_queue.append({
-			"camera": self.create_panorama_cam("panorama_0", (pi_half, 0.0, 0.0), self.original_cam.location),
-			"filename": "panorama_0.png"
-		})
-		self.render_queue.append({
-			"camera": self.create_panorama_cam("panorama_1", (pi_half, 0.0, math.pi + pi_half), self.original_cam.location),
-			"filename": "panorama_1.png"
-		})
-		self.render_queue.append({
-			"camera": self.create_panorama_cam("panorama_2", (pi_half, 0.0, math.pi), self.original_cam.location),
-			"filename": "panorama_2.png"
-		})
-		self.render_queue.append({
-			"camera": self.create_panorama_cam("panorama_3", (pi_half, 0.0, pi_half), self.original_cam.location),
-			"filename": "panorama_3.png"
-		})
-		self.render_queue.append({
-			"camera": self.create_panorama_cam("panorama_4", (math.pi, 0.0, 0.0), self.original_cam.location),
-			"filename": "panorama_4.png"
-		})
-		self.render_queue.append({
-			"camera": self.create_panorama_cam("panorama_5", (0.0, 0.0, 0.0), self.original_cam.location),
-			"filename": "panorama_5.png"
-		})
-
-		self.render_queue_cleanup = self.render_queue.copy()
-
-		# Do the renderage
-		bpy.context.scene.render.resolution_x = self.panorama_resolution
-		bpy.context.scene.render.resolution_y = self.panorama_resolution
-		bpy.app.handlers.render_cancel.append(self.cancel_render)
-		bpy.app.handlers.render_complete.append(self.render_next_in_queue)
-
-		self.render_next_in_queue(None, None)
-
-		return {'FINISHED'}
+	filepath = None
 
 	def cleanup_scene(self):
 		# Clean up
@@ -1057,10 +993,10 @@ class MCPREP_OT_render_panorama(bpy.types.Operator, ImportHelper):
 		bpy.context.scene.render.resolution_y = self.old_res_y
 		bpy.context.scene.camera = self.original_cam
 
-	def create_panorama_cam(self, name, rot, loc):
+	def create_panorama_cam(self, name, camera_data, rot, loc):
 		"""Create a camera"""
 
-		camera = bpy.data.objects.new(name, self.camera_data)
+		camera = bpy.data.objects.new(name, camera_data)
 		camera.rotation_euler = rot
 		camera.location = loc
 		util.obj_link_scene(camera)
@@ -1082,7 +1018,77 @@ class MCPREP_OT_render_panorama(bpy.types.Operator, ImportHelper):
 		bpy.context.scene.camera = current_render["camera"]
 
 		bpy.context.scene.render.filepath = os.path.join(self.filepath, current_render["filename"])
-		bpy.ops.render.render('EXEC_DEFAULT', write_still=True, use_viewport=True)
+		bpy.ops.render.render('EXEC_DEFAULT', write_still=True, use_viewport=False)
+
+
+render_helper = MCPREP_OT_render_helper()
+
+
+class MCPREP_OT_render_panorama(bpy.types.Operator, ImportHelper):
+	"""Render the Panorama images for a texture Pack"""
+	bl_idname = "mcprep.render_panorama"
+	bl_label = "Render Panorama"
+	bl_description = "Render Panorama for texture Pack"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	panorama_resolution = bpy.props.IntProperty(
+		name="Render resolution",
+		description="The resolution of the output images",
+		default=1024
+	)
+
+	filepath = bpy.props.StringProperty(subtype='DIR_PATH')
+
+	def draw(self, context):
+		self.layout.prop(self, "panorama_resolution")
+
+	def execute(self, context):
+		# Save old Values
+		render_helper.original_cam = bpy.context.scene.camera
+		render_helper.old_res_x = bpy.context.scene.render.resolution_x
+		render_helper.old_res_y = bpy.context.scene.render.resolution_y
+		render_helper.filepath = self.filepath
+
+		camera_data = bpy.data.cameras.new(name="panorama_cam")
+		camera_data.angle = math.pi / 2
+
+		pi_half = math.pi / 2
+		render_helper.render_queue.append({
+			"camera": render_helper.create_panorama_cam("panorama_0", camera_data, (pi_half, 0.0, 0.0), render_helper.original_cam.location),
+			"filename": "panorama_0.png"
+		})
+		render_helper.render_queue.append({
+			"camera": render_helper.create_panorama_cam("panorama_1", camera_data, (pi_half, 0.0, math.pi + pi_half), render_helper.original_cam.location),
+			"filename": "panorama_1.png"
+		})
+		render_helper.render_queue.append({
+			"camera": render_helper.create_panorama_cam("panorama_2", camera_data, (pi_half, 0.0, math.pi), render_helper.original_cam.location),
+			"filename": "panorama_2.png"
+		})
+		render_helper.render_queue.append({
+			"camera": render_helper.create_panorama_cam("panorama_3", camera_data, (pi_half, 0.0, pi_half), render_helper.original_cam.location),
+			"filename": "panorama_3.png"
+		})
+		render_helper.render_queue.append({
+			"camera": render_helper.create_panorama_cam("panorama_4", camera_data, (math.pi, 0.0, 0.0), render_helper.original_cam.location),
+			"filename": "panorama_4.png"
+		})
+		render_helper.render_queue.append({
+			"camera": render_helper.create_panorama_cam("panorama_5", camera_data, (0.0, 0.0, 0.0), render_helper.original_cam.location),
+			"filename": "panorama_5.png"
+		})
+
+		render_helper.render_queue_cleanup = render_helper.render_queue.copy()
+
+		# Do the renderage
+		bpy.context.scene.render.resolution_x = self.panorama_resolution
+		bpy.context.scene.render.resolution_y = self.panorama_resolution
+		bpy.app.handlers.render_cancel.append(render_helper.cancel_render)
+		bpy.app.handlers.render_complete.append(render_helper.render_next_in_queue)
+
+		render_helper.render_next_in_queue(None, None)
+
+		return {'FINISHED'}
 
 
 # -----------------------------------------------------------------------------
