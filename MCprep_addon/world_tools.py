@@ -984,7 +984,7 @@ class MCPREP_OT_render_panorama(bpy.types.Operator):
 	panorama_resolution = bpy.props.IntProperty(
 		name="Render resolution",
 		description="The resolution of the output images",
-		default=512
+		default=1024
 	)
 
 	save_path = bpy.props.StringProperty(
