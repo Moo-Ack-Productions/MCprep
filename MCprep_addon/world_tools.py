@@ -974,7 +974,7 @@ def world_time_update(self, context):
 	return
 
 
-class MCPREP_OT_render_panorama(bpy.types.Operator):
+class MCPREP_OT_render_panorama(bpy.types.Operator, ImportHelper):
 	"""Render the Panorama images for a texture Pack"""
 	bl_idname = "mcprep.render_panorama"
 	bl_label = "Render Panorama"
@@ -987,15 +987,10 @@ class MCPREP_OT_render_panorama(bpy.types.Operator):
 		default=1024
 	)
 
-	save_path = bpy.props.StringProperty(
-		name="Output Folder",
-		description="The folder to output the renders to",
-		subtype="DIR_PATH",
-		default="/tmp\\"
-	)
-
 	render_queue = []
 	render_queue_cleanup = []
+
+	filepath = bpy.props.StringProperty(subtype='DIR_PATH')
 
 	camera_data = None
 
@@ -1003,12 +998,8 @@ class MCPREP_OT_render_panorama(bpy.types.Operator):
 	old_res_y = None
 	original_cam = None
 
-	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(self, width=400 * util.ui_scale())
-
 	def draw(self, context):
 		self.layout.prop(self, "panorama_resolution")
-		self.layout.prop(self, "save_path")
 
 	def execute(self, context):
 		# Save old Values
@@ -1090,7 +1081,7 @@ class MCPREP_OT_render_panorama(bpy.types.Operator):
 
 		bpy.context.scene.camera = current_render["camera"]
 
-		bpy.context.scene.render.filepath = os.path.join(self.save_path, current_render["filename"])
+		bpy.context.scene.render.filepath = os.path.join(self.filepath, current_render["filename"])
 		bpy.ops.render.render('EXEC_DEFAULT', write_still=True, use_viewport=True)
 
 
