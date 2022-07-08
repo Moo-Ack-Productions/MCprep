@@ -243,13 +243,10 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 				if res == 0:
 					count += 1
 			else:
-				try:
-					bpy.ops.mcprep.sync_default_materials(use_pbr=False, engine=engine.lower())
-				except Exception:
-					self.report(
-						{'ERROR'},
-						"Only Blender Internal, Cycles, and Eevee are supported")
-					return {'CANCELLED'}
+				self.report(
+					{'ERROR'},
+					"Only Blender Internal, Cycles, and Eevee are supported")
+				return {'CANCELLED'}
 
 			if self.animateTextures:
 				sequences.animate_single_material(
