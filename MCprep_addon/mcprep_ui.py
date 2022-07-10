@@ -1482,8 +1482,8 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 	def draw(self, context):
 		row = self.layout.row(align=True)
 		row.label(text="Click triangle to open")
-		# row.prop(context.scene.mcprep_props, "spawn_mode", expand=True)
-		ops = row.operator("mcprep.open_help", text="", icon="QUESTION")
+		ops = row.operator(
+			"mcprep.open_help", text="", icon="QUESTION", emboss=False)
 		ops.url = "https://theduckcow.com/dev/blender/mcprep/mcprep-spawner/"
 		addon_updater_ops.check_for_update_background()
 
