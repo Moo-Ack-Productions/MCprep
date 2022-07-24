@@ -17,6 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import os
+import re
 
 import bpy
 
@@ -87,6 +88,66 @@ def filter_collections(data_from):
 			len(all_names), len(mcprep_names)))
 		all_names = mcprep_names
 	return all_names
+
+
+def check_blend_eligible(this_file, all_files):
+	"""Returns true if the path blend file is ok for this blender version.
+
+	Created to better support older blender versions without having to
+	compeltely remake new rig contirbutions from scratch. See for more details:
+	https://github.com/TheDuckCow/MCprep/issues/317
+
+	If the "pre#.#.#" suffix is found in any similar prefix named blend files,
+	evaluate whether the target file itself is eligible. If pre3.0.0 is found
+	in path, then this function returns False if the current blender version is
+	3.0 to force loading the non pre3.0.0 version instead, and if pre3.0.0 is
+	not in the path variable but pre#.#.# is found in another file, then it
+	returns true. If no pre#.#.# found in any files of the common base, would
+	always return True.
+	"""
+	basename = os.path.splitext(this_file)[0]
+
+	# Regex code to any matches of pre#.#.# at very end of name.
+	# (pre) for exact match,
+	# [0-9]+ to match any 1+ numbers
+	# (\.[0-9]+) for any repeat number of .#
+	# +$ to ensure it's an ending group.
+	code = r'(?i)(pre)[0-9]+(\.[0-9]+)+$'
+	find_suffix = re.compile(code)
+
+	def tuple_from_match(match):
+		prestr = match.group(0)  # At most one group given +$ ending condition.
+		vstr = prestr[3:]  # Chop off "pre".
+		tuple_ver = tuple([int(n) for n in vstr.split(".")])
+		return tuple_ver
+
+	matches = find_suffix.search(basename)
+	if matches:
+		tuple_ver = tuple_from_match(matches)
+		res = util.min_bv(tuple_ver)
+		# If the suffix = 3.0 and we are BELOW 3.0, return True (use this file)
+		return not res
+
+	# Remaining case: no suffix found in this target, but see if any other
+	# files have the same base and *do* have a suffix indicator.
+	for afile in all_files:
+		if not afile.startswith(basename):
+			continue
+		if afile == this_file:
+			continue  # Already checked above.
+
+		base_afile = os.path.splitext(afile)[0]
+		matches = find_suffix.search(base_afile)
+		if matches:
+			tuple_ver = tuple_from_match(matches)
+			res = util.min_bv(tuple_ver)
+			# If the suffix = 3.0 in `afile` file, and current blender is
+			# below 3, then `afile` is the file that should be loaded, and the
+			# current file `this_file` is to be skipped.
+			return res
+
+	# If no matches (the most common case), then this file is eligible.
+	return True
 
 
 def attemptScriptLoad(path):

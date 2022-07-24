@@ -56,6 +56,7 @@ class mcprep_testing():
 			self.openfolder,
 			self.spawn_mob,
 			self.spawn_mob_linked,
+			self.check_blend_eligible,
 			self.change_skin,
 			self.import_world_split,
 			self.import_world_fail,
@@ -689,6 +690,43 @@ class mcprep_testing():
 		self._clear_scene()
 		bpy.ops.mcprep.reload_mobs()
 		bpy.ops.mcprep.mob_spawner(toLink=True)
+
+	def check_blend_eligible(self):
+		from MCprep.spawner import spawn_util
+		fake_base = "MyMob - by Person"
+
+		suffix_new = " pre9.0.0"  # Force active blender instance as older
+		suffix_old = " pre1.0.0"  # Force active blender instance as newer.
+
+		p_none = fake_base + ".blend"
+		p_new = fake_base + suffix_new + ".blend"
+		p_old = fake_base + suffix_old + ".blend"
+		rando = "rando_name" + suffix_old + ".blend"
+
+		# Check where input file is the "non-versioned" one.
+
+		res = spawn_util.check_blend_eligible(p_none, [p_none, rando])
+		if res is not True:
+			return "Should have been true even if rando has suffix"
+
+		res = spawn_util.check_blend_eligible(p_none, [p_none, p_old])
+		if res is not True:
+			return "Should be true as curr blend eligible and checked latest"
+
+		res = spawn_util.check_blend_eligible(p_none, [p_none, p_new])
+		if res is not False:
+			print(p_none, p_new, res)
+			return "Should be false as curr blend not eligible and checked latest"
+
+		# Now check if input is a versioned file.
+
+		res = spawn_util.check_blend_eligible(p_new, [p_none, p_new])
+		if res is not True:
+			return "Should have been true since we are below min blender"
+
+		res = spawn_util.check_blend_eligible(p_old, [p_none, p_old])
+		if res is not False:
+			return "Should have been false since we are above this min blender"
 
 	def change_skin(self):
 		"""Test scenarios for changing skin after adding a character."""

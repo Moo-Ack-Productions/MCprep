@@ -24,7 +24,6 @@ import platform
 import random
 import re
 import subprocess
-from subprocess import Popen, PIPE
 
 import bpy
 
