@@ -58,23 +58,23 @@ class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 	)
 	scene_brightness = bpy.props.EnumProperty(
 		name="",
-		description="Time of day in the scene",
+		description="Brightness of the scene: Affects how the optimizer adjusts sampling",
 		items=scene_brightness
 	)
 	quality_vs_speed = bpy.props.BoolProperty(
-		name="Optimize for quality",
+		name="Optimize scene for quality: Makes the optimizer adjust settings in a less \"destructive\" way",
 		default=True
 	)
 	simplify = bpy.props.BoolProperty(
-		name="Simplify the viewport",
+		name="Simplify the viewport: Reduces subdivisions to 0. Only disable if any assets will break when using this",
 		default=True
 	)
 	scrambling_unsafe = bpy.props.BoolProperty(
-		name="Automatic Scrambling Distance",
+		name="Automatic Scrambling Distance: Can cause artifacts when rendering",
 		default=False
 	)
 	preview_scrambling = bpy.props.BoolProperty(
-		name="Preview Scrambling",
+		name="Preview Scrambling in the viewport",
 		default=True
 	)
 
