@@ -1,0 +1,64 @@
+name: Bug Report
+description: File a bug report
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report for MCprep! We just need some info. Check here for more info: https://github.com/TheDuckCow/MCprep/issues/322
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Also tell us, what did you expect to happen?
+      placeholder: Tell us what you see!
+      value: "A bug happened!"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: after-restart
+    attributes:
+      label: Did the issue happen after restarting Blender?
+      description: Many times issues can be solved after restarting Blender
+      options:
+        - label: Yes, the issue indeed continued after restarting Blender
+          required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: What steps are needed to produce the bug?
+      placeholder: Tell us what you did!
+      value: "Step 1: "
+    validations:
+      required: true
+
+  - type: textarea
+    id: mcprep-version
+    attributes:
+      label: What version of MCprep are you using?
+      placeholder: I am using MCprep...
+      value: "3.3.1"
+    validations:
+      required: true
+
+  - type: textarea
+    id: blender-version
+    attributes:
+      label: What version of Blender are you using?
+      placeholder: I am using Blender...
+      value: "3.2"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Confirmation
+      description: By submitting this issue, you have confirmed that you have filled out all the info needed.
+      options:
+        - label: I have given some details regading the bug and have also given the steps needed to reproduce the bug
+          required: true
