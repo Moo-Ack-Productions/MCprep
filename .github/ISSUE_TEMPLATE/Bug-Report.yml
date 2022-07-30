@@ -7,6 +7,7 @@ body:
     attributes:
       value: |
         Thanks for taking the time to fill out this bug report for MCprep! We just need some info
+
   - type: textarea
     id: what-happened
     attributes:
@@ -16,46 +17,43 @@ body:
       value: "A bug happened!"
     validations:
       required: true
-    - type: textarea
-      id: steps-to-reproduce
-      attributes:
-        label: What steps are needed to produce the bug?
-        placeholder: Tell us what you did!
-        value: "Step 1: "
-      validations:
-        required: true
-  - type: dropdown
-    id: version
+
+  - type: checkboxes
+    id: after-restart
     attributes:
-      label: MCprep Version
-      description: What version of MCprep are you using?
+      label: Did the issue happen after restarting Blender?
+      description: Many times issues can be solved after restarting Blender
       options:
-        - 3.3.1 (Default)
-        - 3.3.0 
-        - 3.2.5.1
-        - 3.2.5
+        - label: Yes, the issue indeed continued after restarting Blender
+          required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: What steps are needed to produce the bug?
+      placeholder: Tell us what you did!
+      value: "Step 1: "
     validations:
       required: true
-  - type: dropdown
-    id: version
+
+  - type: textarea
+    id: mcprep-version
     attributes:
-      label: Blender Version
-      description: What version of Blender are you using?
-      options:
-        - 3.2
-        - 3.1 
-        - 2.93
-        - 2.92
-        - 2.91
-        - 2.90
-        - 2.83
-        - 2.82
-        - 2.81
-        - 2.80
-        - 2.79
-        - 2.78
+      label: What version of MCprep are you using?
+      placeholder: I am using MCprep...
+      value: "3.3.1"
     validations:
       required: true
+
+  - type: textarea
+    id: blender-version
+    attributes:
+      label: What version of Blender are you using?
+      placeholder: I am using Blender...
+      value: "3.2"
+    validations:
+      required: true
+
   - type: checkboxes
     id: terms
     attributes:
