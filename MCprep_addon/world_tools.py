@@ -989,6 +989,7 @@ class MCPREP_OT_render_helper():
 	current_render = {}
 	prior_frame = {}
 	previews = []
+	open_folder = False
 
 	def cleanup_scene(self):
 		# Clean up
@@ -1015,6 +1016,9 @@ class MCPREP_OT_render_helper():
 		self.display_current(use_rendered=True)
 		for img in self.previews:
 			bpy.data.images.remove(img)
+
+		if self.open_folder:
+			bpy.ops.mcprep.openfolder(folder=self.filepath)
 
 	def create_panorama_cam(self, name, camera_data, rot, loc):
 		"""Create a camera"""
@@ -1127,12 +1131,21 @@ class MCPREP_OT_render_panorama(bpy.types.Operator, ExportHelper):
 		description="The resolution of the output images",
 		default=1024
 	)
+	open_folder = bpy.props.BoolProperty(
+		name="Open folder when done",
+		description="Open the output folder when render completes",
+		default=False)
 
 	filepath = bpy.props.StringProperty(subtype='DIR_PATH')
 	filename_ext = ""  # Not used, but required by ExportHelper.
 
 	def draw(self, context):
+		col = self.layout.column()
+		col.scale_y = 0.8
+		col.label(text="Pick the output folder")
+		col.label(text="to place pano images.")
 		self.layout.prop(self, "panorama_resolution")
+		self.layout.prop(self, "open_folder")
 
 	def execute(self, context):
 		# Save old Values
@@ -1140,6 +1153,7 @@ class MCPREP_OT_render_panorama(bpy.types.Operator, ExportHelper):
 		render_helper.old_res_x = bpy.context.scene.render.resolution_x
 		render_helper.old_res_y = bpy.context.scene.render.resolution_y
 		render_helper.filepath = self.filepath
+		render_helper.open_folder = self.open_folder
 
 		camera_data = bpy.data.cameras.new(name="panorama_cam")
 		camera_data.angle = math.pi / 2
