@@ -408,7 +408,7 @@ To edit the materials.blend file for syncing:
 *Mob Spawner Redo-last/F6 Options*
 ![Meshswap options](/visuals/spawnOptions.png?raw=true)
 
-To add your own rigs to the Mob Spawner:
+#### To add your own rigs to the Mob Spawner:
 
 - **Step 1:** Make your rig, or download one you want to use!
 - **Step 2:** Make sure all elements of the rig, ie all armatures, body parts, and extra objects, are added to a single group (select and press control+g) inside your rig file. The name of this group is what will appear under the shift-a menu, and typically matches the name of the file if there is just one rig per blend file.
@@ -418,6 +418,12 @@ To add your own rigs to the Mob Spawner:
 - **Step 5:** Either from Blender Preferences > Addon > MCprep preferences panel > "Install file for mob spawning" or from the MCprep 3D view tab, go to spawner > mob > menu "Install new mob". From there, use the file browser to select the blend file and install it! This copies the file to the current mob folder, by default inside the MCprep addon.
 - **Alternative:** To specify a different, custom folder in a location of your choosing for mob spawning, simply change the "Mob spawner folder" path in the MCprep mob spawner advanced section (this setting is saved to blend file), or save a new default in the addon's preferences (becomes the default for all new blend scenes).
 - Note: all groups inside installed blend files will appear for mob spawning. After installing a blend file, you do *not* need to save user preferences to use it in future blender sessions.
+
+#### Using multiple collections in your rig?
+
+Be aware of this behavior to ensure only one collection appears in the rig spawner (use one or the other):
+- Option 1: Add "mcprep" to the name of your top-level collection to be imported
+- Option 2: Add "mcskip" to *all* collections that should NOT be listed.
 
 
 *Sometimes you may need to reload a rig cache, click this button if the correct rigs aren't appearing - or if you've just added new rigs to the folder outside of blender*
