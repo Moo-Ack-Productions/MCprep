@@ -18,13 +18,13 @@ body:
           required: true
 
   - type: checkboxes
-  id: check-known
-  attributes:
-    label: Check known issues
-    description: Be sure to check against all [known issues](https://github.com/TheDuckCow/MCprep/issues?q=is%3Aissue+is%3Aopen+label%3A%22Known+issue%22) to see if your issue is related to one of those - if so, comment there (instead of creating a new issue).
-    options:
-      - label: I have checked known issues, and my problem is different
-        required: true
+    id: check-known
+    attributes:
+      label: Check known issues
+      description: Be sure to check against all [known issues](https://github.com/TheDuckCow/MCprep/issues?q=is%3Aissue+is%3Aopen+label%3A%22Known+issue%22) to see if your issue is related to one of those - if so, comment there (instead of creating a new issue).
+      options:
+        - label: I have checked known issues, and my problem is different
+          required: true
 
   - type: textarea
     id: what-happened
