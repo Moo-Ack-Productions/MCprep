@@ -1,22 +1,12 @@
 name: Bug Report
 description: File a bug report
-title: "[Bug]: "
-labels: ["bug", "triage"]
+title: ""
+labels: ["user-troubleshoot"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to fill out this bug report for MCprep! We just need some info. Check here for more info: https://github.com/TheDuckCow/MCprep/issues/322
-
-  - type: textarea
-    id: what-happened
-    attributes:
-      label: What happened?
-      description: Also tell us, what did you expect to happen?
-      placeholder: Tell us what you see!
-      value: "A bug happened!"
-    validations:
-      required: true
+        Thanks for taking the time to fill out this bug report for MCprep! We just need some info. Check here for more info: https://github.com/TheDuckCow/MCprep/issues/322. Please note that if you are looking for general help with Blender itself or a related problem like Mineways, you are better off joining the official [MCprep discord](https://discord.gg/mb8hBUC).
 
   - type: checkboxes
     id: after-restart
@@ -27,12 +17,31 @@ body:
         - label: Yes, the issue indeed continued after restarting Blender
           required: true
 
+  - type: checkboxes
+  id: check-known
+  attributes:
+    label: Check known issues
+    description: Be sure to check against all [known issues](https://github.com/TheDuckCow/MCprep/issues?q=is%3Aissue+is%3Aopen+label%3A%22Known+issue%22) to see if your issue is related to one of those - if so, comment there (instead of creating a new issue).
+    options:
+      - label: I have checked known issues, and my problem is different
+        required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Also tell us, what did you expect to happen? Uploading screenshots is very helpful too.
+      placeholder: Tell us what you see!
+      value: ""
+    validations:
+      required: true
+
   - type: textarea
     id: steps-to-reproduce
     attributes:
       label: What steps are needed to produce the bug?
-      placeholder: Tell us what you did!
-      value: "Step 1: "
+      placeholder: 1) First step...
+      value: ""
     validations:
       required: true
 
@@ -40,8 +49,8 @@ body:
     id: mcprep-version
     attributes:
       label: What version of MCprep are you using?
-      placeholder: I am using MCprep...
-      value: "3.3.1"
+      placeholder: MCprep 3.#.#
+      value: ""
     validations:
       required: true
 
@@ -49,16 +58,7 @@ body:
     id: blender-version
     attributes:
       label: What version of Blender are you using?
-      placeholder: I am using Blender...
-      value: "3.2"
+      placeholder: Blender 3.#
+      value: ""
     validations:
       required: true
-
-  - type: checkboxes
-    id: terms
-    attributes:
-      label: Confirmation
-      description: By submitting this issue, you have confirmed that you have filled out all the info needed.
-      options:
-        - label: I have given some details regading the bug and have also given the steps needed to reproduce the bug
-          required: true
