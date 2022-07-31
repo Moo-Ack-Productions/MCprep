@@ -20,7 +20,7 @@ import os
 import math
 
 import bpy
-from bpy_extras.io_utils import ImportHelper
+from bpy_extras.io_utils import ExportHelper, ImportHelper
 
 from . import conf
 from . import util
@@ -984,14 +984,37 @@ class MCPREP_OT_render_helper():
 
 	filepath = None
 
+	rendered_count = 0
+	rendering = False
+	current_render = {}
+	prior_frame = {}
+	previews = []
+
 	def cleanup_scene(self):
 		# Clean up
+		conf.log("Cleanup pano rendering")
 		for i in range(len(self.render_queue_cleanup)):
 			util.obj_unlink_remove(self.render_queue_cleanup[i]["camera"], True)
 
 		bpy.context.scene.render.resolution_x = self.old_res_x
 		bpy.context.scene.render.resolution_y = self.old_res_y
 		bpy.context.scene.camera = self.original_cam
+
+		self.rendered_count = 0
+
+		# Attempt to remove self from handlers.
+		try:
+			bpy.app.handlers.render_cancel.remove(self.cancel_render)
+			bpy.app.handlers.render_complete.remove(self.render_next_in_queue)
+		except ValueError as e:
+			print("Failed to remove handler:", e)
+
+		self.rendering = False
+		self.render_queue_cleanup = []
+
+		self.display_current(use_rendered=True)
+		for img in self.previews:
+			bpy.data.images.remove(img)
 
 	def create_panorama_cam(self, name, camera_data, rot, loc):
 		"""Create a camera"""
@@ -1003,28 +1026,96 @@ class MCPREP_OT_render_helper():
 		return camera
 
 	def cancel_render(self, scene):
+		conf.log("Cancelling pano render queue")
 		self.render_queue = []
+		self.cleanup_scene()
+
+	def display_current(self, use_rendered=False):
+		"""Display the most recent image in a window."""
+		if self.rendered_count == 0:
+			bpy.ops.render.view_show("INVOKE_DEFAULT")
+
+		# Set up the window as needed.
+		area = None
+		for window in reversed(bpy.context.window_manager.windows):
+			this_area = window.screen.areas[0]
+			if this_area.type == "IMAGE_EDITOR":
+				area = this_area
+				break
+		if not area:
+			print("Could not fetch area tod isplay interim pano render")
+			return
+
+		if self.rendering:
+			header_text = "Pano render in progress: {}/6 done".format(
+				self.rendered_count)
+		else:
+			header_text = "Pano render finished"
+
+		conf.log(header_text)
+		area.header_text_set(header_text)
+		area.show_menus = False
+
+		if use_rendered:
+			img = bpy.data.images.get("Render Result")
+			if img:
+				area.spaces[0].image = img
+		elif self.rendered_count > 0 and self.prior_frame:
+			path = os.path.join(self.filepath, self.prior_frame["filename"])
+			print(path)
+			if not os.path.isfile(path):
+				print("Failed to find pano frame to load preview")
+			elif area:
+				img = bpy.data.images.load(path)  # DO cleanup.
+				area.spaces[0].image = img
+				self.previews.append(img)
+
+		for region in area.regions:
+			region.tag_redraw()
 
 	def render_next_in_queue(self, scene, dummy):
 		"""Render the next image in the queue"""
+		if not self.rendering:
+			self.rendering = True  # The initial call.
+		else:
+			self.rendered_count += 1
+			self.prior_frame = self.current_render
 
 		if not self.render_queue:
-			print("Finished queue")
+			conf.log("Finished pano render queue")
 			self.cleanup_scene()
 			return
 
-		current_render = self.render_queue.pop()
+		self.current_render = self.render_queue.pop()
 
-		bpy.context.scene.camera = current_render["camera"]
+		bpy.context.scene.camera = self.current_render["camera"]
 
-		bpy.context.scene.render.filepath = os.path.join(self.filepath, current_render["filename"])
-		bpy.ops.render.render('EXEC_DEFAULT', write_still=True, use_viewport=False)
+		bpy.context.scene.render.filepath = os.path.join(
+			self.filepath, self.current_render["filename"])
+
+		conf.log("Starting pano render {}".format(self.current_render["filename"]))
+		self.display_current()
+
+		bpy.app.timers.register(
+			render_pano_frame_timer, first_interval=0.05, persistent=False)
 
 
 render_helper = MCPREP_OT_render_helper()
 
 
-class MCPREP_OT_render_panorama(bpy.types.Operator, ImportHelper):
+def init_render_timer():
+	"""Helper for pano renders to offset the start of the queue from op run."""
+	conf.log("Initial render timer started pano queue")
+	render_helper.render_next_in_queue(None, None)
+
+
+def render_pano_frame_timer():
+	"""Pano render timer callback, giving a chance to refresh display."""
+	bpy.ops.render.render(
+		'EXEC_DEFAULT', write_still=True, use_viewport=False)
+
+
+class MCPREP_OT_render_panorama(bpy.types.Operator, ExportHelper):
 	"""Render the Panorama images for a texture Pack"""
 	bl_idname = "mcprep.render_panorama"
 	bl_label = "Render Panorama"
@@ -1038,6 +1129,7 @@ class MCPREP_OT_render_panorama(bpy.types.Operator, ImportHelper):
 	)
 
 	filepath = bpy.props.StringProperty(subtype='DIR_PATH')
+	filename_ext = ""  # Not used, but required by ExportHelper.
 
 	def draw(self, context):
 		self.layout.prop(self, "panorama_resolution")
@@ -1053,28 +1145,35 @@ class MCPREP_OT_render_panorama(bpy.types.Operator, ImportHelper):
 		camera_data.angle = math.pi / 2
 
 		pi_half = math.pi / 2
+		orig_pos = render_helper.original_cam.location
 		render_helper.render_queue.append({
-			"camera": render_helper.create_panorama_cam("panorama_0", camera_data, (pi_half, 0.0, 0.0), render_helper.original_cam.location),
+			"camera": render_helper.create_panorama_cam(
+				"panorama_0", camera_data, (pi_half, 0.0, 0.0), orig_pos),
 			"filename": "panorama_0.png"
 		})
 		render_helper.render_queue.append({
-			"camera": render_helper.create_panorama_cam("panorama_1", camera_data, (pi_half, 0.0, math.pi + pi_half), render_helper.original_cam.location),
+			"camera": render_helper.create_panorama_cam(
+				"panorama_1", camera_data, (pi_half, 0.0, math.pi + pi_half), orig_pos),
 			"filename": "panorama_1.png"
 		})
 		render_helper.render_queue.append({
-			"camera": render_helper.create_panorama_cam("panorama_2", camera_data, (pi_half, 0.0, math.pi), render_helper.original_cam.location),
+			"camera": render_helper.create_panorama_cam(
+				"panorama_2", camera_data, (pi_half, 0.0, math.pi), orig_pos),
 			"filename": "panorama_2.png"
 		})
 		render_helper.render_queue.append({
-			"camera": render_helper.create_panorama_cam("panorama_3", camera_data, (pi_half, 0.0, pi_half), render_helper.original_cam.location),
+			"camera": render_helper.create_panorama_cam(
+				"panorama_3", camera_data, (pi_half, 0.0, pi_half), orig_pos),
 			"filename": "panorama_3.png"
 		})
 		render_helper.render_queue.append({
-			"camera": render_helper.create_panorama_cam("panorama_4", camera_data, (math.pi, 0.0, 0.0), render_helper.original_cam.location),
+			"camera": render_helper.create_panorama_cam(
+				"panorama_4", camera_data, (math.pi, 0.0, 0.0), orig_pos),
 			"filename": "panorama_4.png"
 		})
 		render_helper.render_queue.append({
-			"camera": render_helper.create_panorama_cam("panorama_5", camera_data, (0.0, 0.0, 0.0), render_helper.original_cam.location),
+			"camera": render_helper.create_panorama_cam(
+				"panorama_5", camera_data, (0.0, 0.0, 0.0), orig_pos),
 			"filename": "panorama_5.png"
 		})
 
@@ -1086,7 +1185,10 @@ class MCPREP_OT_render_panorama(bpy.types.Operator, ImportHelper):
 		bpy.app.handlers.render_cancel.append(render_helper.cancel_render)
 		bpy.app.handlers.render_complete.append(render_helper.render_next_in_queue)
 
-		render_helper.render_next_in_queue(None, None)
+		render_helper.display_current()
+
+		bpy.app.timers.register(
+			init_render_timer, first_interval=0.05, persistent=False)
 
 		return {'FINISHED'}
 
