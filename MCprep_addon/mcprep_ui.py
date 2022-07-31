@@ -822,6 +822,12 @@ class MCPREP_PT_world_tools(bpy.types.Panel):
 		# col.operator("mcprep.world", text="Add clouds")
 		# col.operator("mcprep.world", text="Set Weather")
 
+		rw = layout.row()
+		col = rw.column(align=True)
+		row = col.row(align=True)
+		row.label(text="World settings and lighting")  # world time
+		col.operator("mcprep.render_panorama")
+
 
 class MCPREP_PT_skins(bpy.types.Panel):
 	"""MCprep panel for skin swapping"""
