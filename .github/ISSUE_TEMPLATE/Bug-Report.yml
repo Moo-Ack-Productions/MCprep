@@ -55,6 +55,5 @@ body:
     attributes:
       label: What version of Blender are you using?
       placeholder: Blender 3.#
-      value: ""
     validations:
       required: true
