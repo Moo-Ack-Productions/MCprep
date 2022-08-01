@@ -48,9 +48,9 @@ body:
       required: false
 
   - type: textarea
-      id: credit-url
-      attributes:
-        label: What credit url should we use to reference you in the README.md file?
+    id: credit-url
+    attributes:
+      label: What credit url should we use to reference you in the README.md file?
     validations:
       required: false
 
