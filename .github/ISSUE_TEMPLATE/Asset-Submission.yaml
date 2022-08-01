@@ -16,7 +16,7 @@ body:
       required: true
 
   - type: checkboxes
-    id: checks
+    id: quality-checks
     attributes:
       label: Quality checks
       description: Please ensure all of the following are true for your asset.
@@ -41,21 +41,21 @@ body:
       required: false
 
   - type: textarea
-    id: feature-idea
+    id: credit-name
     attributes:
       label: What name should we use to credit you in the README.md file?
     validations:
       required: false
 
   - type: textarea
-      id: feature-idea
+      id: credit-url
       attributes:
         label: What credit url should we use to reference you in the README.md file?
     validations:
       required: false
 
   - type: checkboxes
-    id: checks
+    id: certify-confirmation
     attributes:
       label: Confirmation
       options:
