@@ -87,6 +87,10 @@ class MCPREP_MT_mob_spawner(bpy.types.Menu):
 				ops = layout.operator("mcprep.mob_spawner", text=mob.name)
 			ops.mcmob_type = mob.mcmob_type
 
+			# Skip prep materials in case of unique shader.
+			if conf.json_data and mob.name in conf.json_data.get("mob_skip_prep", []):
+				ops.prep_materials = False
+
 
 class MCPREP_MT_meshswap_place(bpy.types.Menu):
 	"""Menu for all the meshswap objects"""
@@ -111,6 +115,10 @@ class MCPREP_MT_meshswap_place(bpy.types.Menu):
 			)
 			opr.block = blockset[0]
 			opr.location = util.get_cuser_location(context)
+
+			# Ensure meshswap with rigs is made real, so the rigs can be used.
+			if conf.json_data and blockset[1] in conf.json_data.get("make_real", []):
+				opr.make_real = True
 
 
 class MCPREP_MT_item_spawn(bpy.types.Menu):
@@ -1060,6 +1068,11 @@ def mob_spawner(self, context):
 	p = row.operator("mcprep.mob_spawner", text="Spawn " + name)
 	if mcmob_type:
 		p.mcmob_type = mcmob_type
+
+	# Skip prep materials in case of unique shader.
+	if conf.json_data and name in conf.json_data.get("mob_skip_prep", []):
+		p.prep_materials = False
+
 	p = col.operator("mcprep.mob_install_menu")
 	p.mob_category = scn_props.spawn_rig_category
 
@@ -1162,6 +1175,10 @@ def meshswap_spawner(self, context):
 		p.block = block
 		p.method = method
 		p.location = util.get_cuser_location(context)
+		# Ensure meshswap with rigs is made real, so the rigs can be used.
+		if conf.json_data and block in conf.json_data.get("make_real", []):
+			p.make_real = True
+
 	else:
 		row.operator("mcprep.meshswap_spawner", text="Place block")
 	# something to directly open meshswap file??

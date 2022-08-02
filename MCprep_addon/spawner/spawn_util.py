@@ -591,6 +591,7 @@ class MCPREP_OT_reload_spawners(bpy.types.Operator):
 
 	@tracking.report_error
 	def execute(self, context):
+		_ = util.load_mcprep_json()  # For cases when to prep/make real.
 		bpy.ops.mcprep.reload_meshswap()
 		bpy.ops.mcprep.reload_mobs()
 		bpy.ops.mcprep.reload_items()
