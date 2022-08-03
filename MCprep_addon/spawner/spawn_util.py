@@ -33,6 +33,13 @@ INCLUDE_COLL = "mcprep"
 SKIP_COLL = "mcskip"  # Used for geometry and particle skips too.
 SKIP_COLL_LEGACY = "noimport"  # Supporting older MCprep Meshswap lib.
 
+# Icon backwards compatibility.
+if util.bv30():
+	COLL_ICON = 'OUTLINER_COLLECTION'
+elif util.bv28():
+	COLL_ICON = 'COLLECTION_NEW'
+else:
+	COLL_ICON = 'GROUP'
 
 # -----------------------------------------------------------------------------
 # Reusable functions for spawners
@@ -720,7 +727,7 @@ class MCPREP_UL_effects(bpy.types.UIList):
 			elif set.effect_type == effects.PARTICLE_AREA:
 				layout.label(text=set.name, icon="PARTICLES")
 			elif set.effect_type == effects.COLLECTION:
-				layout.label(text=set.name, icon="OUTLINER_COLLECTION")
+				layout.label(text=set.name, icon=COLL_ICON)
 			elif set.effect_type == effects.IMG_SEQ:
 				if conf.use_icons and icon in conf.preview_collections["effects"]:
 					layout.label(
