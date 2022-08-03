@@ -3942,13 +3942,15 @@
 			"water_still"
 		]
 	},
+	"make_real": [
+		"chest",
+		"chest_double"
+	],
 	"mob_skip_prep": [
 		"Frog",
 		"Simple Villager (2.8+)",
 		"Glow Squid",
 		"Strider",
 		"Warden"
-	],
-	"make_real": ["chest", "chest_double"]
-
+	]
 }
