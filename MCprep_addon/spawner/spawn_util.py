@@ -462,7 +462,6 @@ def load_append(self, context, path, name):
 	util.bAppendLink(os.path.join(path, subpath), name, False)
 	postgroups = list(util.collections())
 
-	g1 = None
 	new_groups = list(set(postgroups) - set(pregroups))
 	if not new_groups and name in util.collections():
 		# this is more likely to fail but serves as a fallback
@@ -473,10 +472,15 @@ def load_append(self, context, path, name):
 		self.report({'WARNING'}, "Could not detect imported group")
 		return
 	else:
-		grp_added = new_groups[0]  # assume first
+		grp_added = new_groups[0]  # Start with first assigned
+		for grp in new_groups:
+			if grp.name.startswith(name):
+				# But then pick the better matching one, in case the first
+				# group is a subcollection of another name.
+				grp_added = grp
 
-	conf.log("Identified object {} with group {} as just imported".format(
-		g1, grp_added), vv_only=True)
+	conf.log("Identified collection/group {} as the primary imported".format(
+		grp_added), vv_only=True)
 
 	# if rig not centered in original file, assume its group is
 	if hasattr(grp_added, "dupli_offset"):  # 2.7
@@ -493,7 +497,8 @@ def load_append(self, context, path, name):
 	addedObjs = [ob for ob in grp_added.objects]
 	for ob in all_objects:
 		if ob not in addedObjs:
-			conf.log("This obj not in group: " + ob.name)
+			conf.log("This obj not in group {}: {}".format(
+				grp_added.name, ob.name))
 			# removes things like random bone shapes pulled in,
 			# without deleting them, just unlinking them from the scene
 			util.obj_unlink_remove(ob, False, context)
