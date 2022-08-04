@@ -1,7 +1,17 @@
-TO INSTALL MCprep
-======
 
-### Click the link below and download the .zip file (re-zip if auto-unzipped into a folder necessary), install into blender (2.72 through 3.0 supported)
+
+MCprep Addon
+======
+[![Discord](https://badgen.net/badge/icon/discord?icon=discord&label)](https://discord.gg/mb8hBUC)
+[![MCprep License](https://img.shields.io/github/license/TheDuckCow/MCprep)](https://www.gnu.org/licenses/gpl-3.0)
+![MCprep Stars](https://img.shields.io/github/stars/TheDuckCow/MCprep)
+[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/TheDuckCow/MCprep/blob/master/CONTRIBUTING.md)
+
+
+MCprep is an addon dedicated to speeding up the workflow of Minecraft animators in Blender by automatically fixing up materials and providing other tools such as mob spawing, effects spawning, etc. 
+
+## Installing MCprep
+### Click the link below and download the .zip file (re-zip if auto-unzipped into a folder necessary), install into blender (2.78 through 3.2 supported)
 
 [![Install MCprep](/visuals/mcprep_download.png)](https://theduckcow.com/dev/blender/mcprep-download/)
 
