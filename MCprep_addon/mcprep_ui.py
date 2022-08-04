@@ -150,7 +150,41 @@ class MCPREP_MT_effect_spawn(bpy.types.Menu):
 	bl_idname = "MCPREP_MT_effect_spawn"
 
 	def draw(self, context):
-		self.layout.label(text="Not yet implemented!")
+		col = self.layout.column()
+		loc = util.get_cuser_location(context)
+		for effect in context.scene.mcprep_props.effects_list:
+			if effect.effect_type in (effects.GEO_AREA, effects.PARTICLE_AREA):
+				if effect.effect_type == effects.GEO_AREA:
+					icon = "NODETREE"
+				else:
+					icon = "PARTICLES"
+				ops = col.operator(
+					"mcprep.spawn_global_effect",
+					text=effect.name,
+					icon=icon)
+				ops.effect_id = str(effect.index)
+			elif effect.effect_type == effects.COLLECTION:
+				ops = col.operator(
+					"mcprep.spawn_instant_effect",
+					text=effect.name, icon=spawn_util.COLL_ICON)
+				ops.effect_id = str(effect.index)
+				ops.location = loc
+				ops.frame = context.scene.frame_current
+			elif effect.effect_type == effects.IMG_SEQ:
+				icon = "effects-{}".format(effect.index)
+				if conf.use_icons and icon in conf.preview_collections["effects"]:
+					ops = col.operator(
+						"mcprep.spawn_instant_effect",
+						text=effect.name,
+						icon_value=conf.preview_collections["effects"][icon].icon_id)
+				else:
+					ops = col.operator(
+						"mcprep.spawn_instant_effect",
+						text=effect.name,
+						icon="RENDER_RESULT")
+				ops.effect_id = str(effect.index)
+				ops.location = loc
+				ops.frame = context.scene.frame_current
 
 
 class MCPREP_MT_entity_spawn(bpy.types.Menu):
@@ -779,7 +813,9 @@ class MCPREP_PT_bridge(bpy.types.Panel):
 	bl_category = "MCprep"
 
 	def draw(self, context):
-		bridge.panel_draw(self, context)
+		# bridge.panel_draw(self, context)
+		pass
+
 
 class MCPREP_PT_world_tools(bpy.types.Panel):
 	"""World settings and tools"""
