@@ -85,11 +85,11 @@ In order to run these tests, **you must ensure your git folder with your MCprep 
 
 At the moment, only the project lead (TheDuckCow) should ever mint new releases for MCprep. However, the steps are noted here for completeness:
 
-1. All releases need a correpsonding milestone, like v3.3.1
+1. All releases need a corresponding milestone, like v3.3.1
+1. Make sure the version is the correct number for the release (should match a corresponding milestone). Make this commit on the dev branch.
 1. Create a pull request and merge dev into master (without deleting the dev branch). Close out any remaining corresponding milestones. Add this pull request to the milestone, only merging when all other tasks are completed or moved out of the milestone.
 1. Check out master, git pull
-1. Make sure the version is the correct number for the release (should match a corresponding milestone)
-1. Make sure that `"dev" = False` in conf.py, so that prod resources are used for reporting
+1. Make sure that `"dev" = False` in conf.py, so that prod resources are used for reporting (it should always be this way on the master branch without doing anything, even after doing a merge from dev; but *always* double check)
 1. Create [a draft release](https://github.com/TheDuckCow/MCprep/releases/new) on GitHub
    - Tag is in the form `3.3.1`, no leading `v`.
    - The title however is in the form `MCprep v3.3.0 | ShortName` where version has a leading `v`.
@@ -105,6 +105,7 @@ At the moment, only the project lead (TheDuckCow) should ever mint new releases 
    1. If it works, then **immediately update** the https://theduckcow.com/dev/blender/mcprep-download/ page to point to the new number (must be manually updated by TheDuckCow).
    1. Anything wrong? Immediately delete the entire release, and as a second step, also delete the tag (you likely want to copy the markdown text of the release though to a safe temporary space, so you don't lose that). You can do both steps from the github UI.
 1. After release, enter hypercare by monitoring the discord channel and the datastudio dashboard for error reporting (only core contributors will have access to this)
+1. git checkout dev, and then upversion the dev branch to a unique incremental version. So if you just released v3.3.1, then the dev branch should be updated to be (3, 3, 1, 1) so that we can tell official releases apart from dev versions.
 
 
 

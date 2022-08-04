@@ -22,16 +22,17 @@
 # ##### END GPL LICENSE BLOCK #####
 
 
-import bpy
-import traceback
-
-import os
-import sys
-import io
 from contextlib import redirect_stdout
 import importlib
-import tempfile
+import io
+import os
 import shutil
+import sys
+import tempfile
+import time
+import traceback
+
+import bpy
 from mathutils import Vector
 
 TEST_FILE = "test_results.tsv"
@@ -55,6 +56,7 @@ class mcprep_testing():
 			self.openfolder,
 			self.spawn_mob,
 			self.spawn_mob_linked,
+			self.check_blend_eligible,
 			self.change_skin,
 			self.import_world_split,
 			self.import_world_fail,
@@ -73,8 +75,14 @@ class mcprep_testing():
 			self.find_missing_images_cycles,
 			self.qa_meshswap_file,
 			self.item_spawner,
+			self.item_spawner_resize,
 			self.entity_spawner,
 			self.model_spawner,
+			self.geonode_effect_spawner,
+			self.particle_area_effect_spawner,
+			self.collection_effect_spawner,
+			self.img_sequence_effect_spawner,
+			self.particle_plane_effect_spawner,
 			self.sync_materials,
 			self.sync_materials_link,
 			self.load_material,
@@ -682,6 +690,43 @@ class mcprep_testing():
 		self._clear_scene()
 		bpy.ops.mcprep.reload_mobs()
 		bpy.ops.mcprep.mob_spawner(toLink=True)
+
+	def check_blend_eligible(self):
+		from MCprep.spawner import spawn_util
+		fake_base = "MyMob - by Person"
+
+		suffix_new = " pre9.0.0"  # Force active blender instance as older
+		suffix_old = " pre1.0.0"  # Force active blender instance as newer.
+
+		p_none = fake_base + ".blend"
+		p_new = fake_base + suffix_new + ".blend"
+		p_old = fake_base + suffix_old + ".blend"
+		rando = "rando_name" + suffix_old + ".blend"
+
+		# Check where input file is the "non-versioned" one.
+
+		res = spawn_util.check_blend_eligible(p_none, [p_none, rando])
+		if res is not True:
+			return "Should have been true even if rando has suffix"
+
+		res = spawn_util.check_blend_eligible(p_none, [p_none, p_old])
+		if res is not True:
+			return "Should be true as curr blend eligible and checked latest"
+
+		res = spawn_util.check_blend_eligible(p_none, [p_none, p_new])
+		if res is not False:
+			print(p_none, p_new, res)
+			return "Should be false as curr blend not eligible and checked latest"
+
+		# Now check if input is a versioned file.
+
+		res = spawn_util.check_blend_eligible(p_new, [p_none, p_new])
+		if res is not True:
+			return "Should have been true since we are below min blender"
+
+		res = spawn_util.check_blend_eligible(p_old, [p_none, p_old])
+		if res is not False:
+			return "Should have been false since we are above this min blender"
 
 	def change_skin(self):
 		"""Test scenarios for changing skin after adding a character."""
@@ -1422,6 +1467,38 @@ class mcprep_testing():
 		# test that with an image of more than 1k pixels, it's truncated as expected
 		# test with different
 
+	def item_spawner_resize(self):
+		"""Test spawning an item that requires resizing."""
+		self._clear_scene()
+		bpy.ops.mcprep.reload_items()
+
+		# Create a tmp file
+		tmp_img = bpy.data.images.new("tmp_item_spawn", 32, 32, alpha=True)
+		tmp_img.filepath = os.path.join(bpy.app.tempdir, "tmp_item.png")
+		tmp_img.save()
+
+		# spawn with whatever default index
+		pre_objs = len(bpy.data.objects)
+		bpy.ops.mcprep.spawn_item_file(
+			max_pixels=16,
+			filepath=tmp_img.filepath
+		)
+		post_objs = len(bpy.data.objects)
+
+		if post_objs == pre_objs:
+			return "No items spawned"
+		elif post_objs > pre_objs + 1:
+			return "More than one item spawned"
+
+		# Now check that this item spawned has the expected face count.
+		obj = bpy.context.object
+		polys = len(obj.data.polygons)
+		print("Poly's count: ", polys)
+		if polys > 16:
+			return "Didn't scale enough to fewer pixels, facecount: " + str(polys)
+		elif polys < 16:
+			return "Over-scaled down facecount: " + str(polys)
+
 	def entity_spawner(self):
 		"""Test entity spawning and reloading"""
 		self._clear_scene()
@@ -1479,6 +1556,159 @@ class mcprep_testing():
 
 		# Test collection/group added
 		# Test loading from file.
+
+	def geonode_effect_spawner(self):
+		"""Test the geo node variant of effect spawning works."""
+		if bpy.app.version < (3, 0):
+			return  # Not supported before 3.0 anyways.
+		self._clear_scene()
+		scn_props = bpy.context.scene.mcprep_props
+		etype = "geo_area"
+
+		pre_count = len([
+			x for x in scn_props.effects_list if x.effect_type == etype])
+		bpy.ops.mcprep.reload_effects()
+		post_count = len([
+			x for x in scn_props.effects_list if x.effect_type == etype])
+
+		if pre_count != 0:
+			return "Should start with no effects loaded"
+		if post_count == 0:
+			return "Should have more effects loaded after reload"
+
+		effect = [x for x in scn_props.effects_list if x.effect_type == etype][0]
+		res = bpy.ops.mcprep.spawn_global_effect(effect_id=str(effect.index))
+		if res != {'FINISHED'}:
+			return "Did not end with finished result"
+
+		# TODO: Further checks it actually loaded the effect.
+		# Check that the geonode inputs are updated.
+		obj = bpy.context.object
+		if not obj:
+			return "Geo node added object not selected"
+
+		geo_nodes = [mod for mod in obj.modifiers if mod.type == "NODES"]
+		if not geo_nodes:
+			return "No geonode modifier found"
+
+		# Now validate that one of the settings was updated.
+		# TODO: example where we assert the active effect `subpath` is non empty
+
+	def particle_area_effect_spawner(self):
+		"""Test the particle area variant of effect spawning works."""
+		self._clear_scene()
+		scn_props = bpy.context.scene.mcprep_props
+		etype = "particle_area"
+
+		pre_count = len([
+			x for x in scn_props.effects_list if x.effect_type == etype])
+		bpy.ops.mcprep.reload_effects()
+		post_count = len([
+			x for x in scn_props.effects_list if x.effect_type == etype])
+
+		if pre_count != 0:
+			return "Should start with no effects loaded"
+		if post_count == 0:
+			return "Should have more effects loaded after reload"
+
+		effect = [x for x in scn_props.effects_list if x.effect_type == etype][0]
+		res = bpy.ops.mcprep.spawn_global_effect(effect_id=str(effect.index))
+		if res != {'FINISHED'}:
+			return "Did not end with finished result"
+
+		# TODO: Further checks it actually loaded the effect.
+
+	def collection_effect_spawner(self):
+		"""Test the collection variant of effect spawning works."""
+		self._clear_scene()
+		scn_props = bpy.context.scene.mcprep_props
+		etype = "collection"
+
+		pre_count = len([
+			x for x in scn_props.effects_list if x.effect_type == etype])
+		bpy.ops.mcprep.reload_effects()
+		post_count = len([
+			x for x in scn_props.effects_list if x.effect_type == etype])
+
+		if pre_count != 0:
+			return "Should start with no effects loaded"
+		if post_count == 0:
+			return "Should have more effects loaded after reload"
+
+		init_objs = list(bpy.data.objects)
+
+		effect = [x for x in scn_props.effects_list if x.effect_type == etype][0]
+		res = bpy.ops.mcprep.spawn_instant_effect(effect_id=str(effect.index), frame=2)
+		if res != {'FINISHED'}:
+			return "Did not end with finished result"
+
+		final_objs = list(bpy.data.objects)
+		new_objs = list(set(final_objs) - set(init_objs))
+		if len(new_objs) == 0:
+			return "didn't crate new objects"
+		if bpy.context.object not in new_objs:
+			return "Selected obj is not a new object"
+
+		is_empty = bpy.context.object.type == 'EMPTY'
+		is_coll_inst = bpy.context.object.instance_type == 'COLLECTION'
+		if not is_empty or not is_coll_inst:
+			return "Didn't end up with selected collection instance"
+
+		# TODO: Further checks it actually loaded the effect.
+
+	def img_sequence_effect_spawner(self):
+		"""Test the image sequence variant of effect spawning works."""
+		self._clear_scene()
+		scn_props = bpy.context.scene.mcprep_props
+		etype = "img_seq"
+
+		pre_count = len([
+			x for x in scn_props.effects_list if x.effect_type == etype])
+		bpy.ops.mcprep.reload_effects()
+		post_count = len([
+			x for x in scn_props.effects_list if x.effect_type == etype])
+
+		if pre_count != 0:
+			return "Should start with no effects loaded"
+		if post_count == 0:
+			return "Should have more effects loaded after reload"
+
+		# Find the one with at least 10 frames.
+		effect_name = "Big smoke"
+		effect = None
+		for this_effect in scn_props.effects_list:
+			if this_effect.effect_type != etype:
+				continue
+			if this_effect.name == effect_name:
+				effect = this_effect
+
+		if not effect:
+			return "Failed to fetch {} target effect".format(effect_name)
+
+		t0 = time.time()
+		res = bpy.ops.mcprep.spawn_instant_effect(effect_id=str(effect.index))
+		if res != {'FINISHED'}:
+			return "Did not end with finished result"
+
+		t1 = time.time()
+		if t1 - t0 > 1.0:
+			return "Spawning took over 1 second for sequence effect"
+
+		# TODO: Further checks it actually loaded the effect.
+
+	def particle_plane_effect_spawner(self):
+		"""Test the particle plane variant of effect spawning works."""
+		self._clear_scene()
+
+		filepath = os.path.join(
+			bpy.context.scene.mcprep_texturepack_path,
+			"assets", "minecraft", "textures", "block", "dirt.png")
+		res = bpy.ops.mcprep.spawn_particle_planes(filepath=filepath)
+
+		if res != {'FINISHED'}:
+			return "Did not end with finished result"
+
+		# TODO: Further checks it actually loaded the effect.
 
 	def world_tools(self):
 		"""Test adding skies, prepping the world, etc"""
@@ -1672,7 +1902,10 @@ class mcprep_testing():
 		# add object
 		bpy.ops.mesh.primitive_cube_add()
 
-		bpy.ops.mcprep.load_material()
+		scn_props = bpy.context.scene.mcprep_props
+		itm = scn_props.material_list[scn_props.material_list_index]
+		path = itm.path
+		bpy.ops.mcprep.load_material(filepath=path)
 
 		# validate that the loaded material has a name matching current list
 		mat = bpy.context.object.active_material
@@ -1800,6 +2033,9 @@ class mcprep_testing():
 		gen_files = [img for img in os.listdir(result_dir) if img.endswith(".png")]
 		if not gen_files:
 			return "No images generated"
+
+		# Now do cleanup.
+		shutil.rmtree(result_dir)
 
 	def test_enable_obj_importer(self):
 		"""Ensure module name is correct, since error won't be reported."""

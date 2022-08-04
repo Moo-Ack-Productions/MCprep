@@ -17,6 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import os
+import re
 
 import bpy
 
@@ -24,13 +25,21 @@ from .. import conf
 from .. import util
 from .. import tracking
 from . import mobs
+from . import effects
 
 # Top-level names used for inclusion or exclusions when filtering through
 # collections in blend files for spawners: mobs, meshswap, and entities.
 INCLUDE_COLL = "mcprep"
-SKIP_COLL = "mcskip"
+SKIP_COLL = "mcskip"  # Used for geometry and particle skips too.
 SKIP_COLL_LEGACY = "noimport"  # Supporting older MCprep Meshswap lib.
 
+# Icon backwards compatibility.
+if util.bv30():
+	COLL_ICON = 'OUTLINER_COLLECTION'
+elif util.bv28():
+	COLL_ICON = 'COLLECTION_NEW'
+else:
+	COLL_ICON = 'GROUP'
 
 # -----------------------------------------------------------------------------
 # Reusable functions for spawners
@@ -86,6 +95,66 @@ def filter_collections(data_from):
 			len(all_names), len(mcprep_names)))
 		all_names = mcprep_names
 	return all_names
+
+
+def check_blend_eligible(this_file, all_files):
+	"""Returns true if the path blend file is ok for this blender version.
+
+	Created to better support older blender versions without having to
+	compeltely remake new rig contirbutions from scratch. See for more details:
+	https://github.com/TheDuckCow/MCprep/issues/317
+
+	If the "pre#.#.#" suffix is found in any similar prefix named blend files,
+	evaluate whether the target file itself is eligible. If pre3.0.0 is found
+	in path, then this function returns False if the current blender version is
+	3.0 to force loading the non pre3.0.0 version instead, and if pre3.0.0 is
+	not in the path variable but pre#.#.# is found in another file, then it
+	returns true. If no pre#.#.# found in any files of the common base, would
+	always return True.
+	"""
+	basename = os.path.splitext(this_file)[0]
+
+	# Regex code to any matches of pre#.#.# at very end of name.
+	# (pre) for exact match,
+	# [0-9]+ to match any 1+ numbers
+	# (\.[0-9]+) for any repeat number of .#
+	# +$ to ensure it's an ending group.
+	code = r'(?i)(pre)[0-9]+(\.[0-9]+)+$'
+	find_suffix = re.compile(code)
+
+	def tuple_from_match(match):
+		prestr = match.group(0)  # At most one group given +$ ending condition.
+		vstr = prestr[3:]  # Chop off "pre".
+		tuple_ver = tuple([int(n) for n in vstr.split(".")])
+		return tuple_ver
+
+	matches = find_suffix.search(basename)
+	if matches:
+		tuple_ver = tuple_from_match(matches)
+		res = util.min_bv(tuple_ver)
+		# If the suffix = 3.0 and we are BELOW 3.0, return True (use this file)
+		return not res
+
+	# Remaining case: no suffix found in this target, but see if any other
+	# files have the same base and *do* have a suffix indicator.
+	for afile in all_files:
+		if not afile.startswith(basename):
+			continue
+		if afile == this_file:
+			continue  # Already checked above.
+
+		base_afile = os.path.splitext(afile)[0]
+		matches = find_suffix.search(base_afile)
+		if matches:
+			tuple_ver = tuple_from_match(matches)
+			res = util.min_bv(tuple_ver)
+			# If the suffix = 3.0 in `afile` file, and current blender is
+			# below 3, then `afile` is the file that should be loaded, and the
+			# current file `this_file` is to be skipped.
+			return res
+
+	# If no matches (the most common case), then this file is eligible.
+	return True
 
 
 def attemptScriptLoad(path):
@@ -400,7 +469,6 @@ def load_append(self, context, path, name):
 	util.bAppendLink(os.path.join(path, subpath), name, False)
 	postgroups = list(util.collections())
 
-	g1 = None
 	new_groups = list(set(postgroups) - set(pregroups))
 	if not new_groups and name in util.collections():
 		# this is more likely to fail but serves as a fallback
@@ -411,10 +479,15 @@ def load_append(self, context, path, name):
 		self.report({'WARNING'}, "Could not detect imported group")
 		return
 	else:
-		grp_added = new_groups[0]  # assume first
+		grp_added = new_groups[0]  # Start with first assigned
+		for grp in new_groups:
+			if grp.name.startswith(name):
+				# But then pick the better matching one, in case the first
+				# group is a subcollection of another name.
+				grp_added = grp
 
-	conf.log("Identified object {} with group {} as just imported".format(
-		g1, grp_added), vv_only=True)
+	conf.log("Identified collection/group {} as the primary imported".format(
+		grp_added), vv_only=True)
 
 	# if rig not centered in original file, assume its group is
 	if hasattr(grp_added, "dupli_offset"):  # 2.7
@@ -431,7 +504,8 @@ def load_append(self, context, path, name):
 	addedObjs = [ob for ob in grp_added.objects]
 	for ob in all_objects:
 		if ob not in addedObjs:
-			conf.log("This obj not in group: " + ob.name)
+			conf.log("This obj not in group {}: {}".format(
+				grp_added.name, ob.name))
 			# removes things like random bone shapes pulled in,
 			# without deleting them, just unlinking them from the scene
 			util.obj_unlink_remove(ob, False, context)
@@ -529,9 +603,11 @@ class MCPREP_OT_reload_spawners(bpy.types.Operator):
 
 	@tracking.report_error
 	def execute(self, context):
+		_ = util.load_mcprep_json()  # For cases when to prep/make real.
 		bpy.ops.mcprep.reload_meshswap()
 		bpy.ops.mcprep.reload_mobs()
 		bpy.ops.mcprep.reload_items()
+		bpy.ops.mcprep.reload_effects()
 		bpy.ops.mcprep.reload_entities()
 		bpy.ops.mcprep.reload_models()
 
@@ -639,6 +715,39 @@ class MCPREP_UL_item(bpy.types.UIList):
 				layout.label(text="", icon='QUESTION')
 
 
+class MCPREP_UL_effects(bpy.types.UIList):
+	"""For effects asset listing UIList drawing"""
+	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
+		icon = "effects-{}".format(set.index)
+		if self.layout_type in {'DEFAULT', 'COMPACT'}:
+
+			# Add icons based on the type of effect.
+			if set.effect_type == effects.GEO_AREA:
+				layout.label(text=set.name, icon="NODETREE")
+			elif set.effect_type == effects.PARTICLE_AREA:
+				layout.label(text=set.name, icon="PARTICLES")
+			elif set.effect_type == effects.COLLECTION:
+				layout.label(text=set.name, icon=COLL_ICON)
+			elif set.effect_type == effects.IMG_SEQ:
+				if conf.use_icons and icon in conf.preview_collections["effects"]:
+					layout.label(
+						text=set.name,
+						icon_value=conf.preview_collections["effects"][icon].icon_id)
+				else:
+					layout.label(text=set.name, icon="RENDER_RESULT")
+			else:
+				layout.label(text=set.name, icon="BLANK1")
+
+		elif self.layout_type in {'GRID'}:
+			layout.alignment = 'CENTER'
+			if conf.use_icons and icon in conf.preview_collections["effects"]:
+				layout.label(
+					text="",
+					icon_value=conf.preview_collections["effects"][icon].icon_id)
+			else:
+				layout.label(text="", icon='QUESTION')
+
+
 class MCPREP_UL_material(bpy.types.UIList):
 	"""For material library UIList drawing"""
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
@@ -711,7 +820,26 @@ class ListModelAssets(bpy.types.PropertyGroup):
 	"""For UI drawing of mc model assets and holding data"""
 	filepath = bpy.props.StringProperty(subtype="FILE_PATH")
 	description = bpy.props.StringProperty()
-	# index = bpy.props.IntProperty(min=0, default=0)  # for icon drawing
+	# index = bpy.props.IntProperty(min=0, default=0)  # icon pulled by name.
+
+
+class ListEffectsAssets(bpy.types.PropertyGroup):
+	"""For UI drawing for different kinds of effects"""
+	# inherited: name
+	filepath = bpy.props.StringProperty(subtype="FILE_PATH")
+	subpath = bpy.props.StringProperty(
+		description="Collection/particle/nodegroup within this file",
+		default="")
+	description = bpy.props.StringProperty()
+	effect_type = bpy.props.EnumProperty(
+		name="Effect type",
+		items=(
+			(effects.GEO_AREA, 'Geonode area', 'Instance wide-area geonodes effect'),
+			(effects.PARTICLE_AREA, 'Particle area', 'Instance wide-area particle effect'),
+			(effects.COLLECTION, 'Collection effect', 'Instance pre-animated collection'),
+			(effects.IMG_SEQ, 'Image sequence', 'Instance an animated image sequence effect'),
+		))
+	index = bpy.props.IntProperty(min=0, default=0)  # for icon drawing
 
 
 # -----------------------------------------------------------------------------
@@ -726,12 +854,14 @@ classes = (
 	ListItemAssets,
 	ListEntityAssets,
 	ListModelAssets,
+	ListEffectsAssets,
 	MCPREP_UL_material,
 	MCPREP_UL_mob,
 	MCPREP_UL_meshswap,
 	MCPREP_UL_entity,
 	MCPREP_UL_model,
 	MCPREP_UL_item,
+	MCPREP_UL_effects,
 	MCPREP_OT_reload_spawners,
 	MCPREP_OT_spawn_path_reset,
 )

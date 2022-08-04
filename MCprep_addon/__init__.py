@@ -34,10 +34,14 @@ Disclaimer: This is not an official Google product
 
 """
 
+# ----------------------------- For any developer ---------------------------- #
+# Increment this number for each time you get a "inconsistent use of spaces and tab error"
+# 								error = 51
+
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",
-	"version": (3, 3, 1),
+	"version": (3, 4, 0),
 	"blender": (2, 80, 0),
 	"location": "3D window toolshelf > MCprep tab",
 	"description": "Minecraft workflow addon for rendering and animation",

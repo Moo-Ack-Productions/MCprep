@@ -22,19 +22,21 @@ import bpy
 import os
 
 # addon imports
+from . import addon_updater_ops
 from . import conf
+from . import optimize_scene
+from . import tracking
 from . import util
-from .spawner import mobs
-from .spawner import meshswap
-from .spawner import spawn_util
+from . import world_tools
+from .materials import material_manager
+from .materials.generate import update_mcprep_texturepack_path
+from .materials.skin import update_skin_path
+from .spawner import effects
 from .spawner import entities
 from .spawner import mcmodel
-from . import world_tools
-from . import addon_updater_ops
-from . import tracking
-from .materials.skin import update_skin_path
-from .materials.generate import update_mcprep_texturepack_path
-from .materials import material_manager
+from .spawner import meshswap
+from .spawner import mobs
+from .spawner import spawn_util
 # from .import_bridge import bridge
 
 # blender 2.7 vs 2.8 icon selections
@@ -85,6 +87,10 @@ class MCPREP_MT_mob_spawner(bpy.types.Menu):
 				ops = layout.operator("mcprep.mob_spawner", text=mob.name)
 			ops.mcmob_type = mob.mcmob_type
 
+			# Skip prep materials in case of unique shader.
+			if conf.json_data and mob.name in conf.json_data.get("mob_skip_prep", []):
+				ops.prep_materials = False
+
 
 class MCPREP_MT_meshswap_place(bpy.types.Menu):
 	"""Menu for all the meshswap objects"""
@@ -110,6 +116,10 @@ class MCPREP_MT_meshswap_place(bpy.types.Menu):
 			opr.block = blockset[0]
 			opr.location = util.get_cuser_location(context)
 
+			# Ensure meshswap with rigs is made real, so the rigs can be used.
+			if conf.json_data and blockset[1] in conf.json_data.get("make_real", []):
+				opr.make_real = True
+
 
 class MCPREP_MT_item_spawn(bpy.types.Menu):
 	"""Menu for loaded item spawners"""
@@ -132,6 +142,49 @@ class MCPREP_MT_item_spawn(bpy.types.Menu):
 			else:
 				ops = layout.operator("mcprep.spawn_item", text=item.name)
 			ops.filepath = item.path
+
+
+class MCPREP_MT_effect_spawn(bpy.types.Menu):
+	"""Menu for loaded effect spawners"""
+	bl_label = "Effects Spawner"
+	bl_idname = "MCPREP_MT_effect_spawn"
+
+	def draw(self, context):
+		col = self.layout.column()
+		loc = util.get_cuser_location(context)
+		for effect in context.scene.mcprep_props.effects_list:
+			if effect.effect_type in (effects.GEO_AREA, effects.PARTICLE_AREA):
+				if effect.effect_type == effects.GEO_AREA:
+					icon = "NODETREE"
+				else:
+					icon = "PARTICLES"
+				ops = col.operator(
+					"mcprep.spawn_global_effect",
+					text=effect.name,
+					icon=icon)
+				ops.effect_id = str(effect.index)
+			elif effect.effect_type == effects.COLLECTION:
+				ops = col.operator(
+					"mcprep.spawn_instant_effect",
+					text=effect.name, icon=spawn_util.COLL_ICON)
+				ops.effect_id = str(effect.index)
+				ops.location = loc
+				ops.frame = context.scene.frame_current
+			elif effect.effect_type == effects.IMG_SEQ:
+				icon = "effects-{}".format(effect.index)
+				if conf.use_icons and icon in conf.preview_collections["effects"]:
+					ops = col.operator(
+						"mcprep.spawn_instant_effect",
+						text=effect.name,
+						icon_value=conf.preview_collections["effects"][icon].icon_id)
+				else:
+					ops = col.operator(
+						"mcprep.spawn_instant_effect",
+						text=effect.name,
+						icon="RENDER_RESULT")
+				ops.effect_id = str(effect.index)
+				ops.location = loc
+				ops.frame = context.scene.frame_current
 
 
 class MCPREP_MT_entity_spawn(bpy.types.Menu):
@@ -190,12 +243,14 @@ class MCPREP_MT_3dview_add(bpy.types.Menu):
 			spawner_icon = conf.preview_collections["main"].get("spawner_icon")
 			meshswap_icon = conf.preview_collections["main"].get("meshswap_icon")
 			sword_icon = conf.preview_collections["main"].get("sword_icon")
+			effects_icon = conf.preview_collections["main"].get("effects_icon")
 			entity_icon = conf.preview_collections["main"].get("entity_icon")
 			model_icon = conf.preview_collections["main"].get("model_icon")
 		else:
 			spawner_icon = None
 			meshswap_icon = None
 			sword_icon = None
+			effects_icon = None
 			entity_icon = None
 			model_icon = None
 
@@ -226,6 +281,12 @@ class MCPREP_MT_3dview_add(bpy.types.Menu):
 				MCPREP_MT_item_spawn.bl_idname, icon_value=sword_icon.icon_id)
 		else:
 			layout.menu(MCPREP_MT_item_spawn.bl_idname)
+
+		if effects_icon is not None:
+			layout.menu(
+				MCPREP_MT_effect_spawn.bl_idname, icon_value=effects_icon.icon_id)
+		else:
+			layout.menu(MCPREP_MT_effect_spawn.bl_idname)
 
 		if entity_icon is not None:
 			layout.menu(
@@ -290,6 +351,11 @@ class McprepPreference(bpy.types.AddonPreferences):
 		description="Folder for skin textures, used in skin swapping",
 		subtype='DIR_PATH',
 		default=scriptdir + "/MCprep_resources/skins/")
+	effects_path = bpy.props.StringProperty(
+		name="Effects path",
+		description="Folder for effects blend files and assets",
+		subtype='DIR_PATH',
+		default=scriptdir + "/MCprep_resources/effects/")
 	world_obj_path = bpy.props.StringProperty(
 		name="World Folder",
 		description=(
@@ -674,6 +740,17 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			col.operator(
 				"mcprep.improve_ui", text="Improve UI", icon='SETTINGS')
 
+		# Optimizer Panel.
+		row = col.row(align=True)
+		icon = "TRIA_DOWN" if scn_props.show_settings_optimizer else "TRIA_RIGHT"
+		row.prop(
+			scn_props, "show_settings_optimizer",
+			text="Cycles Optimizer", icon=icon)
+		if scn_props.show_settings_optimizer:
+			row = col.row(align=True)
+			optimize_scene.panel_draw(context, row)
+
+		# Advanced settings.
 		row = col.row(align=True)
 		if not scn_props.show_settings_material:
 			row.prop(
@@ -736,7 +813,8 @@ class MCPREP_PT_bridge(bpy.types.Panel):
 	bl_category = "MCprep"
 
 	def draw(self, context):
-		bridge.panel_draw(self, context)
+		# bridge.panel_draw(self, context)
+		pass
 
 
 class MCPREP_PT_world_tools(bpy.types.Panel):
@@ -760,6 +838,7 @@ class MCPREP_PT_world_tools(bpy.types.Panel):
 		col = rw.column(align=True)
 		col.operator("mcprep.add_mc_sky")
 		col.operator("mcprep.world")
+		col.operator("mcprep.render_panorama")
 
 		layout.split()
 		rw = layout.row()
@@ -909,6 +988,8 @@ class MCPREP_PT_materials(bpy.types.Panel):
 		scn_props = context.scene.mcprep_props
 
 		layout = self.layout
+		row = layout.row()
+		# row.operator("mcprep.create_default_material")
 		split = layout.split()
 		col = split.column(align=True)
 
@@ -921,8 +1002,9 @@ class MCPREP_PT_materials(bpy.types.Panel):
 			col = layout.column(align=True)
 			row = col.row(align=True)
 			row.scale_y = 1.5
-			name = scn_props.material_list[scn_props.material_list_index].name
-			row.operator("mcprep.load_material", text="Load: " + name)
+			mat = scn_props.material_list[scn_props.material_list_index]
+			ops = row.operator("mcprep.load_material", text="Load: " + mat.name)
+			ops.filepath = mat.path
 		else:
 			box = col.box()
 			b_row = box.row()
@@ -935,7 +1017,7 @@ class MCPREP_PT_materials(bpy.types.Panel):
 			col.enabled = False
 			row = col.row(align=True)
 			row.scale_y = 1.5
-			row.operator("mcprep.load_material", text="Load material")
+			ops = row.operator("mcprep.load_material", text="Load material")
 
 
 class MCPREP_PT_materials_subsettings(bpy.types.Panel):
@@ -1022,6 +1104,11 @@ def mob_spawner(self, context):
 	p = row.operator("mcprep.mob_spawner", text="Spawn " + name)
 	if mcmob_type:
 		p.mcmob_type = mcmob_type
+
+	# Skip prep materials in case of unique shader.
+	if conf.json_data and name in conf.json_data.get("mob_skip_prep", []):
+		p.prep_materials = False
+
 	p = col.operator("mcprep.mob_install_menu")
 	p.mob_category = scn_props.spawn_rig_category
 
@@ -1124,6 +1211,10 @@ def meshswap_spawner(self, context):
 		p.block = block
 		p.method = method
 		p.location = util.get_cuser_location(context)
+		# Ensure meshswap with rigs is made real, so the rigs can be used.
+		if conf.json_data and block in conf.json_data.get("make_real", []):
+			p.make_real = True
+
 	else:
 		row.operator("mcprep.meshswap_spawner", text="Place block")
 	# something to directly open meshswap file??
@@ -1351,7 +1442,7 @@ def model_spawner(self, context):
 		row = col.row(align=True)
 		row.enabled = False
 		row.scale_y = 1.5
-		row.operator("mcprep.spawn_model")
+		row.operator(mcmodel.MCPREP_OT_spawn_minecraft_model.bl_idname)
 
 	ops = col.operator("mcprep.import_model_file")
 	ops.location = util.get_cuser_location(context)
@@ -1385,6 +1476,56 @@ def model_spawner(self, context):
 		b_col.operator("mcprep.reload_models")
 
 
+def effects_spawner(self, context):
+	"""Code for drawing the effects spawner"""
+	scn_props = context.scene.mcprep_props
+
+	layout = self.layout
+	col = layout.column(align=True)
+	col.label(text="Load/generate effects")
+
+	# Alternate draw approach, using UI list.
+	if scn_props.effects_list:
+		col.template_list(
+			"MCPREP_UL_effects", "",
+			scn_props, "effects_list",
+			scn_props, "effects_list_index",
+			rows=4)
+		col = layout.column(align=True)
+		row = col.row(align=True)
+		row.scale_y = 1.5
+		effect = scn_props.effects_list[scn_props.effects_list_index]
+		if effect.effect_type in (effects.GEO_AREA, effects.PARTICLE_AREA):
+			ops = row.operator(
+				"mcprep.spawn_global_effect", text="Add: " + effect.name)
+			ops.effect_id = str(effect.index)
+		elif effect.effect_type in (effects.COLLECTION, effects.IMG_SEQ):
+			ops = row.operator(
+				"mcprep.spawn_instant_effect", text="Add: " + effect.name)
+			ops.effect_id = str(effect.index)
+			ops.location = util.get_cuser_location(context)
+			ops.frame = context.scene.frame_current
+	else:
+		box = col.box()
+		b_row = box.row()
+		b_row.label(text="No effects loaded")
+		b_row = box.row()
+		b_row.scale_y = 2
+		b_row.operator(
+			"mcprep.reload_spawners",
+			text="Reload assets", icon="ERROR")
+
+		col = layout.column(align=True)
+		row = col.row(align=True)
+		row.scale_y = 1.5
+		row.enabled = False
+		row.operator("mcprep.spawn_item", text="Add effect")
+	row = col.row(align=True)
+	ops = row.operator("mcprep.spawn_particle_planes")
+	ops.location = util.get_cuser_location(context)
+	ops.frame = context.scene.frame_current
+
+
 class MCPREP_PT_spawn(bpy.types.Panel):
 	"""MCprep panel for mob spawning"""
 	bl_label = "Spawner"
@@ -1395,8 +1536,8 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 	def draw(self, context):
 		row = self.layout.row(align=True)
 		row.label(text="Click triangle to open")
-		# row.prop(context.scene.mcprep_props, "spawn_mode", expand=True)
-		ops = row.operator("mcprep.open_help", text="", icon="QUESTION")
+		ops = row.operator(
+			"mcprep.open_help", text="", icon="QUESTION", emboss=False)
 		ops.url = "https://theduckcow.com/dev/blender/mcprep/mcprep-spawner/"
 		addon_updater_ops.check_for_update_background()
 
@@ -1472,6 +1613,31 @@ class MCPREP_PT_item_spawner(bpy.types.Panel):
 		if not conf.use_icons or conf.preview_collections["main"] == "":
 			return
 		icon = conf.preview_collections["main"].get("sword_icon")
+		if not icon:
+			return
+		self.layout.label(text="", icon_value=icon.icon_id)
+
+
+class MCPREP_PT_effects_spawner(bpy.types.Panel):
+	"""MCprep panel for effects spawning"""
+	bl_label = "Effects + weather"
+	bl_parent_id = "MCPREP_PT_spawn"
+	bl_space_type = "VIEW_3D"
+	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
+	bl_category = "MCprep"
+	bl_options = {'DEFAULT_CLOSED'}
+
+	def draw(self, context):
+		is_obj_mode = context.mode == "OBJECT"
+		if not is_obj_mode:
+			draw_mode_warning(self.layout)
+			return
+		effects_spawner(self, context)
+
+	def draw_header(self, context):
+		if not conf.use_icons or conf.preview_collections["main"] == "":
+			return
+		icon = conf.preview_collections["main"].get("effects_icon")
 		if not icon:
 			return
 		self.layout.label(text="", icon_value=icon.icon_id)
@@ -1602,6 +1768,10 @@ class McprepProps(bpy.types.PropertyGroup):
 		name="show skin settings",
 		description="Show extra MCprep panel settings",
 		default=False)
+	show_settings_optimizer = bpy.props.BoolProperty(
+		name="show optimizer settings",
+		description="Show extra MCprep panel settings",
+		default=False)
 	show_settings_spawner = bpy.props.BoolProperty(
 		name="show spawner settings",
 		description="Show extra MCprep panel settings",
@@ -1643,6 +1813,12 @@ class McprepProps(bpy.types.PropertyGroup):
 	model_list = bpy.props.CollectionProperty(type=spawn_util.ListModelAssets)
 	model_list_index = bpy.props.IntProperty(default=0)
 
+	# Effects are uniqune in that they are loaded into a list structure,
+	# but the UI list itself is not directly displayed. Rather, dropdowns
+	# will iterate over this to populate based on type.
+	effects_list = bpy.props.CollectionProperty(type=spawn_util.ListEffectsAssets)
+	effects_list_index = bpy.props.IntProperty(default=0)
+
 
 # -----------------------------------------------------------------------------
 # Register functions
@@ -1655,6 +1831,7 @@ classes = (
 	MCPREP_MT_mob_spawner,
 	MCPREP_MT_meshswap_place,
 	MCPREP_MT_item_spawn,
+	MCPREP_MT_effect_spawn,
 	MCPREP_MT_entity_spawn,
 	MCPREP_MT_model_spawn,
 	MCPREP_MT_3dview_add,
@@ -1666,6 +1843,7 @@ classes = (
 	MCPREP_PT_mob_spawner,
 	MCPREP_PT_model_spawner,
 	MCPREP_PT_item_spawner,
+	MCPREP_PT_effects_spawner,
 	MCPREP_PT_entity_spawner,
 	MCPREP_PT_meshswap_spawner,
 	MCPREP_PT_materials,
@@ -1701,6 +1879,12 @@ def register():
 		subtype='FILE_PATH',
 		update=meshswap.update_meshswap_path,
 		default=addon_prefs.meshswap_path)
+	bpy.types.Scene.mcprep_effects_path = bpy.props.StringProperty(
+		name="Effects folder",
+		description="Folder for handcrafted effects like particles and geonodes",
+		subtype='DIR_PATH',
+		update=effects.update_effects_path,
+		default=addon_prefs.effects_path)
 	bpy.types.Scene.entity_path = bpy.props.StringProperty(
 		name="Entity file",
 		description="File for entity library",

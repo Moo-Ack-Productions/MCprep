@@ -855,6 +855,7 @@ def is_image_grayscale(image):
 		# Find new pixel sizes keeping aspect ratio, equation of:
 		# 1024 = nwith * nheight
 		# 1024 = (nheight * aspect) * nheight
+		# nheight = sqrtoot(1024 / aspect)
 		nheight = (1024 / aspect)**0.5
 		imgcp.scale(int(nheight * aspect), int(nheight))
 		pxl_count = imgcp.size[0] * imgcp.size[1]
@@ -1333,6 +1334,9 @@ def matgen_cycles_simple(
 			principled.inputs["Roughness"].default_value = 0.2
 	else:
 		principled.inputs["Metallic"].default_value = 0
+
+	# Specular tends to cause some issues with how blocks look, so let's disable it
+	principled.inputs["Specular"].default_value = 0
 
 	# Connect nodes.
 	links.new(nodeSaturateMix.outputs[0], principled.inputs[0])

@@ -25,7 +25,7 @@ JMC_1_13 = "https://raw.githubusercontent.com/jmc2obj/j-mc-2-obj/0fb2bd742f0d64b
 def save_file_str(url):
 	"""Save to temp location next to script."""
 	request = urllib.request.Request(url)
-	result = urllib.request.urlopen(request)
+	result = urllib.request.urlopen(request, timeout=10)
 	result_string = result.read()
 	result.close()
 	return result_string.decode()
@@ -547,7 +547,12 @@ def run_all(auto=False):
 	# 	mat:mineways2mc(mat, vanilla) for mat in mineways
 	# 	if mineways2mc(mat, vanilla) is not None}
 
-	data["blocks"].update(base_override["blocks"])
+	# Update all fields coming from base override
+	for key in base_override.keys():
+		if key in data:
+			data[key].update(base_override[key])
+		else:
+			data[key] = base_override[key]
 
 	vanilla_blocks = [vanilla[itm] for itm in vanilla
 			if itm is not None

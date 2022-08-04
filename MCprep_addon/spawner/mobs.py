@@ -50,7 +50,7 @@ def get_rig_list(context):
 
 
 def update_rig_path(self, context):
-	"""List for UI items callback of property spawn_rig_category."""
+	"""List for UI mobs callback of property spawn_rig_category."""
 	conf.log("Updating rig path", vv_only=True)
 	conf.rig_categories = []
 	update_rig_list(context)
@@ -73,10 +73,17 @@ def update_rig_list(context):
 			mob_names = spawn_util.filter_collections(data_from)
 
 			for name in mob_names:
-				description = "Spawn one {x} rig".format(x=name)
 				mob = context.scene.mcprep_props.mob_list_all.add()
+				if spawn_util.INCLUDE_COLL.lower() in name.lower():
+					subname = name.lower().replace(
+						spawn_util.INCLUDE_COLL.lower(), "")
+					subname = subname.strip()
+				else:
+					subname = name
+
+				description = "Spawn one {x} rig".format(x=subname)
 				mob.description = description  # add in non all-list
-				mob.name = name.title()
+				mob.name = subname.title()
 				mob.category = category
 				mob.index = len(context.scene.mcprep_props.mob_list_all)
 				if category:
@@ -92,7 +99,7 @@ def update_rig_list(context):
 				icons = [
 					f for f in os.listdir(icon_folder)
 					if os.path.isfile(os.path.join(icon_folder, f))
-					and name.lower() == os.path.splitext(f.lower())[0]
+					and subname.lower() == os.path.splitext(f.lower())[0]
 					and not f.startswith(".")
 					and os.path.splitext(f.lower())[-1] in extensions]
 				if not icons:
@@ -135,11 +142,15 @@ def update_rig_list(context):
 			and not f.startswith(".")]
 
 		for blend_name in blend_files:
+			if not spawn_util.check_blend_eligible(blend_name, blend_files):
+				continue  # Not eligible, use allowed blend in list instead.
 			blend_path = os.path.join(cat_path, blend_name)
 			_add_rigs_from_blend(blend_path, blend_name, category)
 
 	# Update the list with non-categorized mobs (ie root of target folder)
 	for blend_name in no_category_blends:
+		if not spawn_util.check_blend_eligible(blend_name, no_category_blends):
+			return  # Not eligible, use allowed blend in list instead.
 		blend_path = os.path.join(rigpath, blend_name)
 		_add_rigs_from_blend(blend_path, blend_name, "")
 
@@ -268,6 +279,8 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 		except:
 			pass  # Can fail to this e.g. if no objects are selected.
 
+		init_objs = list(bpy.data.objects)
+
 		if self.toLink:
 			if path == '//':
 				conf.log("This is the local file. Cancelling...")
@@ -276,7 +289,11 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 		else:
 			_ = spawn_util.load_append(self, context, path, name)
 
-		# if there is a script with this rig, attempt to run it
+		post_objs = list(bpy.data.objects)
+		new_objs = list(set(post_objs) - set(init_objs))
+		self.set_fake_users(context, new_objs)
+
+		# If there is a script with this rig, attempt to run it.
 		spawn_util.attemptScriptLoad(path)
 
 		if self.prep_materials and not self.toLink and context.selected_objects:
@@ -288,6 +305,27 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 
 		self.track_param = self.mcmob_type.split(":/:")[1]
 		return {'FINISHED'}
+
+	def set_fake_users(self, context, new_objs):
+		"""Set certain object types to fake user if modifier targets.
+
+		This is the workaround to address an issue with blender 3.0 where objs
+		that are not linked to the scene but are used by modifiers aren't seen
+		by blender as being "used", and get removed after a file reload. Hence,
+		we must assign them as a fake user.
+		https://github.com/TheDuckCow/MCprep/issues/307
+		"""
+		if not util.bv30():
+			return
+		mod_objs = []
+		for obj in new_objs:
+			for mod in obj.modifiers:
+				if hasattr(mod, "object") and mod.object:
+					mod_objs.append(mod.object)
+		for obj in mod_objs:
+			if obj not in list(context.scene.collection.all_objects):
+				obj.use_fake_user = True
+				conf.log("Set {} as fake user".format(obj.name))
 
 
 class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
