@@ -13,7 +13,7 @@ body:
       label: Check against existing requests
       description: Please check that your feature request is not [already listed here](https://github.com/TheDuckCow/MCprep/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement) - if it is, then please comment on one of those issues instead. Duplicate request issues will simply be closed.
       options:
-        - label: I have checked known issues, and my problem is different
+        - label: I have checked existing feature requests, and my idea is different
           required: true
 
   - type: textarea
