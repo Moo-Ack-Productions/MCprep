@@ -425,7 +425,9 @@ def load_mcprep_json():
 			"block_mapping_jmc": {},
 			"block_mapping_mineways": {},
 			"canon_mapping_block": {}
-		}
+		},
+		"mob_skip_prep": [],
+		"make_real": []
 	}
 	if not os.path.isfile(path):
 		conf.log("Error, json file does not exist: " + path)

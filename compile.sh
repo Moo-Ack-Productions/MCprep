@@ -60,6 +60,7 @@ function build() {
 
 		# Making the zip with all the sub files is also slow.
 		cd build
+		rm $NAME.zip # Compeltely remove old version (else it's append/replace)
 		zip $NAME.zip -rq $NAME
 		cd ../
 	fi

@@ -33,6 +33,13 @@ INCLUDE_COLL = "mcprep"
 SKIP_COLL = "mcskip"  # Used for geometry and particle skips too.
 SKIP_COLL_LEGACY = "noimport"  # Supporting older MCprep Meshswap lib.
 
+# Icon backwards compatibility.
+if util.bv30():
+	COLL_ICON = 'OUTLINER_COLLECTION'
+elif util.bv28():
+	COLL_ICON = 'COLLECTION_NEW'
+else:
+	COLL_ICON = 'GROUP'
 
 # -----------------------------------------------------------------------------
 # Reusable functions for spawners
@@ -462,7 +469,6 @@ def load_append(self, context, path, name):
 	util.bAppendLink(os.path.join(path, subpath), name, False)
 	postgroups = list(util.collections())
 
-	g1 = None
 	new_groups = list(set(postgroups) - set(pregroups))
 	if not new_groups and name in util.collections():
 		# this is more likely to fail but serves as a fallback
@@ -473,10 +479,15 @@ def load_append(self, context, path, name):
 		self.report({'WARNING'}, "Could not detect imported group")
 		return
 	else:
-		grp_added = new_groups[0]  # assume first
+		grp_added = new_groups[0]  # Start with first assigned
+		for grp in new_groups:
+			if grp.name.startswith(name):
+				# But then pick the better matching one, in case the first
+				# group is a subcollection of another name.
+				grp_added = grp
 
-	conf.log("Identified object {} with group {} as just imported".format(
-		g1, grp_added), vv_only=True)
+	conf.log("Identified collection/group {} as the primary imported".format(
+		grp_added), vv_only=True)
 
 	# if rig not centered in original file, assume its group is
 	if hasattr(grp_added, "dupli_offset"):  # 2.7
@@ -493,7 +504,8 @@ def load_append(self, context, path, name):
 	addedObjs = [ob for ob in grp_added.objects]
 	for ob in all_objects:
 		if ob not in addedObjs:
-			conf.log("This obj not in group: " + ob.name)
+			conf.log("This obj not in group {}: {}".format(
+				grp_added.name, ob.name))
 			# removes things like random bone shapes pulled in,
 			# without deleting them, just unlinking them from the scene
 			util.obj_unlink_remove(ob, False, context)
@@ -591,6 +603,7 @@ class MCPREP_OT_reload_spawners(bpy.types.Operator):
 
 	@tracking.report_error
 	def execute(self, context):
+		_ = util.load_mcprep_json()  # For cases when to prep/make real.
 		bpy.ops.mcprep.reload_meshswap()
 		bpy.ops.mcprep.reload_mobs()
 		bpy.ops.mcprep.reload_items()
@@ -714,7 +727,7 @@ class MCPREP_UL_effects(bpy.types.UIList):
 			elif set.effect_type == effects.PARTICLE_AREA:
 				layout.label(text=set.name, icon="PARTICLES")
 			elif set.effect_type == effects.COLLECTION:
-				layout.label(text=set.name, icon="OUTLINER_COLLECTION")
+				layout.label(text=set.name, icon=COLL_ICON)
 			elif set.effect_type == effects.IMG_SEQ:
 				if conf.use_icons and icon in conf.preview_collections["effects"]:
 					layout.label(
