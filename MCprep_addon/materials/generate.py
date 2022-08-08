@@ -479,7 +479,7 @@ def set_cycles_texture(image, material, extra_passes=False):
 			if "normal" in img_sets:
 				new_img = util.loadTexture(img_sets["normal"])
 				node.image = new_img
-				util.apply_colorspace(node, 'Non-Color')
+				util.set_Non_Color(node)
 				node.mute = False
 				node.hide = False
 			else:
@@ -496,7 +496,7 @@ def set_cycles_texture(image, material, extra_passes=False):
 				node.image = new_img
 				node.mute = False
 				node.hide = False
-				util.apply_colorspace(node, 'Non-Color')
+				util.set_Non_Color(node)
 			else:
 				node.mute = True
 				node.hide = True
@@ -1115,8 +1115,8 @@ def texgen_specular(mat, passes, nodeInputs, use_reflections):
 		nodeTexSpec.interpolation = 'Closest'
 
 	# Update to use non-color data for spec and normal
-	util.apply_colorspace(nodeTexSpec, 'Non-Color')
-	util.apply_colorspace(nodeTexNorm, 'Non-Color')
+	util.set_Non_Color(nodeTexSpec)
+	util.set_Non_Color(nodeTexNorm)
 
 	# Graystyle Blending
 	nodeSaturateMix.inputs[0].default_value = 1.0
@@ -1249,8 +1249,8 @@ def texgen_seus(mat, passes, nodeInputs, use_reflections):
 		nodeTexNorm.interpolation = 'Closest'
 
 	# Update to use non-color data for spec and normal
-	util.apply_colorspace(nodeTexSpec, 'Non-Color')
-	util.apply_colorspace(nodeTexNorm, 'Non-Color')
+	util.set_Non_Color(nodeTexSpec)
+	util.set_Non_Color(nodeTexNorm)
 
 	# Graystyle Blending
 	nodeSaturateMix.inputs[0].default_value = 1.0
@@ -1847,7 +1847,7 @@ def matgen_special_water(mat, passes):
 		nodeTexDiff.interpolation = 'Closest'
 
 	# Normal update
-	util.apply_colorspace(nodeTexNorm, 'Non-Color')
+	util.set_Non_Color(nodeTexNorm)
 	if image_norm:
 		nodeTexNorm.image = image_norm
 		nodeTexNorm.mute = False
@@ -1994,7 +1994,7 @@ def matgen_special_glass(mat, passes):
 		nodeTexDiff.interpolation = 'Closest'
 
 	# Normal update
-	util.apply_colorspace(nodeTexNorm, 'Non-Color')
+	util.set_Non_Color(nodeTexNorm)
 	if image_norm:
 		nodeTexNorm.image = image_norm
 		nodeTexNorm.mute = False
