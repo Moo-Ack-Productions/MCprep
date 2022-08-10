@@ -74,8 +74,8 @@ class Singleton_tracking(object):
 		self._background = False
 		self._bg_thread = []
 		self._blender_version = ""
-		self._dev = True
-		self._failsafe = True
+		self._dev = False
+		self._failsafe = False
 		self._handling_error = False
 		self._language = ""
 		self._platform = ""
