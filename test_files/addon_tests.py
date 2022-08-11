@@ -92,6 +92,8 @@ class mcprep_testing():
 			self.world_tools,
 			self.test_enable_obj_importer,
 			self.test_generate_material_sequence,
+			self.qa_effects,
+			self.qa_rigs,
 		]
 		self.run_only = None  # Name to give to only run this test
 
@@ -1390,6 +1392,42 @@ class mcprep_testing():
 			cleanup()
 			raise Exception("Fake file should not have any return")
 
+	def _qa_helper(self, basepath, allow_packed):
+		"""File used to help QC an open blend file."""
+
+		# bpy.ops.file.make_paths_relative() instead of this, do manually.
+		different_base = []
+		not_relative = []
+		missing = []
+		for img in bpy.data.images:
+			if not img.filepath:
+				continue
+			abspath = os.path.abspath(bpy.path.abspath(img.filepath))
+			if not abspath.startswith(basepath):
+				if allow_packed is True and img.packed_file:
+					pass
+				else:
+					different_base.append(os.path.basename(img.filepath))
+			if img.filepath != bpy.path.relpath(img.filepath):
+				not_relative.append(os.path.basename(img.filepath))
+			if not os.path.isfile(abspath):
+				if allow_packed is True and img.packed_file:
+					pass
+				else:
+					missing.append(img.name)
+
+		if len(different_base) > 50:
+			return "Wrong basepath for image filepath comparison!"
+		if different_base:
+			return "Found {} images with different basepath from file: {}".format(
+				len(different_base), ", ".join(different_base))
+		if not_relative:
+			return "Found {} non relative img files: {}".format(
+				len(not_relative), ", ".join(not_relative))
+		if missing:
+			return "Found {} img with missing source files: {}".format(
+				len(missing), ", ".join(missing))
+
 	def qa_meshswap_file(self):
 		"""Open the meshswap file, assert there are no relative paths"""
 		basepath = os.path.join("MCprep_addon", "MCprep_resources")
@@ -1400,32 +1438,9 @@ class mcprep_testing():
 		bpy.ops.wm.open_mainfile(filepath=blendfile)
 		# do NOT save this file!
 
-		# bpy.ops.file.make_paths_relative() instead of this, do manually
-		different_base = []
-		not_relative = []
-		missing = []
-		for img in bpy.data.images:
-			if not img.filepath:
-				continue
-			abspath = os.path.abspath(bpy.path.abspath(img.filepath))
-			if not abspath.startswith(basepath):
-				different_base.append(os.path.basename(img.filepath))
-			if img.filepath != bpy.path.relpath(img.filepath):
-				not_relative.append(os.path.basename(img.filepath))
-			if not os.path.isfile(abspath):
-				missing.append(img.name)
-
-		if len(different_base) > 50:
-			return "Wrong basepath for image filepath comparison!"
-		if different_base:
-			return "Found {} images with different basepath from the meshswap file: {}".format(
-				len(different_base), ", ".join(different_base))
-		if not_relative:
-			return "Found {} non relative img files in meshswap: {}".format(
-				len(not_relative), ", ".join(not_relative))
-		if missing:
-			return "Found {} img with missing source files: {}".format(
-				len(missing), ", ".join(missing))
+		resp = self._qa_helper(basepath, allow_packed=False)
+		if resp:
+			return resp
 
 		# detect any non canonical material names?? how to exclude?
 
@@ -2040,6 +2055,95 @@ class mcprep_testing():
 	def test_enable_obj_importer(self):
 		"""Ensure module name is correct, since error won't be reported."""
 		bpy.ops.preferences.addon_enable(module="io_scene_obj")
+
+	def qa_effects(self):
+		"""Ensures that effects files meet all QA needs"""
+
+		basepath = os.path.join("MCprep_addon", "MCprep_resources", "effects")
+		basepath = os.path.abspath(basepath)  # relative to the dev git folder
+
+		bfiles = []
+		for child in os.listdir(basepath):
+			fullp = os.path.join(basepath, child)
+			if os.path.isfile(fullp) and child.lower().endswith(".blend"):
+				bfiles.append(fullp)
+			elif not os.path.isdir(fullp):
+				continue
+			subblends = [
+				os.path.join(basepath, child, blend)
+				for blend in os.listdir(os.path.join(basepath, child))
+				if os.path.isfile(os.path.join(basepath, child, blend))
+				and blend.lower().endswith(".blend")
+			]
+			bfiles.extend(subblends)
+
+		print("Checking blend files")
+		if not bfiles:
+			return "No files loaded for bfiles"
+
+		issues = []
+		checked = 0
+		for blend in bfiles:
+			print("QC'ing:", blend)
+			if not os.path.isfile(blend):
+				return "Did not exist: " + str(blend)
+			bpy.ops.wm.open_mainfile(filepath=blend)
+
+			resp = self._qa_helper(basepath, allow_packed=True)
+			if resp:
+				issues.append([blend, resp])
+			checked += 1
+
+		if issues:
+			return issues
+
+	def qa_rigs(self):
+		"""Ensures that all rig files meet all QA needs.
+
+		NOTE: This test is actually surpisingly fast given the number of files
+		it needs to check against, but it's possible it can be unstable. Exit
+		early to override if needed.
+		"""
+
+		basepath = os.path.join("MCprep_addon", "MCprep_resources", "rigs")
+		basepath = os.path.abspath(basepath)  # relative to the dev git folder
+
+		bfiles = []
+		for child in os.listdir(basepath):
+			fullp = os.path.join(basepath, child)
+			if os.path.isfile(fullp) and child.lower().endswith(".blend"):
+				bfiles.append(fullp)
+			elif not os.path.isdir(fullp):
+				continue
+			subblends = [
+				os.path.join(basepath, child, blend)
+				for blend in os.listdir(os.path.join(basepath, child))
+				if os.path.isfile(os.path.join(basepath, child, blend))
+				and blend.lower().endswith(".blend")
+			]
+			bfiles.extend(subblends)
+
+		print("Checking blend files")
+		if not bfiles:
+			return "No files loaded for bfiles"
+
+		issues = []
+		checked = 0
+		for blend in bfiles:
+			print("QC'ing:", blend)
+			if not os.path.isfile(blend):
+				return "Did not exist: " + str(blend)
+			bpy.ops.wm.open_mainfile(filepath=blend)
+
+			resp = self._qa_helper(basepath, allow_packed=True)
+			if resp:
+				issues.append([blend, resp])
+			checked += 1
+
+		return "Checked {} rigs, issues: {}".format(
+			checked, issues)
+		if issues:
+			return issues
 
 
 class OCOL:
