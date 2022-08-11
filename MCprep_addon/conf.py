@@ -194,6 +194,9 @@ def updater_select_link_function(self, tag):
 
 	Injected function to avoid being overwritten in future updates.
 	"""
+	link = tag["zipball_url"]  # Fallback is full source code.
+
+	# However, prefer puling the uploaded addon zip build.
 	if "assets" in tag and "browser_download_url" in tag["assets"][0]:
 		link = tag["assets"][0]["browser_download_url"]
 	return link
