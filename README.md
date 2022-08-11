@@ -1,7 +1,16 @@
-TO INSTALL MCprep
-======
 
-### Click the link below and download the .zip file (re-zip if auto-unzipped into a folder necessary), install into blender (2.72 through 3.0 supported)
+MCprep Addon
+======
+[![Discord](https://badgen.net/badge/icon/discord?icon=discord&label)](https://discord.gg/mb8hBUC)
+[![MCprep License](https://img.shields.io/github/license/TheDuckCow/MCprep)](https://www.gnu.org/licenses/gpl-3.0)
+![MCprep Stars](https://img.shields.io/github/stars/TheDuckCow/MCprep)
+[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/TheDuckCow/MCprep/blob/master/CONTRIBUTING.md)
+
+
+MCprep is an addon dedicated to speeding up the workflow of Minecraft animators in Blender by automatically fixing up materials and providing other tools such as mob spawing, effects spawning, etc. 
+
+## Installing MCprep
+### Click the link below and download the .zip file (re-zip if auto-unzipped into a folder necessary), install into blender (2.78 through 3.2 supported)
 
 [![Install MCprep](/visuals/mcprep_download.png)](https://theduckcow.com/dev/blender/mcprep-download/)
 
@@ -94,13 +103,14 @@ CREDIT
 ======
 While this addon is released as open source software, the assets are being released as [Creative Commons Attributions, CC-BY](https://creativecommons.org/licenses/by/3.0/us/). If you use MeshSwap, **please credit the creators** by linking to this page wherever your project may appear: [http://github.com/TheDuckCow/MCprep](https://github.com/TheDuckCow/MCprep)
 
-Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow), [SilverC16](http://youtube.com/user/silverC16), and [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse).
+Meshswap Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow), [SilverC16](http://youtube.com/user/silverC16), and [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse).
 
 
 | Player Rigs   |      Creator      |
 |----------|:-------------:|
 | Fancy Feet Player |  [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) ([Rig link](http://bit.ly/MinecraftRig)) |
 | Fancy Feet Slim Player | Modified by [Jeremy Putnam](http://www.blendswap.com/user/lorddon) (MCprep exclusive) |
+| Fancy Feet Armor Player | Modified by [zNightlord](https://twitter.com/znightTrung) (MCprep exclusive) |
 | Simple Player (modified) | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Simple Slim Player (modified) | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) + TheDuckCow (MCprep exclusive) |
 | Shapekey Player | Derived from [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home), shapekeys and animation by [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) (MCprep exclusive) |
@@ -110,13 +120,16 @@ Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow),
 
 | Passive Rigs   |      Creator      |
 |----------|:-------------:|
+| Allay | [zNightlord](https://twitter.com/znightTrung) |
 | Axolotl | [Breadcrumb](https://www.youtube.com/channel/UCT1_5td4SWg67fhElGz1S4A) |
 | Bat | [Patrick W. Crawford](http://www.youtube.com/TheDuckCow) (MCprep exclusive) |
+| Cat | [TRPHB Animation](https://youtube.com/c/TRPHBAnimation) |
 | Cod fish | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Chicken | [Trainguy9512](https://www.youtube.com/channel/UCktn-etC2h25hMTk1tIz7IQ) (No direct link yet) |
 | Cow | [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse) ([Rig link](http://rymdnisse.net/downloads/minecraft-blender-rig.html)) |
 | Dolphin | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Fox | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+| Frog | [zNightlord](https://twitter.com/znightTrung) |
 | Glow squid | [TRPHB Animation](https://youtube.com/c/TRPHBAnimation) |
 | Goat | [TRPHB Animation](https://youtube.com/c/TRPHBAnimation) |
 | Mooshroom (red/brown) | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
@@ -163,6 +176,7 @@ Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow),
 | Stray | [thefunnypie2 + Trainguy9512](https://github.com/TheDuckCow/MCprep/issues/160#issuecomment-931923101) |
 | Strider | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Vindicator | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
+| Warden | [DigDanAnimates](https://twitter.com/DigDanAnimates) |
 | Witch | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Wither | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Wither Skeleton | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
@@ -196,7 +210,14 @@ Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow),
 | Crossbow | [TRPHB Animation](https://www.youtube.com/c/TRPHBAnimation/) |
 | Minecart | [BoxScape Studios](https://sites.google.com/view/boxscape-studios/home) ([Pack link](https://sites.google.com/view/boxscape-studios/downloads)) |
 | Shield | [Ageofherosmedia](https://github.com/TheDuckCow/MCprep/issues/245#issuecomment-998745223) |
+| Spyglass | [Banana-Blu](https://github.com/Banana-Blu) |
 
+
+| Effects   |      Creator      |
+|----------|:-------------:|
+| Geo node effects | [Th3pooka](https://twitter.com/Th3Pooka) |
+| TNT effects (both) | [TheDuckCow](http://www.youtube.com/TheDuckCow) |
+| Rain + Snow particles | [TheDuckCow](http://www.youtube.com/TheDuckCow) |
 
 
 | Meshswap Blocks | Creator |
@@ -250,7 +271,7 @@ Setting options:
 Using Mineways? Use the following world export settings to use this feature:
 ![Mineways exporter settings](/visuals/mineways-settings.png?raw=true)
 
-Note: Using tiles for expore creates individual files per block instead of one combined texture file. This is what allows swap texturepack to work.
+Note: Use tiles for exporting to create individual files per block instead of one combined texture file. This is what allows swap texturepack and animate textures to work.
 
 
 ### Meshswap:
@@ -280,7 +301,7 @@ To add your own objects to meshswap (or groupswap):
   * "variance": Objects with this property when meshswapped will have some x/y variance added. If the property is set to 1, it will also have (only negative) z variance. If it is set to 0, it will only have xy variance. For instance, tall_grass is given a value of 1 so some grass is shorter than others, but flowers are given a value of 0 so they always have the same height but still have some variance in placement.
   * "edgeFloat": objects like vines, ladders, and lillypads which float off the edge of other blocks.
   * "torchlike": objects that can have rotations like a torch on a wall. Objects with this property will be determined to be either on top of a block or placed on the side of another block according to the mesh.
-  * **Note:** there is no UI for adding properties to a group, so if you want to add a property to a group (say a torch which has a pre-animated light and particle system, as the included blend file does) you must go into the python consol and add the property like so:  <code>bpy.data.groups['groupName']['propertyName'] = 1</code>  (the value only matters for the variance property)
+  * **Note:** there is no UI for adding properties to a group, so if you want to add a property to a group (say a torch which has a pre-animated light and particle system, as the included blend file does) you must go into the python console and add the property like so:  <code>bpy.data.groups['groupName']['propertyName'] = 1</code>  (the value only matters for the variance property)
   * **Example:** <code>bpy.data.groups['torch']['torchlike'] = 1</code> will add the torchlike property to the torch group, allowing it to have correct rotations when meshSwapped in.
 
 
@@ -366,11 +387,11 @@ Using Mineways? Use the following world export settings to use this feature (key
 
 To edit the materials.blend file for syncing:
 
-- **Step 1:** Open the materials.blend file in the active resource pack, or create the file if adding it to antoher resource pack. This file should be placed in the root folder of the resource pack, i.e. next to the `pack.png` file and `assets` folder.
+- **Step 1:** Open the materials.blend file in the active resource pack, or create the file if adding it to another resource pack. This file should be placed in the root folder of the resource pack, i.e. next to the `pack.png` file and `assets` folder.
 - **Step 2:** Technically optional but recommended: add a new cube for your material for quick previewing. Reset the UV layout in edit mode so each face takes up the whole texture.
 - **Step 3:** Apply a material to this new object, either by:
   1) Appending from an existing file where you already created this material
-  2) Usse the `Load Materials` panel to load the default MCprep material. Strongly suggested you change the resource pack (under advanced) to be `//` to tell blender to use the local director as the resource pack, so that it doens't reference images outside the resource pack.
+  2) Usse the `Load Materials` panel to load the default MCprep material. Strongly suggested you change the resource pack (under advanced) to be `//` to tell blender to use the local director as the resource pack, so that it doesn't reference images outside the resource pack.
 - **Step 3:** Edit the material shader nodes. ONLY the material itself will be synced.
 
 
@@ -408,7 +429,7 @@ To edit the materials.blend file for syncing:
 *Mob Spawner Redo-last/F6 Options*
 ![Meshswap options](/visuals/spawnOptions.png?raw=true)
 
-To add your own rigs to the Mob Spawner:
+#### To add your own rigs to the Mob Spawner:
 
 - **Step 1:** Make your rig, or download one you want to use!
 - **Step 2:** Make sure all elements of the rig, ie all armatures, body parts, and extra objects, are added to a single group (select and press control+g) inside your rig file. The name of this group is what will appear under the shift-a menu, and typically matches the name of the file if there is just one rig per blend file.
@@ -419,25 +440,37 @@ To add your own rigs to the Mob Spawner:
 - **Alternative:** To specify a different, custom folder in a location of your choosing for mob spawning, simply change the "Mob spawner folder" path in the MCprep mob spawner advanced section (this setting is saved to blend file), or save a new default in the addon's preferences (becomes the default for all new blend scenes).
 - Note: all groups inside installed blend files will appear for mob spawning. After installing a blend file, you do *not* need to save user preferences to use it in future blender sessions.
 
+#### Using multiple collections in your rig?
+
+Be aware of this behavior to ensure only one collection appears in the rig spawner (use one or the other):
+- Option 1: Add "mcprep" to the name of your top-level collection to be imported
+- Option 2: Add "mcskip" to *all* collections that should NOT be listed.
+
 
 *Sometimes you may need to reload a rig cache, click this button if the correct rigs aren't appearing - or if you've just added new rigs to the folder outside of blender*
 
 ![Reload rig cache](/visuals/reloadRigCache.png?raw=true)
 
 
-### Meshswap block Spawner:
-- **Purpose:** To provide quick, one-click importing of meshswap 3D blocks and groups.
-- **Step 0:** By default this is already done for you; make sure the meshswap file path is a directory with valid blend files setup for appending (addon preferences > MCprep). When installed, this path will already be setup and valid pointing to the included blocks with this release.
-- **Step 1:** Navigate to the spawner panel and select meshswap
-- **Step 2:** Highlight the desired block(s), no harm in over-selecting; will only meshswap blocks that have matching counterparts in the meshswap blend file
-- **Step 3:** Press meshswap, and see the block placed in the scene
-- **Step 4:** Modify redo last settings as needed (also accessible by pressing F6 after spawning). Options include:
-  - Meshswap block: You can change here which block you wanted to add
-  - Location: Set the location where the block is placed
-  - Append layer: layer to append contents of the group to; default is layer 20, setting to 0 will use the currently active layer(s) as the layers for the group
-  - Prep materials: run prep materials on the imported objects, particularly useful if using cycles
-  - Snapping dropdown: Snap the placed block to a rounded coordinate. Optional offset by 0.5 as well
-  - Make real: Instance the groups so they are made real, thus allowing you to individually modify the objects within the group. Note: this may clear any pre-applied animation.
+
+### Block Spawning
+
+Generate blocks from vanilla or other resource packs, or even from mods or other sources. **NOTE!** This is a newer part of MCprep, and because it is completely generalized, it's rather unstable. There are any known issues where blocks do not generate correctly, so bear this in mind ([see here](https://github.com/TheDuckCow/MCprep/issues/267)).
+
+
+#### Spawn resource pack blocks
+- **Purpose:** To be able to generate blocks defined by json files from the active resource pack
+- **Step 1:** Go into Spawners, click the triangle next to Block (model) spawner.
+- **Step 2:** Click a row to make active, you can search for a block by clicking the other smaller triangle icon inside the scroll view
+- **Step 3:** Press "Place: {block name}"
+
+
+#### Spawn blocks from json
+- **Purpose:** To be able to generate blocks defined by json files
+- **Step 1:** Go into Spawners, click the triangle next to Block (model) spawner
+- **Step 2:** Press "Import model (.json)" to popup the filebrowser
+- **Step 2:** Navigate to a .json file on your system
+- **Step 2:** With the single json file selected, press "Import Model"
 
 
 ### Item Spawner:
@@ -450,7 +483,57 @@ To add your own rigs to the Mob Spawner:
   - Maximum number of pixels: Will scale the image down if number of pixels exceeds this (unlikely for Minecraft resource packs)
   - Thickness: If above 0, will add a solidify modifier with this level of thickness; can always be adjusted or removed later
   - Alpha Threshold: At this level or lower of alpha values (0.0-1.0), delete the face from the resulting mesh.
-  - Use transparent pixels: If enabled, will setup the material so that transparent pixels will appear transparent in the render, othwise will be solid.
+  - Use transparent pixels: If enabled, will setup the material so that transparent pixels will appear transparent in the render, otherwise will be solid.
+
+
+
+### Effects Spawner:
+Quickly bring effects into your scene.
+
+#### Effects types
+There are four different kinds of effects that MCprep supports:
+
+- **Geo node**: Load wide area effects driven by Geo Nodes (Blender 3.0+ only). These have the benefit of being deterministic, meaning no simulation occurs, and can follow the camera. This means no matter how fast your camera moves, you won't run into particles like snow not having fallen yet.
+- **Particle**: Wide area effects like snow and rain, parented to the camera to simulate weather.
+- **Collection**: Load pre-animated effects saved in collections (Blender 2.8+ only). Animations (both direct and indirect, such as particle systems) are automatically offset based on the current frame, making this much more useful that appending and trying to manually offset when it plays. Each imported combo collection+frame gets its own collection added and excluded, for reuse.
+- **Image Sequence**: Load a target image sequence from a resource pack folder and import into blender inside a collection where each image is setup as a mesh plane. The animation can be sped up or slowed down at the time of import.
+- **Particle Planes**: This does not show up in the UI scroll list. Instead, this is an operator button that when pressed adds a particle system based from a cut up version of a selected input image, and offset to the current timeline frame.
+
+#### Adding your own effects
+
+**Purpose:** Learn how to add your own effects to extend MCprep for your case.
+- **Geo node effects:** Simply add another blend file with your geo node setup into the MCprep resources folder: MCprep_resources/effects/geonodes
+   - If you have a reusable node group where different parameters of the same group make different effects happen (e.g. calm rain vs windy rain), you can define a json file which matches exactly the blend file name, containing a mapping of settings to the node group in question. This will override all geo nodes that will be listed in MCprep. See the existing node group as an example. This is NOT required ot simply have a single geo node effect show up.
+   - Node groups are automatically parented to the active camera in the scene and meant to "follow" the view
+- **Particle effects:** Simply add new particle systems to the same or new blend files in the MCprep resources folder: MCprep_resources/effects/particle.
+   - Your default emitter should have a size of 40x40m, so that MCprep can automatically maintain the same according density of particles. This size also helps ensure there is sufficient coverage no matter which direction the camera points or turns.
+- **Collection effects:** Simply add new effects to new blend files in the MCprep resources folder: MCprep_resources/effects/collection. The animations are assumed to start at frame one, and offset accordingly when spawned in a scene later.
+- **Image sequence effects:** These are read from the active resource pack's effects folder. Simply place your image sequence of files there and it should load in automatically. Alternatively, point the active resource pack to the parent of another effects resource pack folder (the active resource pack must be pointing to the top level of the resource pack still in order to recognize the folder for image sequence spawning)
+
+
+### Entity Spawner:
+- **Purpose:** To provide quick, one-click importing of pre-rigged entities that are not mobs or blocks
+- **Step 1:** Navigate to the spawner panel and expand Entity Spawner
+- **Step 2:** Click a row to select it
+- **Step 3:** Spawn arrow!
+
+Under advanced settings, you can change your target entity file to point to another blend file, as well as force reload entities.
+
+
+### Meshswap block Spawner:
+- **Purpose:** To provide quick, one-click importing of meshswap 3D blocks and groups.
+- **Step 0:** By default this is already done for you; make sure the meshswap file path is a directory with valid blend files setup for appending (addon preferences > MCprep). When installed, this path will already be setup and valid pointing to the included blocks with this release.
+- **Step 1:** Navigate to the spawner panel and expand Meshswap Spawner
+- **Step 2:** Select a row to spawn
+- **Step 3:** Press "Place {block}"
+- **Step 4:** Modify redo last settings as needed (also accessible by pressing F6 after spawning). Options include:
+  - Meshswap block: You can change here which block you wanted to add
+  - Location: Set the location where the block is placed
+  - Append layer: layer to append contents of the group to; default is layer 20, setting to 0 will use the currently active layer(s) as the layers for the group
+  - Prep materials: run prep materials on the imported objects, particularly useful if using cycles
+  - Snapping dropdown: Snap the placed block to a rounded coordinate. Optional offset by 0.5 as well
+  - Make real: Instance the groups so they are made real, thus allowing you to individually modify the objects within the group. Note: this may clear any pre-applied animation.
+
 
 ### Cycles Optimizer
 - **Purpose:** To optimize Cycles render settings without sacrificing much quality
@@ -469,8 +552,8 @@ To add your own rigs to the Mob Spawner:
 
 #### Cycles Optimizer Node Settings
 The Cycles optimizer also comes with it some special node names to control how it interprets certain nodes. They are the following:
-- `MCPREP_HOMOGENOUS_VOLUME`: if applied to a Volume Scatter, Volume Absorbtion, or Pricipled Volume node, it is treated as a homogenous volume 
-- `MCPREP_NOT_HOMOGENOUS_VOLUME`: if applied to a Volume Scatter, Volume Absorbtion, or Pricipled Volume node, it is not treated as a homogenous volume 
+- `MCPREP_HOMOGENOUS_VOLUME`: if applied to a Volume Scatter, Volume Absorption, or Principled Volume node, it is treated as a homogeneous volume 
+- `MCPREP_NOT_HOMOGENOUS_VOLUME`: if applied to a Volume Scatter, Volume Absorption, or Principled Volume node, it is not treated as a homogeneous volume 
 
 To use these settings, simply click on the node you want to edit, press N, and then edit the Name of the node
 
@@ -479,9 +562,7 @@ To use these settings, simply click on the node you want to edit, press N, and t
 
 Known Bugs
 ======
-- See all [known current bugs here](https://github.com/TheDuckCow/MCprep/issues?q=is%3Aissue+is%3Aopen+label%3Abug)
-- SOMETIMES UNDO (control/command z) MAY CRASH AFTER MESHSWAPPING, recommended to save before using to be safe but generally is fine.
-- Motion blur glitches on wind-swaying elements, e.g. grass: This is a bug with blender, where solidify plus the displacement modifiers and split edges modifiers can create bad motion blur effects. The easy fix is to remove split edges and let the grass be shaded smoothly instead.
+See all [known current bugs here](https://github.com/TheDuckCow/MCprep/issues?q=is%3Aissue+is%3Aopen+label%3Abug)
 
 
 Future Plans

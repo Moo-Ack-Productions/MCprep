@@ -547,7 +547,12 @@ def run_all(auto=False):
 	# 	mat:mineways2mc(mat, vanilla) for mat in mineways
 	# 	if mineways2mc(mat, vanilla) is not None}
 
-	data["blocks"].update(base_override["blocks"])
+	# Update all fields coming from base override
+	for key in base_override.keys():
+		if key in data:
+			data[key].update(base_override[key])
+		else:
+			data[key] = base_override[key]
 
 	vanilla_blocks = [vanilla[itm] for itm in vanilla
 			if itm is not None
