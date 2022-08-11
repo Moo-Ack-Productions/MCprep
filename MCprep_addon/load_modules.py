@@ -167,7 +167,7 @@ module_list = (
 	world_tools,
 	# bridge,
 	mcprep_ui,
- 	optimize_scene
+	optimize_scene
 )
 
 
@@ -179,6 +179,9 @@ def register(bl_info):
 
 	# addon updater code and configurations
 	addon_updater_ops.register(bl_info)
+
+	# Inject the custom updater function, to use release zip instead src.
+	addon_updater_ops.updater.select_link = conf.updater_select_link_function
 
 	conf.log("MCprep: Verbose is enabled")
 	conf.log("MCprep: Very Verbose is enabled", vv_only=True)

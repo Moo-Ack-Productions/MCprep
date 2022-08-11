@@ -189,6 +189,16 @@ def log(statement, vv_only=False):
 		print(statement)
 
 
+def updater_select_link_function(self, tag):
+	"""Indicates what zip file to use for updating from a tag structure.
+
+	Injected function to avoid being overwritten in future updates.
+	"""
+	if "assets" in tag and "browser_download_url" in tag["assets"][0]:
+		link = tag["assets"][0]["browser_download_url"]
+	return link
+
+
 # -----------------------------------------------------------------------------
 # GLOBAL REGISTRATOR INIT
 # -----------------------------------------------------------------------------
