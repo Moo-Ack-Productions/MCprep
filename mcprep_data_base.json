@@ -93,16 +93,5 @@
 			"prismarine_dark","prismarine_rough", "glowstone"],
 	"metallic":["door_iron_lower", "door_iron_upper","iron_bars","iron_block",
 			"iron_trapdoor", "diamond_block","emerald_block", "gold_block"]
-},
-
-"mob_skip_prep": [
-	"Frog",
-	"Simple Villager (2.8+)",
-	"Glow Squid",
-	"Strider",
-	"Warden"
-],
-"make_real": [
-	"chest",
-	"chest_double"]
+}
 }

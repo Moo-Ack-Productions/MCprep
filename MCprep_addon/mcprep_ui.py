@@ -87,10 +87,6 @@ class MCPREP_MT_mob_spawner(bpy.types.Menu):
 				ops = layout.operator("mcprep.mob_spawner", text=mob.name)
 			ops.mcmob_type = mob.mcmob_type
 
-			# Skip prep materials in case of unique shader.
-			if conf.json_data and mob.name in conf.json_data.get("mob_skip_prep", []):
-				ops.prep_materials = False
-
 
 class MCPREP_MT_meshswap_place(bpy.types.Menu):
 	"""Menu for all the meshswap objects"""
@@ -115,10 +111,6 @@ class MCPREP_MT_meshswap_place(bpy.types.Menu):
 			)
 			opr.block = blockset[0]
 			opr.location = util.get_cuser_location(context)
-
-			# Ensure meshswap with rigs is made real, so the rigs can be used.
-			if conf.json_data and blockset[1] in conf.json_data.get("make_real", []):
-				opr.make_real = True
 
 
 class MCPREP_MT_item_spawn(bpy.types.Menu):
@@ -150,41 +142,7 @@ class MCPREP_MT_effect_spawn(bpy.types.Menu):
 	bl_idname = "MCPREP_MT_effect_spawn"
 
 	def draw(self, context):
-		col = self.layout.column()
-		loc = util.get_cuser_location(context)
-		for effect in context.scene.mcprep_props.effects_list:
-			if effect.effect_type in (effects.GEO_AREA, effects.PARTICLE_AREA):
-				if effect.effect_type == effects.GEO_AREA:
-					icon = "NODETREE"
-				else:
-					icon = "PARTICLES"
-				ops = col.operator(
-					"mcprep.spawn_global_effect",
-					text=effect.name,
-					icon=icon)
-				ops.effect_id = str(effect.index)
-			elif effect.effect_type == effects.COLLECTION:
-				ops = col.operator(
-					"mcprep.spawn_instant_effect",
-					text=effect.name, icon=spawn_util.COLL_ICON)
-				ops.effect_id = str(effect.index)
-				ops.location = loc
-				ops.frame = context.scene.frame_current
-			elif effect.effect_type == effects.IMG_SEQ:
-				icon = "effects-{}".format(effect.index)
-				if conf.use_icons and icon in conf.preview_collections["effects"]:
-					ops = col.operator(
-						"mcprep.spawn_instant_effect",
-						text=effect.name,
-						icon_value=conf.preview_collections["effects"][icon].icon_id)
-				else:
-					ops = col.operator(
-						"mcprep.spawn_instant_effect",
-						text=effect.name,
-						icon="RENDER_RESULT")
-				ops.effect_id = str(effect.index)
-				ops.location = loc
-				ops.frame = context.scene.frame_current
+		self.layout.label(text="Not yet implemented!")
 
 
 class MCPREP_MT_entity_spawn(bpy.types.Menu):
@@ -813,9 +771,7 @@ class MCPREP_PT_bridge(bpy.types.Panel):
 	bl_category = "MCprep"
 
 	def draw(self, context):
-		# bridge.panel_draw(self, context)
-		pass
-
+		bridge.panel_draw(self, context)
 
 class MCPREP_PT_world_tools(bpy.types.Panel):
 	"""World settings and tools"""
@@ -838,7 +794,6 @@ class MCPREP_PT_world_tools(bpy.types.Panel):
 		col = rw.column(align=True)
 		col.operator("mcprep.add_mc_sky")
 		col.operator("mcprep.world")
-		col.operator("mcprep.render_panorama")
 
 		layout.split()
 		rw = layout.row()
@@ -1104,11 +1059,6 @@ def mob_spawner(self, context):
 	p = row.operator("mcprep.mob_spawner", text="Spawn " + name)
 	if mcmob_type:
 		p.mcmob_type = mcmob_type
-
-	# Skip prep materials in case of unique shader.
-	if conf.json_data and name in conf.json_data.get("mob_skip_prep", []):
-		p.prep_materials = False
-
 	p = col.operator("mcprep.mob_install_menu")
 	p.mob_category = scn_props.spawn_rig_category
 
@@ -1211,10 +1161,6 @@ def meshswap_spawner(self, context):
 		p.block = block
 		p.method = method
 		p.location = util.get_cuser_location(context)
-		# Ensure meshswap with rigs is made real, so the rigs can be used.
-		if conf.json_data and block in conf.json_data.get("make_real", []):
-			p.make_real = True
-
 	else:
 		row.operator("mcprep.meshswap_spawner", text="Place block")
 	# something to directly open meshswap file??

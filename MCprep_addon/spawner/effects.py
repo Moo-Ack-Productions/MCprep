@@ -619,7 +619,6 @@ def apply_particle_settings(obj, frame, base_name, pcoll):
 def import_animated_coll(context, effect, keyname):
 	"""Import and return a new animated collection given a specific key."""
 	init_colls = list(util.collections())
-	any_imported = False
 	with bpy.data.libraries.load(effect.filepath) as (data_from, data_to):
 		collections = spawn_util.filter_collections(data_from)
 		for itm in collections:
@@ -627,18 +626,12 @@ def import_animated_coll(context, effect, keyname):
 				continue
 			if util.bv28():
 				data_to.collections.append(itm)
-				any_imported = True
 			else:
 				data_to.groups.append(itm)
-				any_imported = True
 
 	final_colls = list(util.collections())
 	new_colls = list(set(final_colls) - set(init_colls))
 	if not new_colls:
-		if any_imported:
-			conf.log("New collection loaded, but not picked up")
-		else:
-			conf.log("No colleections imported or recognized")
 		raise Exception("No collections imported")
 	elif len(new_colls) > 1:
 		# Pick the closest fitting one. At worst, will pick a random one.
@@ -855,9 +848,6 @@ def load_area_particle_effects(context):
 
 def load_collection_effects(context):
 	"""Load effects defined by collections saved to an effects blend file."""
-	if not util.bv28():
-		print("Collection spawning not supported in Blender 2.7x")
-		return
 	mcprep_props = context.scene.mcprep_props
 	path = context.scene.mcprep_effects_path
 	path = os.path.join(path, "collection")
