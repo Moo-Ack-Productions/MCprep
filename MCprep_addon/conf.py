@@ -39,7 +39,7 @@ def init():
 	# Used to print out extra information, set false with distribution
 	# -----------------------------------------------
 	global dev
-	dev = False
+	dev = True
 
 	global v
 	v = True  # $VERBOSE, UI setting
@@ -187,6 +187,19 @@ def log(statement, vv_only=False):
 		print(statement)
 	elif v:
 		print(statement)
+
+
+def updater_select_link_function(self, tag):
+	"""Indicates what zip file to use for updating from a tag structure.
+
+	Injected function to avoid being overwritten in future updates.
+	"""
+	link = tag["zipball_url"]  # Fallback is full source code.
+
+	# However, prefer puling the uploaded addon zip build.
+	if "assets" in tag and "browser_download_url" in tag["assets"][0]:
+		link = tag["assets"][0]["browser_download_url"]
+	return link
 
 
 # -----------------------------------------------------------------------------

@@ -764,6 +764,11 @@ def load_geonode_effect_list(context):
 	path = context.scene.mcprep_effects_path
 	path = os.path.join(path, "geonodes")
 
+	if not os.path.isdir(path):
+		print("The geonode directory is missing! Reinstall MCprep")
+		print(path)
+		return
+
 	# Find all files with geonodes.
 	blends = [
 		os.path.join(path, blend) for blend in os.listdir(path)
@@ -834,6 +839,11 @@ def load_area_particle_effects(context):
 	path = context.scene.mcprep_effects_path
 	path = os.path.join(path, "particle")
 
+	if not os.path.isdir(path):
+		print("The particle directory is missing! Reinstall MCprep")
+		print(path)
+		return
+
 	# Find all files with geonodes.
 	blends = [
 		os.path.join(path, blend) for blend in os.listdir(path)
@@ -861,6 +871,11 @@ def load_collection_effects(context):
 	mcprep_props = context.scene.mcprep_props
 	path = context.scene.mcprep_effects_path
 	path = os.path.join(path, "collection")
+
+	if not os.path.isdir(path):
+		print("The collection directory is missing! Reinstall MCprep")
+		print(path)
+		return
 
 	# Find all files with geonodes.
 	blends = [
@@ -894,7 +909,8 @@ def load_image_sequence_effects(context):
 	lvl_3 = os.path.join(resource_folder, "assets", "minecraft", "textures", "particle")
 
 	if not os.path.isdir(resource_folder):
-		conf.log("Error, resource folder does not exist")
+		conf.log(
+			"The particle resource directory is missing! Assign another resource pack")
 		return
 	elif os.path.isdir(lvl_0):
 		resource_folder = lvl_0
