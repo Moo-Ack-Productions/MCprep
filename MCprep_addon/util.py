@@ -53,15 +53,12 @@ def apply_colorspace(node, color_enum):
 	if hasattr(node, "color_space"):  # 2.7 and earlier 2.8 versions
 		node.color_space = 'NONE'  # for better interpretation of specmaps
 	elif hasattr(node.image, "colorspace_settings"):  # later 2.8 versions
-		# try default 'Non-color' or 'role_data', fall back to best guess 'Non-Colour Data'
-		if color_enum == 'Non-color' or color_enum == 'role_data' and noncolor_override is not None:
+		# try default 'Non-color', fall back to best guess 'Non-Colour Data'
+		if color_enum == 'Non-color' and noncolor_override is not None:
 			node.image.colorspace_settings.name = noncolor_override
 		else:
 			try:
-				if colorACES():
-					node.image.colorspace_settings.name = 'role_data'
-				else:
-					node.image.colorspace_settings.name = 'Non-Color'
+				node.image.colorspace_settings.name = 'Non-Color'
 			except TypeError:
 				node.image.colorspace_settings.name = 'Non-Colour Data'
 				noncolor_override = 'Non-Colour Data'
@@ -195,6 +192,7 @@ def min_bv(version, *, inclusive=True):
 			return bpy.app.version > version
 		return bpy.app.version >= version
 
+
 def bv28():
 	"""Check if blender 2.8, for layouts, UI, and properties. """
 	return min_bv((2, 80))
@@ -204,16 +202,6 @@ def bv30():
 	"""Check if we're dealing with Blender 3.0"""
 	return min_bv((3, 00))
 
-def colorACES():
-	if hasattr(bpy.context, "scene.display_settings.display_device"):
-		return bpy.context.scene.display_settings.display_device == 'ACES'
-	return False
-
-def set_Non_Color(node):
-	if colorACES():
-		apply_colorspace(node, 'role_data')
-	else:
-		apply_colorspace(node, 'Non-Color')
 
 def face_on_edge(faceLoc):
 	"""Check if a face is on the boundary between two blocks (local coordinates)."""
