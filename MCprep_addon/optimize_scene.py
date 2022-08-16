@@ -26,7 +26,7 @@ from .materials import generate
 MAX_BOUNCES = 8 # 8 is generally the standard for light bounces
 MIN_BOUNCES = 2 # 2 is the lowest as it avoids issues regarding glossy
 CMP_BOUNCES = MIN_BOUNCES * 2 # To avoid bounces from going bellow 2
-MAX_FILTER_glossy = 1.0 # Standard in Blender
+MAX_FILTER_GLOSSY = 1.0 # Standard in Blender
 MAX_STEPS = 200 # 200 is fine for most scenes
 MIN_SCRAMBLING_MULTIPLIER = 0.35 # 0.35 seems to help performance a lot, but we'll do edits to this value depending on materials
 SCRAMBLING_MULTIPLIER_ADD = 0.05 # This is how much we'll add to the srambling distance multiplier 
@@ -34,8 +34,8 @@ CMP_SCRAMBLING_MULTIPLIER = MIN_SCRAMBLING_MULTIPLIER * 3 # The max since beyond
 VOLUMETRIC_NODES = ["ShaderNodeVolumeScatter", "ShaderNodeVolumeAbsorption", "ShaderNodeVolumePrincipled"]
 
 # MCprep Node Settings
-MCPREP_HOMOGENOUS_volume = "MCPREP_HOMOGENOUS_VOLUME"
-MCPREP_NOT_HOMOGENOUS_volume = "MCPREP_NOT_HOMOGENOUS_VOLUME"
+MCPREP_HOMOGENOUS_VOLUME = "MCPREP_HOMOGENOUS_VOLUME"
+MCPREP_NOT_HOMOGENOUS_VOLUME = "MCPREP_NOT_HOMOGENOUS_VOLUME"
 
 
 class MCprepOptimizerProperties(bpy.types.PropertyGroup):
@@ -154,12 +154,12 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		# Sometimes there may be something linked to the density but it's fine to treat it as a homogeneous volume
 		# This allows the user to control the addon at the node level
 		if not density_socket.is_linked:
-			if node_name == MCPREP_NOT_HOMOGENOUS_volume:
+			if node_name == MCPREP_HOMOGENOUS_VOLUME:
 				self.not_homogenous_volumes -= 1
 			else:
 				self.homogenous_volumes += 1
 		else:
-			if node_name == MCPREP_HOMOGENOUS_volume:
+			if node_name == MCPREP_HOMOGENOUS_VOLUME:
 				self.homogenous_volumes += 1
 			else:
 				self.not_homogenous_volumes += 1
@@ -239,12 +239,12 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		
 		if self.quality:
 			self.minimum_samples = self.samples // 4
-			self.filter_glossy = MAX_FILTER_glossy // 2
+			self.filter_glossy = MAX_FILTER_GLOSSY // 2
 			self.max_steps = MAX_STEPS # TODO: Add better volumetric optimizations
 
 		else:
 			self.minimum_samples = self.samples // 8
-			self.filter_glossy = MAX_FILTER_glossy
+			self.filter_glossy = MAX_FILTER_GLOSSY
 			self.max_steps = MAX_STEPS // 2 # TODO: Add better volumetric optimizations
 
 		# Compute device.
