@@ -70,6 +70,12 @@ def init():
 		"MCprep_resources",
 		"mcprep_data_update.json")
 
+	global optimizer_json_path 
+	optimizer_json_path = os.path.join(
+		os.path.dirname(__file__),
+		"MCprep_resources",
+		"optimizer_settings.json")
+
 	# if new update file found from install, replace old one with new
 	if os.path.isfile(json_path_update):
 		if os.path.isfile(json_path) is True:
