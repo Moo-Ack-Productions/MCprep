@@ -42,6 +42,7 @@ MCPREP_NOT_HOMOGENOUS_VOLUME = "MCPREP_NOT_HOMOGENOUS_VOLUME"
 class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 	caustics_enum = bpy.props.EnumProperty(
 		name="",
+		description="Whether or not caustics are disabled when optimizing",
 		items=[
 			("TOUCH_BOTH", "Always Disable", "Always disables caustics"),
 			("TOUCH_REFLECTIVE", "Always Disable Reflective Caustics", "Always disables reflective caustics"),
@@ -58,19 +59,23 @@ class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 		]
 	)
 	quality_vs_speed = bpy.props.BoolProperty(
-		name="Optimize scene for quality: Makes the optimizer adjust settings in a less \"destructive\" way",
+		name="Optimize scene for quality",
+		description="Makes the optimizer adjust settings in a less \"destructive\" way",
 		default=True
 	)
 	simplify = bpy.props.BoolProperty(
-		name="Simplify the viewport: Reduces subdivisions to 0. Only disable if any assets will break when using this",
+		name="Simplify the viewport",
+		description="Reduces subdivisions to 0. Only disable if any assets will break when using this",
 		default=True
 	)
 	scrambling_unsafe = bpy.props.BoolProperty(
-		name="Automatic Scrambling Distance: Can cause artifacts when rendering",
+		name="Automatic Scrambling Distance",
+		description="Reduces randomization of samples during rendering. This can lead to artifacts when rendering",
 		default=False
 	)
 	preview_scrambling = bpy.props.BoolProperty(
 		name="Preview Scrambling in the viewport",
+		description="Allows you to preview automatic scrambling distance in the viewport",
 		default=True
 	)
 
