@@ -39,29 +39,23 @@ VOLUMETRIC_NODES = ["ShaderNodeVolumeScatter", "ShaderNodeVolumeAbsorption", "Sh
 MCPREP_HOMOGENOUS_VOLUME = "MCPREP_HOMOGENOUS_VOLUME"
 MCPREP_NOT_HOMOGENOUS_VOLUME = "MCPREP_NOT_HOMOGENOUS_VOLUME"
 
-
 class MCprepOptimizerProperties(bpy.types.PropertyGroup):
-	def scene_brightness(self, context):
-		itms = [
-			("BRIGHT", "Scene is bright", "Use this setting if your scene is mostly bright\nEx. outside during the day"), 
-			("DARK", "Scene is dark", "Use this setting if your scene is mostly dark\nEx. caves, interiors, and outside at night")
+	caustics_enum = bpy.props.EnumProperty(
+		name="",
+		items=[
+			("TOUCH_BOTH", "Always Disable", "Always disables caustics"),
+			("TOUCH_REFLECTIVE", "Always Disable Reflective Caustics", "Always disables reflective caustics"),
+			("TOUCH_REFRACTIVE", "Always Disable Refractive Caustics", "Always disables refractive caustics"),
+			("NO_TOUCH", "Don't Touch", "Caustics settings will remain as they are currently set"),
 		]
-		return itms
-
-	caustics_bool = bpy.props.BoolProperty(
-		name="Caustics (slower)",
-		default=False,
-		description="If checked allows cautics to be enabled"
-	)
-	motion_blur_bool = bpy.props.BoolProperty(
-		name="Motion Blur (slower)",
-		default=False,
-		description="If checked allows motion blur to be enabled"
 	)
 	scene_brightness = bpy.props.EnumProperty(
 		name="",
 		description="Brightness of the scene: Affects how the optimizer adjusts sampling",
-		items=scene_brightness
+		items=[
+			("BRIGHT", "Scene is bright", "Use this setting if your scene is mostly bright\nEx. outside during the day"), 
+			("DARK", "Scene is dark", "Use this setting if your scene is mostly dark\nEx. caves, interiors, and outside at night")
+		]
 	)
 	quality_vs_speed = bpy.props.BoolProperty(
 		name="Optimize scene for quality: Makes the optimizer adjust settings in a less \"destructive\" way",
@@ -89,13 +83,14 @@ def panel_draw(context, element):
 	if engine == 'CYCLES':
 		col.label(text="Options")
 		quality_icon = "INDIRECT_ONLY_ON" if scn_props.quality_vs_speed else "INDIRECT_ONLY_OFF"
+		simplify_icon = "INDIRECT_ONLY_ON" if scn_props.simplify else "INDIRECT_ONLY_OFF"
 		col.prop(scn_props, "quality_vs_speed", icon=quality_icon)
-		col.prop(scn_props, "simplify", icon=quality_icon)
+		col.prop(scn_props, "simplify", icon=simplify_icon)
 
 		col.label(text="Time of Day")
 		col.prop(scn_props, "scene_brightness")
-		col.prop(scn_props, "caustics_bool", icon="TRIA_UP")
-		col.prop(scn_props, "motion_blur_bool", icon="TRIA_UP")
+		col.label(text="Caustics")
+		col.prop(scn_props, "caustics_enum")
 		col.row()
 		col.label(text="Unsafe Options! Use at your own risk!")
 		if util.bv30():
@@ -166,8 +161,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		self.filter_glossy = 1
 		self.clamping_indirect = 1
 
-		# Motion blur, caustics, etc.
-		self.motion_blur = None
+		# Caustics
 		self.reflective_caustics = None
 		self.refractive_caustics = None
 
@@ -249,9 +243,8 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		self.clamping_indirect = 1
 
 		# Motion blur, caustics, etc.
-		self.motion_blur = scn_props.motion_blur_bool
-		self.reflective_caustics = scn_props.caustics_bool
-		self.refractive_caustics = scn_props.caustics_bool
+		self.reflective_caustics = False if scn_props.caustics_enum == "TOUCH_BOTH" or scn_props.caustics_enum == "TOUCH_REFLECTIVE" else bpy.context.scene.cycles.caustics_reflective
+		self.refractive_caustics = False if scn_props.caustics_enum == "TOUCH_BOTH" or scn_props.caustics_enum == "TOUCH_REFRACTIVE" else bpy.context.scene.cycles.caustics_refractive
 
 		# Optimizer Settings.
 		self.quality = scn_props.quality_vs_speed
@@ -417,7 +410,6 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		# Sometimes people don't want to use simplify because it messes with rigs
 		bpy.context.scene.render.use_simplify = scn_props.simplify
 		bpy.context.scene.render.simplify_subdivision = 0
-		bpy.context.scene.render.use_motion_blur = self.motion_blur
 		return {'FINISHED'}
 
 
