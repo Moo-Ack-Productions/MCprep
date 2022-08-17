@@ -2,3 +2,35 @@ To view the MCprep privacy policy, please go to:
 https://theduckcow.com/privacy-policy/
 
 By enabling and using the addon in blender, you agree to this privacy policy.
+
+MCprep Blender Addon Privacy Policy
+By using the MCprep addon, you agree to this privacy policy.
+ 
+What personal information do we collect from the people that use this addon?
+No personally identifiable information is collected. Only anonymous, non-traceable data points are captured and used to help understand usage and improve experience for all users (hereafter referred to as Information).
+When do we collect Information?
+We collect Information when you install and enable the addon in Blender for the first time. This information includes:
+      • The current global time at the moment of enabling the addon for the first time
+      • The version of the addon being enabled
+      • Blender version
+      • Operating system
+      • Whether it’s a first time install or re-install (determined locally only)
+      • No personal or traceable Information is captured
+We collect addon usage Information unless you opt out of anonymous user tracking. This information includes:
+      • What MCprep specific operators is used
+      • The number of times a speific MCprep operator has been used (count stored locally only)
+      • The version of the MCprep addon installed
+      • Blender version
+      • Operating system
+      • No personal or traceable Information is captured
+      • No Information is captured or recorded if user tracking is disabled
+No Information is being collected at any other time than first installing the addon or using MCprep addon operators.
+How do we use your Information?
+
+We may use the Information we collect from installing or opting into tracking in the following ways:
+      • To track versions of MCprep actively being installed and used
+      • To derive analytics about usage to improve the product and user experience
+We do not sell, trade, or otherwise transfer to outside parties your Information unless we provide users with advance notice.
+Opting out:
+Users can opt out of having the addon installation tracked by disabling their internet connection at the moment of enabling the addon for the first time.
+Users can opt out of anonymous user tracking by pressing the “Opt out” button in the MCprep user preferences, Tracking tab.
