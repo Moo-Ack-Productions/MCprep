@@ -626,7 +626,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 	world_type = bpy.props.EnumProperty(
 		name="Sky type",
 		description=(
-			"Decide to improt dynamic (time/hour-controlled) vs static sky "
+			"Decide to import dynamic (time/hour-controlled) vs static sky "
 			"(daytime only), and the type of sun/moon (if any) to use"),
 		items=enum_options)
 	initial_time = bpy.props.EnumProperty(
