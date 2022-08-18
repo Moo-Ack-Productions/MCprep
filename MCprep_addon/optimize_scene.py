@@ -230,7 +230,6 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		self.minimum_samples = None
 		self.noise_threshold = 0.2
 
-
 		# Light Bounces.
 		self.diffuse = 2  # This is default because diffuse bounces don't need to be high
 		self.glossy = 1

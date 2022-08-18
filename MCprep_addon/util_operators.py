@@ -86,6 +86,10 @@ class MCPREP_OT_improve_ui(bpy.types.Operator):
 
 			# make it solid mode, regardless of cycles or eevee
 			context.scene.display.shading.type = 'SOLID'
+
+		# TODO: Confirm this works across all versions of Blender
+		if util.bv30():
+			bpy.context.scene.cycles.transparent_max_bounces = 12
 		return {'FINISHED'}
 
 
