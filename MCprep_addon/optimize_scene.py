@@ -40,15 +40,28 @@ MCPREP_HOMOGENOUS_VOLUME = "MCPREP_HOMOGENOUS_VOLUME"
 MCPREP_NOT_HOMOGENOUS_VOLUME = "MCPREP_NOT_HOMOGENOUS_VOLUME"
 
 class MCprepOptimizerProperties(bpy.types.PropertyGroup):
+	def set_caustics(self, context):
+		if util.bv30():
+			itms = [
+					("NO_TOUCH", "Don't Touch", "Caustics settings will remain as they are currently set"),
+					("TOUCH_BOTH", "Always Disable", "Always disables caustics"),
+					("TOUCH_REFLECTIVE", "Always Disable Reflective Caustics", "Always disables reflective caustics"),
+					("TOUCH_REFRACTIVE", "Always Disable Refractive Caustics", "Always disables refractive caustics"),
+				] 
+			return itms
+		else:
+			itms = [
+					("TOUCH_BOTH", "Always Disable", "Always disables caustics"),
+					("TOUCH_REFLECTIVE", "Always Disable Reflective Caustics", "Always disables reflective caustics"),
+					("TOUCH_REFRACTIVE", "Always Disable Refractive Caustics", "Always disables refractive caustics"),
+					("NO_TOUCH", "Don't Touch", "Caustics settings will remain as they are currently set"),
+				] 
+			return itms
+
 	caustics_enum = bpy.props.EnumProperty(
 		name="",
 		description="Whether or not caustics are disabled when optimizing",
-		items=[
-			("TOUCH_BOTH", "Always Disable", "Always disables caustics"),
-			("TOUCH_REFLECTIVE", "Always Disable Reflective Caustics", "Always disables reflective caustics"),
-			("TOUCH_REFRACTIVE", "Always Disable Refractive Caustics", "Always disables refractive caustics"),
-			("NO_TOUCH", "Don't Touch", "Caustics settings will remain as they are currently set"),
-		]
+		items=set_caustics()
 	)
 	scene_brightness = bpy.props.EnumProperty(
 		name="",
