@@ -56,7 +56,7 @@ class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 	caustics_enum = bpy.props.EnumProperty(
 		name="",
 		description="Whether or not caustics are disabled when optimizing",
-		items=set_caustics()
+		items=set_caustics
 	)
 	scene_brightness = bpy.props.EnumProperty(
 		name="",
