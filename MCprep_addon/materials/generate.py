@@ -1354,7 +1354,7 @@ def matgen_cycles_simple(
 			if hasattr(mat, "blend_method"):
 				mat.blend_method = 'BLEND'
 			if hasattr(mat, "shadow_method"):
-				mat.shadow_method = 'HASHED'
+				mat.shadow_method = 'NONE'
 
 	if use_emission:
 		inputs = [inp.name for inp in principled.inputs]
@@ -1524,7 +1524,7 @@ def matgen_cycles_principled(
 			if hasattr(mat, "blend_method"):
 				mat.blend_method = 'BLEND'
 			if hasattr(mat, "shadow_method"):
-				mat.shadow_method = 'HASHED'
+				mat.shadow_method = 'NONE'
 
 			# best if there is no partial transparency
 			# material.blend_method = 'CLIP' for no partial transparency
@@ -1744,7 +1744,7 @@ def matgen_cycles_original(
 			if hasattr(mat, "blend_method"):
 				mat.blend_method = 'BLEND'
 			if hasattr(mat, "shadow_method"):
-				mat.shadow_method = 'HASHED'
+				mat.shadow_method = 'NONE'
 
 			# best if there is no partial transparency
 			# material.blend_method = 'CLIP' for no partial transparency
@@ -1872,7 +1872,7 @@ def matgen_special_water(mat, passes):
 		if hasattr(mat, "blend_method"):
 			mat.blend_method = 'BLEND'
 		if hasattr(mat, "shadow_method"):
-			mat.shadow_method = 'HASHED'
+			mat.shadow_method = 'NONE'
 
 		# best if there is no partial transparency
 		# material.blend_method = 'CLIP' for no partial transparency
@@ -2019,7 +2019,7 @@ def matgen_special_glass(mat, passes):
 		if hasattr(mat, "blend_method"):
 			mat.blend_method = 'BLEND'
 		if hasattr(mat, "shadow_method"):
-			mat.shadow_method = 'HASHED'
+			mat.shadow_method = 'NONE'
 
 		# best if there is no partial transparency
 		# material.blend_method = 'CLIP' for no partial transparency
