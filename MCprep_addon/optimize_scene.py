@@ -115,17 +115,19 @@ def panel_draw(context, element):
 			col.prop(scn_props, "scrambling_unsafe", icon=scrambling_unsafe_icon)
 			if scn_props.scrambling_unsafe:
 				col.prop(scn_props, "preview_scrambling")
-		col.row()
-		col.label(text="")
-		subrow = col.row()
-		subrow.scale_y = 1.5
-		subrow.operator("mcprep.optimize_scene", text="Optimize Scene")
+		addon_prefs = util.get_user_preferences(context)
+		if not addon_prefs.advanced_optimizer_settings:
+			col.row()
+			col.label(text="")
+			subrow = col.row()
+			subrow.scale_y = 1.5
+			subrow.operator("mcprep.optimize_scene", text="Optimize Scene")
 	else:
 		col.label(text="Cycles Only :C")
 
 class MCPrepOptimizerAdvancedProperties(bpy.types.PropertyGroup):
 	scrambling_multiplier_add = bpy.props.FloatProperty(
-		name="Scrambling multiplier addition",
+		name="Scrambling multiplier Add",
 		description="The amount to add to the scrambling multiplier when doing optimizations",
 		default=SCRAMBLING_MULTIPLIER_ADD
 	)
@@ -136,7 +138,8 @@ class MCPrepOptimizerAdvancedProperties(bpy.types.PropertyGroup):
     )
 	transmissive_bounce_add = bpy.props.IntProperty(
 		name="Transmissive Bounce Add",
-		description="The amount to add to transmissive light bounces when doing optimizations"
+		description="The amount to add to transmissive light bounces when doing optimizations",
+		default=1
 	)
 
 def advanced_panel_draw(context, element):
@@ -150,6 +153,11 @@ def advanced_panel_draw(context, element):
 		col.prop(scn_props, "glossy_bounce_add", icon=bounce_icon)
 		col.prop(scn_props, "transmissive_bounce_add", icon=bounce_icon)
 		col.prop(scn_props, "scrambling_multiplier_add")
+		col.row()
+		col.label(text="")
+		subrow = col.row()
+		subrow.scale_y = 1.5
+		subrow.operator("mcprep.optimize_scene", text="Optimize Scene")
 	else:
 		col.label(text="Cycles Only :C")
 

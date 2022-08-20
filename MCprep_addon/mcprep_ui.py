@@ -567,6 +567,8 @@ class McprepPreference(bpy.types.AddonPreferences):
 			row = layout.row()
 			row.prop(self, "verbose")
 			row.prop(self, "feature_set")
+			row = layout.row()
+			row.prop(self, "advanced_optimizer_settings")
 
 			if self.feature_set != "supported":
 				row = layout.row()
@@ -756,6 +758,7 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			optimize_scene.panel_draw(context, row)
 			# Only show advanced optimizer settings if the user wants them
 			if addon_prefs.advanced_optimizer_settings:
+				row = col.row(align=True)
 				optimize_scene.advanced_panel_draw(context, row)
 
 		# Advanced settings.
