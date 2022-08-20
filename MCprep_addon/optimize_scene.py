@@ -17,11 +17,9 @@
 # ##### END GPL LICENSE BLOCK #####
 
 
-import os
-import json
 import bpy
 import addon_utils
-from . import util, conf
+from . import util
 from .materials import generate
 
 
@@ -79,7 +77,7 @@ class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 	simplify = bpy.props.BoolProperty(
 		name="Simplify the viewport",
 		description="Reduces subdivisions to 0. Only disable if any assets will break when using this",
-		default=True
+		default=True,
 	)
 	scrambling_unsafe = bpy.props.BoolProperty(
 		name="Automatic Scrambling Distance",
@@ -129,7 +127,7 @@ class MCPrepOptimizerAdvancedProperties(bpy.types.PropertyGroup):
 	scrambling_multiplier_add = bpy.props.FloatProperty(
 		name="Scrambling multiplier Add",
 		description="The amount to add to the scrambling multiplier when doing optimizations",
-		default=SCRAMBLING_MULTIPLIER_ADD
+		default=0.5
 	)
 	glossy_bounce_add = bpy.props.IntProperty(
 		name="Glossy Bounce Add", 
@@ -167,33 +165,6 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 
 	def __init__(self):
-		# Load config settings
-		if not os.path.isfile(conf.optimizer_json_path):
-				conf.log("Error, json file does not exist: " + conf.optimizer_json_path)
-		with open(conf.optimizer_json_path) as data_file:
-			try:
-				json_data = json.load(data_file)
-			except Exception as err:
-				print("Failed to load json file:")
-				print('\t', err)
-
-			global MAX_BOUNCES
-			global MIN_BOUNCES
-			global MAX_FILTER_GLOSSY
-			global MAX_STEPS
-			global MIN_SCRAMBLING_MULTIPLIER
-			global SCRAMBLING_MULTIPLIER_ADD
-			global MCPREP_HOMOGENOUS_VOLUME
-			global MCPREP_NOT_HOMOGENOUS_VOLUME
-			MAX_BOUNCES = json_data.get("MAX_BOUNCES")
-			MIN_BOUNCES = json_data.get("MIN_BOUNCES")
-			MAX_FILTER_GLOSSY = json_data.get("MAX_FILTER_GLOSSY")
-			MAX_STEPS = json_data.get("MAX_STEPS")
-			MIN_SCRAMBLING_MULTIPLIER = json_data.get("MIN_SCRAMBLING_MULTIPLIER")
-			SCRAMBLING_MULTIPLIER_ADD = json_data.get("SCRAMBLING_MULTIPLIER_ADD")
-			MCPREP_HOMOGENOUS_VOLUME = json_data.get("MCPREP_HOMOGENOUS_VOLUME")
-			MCPREP_NOT_HOMOGENOUS_VOLUME = json_data.get("MCPREP_NOT_HOMOGENOUS_VOLUME")
-
 		# Sampling Settings.
 		self.samples = bpy.context.scene.cycles.samples # We will be doing some minor adjustments to the sample count
 		self.minimum_samples = None
