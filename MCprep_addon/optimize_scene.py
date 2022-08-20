@@ -41,22 +41,17 @@ MCPREP_NOT_HOMOGENOUS_VOLUME = "MCPREP_NOT_HOMOGENOUS_VOLUME"
 
 class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 	def set_caustics(self, context):
+		itms = []
 		if util.bv30():
-			itms = [
-					("NO_TOUCH", "Don't Touch", "Caustics settings will remain as they are currently set"),
-					("TOUCH_BOTH", "Always Disable", "Always disables caustics"),
-					("TOUCH_REFLECTIVE", "Always Disable Reflective Caustics", "Always disables reflective caustics"),
-					("TOUCH_REFRACTIVE", "Always Disable Refractive Caustics", "Always disables refractive caustics"),
-				] 
-			return itms
+			itms.append(("NO_TOUCH", "Don't Touch", "Caustics settings will remain as they are currently set"))
+			itms.append(("TOUCH_BOTH", "Always Disable", "Always disables caustics"))
 		else:
-			itms = [
-					("TOUCH_BOTH", "Always Disable", "Always disables caustics"),
-					("TOUCH_REFLECTIVE", "Always Disable Reflective Caustics", "Always disables reflective caustics"),
-					("TOUCH_REFRACTIVE", "Always Disable Refractive Caustics", "Always disables refractive caustics"),
-					("NO_TOUCH", "Don't Touch", "Caustics settings will remain as they are currently set"),
-				] 
-			return itms
+			itms.append(("TOUCH_BOTH", "Always Disable", "Always disables caustics"))
+			itms.append(("NO_TOUCH", "Don't Touch", "Caustics settings will remain as they are currently set"))
+
+		itms.append(("TOUCH_REFLECTIVE", "Always Disable Reflective Caustics", "Always disables reflective caustics"))
+		itms.append(("TOUCH_REFRACTIVE", "Always Disable Refractive Caustics", "Always disables Refractive caustics"))
+		return itms
 
 	caustics_enum = bpy.props.EnumProperty(
 		name="",
@@ -92,7 +87,6 @@ class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 		default=True
 	)
 
-
 def panel_draw(context, element):
 	box = element.box()
 	col = box.column()
@@ -124,6 +118,27 @@ def panel_draw(context, element):
 	else:
 		col.label(text="Cycles Only :C")
 
+class MCPrepOptimizerAdvancedProperties(bpy.types.PropertyGroup):
+	scrambling_multiplier_add = bpy.props.FloatProperty(
+		name="Scrambling multiplier addition",
+		description="The amount to add to the scrambling multiplier when doing optimizations",
+		default=SCRAMBLING_MULTIPLIER_ADD
+	)
+	bounce_add = bpy.props.IntProperty(
+		name="Light Bounce Add", 
+		description="The amount to add to light bounce when doing optimizations",
+		default=1
+    )
+
+def advanced_panel_draw(context, element):
+	box = element.box()
+	col = box.column()
+	engine = context.scene.render.engine
+	scn_props = context.scene.advanced_optimizer_props
+	if engine == 'CYCLES':
+		pass
+	else:
+		col.label(text="Cycles Only :C")
 
 class MCPrep_OT_optimize_scene(bpy.types.Operator):
 	bl_idname = "mcprep.optimize_scene"
@@ -231,6 +246,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		prefs = util.get_preferences(context)
 		cprefs = prefs.addons.get("cycles")
 		scn_props = context.scene.optimizer_props
+		adv_scn_props = context.scene.advanced_optimizer_props
 
 		# Get the compute device type.
 		cycles_compute_device_type = None
@@ -333,17 +349,17 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 			except Exception:
 				bpy.context.scene.render.tile_x = 256
 				bpy.context.scene.render.tile_y = 256
-    
+	
 		# Cycles Render Settings Optimizations.
 		for mat in bpy.data.materials:
 			matGen = util.nameGeneralize(mat.name)
 			canon, form = generate.get_mc_canonical_name(matGen)
 			mat_type = None
 			if generate.checklist(canon, "reflective"):
-				self.glossy += 1
+				self.glossy += adv_scn_props.bounce_add
 				mat_type = "reflective"
 			if generate.checklist(canon, "glass"):
-				self.transmissive += 1
+				self.transmissive += adv_scn_props.bounce_add
 				mat_type = "glass"
 
 			if mat.use_nodes:
@@ -432,6 +448,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 
 classes = (
 	MCprepOptimizerProperties,
+	MCPrepOptimizerAdvancedProperties,
 	MCPrep_OT_optimize_scene
 )
 
@@ -440,12 +457,11 @@ def register():
 	for cls in classes:
 		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
-
-	bpy.types.Scene.optimizer_props = bpy.props.PointerProperty(
-		type=MCprepOptimizerProperties)
-
+	bpy.types.Scene.optimizer_props = bpy.props.PointerProperty(type=MCprepOptimizerProperties)
+	bpy.types.Scene.advanced_optimizer_props = bpy.props.PointerProperty(type=MCPrepOptimizerAdvancedProperties)
 
 def unregister():
 	for cls in reversed(classes):
 		bpy.utils.unregister_class(cls)
 	del bpy.types.Scene.optimizer_props
+	del bpy.types.Scene.advanced_optimizer_props
