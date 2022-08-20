@@ -71,6 +71,11 @@ class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 		description="Makes the optimizer adjust settings in a less \"destructive\" way",
 		default=True
 	)
+	remove_emision = bpy.props.BoolProperty(
+		name="Remove Emission",
+		description="Removes emission from MCprep materials to reduce noise\nNote: This does not remove emission nodes, this simply sets them to 0 so they don't emit light",
+		default=True
+	)
 	simplify = bpy.props.BoolProperty(
 		name="Simplify the viewport",
 		description="Reduces subdivisions to 0. Only disable if any assets will break when using this",
@@ -124,11 +129,15 @@ class MCPrepOptimizerAdvancedProperties(bpy.types.PropertyGroup):
 		description="The amount to add to the scrambling multiplier when doing optimizations",
 		default=SCRAMBLING_MULTIPLIER_ADD
 	)
-	bounce_add = bpy.props.IntProperty(
-		name="Light Bounce Add", 
-		description="The amount to add to light bounce when doing optimizations",
+	glossy_bounce_add = bpy.props.IntProperty(
+		name="Glossy Bounce Add", 
+		description="The amount to add to glossy light bounces when doing optimizations",
 		default=1
     )
+	transmissive_bounce_add = bpy.props.IntProperty(
+		name="Transmissive Bounce Add",
+		description="The amount to add to transmissive light bounces when doing optimizations"
+	)
 
 def advanced_panel_draw(context, element):
 	box = element.box()
@@ -136,7 +145,11 @@ def advanced_panel_draw(context, element):
 	engine = context.scene.render.engine
 	scn_props = context.scene.advanced_optimizer_props
 	if engine == 'CYCLES':
-		pass
+		col.label(text="Advanced Options")
+		bounce_icon = "INDIRECT_ONLY_ON"
+		col.prop(scn_props, "glossy_bounce_add", icon=bounce_icon)
+		col.prop(scn_props, "transmissive_bounce_add", icon=bounce_icon)
+		col.prop(scn_props, "scrambling_multiplier_add")
 	else:
 		col.label(text="Cycles Only :C")
 
@@ -203,6 +216,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		self.uses_scrambling = None
 		self.preview_scrambling = None
 		self.scrambling_multiplier = MIN_SCRAMBLING_MULTIPLIER
+		self.remove_emision = False
 	
 	def is_vol(self, context, node):
 		density_socket = node.inputs["Density"] # Grab the density
@@ -284,6 +298,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		self.uses_scrambling = scn_props.scrambling_unsafe
 		self.preview_scrambling = scn_props.preview_scrambling
 		self.scrambling_multiplier = MIN_SCRAMBLING_MULTIPLIER
+		self.remove_emision = scn_props.remove_emision
 
 		# Time of day.
 		if scn_props.scene_brightness == "BRIGHT":
@@ -356,11 +371,19 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 			canon, form = generate.get_mc_canonical_name(matGen)
 			mat_type = None
 			if generate.checklist(canon, "reflective"):
-				self.glossy += adv_scn_props.bounce_add
+				self.glossy += adv_scn_props.glossy_bounce_add
 				mat_type = "reflective"
 			if generate.checklist(canon, "glass"):
-				self.transmissive += adv_scn_props.bounce_add
+				self.transmissive += adv_scn_props.transmissive_bounce_add
 				mat_type = "glass"
+			if generate.checklist(canon, "emit"):
+				if self.remove_emision:
+					if mat.use_nodes:
+						for mat_node in mat.node_tree.nodes:
+							if mat_node.type == "ShaderNodeLightFalloff":
+								strength_socket = node.inputs["Strength"]
+								strength_socket.default_value = 0
+								break # there is only one light falloff node in MCprep materials
 
 			if mat.use_nodes:
 				nodes = mat.node_tree.nodes
