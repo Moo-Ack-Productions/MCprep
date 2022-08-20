@@ -1352,7 +1352,7 @@ def matgen_cycles_simple(
 		links.new(nodeTexDiff.outputs[1], principled.inputs["Alpha"])
 		if hasattr(mat, "blend_method"):  # 2.8 eevee settings
 			if hasattr(mat, "blend_method"):
-				mat.blend_method = 'HASHED'
+				mat.blend_method = 'BLEND'
 			if hasattr(mat, "shadow_method"):
 				mat.shadow_method = 'HASHED'
 
@@ -1522,7 +1522,7 @@ def matgen_cycles_principled(
 			# Note: placed with hasattr to reduce bugs, seemingly only on old
 			# 2.80 build
 			if hasattr(mat, "blend_method"):
-				mat.blend_method = 'HASHED'
+				mat.blend_method = 'BLEND'
 			if hasattr(mat, "shadow_method"):
 				mat.shadow_method = 'HASHED'
 
@@ -1742,7 +1742,7 @@ def matgen_cycles_original(
 			# Note: placed with hasattr to reduce bugs, seemingly only on old
 			# 2.80 build
 			if hasattr(mat, "blend_method"):
-				mat.blend_method = 'HASHED'
+				mat.blend_method = 'BLEND'
 			if hasattr(mat, "shadow_method"):
 				mat.shadow_method = 'HASHED'
 
@@ -1870,7 +1870,7 @@ def matgen_special_water(mat, passes):
 		# Note: placed with hasattr to reduce bugs, seemingly only on old
 		# 2.80 build
 		if hasattr(mat, "blend_method"):
-			mat.blend_method = 'HASHED'
+			mat.blend_method = 'BLEND'
 		if hasattr(mat, "shadow_method"):
 			mat.shadow_method = 'HASHED'
 
@@ -2017,7 +2017,7 @@ def matgen_special_glass(mat, passes):
 		# Note: placed with hasattr to reduce bugs, seemingly only on old
 		# 2.80 build
 		if hasattr(mat, "blend_method"):
-			mat.blend_method = 'HASHED'
+			mat.blend_method = 'BLEND'
 		if hasattr(mat, "shadow_method"):
 			mat.shadow_method = 'HASHED'
 
