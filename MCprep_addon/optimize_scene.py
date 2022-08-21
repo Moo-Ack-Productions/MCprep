@@ -29,7 +29,6 @@ CMP_BOUNCES = MIN_BOUNCES * 2 # To avoid bounces from going bellow 2
 MAX_FILTER_GLOSSY = 1.0 # Standard in Blender
 MAX_STEPS = 200 # 200 is fine for most scenes
 MIN_SCRAMBLING_MULTIPLIER = 0.35 # 0.35 seems to help performance a lot, but we'll do edits to this value depending on materials
-SCRAMBLING_MULTIPLIER_ADD = 0.05 # This is how much we'll add to the srambling distance multiplier 
 CMP_SCRAMBLING_MULTIPLIER = MIN_SCRAMBLING_MULTIPLIER * 3 # The max since beyond this performance doesn't improve as much
 VOLUMETRIC_NODES = ["ShaderNodeVolumeScatter", "ShaderNodeVolumeAbsorption", "ShaderNodeVolumePrincipled"]
 
@@ -37,6 +36,9 @@ VOLUMETRIC_NODES = ["ShaderNodeVolumeScatter", "ShaderNodeVolumeAbsorption", "Sh
 MCPREP_HOMOGENOUS_VOLUME = "MCPREP_HOMOGENOUS_VOLUME"
 MCPREP_NOT_HOMOGENOUS_VOLUME = "MCPREP_NOT_HOMOGENOUS_VOLUME"
 
+SCRAMBLING_MULTIPLIER_ADD = 0.05 # This is how much we'll add to the srambling distance multiplier 
+GLOSSY_ADD = 1
+TRANSMISSIVE_ADD = 1
 class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 	def set_caustics(self, context):
 		itms = []
@@ -123,21 +125,86 @@ def panel_draw(context, element):
 	else:
 		col.label(text="Cycles Only :C")
 
+def update_max_bounces(self, context):
+    global MAX_BOUNCES
+    MAX_BOUNCES = self.max_bounces
+
+def update_min_bounces(self, context):
+    global MIN_BOUNCES
+    MIN_BOUNCES = self.min_bounces
+
+def update_max_filter_glossy(self, context):
+	global MAX_FILTER_GLOSSY
+	MAX_FILTER_GLOSSY = self.max_filter_glossy
+
+def update_max_steps(self, context):
+	global MAX_STEPS
+	MAX_STEPS = self.max_steps
+
+def update_min_scrambling_multiplier(self, context):
+	global MIN_SCRAMBLING_MULTIPLIER
+	MIN_SCRAMBLING_MULTIPLIER = self.min_scrambling_multiplier
+    
+def update_scrambling_multiplier(self, context):
+	global SCRAMBLING_MULTIPLIER_ADD
+	SCRAMBLING_MULTIPLIER_ADD = self.scrambling_multiplier_add
+
+def update_glossy_add(self, context):
+    global GLOSSY_ADD
+    GLOSSY_ADD = self.glossy_bounce_add
+
+def update_transmissive_add(self, context):
+	global TRANSMISSIVE_ADD
+	TRANSMISSIVE_ADD = self.transmissive_bounce_add
+
 class MCPrepOptimizerAdvancedProperties(bpy.types.PropertyGroup):
+	max_bounces = bpy.props.IntProperty(
+		name="Max Bounces",
+		description="The maximum number of light bounces for optimizations",
+		default=8,
+		update=update_max_bounces
+	)
+	min_bounces = bpy.props.IntProperty(
+		name="Min Bounces",
+		description="The minimum number of light bounces for optimizations",
+		default=2,
+		update=update_min_bounces
+	)
+	max_filter_glossy = bpy.props.FloatProperty(
+		name="Max Filter Glossy",
+		description="The maximum amount to set filter glossy to",
+		default=1.0,
+		update=update_max_filter_glossy
+	)
+	max_steps = bpy.props.IntProperty(
+		name="Max Steps",
+		description="The maximum number of volumetric steps",
+		default=200,
+		update=update_max_steps
+	)
+	min_scrambling_multiplier = bpy.props.FloatProperty(
+		name="Min Scrambling Multiplier",
+		description="The minimum amount to set scrambling multiplier to",
+		default=0.35,
+		update=update_min_scrambling_multiplier
+	)
 	scrambling_multiplier_add = bpy.props.FloatProperty(
 		name="Scrambling multiplier Add",
 		description="The amount to add to the scrambling multiplier when doing optimizations",
-		default=0.5
+		default=0.5,
+		update=update_scrambling_multiplier
 	)
 	glossy_bounce_add = bpy.props.IntProperty(
 		name="Glossy Bounce Add", 
 		description="The amount to add to glossy light bounces when doing optimizations",
-		default=1
+		default=1,
+		update=update_glossy_add
     )
 	transmissive_bounce_add = bpy.props.IntProperty(
 		name="Transmissive Bounce Add",
 		description="The amount to add to transmissive light bounces when doing optimizations",
-		default=1
+		default=1,
+		update=update_transmissive_add
 	)
 
 def advanced_panel_draw(context, element):
@@ -148,9 +215,14 @@ def advanced_panel_draw(context, element):
 	if engine == 'CYCLES':
 		col.label(text="Advanced Options")
 		bounce_icon = "INDIRECT_ONLY_ON"
-		col.prop(scn_props, "glossy_bounce_add", icon=bounce_icon)
-		col.prop(scn_props, "transmissive_bounce_add", icon=bounce_icon)
+		col.prop(scn_props, "max_bounces", icon=bounce_icon)
+		col.prop(scn_props, "min_bounces", icon=bounce_icon)
+		col.prop(scn_props, "max_filter_glossy")
+		col.prop(scn_props, "max_steps")
+		col.prop(scn_props, "min_scrambling_multiplier")
 		col.prop(scn_props, "scrambling_multiplier_add")
+		col.prop(scn_props, "glossy_bounce_add")
+		col.prop(scn_props, "transmissive_bounce_add")
 		col.row()
 		col.label(text="")
 		subrow = col.row()
@@ -350,10 +422,10 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 			canon, form = generate.get_mc_canonical_name(matGen)
 			mat_type = None
 			if generate.checklist(canon, "reflective"):
-				self.glossy += adv_scn_props.glossy_bounce_add
+				self.glossy += GLOSSY_ADD
 				mat_type = "reflective"
 			if generate.checklist(canon, "glass"):
-				self.transmissive += adv_scn_props.transmissive_bounce_add
+				self.transmissive += TRANSMISSIVE_ADD
 				mat_type = "glass"
 			if generate.checklist(canon, "emit"):
 				if self.remove_emision:
