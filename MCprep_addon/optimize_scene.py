@@ -191,7 +191,7 @@ class MCPrepOptimizerAdvancedProperties(bpy.types.PropertyGroup):
 	scrambling_multiplier_add = bpy.props.FloatProperty(
 		name="Scrambling multiplier Add",
 		description="The amount to add to the scrambling multiplier when doing optimizations",
-		default=0.5,
+		default=0.05,
 		update=update_scrambling_multiplier
 	)
 	glossy_bounce_add = bpy.props.IntProperty(
