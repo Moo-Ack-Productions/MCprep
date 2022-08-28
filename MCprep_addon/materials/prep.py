@@ -78,7 +78,7 @@ class McprepMaterialProps():
 		description="Automatically improve relevant UI settings",
 		default=True)
 	optimizeScene = bpy.props.BoolProperty(
-		name="Optimize scene (cycles)",
+		name="Optimize Scene",
 		description="Optimize the scene for faster cycles rendering",
 		default=False)
 	usePrincipledShader = bpy.props.BoolProperty(
@@ -159,8 +159,9 @@ def draw_mats_common(self, context):
 	col.prop(self, "improveUiSettings")
 	col = row.column()
 	col.prop(self, "combineMaterials")
-	row = self.layout.row()
-	row.prop(self, "optimizeScene")
+	if engine == 'CYCLES':
+		row = self.layout.row()
+		row.prop(self, "optimizeScene")
 
 
 class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
