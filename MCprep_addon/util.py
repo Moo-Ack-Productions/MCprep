@@ -192,7 +192,6 @@ def min_bv(version, *, inclusive=True):
 			return bpy.app.version > version
 		return bpy.app.version >= version
 
-
 def bv28():
 	"""Check if blender 2.8, for layouts, UI, and properties. """
 	return min_bv((2, 80))
@@ -201,6 +200,17 @@ def bv28():
 def bv30():
 	"""Check if we're dealing with Blender 3.0"""
 	return min_bv((3, 00))
+
+BLEND_MODE = "HASHED"
+SHADOW_MODE = "HASHED"
+def change_blend(self, context):
+	"""Change the blend mode"""
+	global BLEND_MODE
+	global SHADOW_MODE
+	if BLEND_MODE == self.blendMode:
+		return
+	BLEND_MODE = self.blendMode
+	SHADOW_MODE = "NONE" if BLEND_MODE == "BLEND" else "HASHED"
 
 
 def face_on_edge(faceLoc):

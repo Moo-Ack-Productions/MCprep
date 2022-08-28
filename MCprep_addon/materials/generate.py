@@ -1352,9 +1352,9 @@ def matgen_cycles_simple(
 		links.new(nodeTexDiff.outputs[1], principled.inputs["Alpha"])
 		if hasattr(mat, "blend_method"):  # 2.8 eevee settings
 			if hasattr(mat, "blend_method"):
-				mat.blend_method = 'BLEND'
+				mat.blend_method = util.BLEND_MODE
 			if hasattr(mat, "shadow_method"):
-				mat.shadow_method = 'NONE'
+				mat.shadow_method = util.SHADOW_MODE
 
 	if use_emission:
 		inputs = [inp.name for inp in principled.inputs]
@@ -1522,9 +1522,9 @@ def matgen_cycles_principled(
 			# Note: placed with hasattr to reduce bugs, seemingly only on old
 			# 2.80 build
 			if hasattr(mat, "blend_method"):
-				mat.blend_method = 'BLEND'
+				mat.blend_method = util.BLEND_MODE
 			if hasattr(mat, "shadow_method"):
-				mat.shadow_method = 'NONE'
+				mat.shadow_method = util.SHADOW_MODE
 
 			# best if there is no partial transparency
 			# material.blend_method = 'CLIP' for no partial transparency
@@ -1742,9 +1742,9 @@ def matgen_cycles_original(
 			# Note: placed with hasattr to reduce bugs, seemingly only on old
 			# 2.80 build
 			if hasattr(mat, "blend_method"):
-				mat.blend_method = 'BLEND'
+				mat.blend_method = util.BLEND_MODE
 			if hasattr(mat, "shadow_method"):
-				mat.shadow_method = 'NONE'
+				mat.shadow_method = util.SHADOW_MODE
 
 			# best if there is no partial transparency
 			# material.blend_method = 'CLIP' for no partial transparency
@@ -1870,9 +1870,9 @@ def matgen_special_water(mat, passes):
 		# Note: placed with hasattr to reduce bugs, seemingly only on old
 		# 2.80 build
 		if hasattr(mat, "blend_method"):
-			mat.blend_method = 'BLEND'
+			mat.blend_method = util.BLEND_MODE
 		if hasattr(mat, "shadow_method"):
-			mat.shadow_method = 'NONE'
+			mat.shadow_method = util.SHADOW_MODE
 
 		# best if there is no partial transparency
 		# material.blend_method = 'CLIP' for no partial transparency
@@ -2017,9 +2017,9 @@ def matgen_special_glass(mat, passes):
 		# Note: placed with hasattr to reduce bugs, seemingly only on old
 		# 2.80 build
 		if hasattr(mat, "blend_method"):
-			mat.blend_method = 'BLEND'
+			mat.blend_method = util.BLEND_MODE
 		if hasattr(mat, "shadow_method"):
-			mat.shadow_method = 'NONE'
+			mat.shadow_method = util.SHADOW_MODE
 
 		# best if there is no partial transparency
 		# material.blend_method = 'CLIP' for no partial transparency
