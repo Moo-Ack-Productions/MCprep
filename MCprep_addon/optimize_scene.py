@@ -31,6 +31,7 @@ MAX_STEPS = 200 # 200 is fine for most scenes
 MIN_SCRAMBLING_MULTIPLIER = 0.35 # 0.35 seems to help performance a lot, but we'll do edits to this value depending on materials
 CMP_SCRAMBLING_MULTIPLIER = MIN_SCRAMBLING_MULTIPLIER * 3 # The max since beyond this performance doesn't improve as much
 VOLUMETRIC_NODES = ["ShaderNodeVolumeScatter", "ShaderNodeVolumeAbsorption", "ShaderNodeVolumePrincipled"]
+EMISSION_NODES = ["ShaderNodeLightFalloff", "ShaderNodeEmission", "ShaderNodeLightPath"]
 
 # MCprep Node Settings
 MCPREP_HOMOGENOUS_VOLUME = "MCPREP_HOMOGENOUS_VOLUME"
@@ -71,11 +72,6 @@ class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 		description="Makes the optimizer adjust settings in a less \"destructive\" way",
 		default=True
 	)
-	remove_emision = bpy.props.BoolProperty(
-		name="Remove Emission",
-		description="Removes emission from MCprep materials to reduce noise\nNote: This does not remove emission nodes, this simply sets them to 0 so they don't emit light",
-		default=True
-	)
 	simplify = bpy.props.BoolProperty(
 		name="Simplify the viewport",
 		description="Reduces subdivisions to 0. Only disable if any assets will break when using this",
@@ -90,6 +86,16 @@ class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 		name="Preview Scrambling in the viewport",
 		description="Allows you to preview automatic scrambling distance in the viewport",
 		default=True
+	)
+	remove_emision_unsafe = bpy.props.BoolProperty(
+		name="Remove emission from materials",
+		description="Removes emission nodes so materials emit close to 0 light. This reduces noise but requires more work for the user when lighting and is not reversable.",
+		default=False
+	)
+	remove_useless_nodes_unsafe = bpy.props.BoolProperty(
+		name="Remove useless nodes",
+		description="Removes useless nodes from materials",
+		default=False
 	)
 
 def panel_draw(context, element):
@@ -115,6 +121,8 @@ def panel_draw(context, element):
 			col.prop(scn_props, "scrambling_unsafe", icon=scrambling_unsafe_icon)
 			if scn_props.scrambling_unsafe:
 				col.prop(scn_props, "preview_scrambling")
+			col.prop(scn_props, "remove_emision_unsafe", icon="LIGHT")
+			col.prop(scn_props, "remove_useless_nodes_unsafe", icon="ORPHAN_DATA")
 		addon_prefs = util.get_user_preferences(context)
 		if not addon_prefs.advanced_optimizer_settings:
 			col.row()
@@ -268,6 +276,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		self.preview_scrambling = None
 		self.scrambling_multiplier = MIN_SCRAMBLING_MULTIPLIER
 		self.remove_emision = False
+		self.remove_useless = False
 	
 	def is_vol(self, context, node):
 		density_socket = node.inputs["Density"] # Grab the density
@@ -349,7 +358,8 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		self.uses_scrambling = scn_props.scrambling_unsafe
 		self.preview_scrambling = scn_props.preview_scrambling
 		self.scrambling_multiplier = MIN_SCRAMBLING_MULTIPLIER
-		self.remove_emision = scn_props.remove_emision
+		self.remove_emision = scn_props.remove_emision_unsafe
+		self.remove_useless = scn_props.remove_useless_nodes_unsafe
 
 		# Time of day.
 		if scn_props.scene_brightness == "BRIGHT":
@@ -427,14 +437,14 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 			if generate.checklist(canon, "glass"):
 				self.transmissive += TRANSMISSIVE_ADD
 				mat_type = "glass"
-			if generate.checklist(canon, "emit"):
-				if self.remove_emision:
-					if mat.use_nodes:
-						for mat_node in mat.node_tree.nodes:
-							if mat_node.type == "ShaderNodeLightFalloff":
-								strength_socket = node.inputs["Strength"]
-								strength_socket.default_value = 0
-								break # there is only one light falloff node in MCprep materials
+    
+			# Remove emission nodes from non-emmssive materials
+			if generate.checklist(canon, "emit") and self.remove_emision:
+				if mat.use_nodes:
+					for mat_node in mat.node_tree.nodes:
+						if mat_node.bl_idname in EMISSION_NODES:
+							mat.node_tree.nodes.remove(mat_node)
+							
 
 			if mat.use_nodes:
 				nodes = mat.node_tree.nodes
@@ -442,11 +452,13 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 					print(node.bl_idname)
 					if node.bl_idname in VOLUMETRIC_NODES:
 						self.is_vol(context, node)
-
-					# Not the best check, but better then nothing
-					if node.bl_idname == "ShaderNodeBsdfPrincipled":
+					
+					if node.bl_idname == "ShaderNodeBsdfPrincipled": # Not the best check, but better then nothing
 						self.is_pricipled(context, mat_type, node)
-				
+
+					if node.mute and self.remove_useless: # Remove muted nodes
+						mat.node_tree.nodes.remove(node)
+
 				if self.homogenous_volumes > 0 or self.not_homogenous_volumes > 0:
 					volumes_rate = self.homogenous_volumes - self.not_homogenous_volumes
 					if volumes_rate > 0:
