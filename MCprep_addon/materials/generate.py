@@ -1355,6 +1355,9 @@ def matgen_cycles_simple(
 				mat.blend_method = util.BLEND_MODE
 			if hasattr(mat, "shadow_method"):
 				mat.shadow_method = util.SHADOW_MODE
+			
+			# This prevents transparency issues with Alpha Blend
+			mat.show_transparent_back = False
 
 	if use_emission:
 		inputs = [inp.name for inp in principled.inputs]
@@ -1531,6 +1534,9 @@ def matgen_cycles_principled(
 			# both work fine with depth of field.
 
 			# but, BLEND does NOT work well with Depth of Field or layering
+
+			# This prevents transparency issues with Alpha Blend
+			mat.show_transparent_back = False
 
 	if use_emission:
 		nodeMixEmit.inputs[0].default_value = 1
@@ -1752,6 +1758,9 @@ def matgen_cycles_original(
 
 			# but, BLEND does NOT work well with Depth of Field or layering
 
+			# This prevents transparency issues with Alpha Blend
+			mat.show_transparent_back = False
+
 	if use_emission:
 		nodeMixEmit.inputs[0].default_value = 1
 	else:
@@ -1879,6 +1888,9 @@ def matgen_special_water(mat, passes):
 		# both work fine with depth of field.
 
 		# but, BLEND does NOT work well with Depth of Field or layering
+
+		# This prevents transparency issues with Alpha Blend
+		mat.show_transparent_back = False
 
 	# reapply animation data if any to generated nodes
 	apply_texture_animation_pass_settings(mat, animated_data)
@@ -2027,6 +2039,9 @@ def matgen_special_glass(mat, passes):
 
 		# but, BLEND does NOT work well with Depth of Field or layering
 
+		# This prevents transparency issues with Alpha Blend
+		mat.show_transparent_back = False
+		
 	# reapply animation data if any to generated nodes
 	apply_texture_animation_pass_settings(mat, animated_data)
 
