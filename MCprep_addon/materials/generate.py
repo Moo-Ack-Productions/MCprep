@@ -1452,6 +1452,10 @@ def matgen_cycles_principled(
 	nodeOut.location = (820, 0)
 	principled.location = (120, 0)
 
+	# ! Optimizer Names: These help the optimizer optimize and remove nodes if they aren't needed
+	nodeMixEmit.name = "MCPREP_EMIT_MIX_NODE"
+	nodeMixCam.name = "MCPREP_LIGHT_PATH_MIX_NODE"
+	
 	# Sets default transparency value
 	nodeMixTrans.inputs[0].default_value = 1
 
@@ -1602,6 +1606,10 @@ def matgen_cycles_original(
 	nodeTrans = nodes.new("ShaderNodeBsdfTransparent")
 	nodeMixTrans = nodes.new("ShaderNodeMixShader")
 	nodeOut = nodes.new("ShaderNodeOutputMaterial")
+
+	# ! Optimizer Names: These help the optimizer optimize and remove nodes if they aren't needed
+	nodeMixEmit.name = "MCPREP_EMIT_MIX_NODE"
+	nodeMixCam.name = "MCPREP_LIGHT_PATH_MIX_NODE"
 
 	# set location
 	nodeMixDiff.location = (1140, 40)

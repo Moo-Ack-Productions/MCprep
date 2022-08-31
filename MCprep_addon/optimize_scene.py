@@ -30,8 +30,8 @@ MAX_FILTER_GLOSSY = 1.0 # Standard in Blender
 MAX_STEPS = 200 # 200 is fine for most scenes
 MIN_SCRAMBLING_MULTIPLIER = 0.35 # 0.35 seems to help performance a lot, but we'll do edits to this value depending on materials
 CMP_SCRAMBLING_MULTIPLIER = MIN_SCRAMBLING_MULTIPLIER * 3 # The max since beyond this performance doesn't improve as much
-VOLUMETRIC_NODES = ["ShaderNodeVolumeScatter", "ShaderNodeVolumeAbsorption", "ShaderNodeVolumePrincipled"]
-EMISSION_NODES = ["ShaderNodeLightFalloff", "ShaderNodeEmission", "ShaderNodeLightPath"]
+VOLUMETRIC_NODES = (bpy.types.ShaderNodeVolumeScatter, bpy.types.ShaderNodeVolumeAbsorption, bpy.types.ShaderNodeVolumePrincipled)
+EMISSION_NODES = (bpy.types.ShaderNodeLightFalloff, bpy.types.ShaderNodeEmission, bpy.types.ShaderNodeLightPath)
 
 # MCprep Node Settings
 MCPREP_HOMOGENOUS_VOLUME = "MCPREP_HOMOGENOUS_VOLUME"
@@ -299,8 +299,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 			self.uses_scrambling = False
 			self.preview_scrambling = False
 			self.scrambling_multiplier = 1.0
-
-		print(self.homogenous_volumes, " ", self.not_homogenous_volumes)
+		
 
 	def is_pricipled(self, context, mat_type, node):
 		if mat_type == "reflective":
@@ -438,26 +437,62 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 				self.transmissive += TRANSMISSIVE_ADD
 				mat_type = "glass"
     
-			# Remove emission nodes from non-emmssive materials
-			if generate.checklist(canon, "emit") and self.remove_emision:
+			# Remove emission nodes from non-emissive materials or from materials that don't need it
+			if (generate.checklist(canon, "emit") and self.remove_emision) or (not generate.checklist(canon, "emit") and self.remove_useless):
 				if mat.use_nodes:
 					for mat_node in mat.node_tree.nodes:
-						if mat_node.bl_idname in EMISSION_NODES:
+						if isinstance(mat_node, EMISSION_NODES):
 							mat.node_tree.nodes.remove(mat_node)
-							
+
+					mix_path_node = mat.node_tree.nodes.get("MCPREP_LIGHT_PATH_MIX_NODE") 
+					mix_emit_node = mat.node_tree.nodes.get("MCPREP_EMIT_MIX_NODE") 
+
+					if mix_path_node:
+						mat.node_tree.nodes.remove(mix_path_node) # This is not needed anymore, lets remove it
+					if mix_emit_node:
+						mix_emit_node.inputs[0].default_value = 0 # TODO: Temporary fix for now. Preferably this node should be removed and its links should be fixed 
 
 			if mat.use_nodes:
 				nodes = mat.node_tree.nodes
 				for node in nodes:
-					print(node.bl_idname)
-					if node.bl_idname in VOLUMETRIC_NODES:
+					if isinstance(node, VOLUMETRIC_NODES):
 						self.is_vol(context, node)
-					
-					if node.bl_idname == "ShaderNodeBsdfPrincipled": # Not the best check, but better then nothing
-						self.is_pricipled(context, mat_type, node)
 
-					if node.mute and self.remove_useless: # Remove muted nodes
+					if isinstance(node, bpy.types.ShaderNodeBsdfPrincipled): # Not the best check, but better then nothing
+						self.is_pricipled(context, mat_type, node)
+						continue
+					
+					# TODO: Give the "Add Color" node a proper name to reference in the optimizer
+					if (node.mute and node.label != "Add Color") and self.remove_useless: # Remove muted nodes
 						mat.node_tree.nodes.remove(node)
+						continue
+				
+				# Only do this second loop if the user wants to remove useless nodes
+				if self.remove_useless:
+					total_inputs = 0
+					unused_inputs = 0
+					total_outputs = 0
+					unused_outputs = 0
+
+					# Recurse through all nodes
+					for node in nodes:
+						# Recurse through all inputs
+						for input in node.inputs:
+							total_inputs += 1
+							if len(input.links) == 0:
+								unused_inputs += 1
+						# Recurse through all outputs
+						for output in node.outputs:
+							total_outputs += 1
+							if len(output.links) == 0:
+								unused_outputs += 1
+						
+						if unused_inputs == total_inputs and unused_outputs == total_outputs:
+							mat.node_tree.nodes.remove(node) # Remove the node if no inputs or outputs are being used
+						total_inputs = 0
+						total_outputs = 0
+						unused_inputs = 0
+						unused_outputs = 0
 
 				if self.homogenous_volumes > 0 or self.not_homogenous_volumes > 0:
 					volumes_rate = self.homogenous_volumes - self.not_homogenous_volumes
