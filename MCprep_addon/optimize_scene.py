@@ -438,7 +438,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 				mat_type = "glass"
     
 			# Remove emission nodes from non-emissive materials or from materials that don't need it
-			if (generate.checklist(canon, "emit") and self.remove_emision) or (not generate.checklist(canon, "emit") and self.remove_useless):
+			if generate.checklist(canon, "block_mapping_jmc") and ((generate.checklist(canon, "emit") and self.remove_emision) or (not generate.checklist(canon, "emit") and self.remove_useless)):
 				if mat.use_nodes:
 					for mat_node in mat.node_tree.nodes:
 						if isinstance(mat_node, EMISSION_NODES):
