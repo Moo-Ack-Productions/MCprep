@@ -1033,6 +1033,12 @@ class MCPREP_OT_global_effect(bpy.types.Operator):
 	def execute(self, context):
 		mcprep_props = context.scene.mcprep_props
 		effect = mcprep_props.effects_list[int(self.effect_id)]
+
+		if not os.path.isfile(bpy.path.abspath(effect.filepath)):
+			self.report({'WARNING'}, "Target effects file not found")
+			bpy.ops.mcprep.prompt_reset_spawners('INVOKE_DEFAULT')
+			return {'CANCELLED'}
+
 		if effect.effect_type == GEO_AREA:
 			add_geonode_area_effect(context, effect)
 			self.report(
@@ -1089,12 +1095,17 @@ class MCPREP_OT_instant_effect(bpy.types.Operator):
 	effect_id = bpy.props.EnumProperty(items=effects_enum, name="Effect")
 	location = bpy.props.FloatVectorProperty(default=(0, 0, 0), name="Location")
 	frame = bpy.props.IntProperty(
-		default=0, name="Frame", description="Start frame for animation")
+		default=0,
+		name="Frame",
+		description="Start frame for animation")
 	speed = bpy.props.FloatProperty(
-		default=1.0, min=0.1, name="Speed",
+		default=1.0,
+		min=0.1,
+		name="Speed",
 		description="Make the effect run faster (skip frames) or slower (hold frames)")
 	show_image = bpy.props.BoolProperty(
-		default=True, name="Show image preview",
+		default=False,
+		name="Show image preview",
 		description="Show a middle animation frame as a viewport preview")
 	skipUsage = bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
@@ -1107,16 +1118,27 @@ class MCPREP_OT_instant_effect(bpy.types.Operator):
 	def execute(self, context):
 		mcprep_props = context.scene.mcprep_props
 		effect = mcprep_props.effects_list[int(self.effect_id)]
+
 		if effect.effect_type == "collection":
-			add_collection_effect(
-				context, effect, self.location, self.frame)
-			return {'FINISHED'}
+			if not os.path.isfile(bpy.path.abspath(effect.filepath)):
+				self.report({'WARNING'}, "Target effects file not found")
+				bpy.ops.mcprep.prompt_reset_spawners('INVOKE_DEFAULT')
+				return {'CANCELLED'}
+			add_collection_effect(context, effect, self.location, self.frame)
+
 		elif effect.effect_type == "img_seq":
+			base_path = os.path.dirname(effect.filepath)
+			if not os.path.isdir(bpy.path.abspath(base_path)):
+				self.report({'WARNING'}, "Target effects file not found: base_path")
+				print(base_path)
+				bpy.ops.mcprep.prompt_reset_spawners('INVOKE_DEFAULT')
+				return {'CANCELLED'}
+
 			inst = add_image_sequence_effect(
 				context, effect, self.location, self.frame, self.speed)
-
 			if not self.show_image:
 				inst.data = None
+
 		self.track_param = effect.name
 		return {'FINISHED'}
 
@@ -1149,8 +1171,14 @@ class MCPREP_OT_spawn_particle_planes(bpy.types.Operator, ImportHelper):
 		name = os.path.basename(path)
 		name = os.path.splitext(name)[0]
 
-		add_particle_planes_effect(
-			context, self.filepath, self.location, self.frame)
+		try:
+			add_particle_planes_effect(
+				context, self.filepath, self.location, self.frame)
+		except FileNotFoundError as e:
+			print("Particle effect file error:", e)
+			self.report({'WARNING'}, "File not found")
+			bpy.ops.mcprep.prompt_reset_spawners('INVOKE_DEFAULT')
+			return {'CANCELLED'}
 
 		self.track_param = name
 		return {'FINISHED'}

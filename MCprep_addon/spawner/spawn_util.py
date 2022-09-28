@@ -648,7 +648,7 @@ class MCPREP_OT_spawn_path_reset(bpy.types.Operator):
 class MCPREP_OT_prompt_reset_spawners(bpy.types.Operator):
 	"""Reset the all spawner paths to the default in addon preferences"""
 	bl_idname = "mcprep.prompt_reset_spawners"
-	bl_label = "Reset spawn path"
+	bl_label = "Reset spawner & texturepath paths"
 	bl_options = {'REGISTER', 'UNDO'}
 
 	def invoke(self, context, event):
