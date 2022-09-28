@@ -967,6 +967,20 @@ def load_image_sequence_effects(context):
 # -----------------------------------------------------------------------------
 
 
+class MCPREP_OT_effects_path_reset(bpy.types.Operator):
+	"""Reset the effects path to the default specified in the addon preferences panel"""
+	bl_idname = "mcprep.effects_path_reset"
+	bl_label = "Reset effects path"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	@tracking.report_error
+	def execute(self, context):
+		addon_prefs = util.get_user_preferences(context)
+		context.scene.mcprep_effects_path = addon_prefs.effects_path
+		update_effects_list(context)
+		return {'FINISHED'}
+
+
 class MCPREP_OT_reload_effects(bpy.types.Operator):
 	"""Reload effects spawner, use after changes to/new effects files"""
 	bl_idname = "mcprep.reload_effects"
@@ -1164,6 +1178,7 @@ class MCPREP_OT_spawn_particle_planes(bpy.types.Operator, ImportHelper):
 
 
 classes = (
+	MCPREP_OT_effects_path_reset,
 	MCPREP_OT_reload_effects,
 	MCPREP_OT_global_effect,
 	MCPREP_OT_instant_effect,
