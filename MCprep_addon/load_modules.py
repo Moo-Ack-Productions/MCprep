@@ -21,6 +21,8 @@ import importlib
 
 import bpy
 
+from MCprep_addon.conf import MCprepEnv
+
 # Per module loading for stable, in-session updates, even if new files are added
 if "conf" in locals():
 	importlib.reload(conf)
@@ -172,7 +174,8 @@ module_list = (
 
 
 def register(bl_info):
-	conf.register()
+	first_instance = MCprepEnv()
+	first_instance.set_env(dev_build=True, verbose=True)
 	tracking.register(bl_info)
 	for mod in module_list:
 		mod.register()
