@@ -28,6 +28,8 @@ TIMEOUT = 60
 import os
 import bpy
 
+from MCprep_addon.conf import MCprepEnv
+
 # remaining, wrap in safe-importing
 try:
 	from . import conf
@@ -999,7 +1001,8 @@ def register(bl_info):
 
 	# used to define which server source, not just if's below
 	if VALID_IMPORT:
-		Tracker.dev = conf.dev # True or False
+		env = MCprepEnv()
+		Tracker.dev = env.dev_build # True or False
 	else:
 		Tracker.dev = False
 

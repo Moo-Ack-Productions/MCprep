@@ -57,9 +57,9 @@ class MCprepEnv:
 
 		# if new update file found from install, replace old one with new
 		if os.path.isfile(self.json_path_update):
-			if os.path.isfile(json_path) is True:
-				os.remove(json_path)
-			os.rename(self.json_path_update, json_path)
+			if os.path.isfile(self.json_path) is True:
+				os.remove(self.json_path)
+			os.rename(self.json_path_update, self.json_path)
 
 		# lazy load json, ie only load it when needed (util function defined)
 
@@ -317,7 +317,7 @@ def log(statement, vv_only=False):
     env = MCprepEnv()
     if env.verbose and vv_only and env.very_verbose:
         print(statement)
-    elif v:
+    elif env.verbose:
         print(statement)
 
 def updater_select_link_function(self, tag):
