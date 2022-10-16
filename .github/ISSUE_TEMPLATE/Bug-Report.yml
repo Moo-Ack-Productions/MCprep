@@ -29,7 +29,7 @@ body:
     id: what-happened
     attributes:
       label: What happened?
-      description: Also tell us, what did you expect to happen? Uploading screenshots is very helpful too.
+      description: Also tell us, what did you expect to happen? Uploading screenshots is very helpful too (https://screenshot.help/).
       placeholder: Tell us what you see!
     validations:
       required: true
