@@ -347,10 +347,13 @@ class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
 		path = bpy.path.abspath(context.scene.mcprep_mob_path)
 		ret = []
 		ret.append(("all", "No Category", "Uncategorized mob"))
-		ret += [
-			(f, f.title(), "{} mob".format(f.title()))
-			for f in os.listdir(path)
-			if os.path.isdir(os.path.join(path, f)) and not f.startswith(".")]
+		try:
+			ret += [
+				(f, f.title(), "{} mob".format(f.title()))
+				for f in os.listdir(path)
+				if os.path.isdir(os.path.join(path, f)) and not f.startswith(".")]
+		except FileNotFoundError:
+			pass  # mobs folder not found, so just pass.
 		ret.append(("no_category", "No Category", "Uncategorized mob"))  # last entry
 		return ret
 
@@ -668,9 +671,12 @@ def spawn_rigs_categories(self, context):
 	categories = conf.rig_categories
 	if not conf.rig_categories:
 		it = context.scene.mcprep_mob_path
-		categories = [
-			f for f in os.listdir(it) if os.path.isdir(os.path.join(it, f))]
-		conf.rig_categories = categories
+		try:
+			categories = [
+				f for f in os.listdir(it) if os.path.isdir(os.path.join(it, f))]
+			conf.rig_categories = categories
+		except FileNotFoundError:
+			pass  # Directory has changed or is not found.
 	for item in categories:
 		ui_name = item + " mobs"
 		items.append((

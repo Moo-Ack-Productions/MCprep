@@ -504,6 +504,12 @@ class McprepPreference(bpy.types.AddonPreferences):
 				row = box.row()
 				row.label(text="Entity file not found", icon="ERROR")
 
+			col = split.column()
+			col.prop(self, "effects_path", text="")
+			if not os.path.isdir(bpy.path.abspath(self.effects_path)):
+				row = box.row()
+				row.label(text="Effects folder not found", icon="ERROR")
+
 			row = layout.row()
 			row.scale_y = 0.7
 			row.label(text="Texture / Resource packs")
@@ -1552,13 +1558,23 @@ def effects_spawner(self, context):
 		box = col.box()
 		b_row = box.row()
 		b_col = b_row.column(align=False)
-		b_col.label(text="Effects")
+		b_col.label(text="Effects folder")
 		subrow = b_col.row(align=True)
 		subrow.prop(context.scene, "mcprep_effects_path", text="")
+		subrow.operator("mcprep.effects_path_reset", icon=LOAD_FACTORY, text="")
+
+		base = bpy.path.abspath(context.scene.mcprep_effects_path)
+		if not os.path.isdir(base):
+			b_col.label(text="Effects folder not found", icon="ERROR")
+		elif not os.path.isdir(os.path.join(base, "collection")):
+			b_col.label(text="Effects/collection folder not found", icon="ERROR")
+		elif not os.path.isdir(os.path.join(base, "geonodes")):
+			b_col.label(text="Effects/geonodes folder not found", icon="ERROR")
+		elif not os.path.isdir(os.path.join(base, "particle")):
+			b_col.label(text="Effects/particle folder not found", icon="ERROR")
 		b_row = box.row()
 		b_col = b_row.column(align=True)
-		b_col.operator("mcprep.reload_effects",
-			text="Reload effects")
+		b_col.operator("mcprep.reload_effects")
 
 
 class MCPREP_PT_spawn(bpy.types.Panel):

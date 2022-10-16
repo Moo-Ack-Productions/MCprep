@@ -375,7 +375,11 @@ class ItemSpawnBase():
 
 		# apply additional settings
 		# generate materials via prep, without re-loading image datablock
-		if status and not obj:
+		if status == "File not found" and not obj:
+			self.report({'WARNING'}, status)
+			bpy.ops.mcprep.prompt_reset_spawners('INVOKE_DEFAULT')
+			return {'CANCELLED'}
+		elif status and not obj:
 			self.report({'ERROR'}, status)
 			return {'CANCELLED'}
 		elif status:
