@@ -297,6 +297,7 @@ def download_user(self, context, username):
 	Reusable function from within two common operators for downloading skin.
 	Example link: http://minotar.net/skin/theduckcow
 	"""
+	env = conf.MCprepEnv()
 	conf.log("Downloading skin: " + username)
 
 	src_link = "http://minotar.net/skin/"
@@ -305,7 +306,7 @@ def download_user(self, context, username):
 		username.lower() + ".png")
 
 	try:
-		if conf.vv:
+		if env.very_verbose:
 			print("Download starting with url: " + src_link + username.lower())
 			print("to save location: " + saveloc)
 		urllib.request.urlretrieve(src_link + username.lower(), saveloc)

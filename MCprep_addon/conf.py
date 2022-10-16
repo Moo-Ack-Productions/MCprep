@@ -44,6 +44,7 @@ class MCprepEnv:
 		self.verbose = verbose
 		self.very_verbose = dev_build
 
+		self.data = None
 		self.json_data = None
 		self.json_path = os.path.join(
 						os.path.dirname(__file__),
@@ -157,7 +158,7 @@ class MCprepEnv:
 def init():
 
 	# -----------------------------------------------
-	# Verbose, use as conf.v
+	# Verbose, use as env.verbose
 	# Used to print out extra information, set false with distribution
 	# -----------------------------------------------
 	# ! Deprecated as of MCprep 3.4.2

@@ -299,9 +299,10 @@ class MCPREP_OT_materials_help(bpy.types.Operator):
 
 	def update_supress_help(self, context):
 		"""Update trigger for supressing help popups."""
-		if conf.v and self.suppress_help:
+		env = conf.MCprepEnv()
+		if env.verbose and self.suppress_help:
 			print("Supressing future help popups")
-		elif conf.v and not self.suppress_help:
+		elif env.verbose and not self.suppress_help:
 			print("Re-enabling popup warnings")
 
 	help_num = bpy.props.IntProperty(

@@ -735,7 +735,8 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		t5 = time.time()
 
 		# run timing calculations
-		if conf.vv:
+		env = conf.MCprepEnv()
+		if env.very_verbose:
 			loop_prep = sum(t1s) - sum(t0s)
 			face_process = sum(t2s) - sum(t1s)
 			instancing = sum(t3s) - sum(t2s)

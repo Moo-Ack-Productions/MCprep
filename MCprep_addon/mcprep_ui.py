@@ -320,7 +320,8 @@ class McprepPreference(bpy.types.AddonPreferences):
 	scriptdir = bpy.path.abspath(os.path.dirname(__file__))
 
 	def change_verbose(self, context):
-		conf.v = self.verbose
+		env = conf.MCprepEnv()
+		env.verbose = self.verbose
 
 	meshswap_path = bpy.props.StringProperty(
 		name="Meshswap path",
@@ -1887,6 +1888,7 @@ classes = (
 
 
 def register():
+	env = conf.MCprepEnv()
 	for cls in classes:
 		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
@@ -1935,7 +1937,7 @@ def register():
 		update=update_mcprep_texturepack_path,
 		default=addon_prefs.custom_texturepack_path)
 
-	conf.v = addon_prefs.verbose
+	env.verbose = addon_prefs.verbose
 	if hasattr(bpy.types, "INFO_MT_add"):  # 2.7
 		bpy.types.INFO_MT_add.append(draw_mcprepadd)
 	elif hasattr(bpy.types, "VIEW3D_MT_add"):  # 2.8
