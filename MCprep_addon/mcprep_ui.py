@@ -565,6 +565,21 @@ class McprepPreference(bpy.types.AddonPreferences):
 			p = col.operator("mcprep.openfolder", text="Open skin folder")
 			p.folder = self.skin_path
 
+			row = layout.row()
+			row.scale_y = 0.7
+			row.label(text="Effects")
+			box = layout.box()
+			split = util.layout_split(box, factor=factor_width)
+			col = split.column()
+			col.label(text="Effect folder")
+			col = split.column()
+			col.prop(self, "effects_path", text="")
+			split = util.layout_split(box, factor=factor_width)
+			col = split.column()
+			col = split.column()
+			p = col.operator("mcprep.openfolder", text="Open effects folder")
+			p.folder = self.effects_path
+
 			# misc settings
 			row = layout.row()
 			row.prop(self, "verbose")
@@ -1531,13 +1546,14 @@ def effects_spawner(self, context):
 	ops.location = util.get_cuser_location(context)
 	ops.frame = context.scene.frame_current
 
-	if not scn_props.show_settings_spawner:
+	col = layout.column()
+	if not scn_props.show_settings_effect:
 		col.prop(
-			scn_props, "show_settings_spawner",
+			scn_props, "show_settings_effect",
 			text="Advanced", icon="TRIA_RIGHT")
 	else:
 		col.prop(
-			scn_props, "show_settings_spawner",
+			scn_props, "show_settings_effect",
 			text="Advanced", icon="TRIA_DOWN")
 		box = col.box()
 		b_row = box.row()
@@ -1809,6 +1825,10 @@ class McprepProps(bpy.types.PropertyGroup):
 		default=False)
 	show_settings_spawner = bpy.props.BoolProperty(
 		name="show spawner settings",
+		description="Show extra MCprep panel settings",
+		default=False)
+	show_settings_effect = bpy.props.BoolProperty(
+		name="show effect settings",
 		description="Show extra MCprep panel settings",
 		default=False)
 
