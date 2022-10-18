@@ -141,12 +141,18 @@ class MCprepEnv:
 				os.path.join(icons_dir, "model_icon.png"),
 				'IMAGE')
 		except Exception as e:
-			log("Old verison of blender, no custom icons available")
-			log("\t" + str(e))
+			self.log("Old verison of blender, no custom icons available")
+			self.log("\t" + str(e))
 			global use_icons
 			self.use_icons = False
 			for iconset in collection_sets:
 				self.preview_collections[iconset] = ""
+    
+	def log(self, statement, vv_only=False):
+		if self.verbose and vv_only and self.very_verbose:
+			print(statement)
+		elif self.verbose:
+			print(statement)
 
 ENV = MCprepEnv(dev_build=True, verbose=True)
 
@@ -310,6 +316,7 @@ def icons_init():
 		for iconset in collection_sets:
 			preview_collections[iconset] = ""
 
+# ! Deprecated as of MCprep 3.4.2
 def log(statement, vv_only=False):
     if ENV.verbose and vv_only and ENV.very_verbose:
         print(statement)
