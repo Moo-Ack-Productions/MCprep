@@ -1357,8 +1357,8 @@ classes = (
 def register(bl_info):
 	"""Registering the operators in this module"""
 	from . import conf
-	env = conf.MCprepEnv()
-	updater.verbose = conf.env
+	from .conf import ENV
+	updater.verbose = ENV.verbose
 
 	# safer failure in case of issue loading module
 	if updater.error != None:

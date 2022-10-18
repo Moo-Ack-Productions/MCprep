@@ -37,6 +37,7 @@ from .spawner import mcmodel
 from .spawner import meshswap
 from .spawner import mobs
 from .spawner import spawn_util
+from .conf import ENV
 # from .import_bridge import bridge
 
 # blender 2.7 vs 2.8 icon selections
@@ -49,7 +50,6 @@ OPT_IN = 'URL' if util.bv28() else 'HAND'
 # Above for class functions/operators
 # Below for UI
 # -----------------------------------------------------------------------------
-
 
 class MCPREP_MT_mob_spawner(bpy.types.Menu):
 	"""Shift-A menu in the 3D view"""
@@ -75,12 +75,12 @@ class MCPREP_MT_mob_spawner(bpy.types.Menu):
 			# show icon if available
 			mob = scn_props.mob_list_all[mobkey]
 			icn = "mob-{}".format(mob.index)
-			if conf.use_icons and icn in conf.preview_collections["mobs"]:
+			if ENV.use_icons and icn in ENV.preview_collections["mobs"]:
 				ops = layout.operator(
 					"mcprep.mob_spawner",
 					text=mob.name,
-					icon_value=conf.preview_collections["mobs"][icn].icon_id)
-			elif conf.use_icons:
+					icon_value=ENV.preview_collections["mobs"][icn].icon_id)
+			elif ENV.use_icons:
 				ops = layout.operator(
 					"mcprep.mob_spawner", text=mob.name, icon="BLANK1")
 			else:
@@ -88,7 +88,7 @@ class MCPREP_MT_mob_spawner(bpy.types.Menu):
 			ops.mcmob_type = mob.mcmob_type
 
 			# Skip prep materials in case of unique shader.
-			if conf.json_data and mob.name in conf.json_data.get("mob_skip_prep", []):
+			if ENV.json_data and mob.name in ENV.json_data.get("mob_skip_prep", []):
 				ops.prep_materials = False
 
 
@@ -117,7 +117,7 @@ class MCPREP_MT_meshswap_place(bpy.types.Menu):
 			opr.location = util.get_cuser_location(context)
 
 			# Ensure meshswap with rigs is made real, so the rigs can be used.
-			if conf.json_data and blockset[1] in conf.json_data.get("make_real", []):
+			if ENV.json_data and blockset[1] in ENV.json_data.get("make_real", []):
 				opr.make_real = True
 
 
@@ -132,11 +132,11 @@ class MCPREP_MT_item_spawn(bpy.types.Menu):
 			layout.label(text="No items found!")
 		for item in context.scene.mcprep_props.item_list:
 			icn = "item-{}".format(item.index)
-			if conf.use_icons and icn in conf.preview_collections["items"]:
+			if ENV.use_icons and icn in ENV.preview_collections["items"]:
 				ops = layout.operator(
 					"mcprep.spawn_item", text=item.name,
-					icon_value=conf.preview_collections["items"][icn].icon_id)
-			elif conf.use_icons:
+					icon_value=ENV.preview_collections["items"][icn].icon_id)
+			elif ENV.use_icons:
 				ops = layout.operator(
 					"mcprep.spawn_item", text=item.name, icon="BLANK1")
 			else:
@@ -172,11 +172,11 @@ class MCPREP_MT_effect_spawn(bpy.types.Menu):
 				ops.frame = context.scene.frame_current
 			elif effect.effect_type == effects.IMG_SEQ:
 				icon = "effects-{}".format(effect.index)
-				if conf.use_icons and icon in conf.preview_collections["effects"]:
+				if ENV.use_icons and icon in ENV.preview_collections["effects"]:
 					ops = col.operator(
 						"mcprep.spawn_instant_effect",
 						text=effect.name,
-						icon_value=conf.preview_collections["effects"][icon].icon_id)
+						icon_value=ENV.preview_collections["effects"][icon].icon_id)
 				else:
 					ops = col.operator(
 						"mcprep.spawn_instant_effect",
@@ -239,13 +239,13 @@ class MCPREP_MT_3dview_add(bpy.types.Menu):
 		layout = self.layout
 		props = context.scene.mcprep_props
 
-		if conf.preview_collections["main"] != "":
-			spawner_icon = conf.preview_collections["main"].get("spawner_icon")
-			meshswap_icon = conf.preview_collections["main"].get("meshswap_icon")
-			sword_icon = conf.preview_collections["main"].get("sword_icon")
-			effects_icon = conf.preview_collections["main"].get("effects_icon")
-			entity_icon = conf.preview_collections["main"].get("entity_icon")
-			model_icon = conf.preview_collections["main"].get("model_icon")
+		if ENV.preview_collections["main"] != "":
+			spawner_icon = ENV.preview_collections["main"].get("spawner_icon")
+			meshswap_icon = ENV.preview_collections["main"].get("meshswap_icon")
+			sword_icon = ENV.preview_collections["main"].get("sword_icon")
+			effects_icon = ENV.preview_collections["main"].get("effects_icon")
+			entity_icon = ENV.preview_collections["main"].get("entity_icon")
+			model_icon = ENV.preview_collections["main"].get("model_icon")
 		else:
 			spawner_icon = None
 			meshswap_icon = None
@@ -255,7 +255,7 @@ class MCPREP_MT_3dview_add(bpy.types.Menu):
 			model_icon = None
 
 		all_loaded = props.mob_list and props.meshswap_list and props.item_list
-		if not conf.loaded_all_spawners and not all_loaded:
+		if not ENV.loaded_all_spawners and not all_loaded:
 			row = layout.row()
 			row.operator(
 				"mcprep.reload_spawners", text="Load spawners", icon=HAND_ICON)
@@ -320,8 +320,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 	scriptdir = bpy.path.abspath(os.path.dirname(__file__))
 
 	def change_verbose(self, context):
-		env = conf.MCprepEnv()
-		env.verbose = self.verbose
+		ENV.verbose = self.verbose
 
 	meshswap_path = bpy.props.StringProperty(
 		name="Meshswap path",
@@ -899,18 +898,18 @@ class MCPREP_PT_skins(bpy.types.Panel):
 		row = layout.row()
 		col = row.column()
 
-		is_sortable = len(conf.skin_list) > 1
+		is_sortable = len(ENV.skin_list) > 1
 		rows = 1
 		if (is_sortable):
 			rows = 4
 
 		# any other conditions for needing reloading?
-		if not conf.skin_list:
+		if not ENV.skin_list:
 			col = layout.column()
 			col.label(text="No skins found/loaded")
 			p = col.operator(
 				"mcprep.reload_skins", text="Press to reload", icon="ERROR")
-		elif conf.skin_list and len(conf.skin_list) <= sind:
+		elif ENV.skin_list and len(ENV.skin_list) <= sind:
 			col = layout.column()
 			col.label(text="Reload skins")
 			p = col.operator(
@@ -926,10 +925,10 @@ class MCPREP_PT_skins(bpy.types.Panel):
 
 			row = col.row(align=True)
 			row.scale_y = 1.5
-			if conf.skin_list:
-				skinname = bpy.path.basename(conf.skin_list[sind][0])
+			if ENV.skin_list:
+				skinname = bpy.path.basename(ENV.skin_list[sind][0])
 				p = row.operator("mcprep.applyskin", text="Apply " + skinname)
-				p.filepath = conf.skin_list[sind][1]
+				p.filepath = ENV.skin_list[sind][1]
 			else:
 				row.enabled = False
 				p = row.operator("mcprep.skin_swapper", text="No skins found")
@@ -972,7 +971,7 @@ class MCPREP_PT_skins(bpy.types.Panel):
 					row.enabled = False
 					row.operator(
 						"mcprep.spawn_with_skin", text="Reload mobs below")
-				elif not conf.skin_list:
+				elif not ENV.skin_list:
 					row.enabled = False
 					row.operator(
 						"mcprep.spawn_with_skin", text="Reload skins above")
@@ -1113,7 +1112,7 @@ def mob_spawner(self, context):
 		p.mcmob_type = mcmob_type
 
 	# Skip prep materials in case of unique shader.
-	if conf.json_data and name in conf.json_data.get("mob_skip_prep", []):
+	if ENV.json_data and name in ENV.json_data.get("mob_skip_prep", []):
 		p.prep_materials = False
 
 	p = col.operator("mcprep.mob_install_menu")
@@ -1153,7 +1152,7 @@ def mob_spawner(self, context):
 			b_col.operator("mcprep.mob_install_icon")
 		else:
 			icon_index = scn_props.mob_list[scn_props.mob_list_index].index
-			if "mob-{}".format(icon_index) in conf.preview_collections["mobs"]:
+			if "mob-{}".format(icon_index) in ENV.preview_collections["mobs"]:
 				b_col.operator(
 					"mcprep.mob_install_icon", text="Change mob icon")
 			else:
@@ -1219,7 +1218,7 @@ def meshswap_spawner(self, context):
 		p.method = method
 		p.location = util.get_cuser_location(context)
 		# Ensure meshswap with rigs is made real, so the rigs can be used.
-		if conf.json_data and block in conf.json_data.get("make_real", []):
+		if ENV.json_data and block in ENV.json_data.get("make_real", []):
 			p.make_real = True
 
 	else:
@@ -1259,7 +1258,7 @@ def meshswap_spawner(self, context):
 def item_spawner(self, context):
 	"""Code for drawing the item spawner"""
 	scn_props = context.scene.mcprep_props
-
+	
 	layout = self.layout
 	layout.label(text="Generate items from textures")
 	split = layout.split()
@@ -1595,9 +1594,9 @@ class MCPREP_PT_mob_spawner(bpy.types.Panel):
 		mob_spawner(self, context)
 
 	def draw_header(self, context):
-		if not conf.use_icons or conf.preview_collections["main"] == "":
+		if not ENV.use_icons or ENV.preview_collections["main"] == "":
 			return
-		icon = conf.preview_collections["main"].get("spawner_icon")
+		icon = ENV.preview_collections["main"].get("spawner_icon")
 		if not icon:
 			return
 		self.layout.label(text="", icon_value=icon.icon_id)
@@ -1620,9 +1619,9 @@ class MCPREP_PT_model_spawner(bpy.types.Panel):
 		model_spawner(self, context)
 
 	def draw_header(self, context):
-		if not conf.use_icons or conf.preview_collections["main"] == "":
+		if not ENV.use_icons or ENV.preview_collections["main"] == "":
 			return
-		icon = conf.preview_collections["main"].get("model_icon")
+		icon = ENV.preview_collections["main"].get("model_icon")
 		if not icon:
 			return
 		self.layout.label(text="", icon_value=icon.icon_id)
@@ -1646,9 +1645,9 @@ class MCPREP_PT_item_spawner(bpy.types.Panel):
 		item_spawner(self, context)
 
 	def draw_header(self, context):
-		if not conf.use_icons or conf.preview_collections["main"] == "":
+		if not ENV.use_icons or ENV.preview_collections["main"] == "":
 			return
-		icon = conf.preview_collections["main"].get("sword_icon")
+		icon = ENV.preview_collections["main"].get("sword_icon")
 		if not icon:
 			return
 		self.layout.label(text="", icon_value=icon.icon_id)
@@ -1671,9 +1670,9 @@ class MCPREP_PT_effects_spawner(bpy.types.Panel):
 		effects_spawner(self, context)
 
 	def draw_header(self, context):
-		if not conf.use_icons or conf.preview_collections["main"] == "":
+		if not ENV.use_icons or ENV.preview_collections["main"] == "":
 			return
-		icon = conf.preview_collections["main"].get("effects_icon")
+		icon = ENV.preview_collections["main"].get("effects_icon")
 		if not icon:
 			return
 		self.layout.label(text="", icon_value=icon.icon_id)
@@ -1696,9 +1695,9 @@ class MCPREP_PT_entity_spawner(bpy.types.Panel):
 		entity_spawner(self, context)
 
 	def draw_header(self, context):
-		if not conf.use_icons or conf.preview_collections["main"] == "":
+		if not ENV.use_icons or ENV.preview_collections["main"] == "":
 			return
-		icon = conf.preview_collections["main"].get("entity_icon")
+		icon = ENV.preview_collections["main"].get("entity_icon")
 		if not icon:
 			return
 		self.layout.label(text="", icon_value=icon.icon_id)
@@ -1721,9 +1720,9 @@ class MCPREP_PT_meshswap_spawner(bpy.types.Panel):
 		meshswap_spawner(self, context)
 
 	def draw_header(self, context):
-		if not conf.use_icons or conf.preview_collections["main"] == "":
+		if not ENV.use_icons or ENV.preview_collections["main"] == "":
 			return
-		icon = conf.preview_collections["main"].get("meshswap_icon")
+		icon = ENV.preview_collections["main"].get("meshswap_icon")
 		if not icon:
 			return
 		self.layout.label(text="", icon_value=icon.icon_id)
@@ -1738,7 +1737,7 @@ class MCPREP_PT_meshswap_spawner(bpy.types.Panel):
 def draw_mcprepadd(self, context):
 	"""Append to Shift+A, icon for top-level MCprep section."""
 	layout = self.layout
-	pcoll = conf.preview_collections["main"]
+	pcoll = ENV.preview_collections["main"]
 	if pcoll != "":
 		my_icon = pcoll["crafting_icon"]
 		layout.menu(MCPREP_MT_3dview_add.bl_idname, icon_value=my_icon.icon_id)
@@ -1771,8 +1770,8 @@ def mcprep_image_tools(self, context):
 		txt = "Spawn as item"
 	if not img:
 		row.enabled = False
-	if conf.preview_collections["main"] != "":
-		sword_icon = conf.preview_collections["main"]["sword_icon"]
+	if ENV.preview_collections["main"] != "":
+		sword_icon = ENV.preview_collections["main"]["sword_icon"]
 	else:
 		sword_icon = None
 
@@ -1888,7 +1887,6 @@ classes = (
 
 
 def register():
-	env = conf.MCprepEnv()
 	for cls in classes:
 		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
@@ -1937,7 +1935,7 @@ def register():
 		update=update_mcprep_texturepack_path,
 		default=addon_prefs.custom_texturepack_path)
 
-	env.verbose = addon_prefs.verbose
+	ENV.verbose = addon_prefs.verbose
 	if hasattr(bpy.types, "INFO_MT_add"):  # 2.7
 		bpy.types.INFO_MT_add.append(draw_mcprepadd)
 	elif hasattr(bpy.types, "VIEW3D_MT_add"):  # 2.8

@@ -33,13 +33,7 @@ except:
 
 
 class MCprepEnv:
-	_instance = None
-	def __new__(cls, *args, **kwargs):
-		if cls._instance is None:
-			cls._instance = super().__new__(cls, *args, **kwargs)
-		return cls._instance
-
-	def set_env(self, dev_build=False, verbose=False):
+	def __init__(self, dev_build=False, verbose=False):
 		self.dev_build = dev_build
 		self.verbose = verbose
 		self.very_verbose = dev_build
@@ -153,6 +147,8 @@ class MCprepEnv:
 			self.use_icons = False
 			for iconset in collection_sets:
 				self.preview_collections[iconset] = ""
+
+ENV = MCprepEnv(dev_build=True, verbose=True)
 
 # ! Deprecated as of MCprep 3.4.2
 def init():
@@ -315,10 +311,9 @@ def icons_init():
 			preview_collections[iconset] = ""
 
 def log(statement, vv_only=False):
-    env = MCprepEnv()
-    if env.verbose and vv_only and env.very_verbose:
+    if ENV.verbose and vv_only and ENV.very_verbose:
         print(statement)
-    elif env.verbose:
+    elif ENV.verbose:
         print(statement)
 
 def updater_select_link_function(self, tag):
@@ -344,18 +339,17 @@ def register():
 
 
 def unregister():
-	env = MCprepEnv()
-	if env.use_icons:
-		for pcoll in env.preview_collections.values():
+	if ENV.use_icons:
+		for pcoll in ENV.preview_collections.values():
 			try:
 				bpy.utils.previews.remove(pcoll)
 			except:
 				log('Issue clearing preview set ' + str(pcoll))
-	env.preview_collections.clear()
+	ENV.preview_collections.clear()
 
-	env.json_data = None  # actively clearing out json data for next open
+	ENV.json_data = None  # actively clearing out json data for next open
 
-	env.loaded_all_spawners = False
-	env.skin_list = []
-	env.rig_categories = []
-	env.material_sync_cache = []
+	ENV.loaded_all_spawners = False
+	ENV.skin_list = []
+	ENV.rig_categories = []
+	ENV.material_sync_cache = []

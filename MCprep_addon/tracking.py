@@ -28,8 +28,6 @@ TIMEOUT = 60
 import os
 import bpy
 
-from MCprep_addon.conf import MCprepEnv
-
 # remaining, wrap in safe-importing
 try:
 	from . import conf
@@ -45,6 +43,7 @@ try:
 	import textwrap
 	import time
 	from datetime import datetime
+	from .conf import ENV
 except Exception as err:
 	print("[MCPREP Error] Failed tracker module load, invalid import module:")
 	print('\t'+str(err))
@@ -1001,8 +1000,7 @@ def register(bl_info):
 
 	# used to define which server source, not just if's below
 	if VALID_IMPORT:
-		env = MCprepEnv()
-		Tracker.dev = env.dev_build # True or False
+		Tracker.dev = ENV.dev_build # True or False
 	else:
 		Tracker.dev = False
 

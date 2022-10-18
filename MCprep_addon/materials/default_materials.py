@@ -26,23 +26,25 @@ from .. import tracking
 from .. import util
 from . import sync
 
+from ..conf import ENV
+
 
 def default_material_in_sync_library(default_material, context):
 	"""Returns true if the material is in the sync mat library blend file."""
-	if conf.material_sync_cache is None:
+	if ENV.material_sync_cache is None:
 		sync.reload_material_sync_library(context)
-	if util.nameGeneralize(default_material) in conf.material_sync_cache:
+	if util.nameGeneralize(default_material) in ENV.material_sync_cache:
 		return True
-	elif default_material in conf.material_sync_cache:
+	elif default_material in ENV.material_sync_cache:
 		return True
 	return False
 
 
 def sync_default_material(context, material, default_material, engine):
 	"""Normal sync material method but with duplication and name change."""
-	if default_material in conf.material_sync_cache:
+	if default_material in ENV.material_sync_cache:
 		import_name = default_material
-	elif util.nameGeneralize(default_material) in conf.material_sync_cache:
+	elif util.nameGeneralize(default_material) in ENV.material_sync_cache:
 		import_name = util.nameGeneralize(default_material)
 
 	# If link is true, check library material not already linked.

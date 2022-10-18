@@ -26,6 +26,7 @@ from .. import conf
 from .. import tracking
 from .. import util
 
+from ..conf import ENV
 
 # -----------------------------------------------------------------------------
 # Utilities
@@ -34,7 +35,7 @@ from .. import util
 @persistent
 def clear_sync_cache(scene):
 	conf.log("Resetting sync mat cache", vv_only=True)
-	conf.material_sync_cache = None
+	ENV.material_sync_cache = None
 
 
 def get_sync_blend(context):
@@ -47,21 +48,21 @@ def reload_material_sync_library(context):
 	"""Reloads the library and cache"""
 	sync_file = get_sync_blend(context)
 	if not os.path.isfile(sync_file):
-		conf.material_sync_cache = []
+		ENV.material_sync_cache = []
 		return
 
 	with bpy.data.libraries.load(sync_file) as (data_from, _):
-		conf.material_sync_cache = list(data_from.materials)
-	conf.log("Updated sync cache", vv_only=True)
+		ENV.material_sync_cache = list(data_from.materials)
+	ENV.log("Updated sync cache", vv_only=True)
 
 
 def material_in_sync_library(material, context):
 	"""Returns true if the material is in the sync mat library blend file"""
-	if conf.material_sync_cache is None:
+	if ENV.material_sync_cache is None:
 		reload_material_sync_library(context)
-	if util.nameGeneralize(material.name) in conf.material_sync_cache:
+	if util.nameGeneralize(material.name) in ENV.material_sync_cache:
 		return True
-	elif material.name in conf.material_sync_cache:
+	elif material.name in ENV.material_sync_cache:
 		return True
 	return False
 
@@ -73,9 +74,9 @@ def sync_material(context, material, link, replace):
 		0 if nothing modified, 1 if modified
 		None if no error or string if error
 	"""
-	if material.name in conf.material_sync_cache:
+	if material.name in ENV.material_sync_cache:
 		import_name = material.name
-	elif util.nameGeneralize(material.name) in conf.material_sync_cache:
+	elif util.nameGeneralize(material.name) in ENV.material_sync_cache:
 		import_name = util.nameGeneralize(material.name)
 
 	# if link is true, check library material not already linked

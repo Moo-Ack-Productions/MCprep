@@ -29,6 +29,7 @@ from . import generate
 from .. import tracking
 from .. import util
 
+from ..conf import ENV
 
 # -----------------------------------------------------------------------------
 # Support functions
@@ -57,12 +58,12 @@ def reloadSkinList(context):
 
 	# clear lists
 	context.scene.mcprep_skins_list.clear()
-	conf.skin_list = []
+	ENV.skin_list = []
 
 	# recreate
 	for i, (skin, description) in enumerate(skinlist, 1):
 		item = context.scene.mcprep_skins_list.add()
-		conf.skin_list.append(
+		ENV.skin_list.append(
 			(skin, os.path.join(skinfolder, skin))
 		)
 		item.label = description
@@ -297,7 +298,6 @@ def download_user(self, context, username):
 	Reusable function from within two common operators for downloading skin.
 	Example link: http://minotar.net/skin/theduckcow
 	"""
-	env = conf.MCprepEnv()
 	conf.log("Downloading skin: " + username)
 
 	src_link = "http://minotar.net/skin/"
@@ -306,7 +306,7 @@ def download_user(self, context, username):
 		username.lower() + ".png")
 
 	try:
-		if env.very_verbose:
+		if ENV.very_verbose:
 			print("Download starting with url: " + src_link + username.lower())
 			print("to save location: " + saveloc)
 		urllib.request.urlretrieve(src_link + username.lower(), saveloc)
@@ -465,8 +465,8 @@ class MCPREP_OT_apply_username_skin(bpy.types.Operator):
 			self.report({"ERROR"}, "Invalid username")
 			return {'CANCELLED'}
 
-		skins = [str(skin[0]).lower() for skin in conf.skin_list]
-		paths = [skin[1] for skin in conf.skin_list]
+		skins = [str(skin[0]).lower() for skin in ENV.skin_list]
+		paths = [skin[1] for skin in ENV.skin_list]
 		if self.username.lower() not in skins or not self.skip_redownload:
 			# Do the download
 			saveloc = download_user(self, context, self.username)
@@ -572,7 +572,7 @@ class MCPREP_OT_remove_skin(bpy.types.Operator):
 			self, width=400 * util.ui_scale())
 
 	def draw(self, context):
-		skin_path = conf.skin_list[context.scene.mcprep_skins_list_index]
+		skin_path = ENV.skin_list[context.scene.mcprep_skins_list_index]
 		col = self.layout.column()
 		col.scale_y = 0.7
 		col.label(text="Warning, will delete file {} from".format(
@@ -582,14 +582,14 @@ class MCPREP_OT_remove_skin(bpy.types.Operator):
 	@tracking.report_error
 	def execute(self, context):
 
-		if not conf.skin_list:
+		if not ENV.skin_list:
 			self.report({"ERROR"}, "No skins loaded in memory, try reloading")
 			return {'CANCELLED'}
-		if context.scene.mcprep_skins_list_index >= len(conf.skin_list):
+		if context.scene.mcprep_skins_list_index >= len(ENV.skin_list):
 			self.report({"ERROR"}, "Indexing error")
 			return {'CANCELLED'}
 
-		file = conf.skin_list[context.scene.mcprep_skins_list_index][-1]
+		file = ENV.skin_list[context.scene.mcprep_skins_list_index][-1]
 
 		if os.path.isfile(file) is False:
 			self.report({"ERROR"}, "Skin not found to delete")
@@ -598,8 +598,8 @@ class MCPREP_OT_remove_skin(bpy.types.Operator):
 
 		# refresh the folder
 		bpy.ops.mcprep.reload_skins()
-		if context.scene.mcprep_skins_list_index >= len(conf.skin_list):
-			context.scene.mcprep_skins_list_index = len(conf.skin_list) - 1
+		if context.scene.mcprep_skins_list_index >= len(ENV.skin_list):
+			context.scene.mcprep_skins_list_index = len(ENV.skin_list) - 1
 
 		# in future, select multiple
 		self.report({"INFO"}, "Removed " + bpy.path.basename(file))
@@ -663,7 +663,7 @@ class MCPREP_OT_spawn_mob_with_skin(bpy.types.Operator):
 	@tracking.report_error
 	def execute(self, context):
 		scn_props = context.scene.mcprep_props
-		if not conf.skin_list:
+		if not ENV.skin_list:
 			self.report({'ERROR'}, "No skins found")
 			return {'CANCELLED'}
 
@@ -679,7 +679,7 @@ class MCPREP_OT_spawn_mob_with_skin(bpy.types.Operator):
 
 		# bpy.ops.mcprep.spawn_with_skin() spawn based on active mob
 		ind = context.scene.mcprep_skins_list_index
-		_ = loadSkinFile(self, context, conf.skin_list[ind][1])
+		_ = loadSkinFile(self, context, ENV.skin_list[ind][1])
 
 		return {'FINISHED'}
 
@@ -736,7 +736,7 @@ class MCPREP_OT_download_username_list(bpy.types.Operator):
 		user_list = list(set(user_list))  # Make list unique.
 
 		# Currently loaded
-		skins = [str(skin[0]).lower() for skin in conf.skin_list]
+		skins = [str(skin[0]).lower() for skin in ENV.skin_list]
 		issue_skins = []
 		for username in user_list:
 			if username.lower() not in skins or not self.skip_redownload:

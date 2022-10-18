@@ -26,6 +26,8 @@ from .. import conf
 from .. import util
 from .. import tracking
 
+from ..conf import ENV
+
 try:
 	import bpy.utils.previews
 except ImportError:
@@ -44,9 +46,9 @@ def reload_items(context):
 	extensions = [".png", ".jpg", ".jpeg"]
 
 	mcprep_props.item_list.clear()
-	if conf.use_icons and conf.preview_collections["items"]:
+	if ENV.use_icons and ENV.preview_collections["items"]:
 		try:
-			bpy.utils.previews.remove(conf.preview_collections["items"])
+			bpy.utils.previews.remove(ENV.preview_collections["items"])
 		except Exception as e:
 			print(e)
 			conf.log("MCPREP: Failed to remove icon set, items")
@@ -89,9 +91,9 @@ def reload_items(context):
 		asset.index = i
 
 		# if available, load the custom icon too
-		if not conf.use_icons or conf.preview_collections["items"] == "":
+		if not ENV.use_icons or ENV.preview_collections["items"] == "":
 			continue
-		conf.preview_collections["items"].load(
+		ENV.preview_collections["items"].load(
 			"item-{}".format(i), item_file, 'IMAGE')
 
 	if mcprep_props.item_list_index >= len(mcprep_props.item_list):
