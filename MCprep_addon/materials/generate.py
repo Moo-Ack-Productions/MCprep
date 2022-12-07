@@ -961,7 +961,7 @@ def set_saturation_material(mat):
 def create_node(tree_nodes, node_type):
 	"""Function to create node"""
 	if node_type == 'ShaderNodeMixRGB': # For MixRGB in 3.4 become Legacy 
-		if bpy.app.version >= (3, 4, 0):
+		if util.min_bv((3, 4, 0)):
 			node = tree_nodes.new('ShaderNodeMix')
 			node.data_type = 'RGBA'
 			inputs = [0,6,7]
@@ -971,8 +971,8 @@ def create_node(tree_nodes, node_type):
 			inputs = [0,1,2]
 			outputs = [0]
 		sockets= {
-		"inputs": inputs,
-		"outputs": outputs
+			"inputs": inputs,
+			"outputs": outputs
 		}
 		return node, sockets
 	else:
