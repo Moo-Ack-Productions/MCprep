@@ -960,23 +960,25 @@ def set_saturation_material(mat):
 
 def create_node(tree_nodes, node_type):
 	"""Function to create node"""
-	sockets= {
-		"inputs": inputs,
-		"outputs": outputs
-	}
 	if node_type == 'ShaderNodeMixRGB': # For MixRGB in 3.4 become Legacy 
 		if bpy.app.version >= (3, 4, 0):
 			node = tree_nodes.new('ShaderNodeMix')
 			node.data_type = 'RGBA'
-			inputs = [0,5,6]
+			inputs = [0,6,7]
 			outputs = [2]
 		else:
 			node = tree_nodes.new('ShaderNodeMixRGB')
 			inputs = [0,1,2]
 			outputs = [0]
+		sockets= {
+		"inputs": inputs,
+		"outputs": outputs
+		}
+		return node, sockets
 	else:
 		node = tree_nodes.new(node_type) 
-	return node, sockets
+		return node
+	
 
 # -----------------------------------------------------------------------------
 # Generating node groups
@@ -1151,9 +1153,9 @@ def texgen_specular(mat, passes, nodeInputs, use_reflections):
 	else:
 		conf.log("Texture desaturated: " + canon, vv_only=True)
 		desat_color = conf.json_data['blocks']['desaturated'][canon]
-		if len(desat_color) < len(nodeSaturateMix.inputs[2].default_value):
+		if len(desat_color) < len(nodeSaturateMix.inputs[saturateMixIn[2]].default_value):
 			desat_color.append(1.0)
-		nodeSaturateMix.inputs[2].default_value = desat_color
+		nodeSaturateMix.inputs[saturateMixIn[2]].default_value = desat_color
 		nodeSaturateMix.mute = False
 		nodeSaturateMix.hide = False
 
@@ -1287,9 +1289,9 @@ def texgen_seus(mat, passes, nodeInputs, use_reflections):
 	else:
 		conf.log("Texture desaturated: " + canon, vv_only=True)
 		desat_color = conf.json_data['blocks']['desaturated'][canon]
-		if len(desat_color) < len(nodeSaturateMix.inputs[2].default_value):
+		if len(desat_color) < len(nodeSaturateMix.inputs[saturateMixIn[2]].default_value):
 			desat_color.append(1.0)
-		nodeSaturateMix.inputs[2].default_value = desat_color
+		nodeSaturateMix.inputs[saturateMixIn[2]].default_value = desat_color
 		nodeSaturateMix.mute = False
 		nodeSaturateMix.hide = False
 
@@ -1359,11 +1361,12 @@ def matgen_cycles_simple(
 		principled.inputs["Metallic"].default_value = 0
 
 	saturateMixIn = sockets["inputs"]
+	saturateMixOut = sockets["outputs"]
 	# Specular tends to cause some issues with how blocks look, so let's disable it
 	principled.inputs["Specular"].default_value = 0
 
 	# Connect nodes.
-	links.new(nodeSaturateMix.outputs[0], principled.inputs[0])
+	links.new(nodeSaturateMix.outputs[saturateMixOut[0]], principled.inputs[0])
 	links.new(principled.outputs["BSDF"], node_out.inputs[0])
 
 	if only_solid is True or checklist(canon, "solid"):
@@ -1384,7 +1387,7 @@ def matgen_cycles_simple(
 		inputs = [inp.name for inp in principled.inputs]
 		if 'Emission Strength' in inputs:  # Later 2.9 versions only.
 			principled.inputs['Emission Strength'].default_value = 1
-		links.new(nodeSaturateMix.outputs[0], principled.inputs["Emission"])
+		links.new(nodeSaturateMix.outputs[saturateMixOut[0]], principled.inputs["Emission"])
 
 	# reapply animation data if any to generated nodes
 	apply_texture_animation_pass_settings(mat, animated_data)
@@ -1406,9 +1409,9 @@ def matgen_cycles_simple(
 	else:
 		conf.log("Texture desaturated: " + canon, vv_only=True)
 		desat_color = conf.json_data['blocks']['desaturated'][canon]
-		if len(desat_color) < len(nodeSaturateMix.inputs[2].default_value):
+		if len(desat_color) < len(nodeSaturateMix.inputs[saturateMixIn[2]].default_value):
 			desat_color.append(1.0)
-		nodeSaturateMix.inputs[2].default_value = desat_color
+		nodeSaturateMix.inputs[saturateMixIn[2]].default_value = desat_color
 		nodeSaturateMix.mute = False
 		nodeSaturateMix.hide = False
 
@@ -1417,7 +1420,7 @@ def matgen_cycles_simple(
 	nodeSaturateMix["SATURATE"] = True
 	nodeTexDiff.image = image_diff
 
-	links.new(nodeTexDiff.outputs[0], nodeSaturateMix.inputs[1])
+	links.new(nodeTexDiff.outputs[0], nodeSaturateMix.inputs[saturateMixIn[1]])
 
 	return 0
 
@@ -1860,6 +1863,8 @@ def matgen_special_water(mat, passes):
 	nodeTexNorm.label = "Normal Tex"
 	nodeNormalInv.label = "Normal Inverse"
 
+	saturateMixIn = sockets["inputs"]
+	saturateMixOut = sockets["outputs"]
 	# Sets default values
 	nodeNormalInv.mapping.curves[1].points[0].location = (0, 1)
 	nodeNormalInv.mapping.curves[1].points[1].location = (1, 0)
@@ -1933,9 +1938,9 @@ def matgen_special_water(mat, passes):
 	else:
 		conf.log("Texture desaturated: " + canon, vv_only=True)
 		desat_color = conf.json_data['blocks']['desaturated'][canon]
-		if len(desat_color) < len(nodeSaturateMix.inputs[2].default_value):
+		if len(desat_color) < len(nodeSaturateMix.inputs[saturateMixIn[2]].default_value):
 			desat_color.append(1.0)
-		nodeSaturateMix.inputs[2].default_value = desat_color
+		nodeSaturateMix.inputs[saturateMixIn[2]].default_value = desat_color
 		nodeSaturateMix.mute = False
 		nodeSaturateMix.hide = False
 
