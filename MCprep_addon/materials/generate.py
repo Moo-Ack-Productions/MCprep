@@ -960,19 +960,23 @@ def set_saturation_material(mat):
 
 def create_node(tree_nodes, node_type):
 	"""Function to create node"""
-	# For any node MixRGB in 3.4 become Legacy 
 	sockets= {
 		"inputs": inputs,
 		"outputs": outputs
 	}
-	if node_type == 'ShaderNodeMixRGB' and bpy.app.version >= (3, 4, 0):
-		node = tree_nodes.new('ShaderNodeMix')
-		node.data_type = 'RGBA'
-		inputs = [5,6]
-		outputs = [2]
+	if node_type == 'ShaderNodeMixRGB': # For MixRGB in 3.4 become Legacy 
+		if bpy.app.version >= (3, 4, 0):
+			node = tree_nodes.new('ShaderNodeMix')
+			node.data_type = 'RGBA'
+			inputs = [0,5,6]
+			outputs = [2]
+		else:
+			node = tree_nodes.new('ShaderNodeMixRGB')
+			inputs = [0,1,2]
+			outputs = [0]
 	else:
 		node = tree_nodes.new(node_type) 
-	return node,sockets
+	return node, sockets
 
 # -----------------------------------------------------------------------------
 # Generating node groups
@@ -1083,6 +1087,8 @@ def texgen_specular(mat, passes, nodeInputs, use_reflections):
 	nodeNormalInv.mapping.curves[1].points[0].location = (0, 1)
 	nodeNormalInv.mapping.curves[1].points[1].location = (1, 0)
 
+	saturateMixIn = sockets["inputs"]
+	saturateMixOut = sockets["outputs"]
 	# Positions the nodes
 	nodeTexDiff.location = (-380, 140)
 	nodeTexNorm.location = (-680, -500)
@@ -1093,13 +1099,13 @@ def texgen_specular(mat, passes, nodeInputs, use_reflections):
 	nodeNormalInv.location = (-380, -500)
 
 	# Links the nodes to the reroute nodes.
-	links.new(nodeTexDiff.outputs["Color"], nodeSaturateMix.inputs["Color1"])
+	links.new(nodeTexDiff.outputs["Color"], nodeSaturateMix.inputs[saturateMixIn[1]])
 	links.new(nodeTexNorm.outputs["Color"], nodeNormalInv.inputs["Color"])
 	links.new(nodeNormalInv.outputs["Color"], nodeNormal.inputs["Color"])
 	links.new(nodeTexSpec.outputs["Color"], nodeSpecInv.inputs["Color"])
 
 	for i in nodeInputs[0]:
-		links.new(nodeSaturateMix.outputs["Color"], i)
+		links.new(nodeSaturateMix.outputs[saturateMixOut[0]], i)
 	for i in nodeInputs[1]:
 		links.new(nodeTexDiff.outputs["Alpha"], i)
 	if image_spec and use_reflections:
@@ -1206,6 +1212,8 @@ def texgen_seus(mat, passes, nodeInputs, use_reflections):
 	nodeNormalInv.mapping.curves[1].points[0].location = (0, 1)
 	nodeNormalInv.mapping.curves[1].points[1].location = (1, 0)
 
+	saturateMixIn = sockets["inputs"]
+	saturateMixOut = sockets["outputs"]
 	# Positions the nodes
 	nodeTexDiff.location = (-380, 140)
 	nodeTexSpec.location = (-580, -180)
@@ -1217,14 +1225,14 @@ def texgen_seus(mat, passes, nodeInputs, use_reflections):
 	nodeNormalInv.location = (-380, -500)
 
 	# Links the nodes to the reroute nodes.
-	links.new(nodeTexDiff.outputs["Color"], nodeSaturateMix.inputs["Color1"])
+	links.new(nodeTexDiff.outputs["Color"], nodeSaturateMix.inputs[saturateMixIn[1]])
 	links.new(nodeTexNorm.outputs["Color"], nodeNormalInv.inputs["Color"])
 	links.new(nodeNormalInv.outputs["Color"], nodeNormal.inputs["Color"])
 	links.new(nodeTexSpec.outputs["Color"], nodeSeperate.inputs["Image"])
 	links.new(nodeSeperate.outputs["R"], nodeSpecInv.inputs["Color"])
 
 	for i in nodeInputs[0]:
-		links.new(nodeSaturateMix.outputs["Color"], i)
+		links.new(nodeSaturateMix.outputs[saturateMixOut[0]], i)
 	for i in nodeInputs[1]:
 		links.new(nodeTexDiff.outputs["Alpha"], i)
 	if image_spec and use_reflections:
@@ -1350,6 +1358,7 @@ def matgen_cycles_simple(
 	else:
 		principled.inputs["Metallic"].default_value = 0
 
+	saturateMixIn = sockets["inputs"]
 	# Specular tends to cause some issues with how blocks look, so let's disable it
 	principled.inputs["Specular"].default_value = 0
 
@@ -1386,7 +1395,7 @@ def matgen_cycles_simple(
 	if hasattr(nodeTexDiff, "interpolation"):  # 2.72+
 		nodeTexDiff.interpolation = 'Closest'
 	# Graystyle Blending
-	nodeSaturateMix.inputs[0].default_value = 1.0
+	nodeSaturateMix.inputs[saturateMixIn[0]].default_value = 1.0
 	nodeSaturateMix.blend_type = 'MULTIPLY'  # changed from OVERLAY
 	nodeSaturateMix.mute = True
 	nodeSaturateMix.hide = True
@@ -1645,6 +1654,14 @@ def matgen_cycles_original(
 	nodeMixTrans.location = (1940, 0)
 	nodeOut.location = (2140, 0)
 
+	# Mix RGB sockets for 3.4
+	mixDiffIn = mixDiffSockets["inputs"]
+	mixDiffOut = mixDiffSockets["outputs"]
+	mixIn = mixSockets["inputs"]
+	mixOut = mixSockets["outputs"]
+	mixMetallicIn =  mixMetallicSockets["inputs"]
+	mixMetallicOut = mixMetallicSockets["outputs"]
+
 	# Sets default transparency value
 	nodeMixTrans.inputs["Fac"].default_value = 1
 	nodeMathMultiplyDiff.inputs[1].default_value = 0.1
@@ -1658,7 +1675,7 @@ def matgen_cycles_original(
 	nodeMathPowerDiff.inputs[1].default_value = 2
 	nodeMathPower.inputs[1].default_value = 2
 	nodeMathMetallic.inputs[1].default_value = 4
-	nodeMixRGBDiff.inputs["Color2"].default_value = [1, 1, 1, 1]
+	nodeMixRGBDiff.inputs[mixDiffIn[2]].default_value = [1, 1, 1, 1]
 
 	# Sets default reflective values
 	if use_reflections and checklist(canon, "reflective"):
@@ -1686,23 +1703,23 @@ def matgen_cycles_original(
 
 	# Connect nodes
 	links.new(nodeMixDiff.outputs["Shader"], nodeMixMetallic.inputs[1])
-	links.new(nodeMathPower.outputs[0], nodeMixRGB.inputs["Fac"])
+	links.new(nodeMathPower.outputs[0], nodeMixRGB.inputs[mixIn[0]])
 	links.new(nodeMathPower.outputs[0], nodeDiff.inputs["Roughness"])
-	links.new(nodeMixRGB.outputs[0], nodeFresnel.inputs["Normal"])
-	links.new(nodeFresnel.outputs[0], nodeMixRGBDiff.inputs["Fac"])
-	links.new(nodeGeometry.outputs["Incoming"], nodeMixRGB.inputs["Color2"])
-	links.new(nodeBump.outputs["Normal"], nodeMixRGB.inputs["Color1"])
-	links.new(nodeMathPowerDiff.outputs["Value"], nodeMixRGBDiff.inputs["Color1"])
-	links.new(nodeMixRGBDiff.outputs["Color"], nodeMathMultiplyDiff.inputs[0])
+	links.new(nodeMixRGB.outputs[mixOut[0]], nodeFresnel.inputs["Normal"])
+	links.new(nodeFresnel.outputs[0], nodeMixRGBDiff.inputs[mixDiffIn[0]])
+	links.new(nodeGeometry.outputs["Incoming"], nodeMixRGB.inputs[mixIn[2]])
+	links.new(nodeBump.outputs["Normal"], nodeMixRGB.inputs[mixIn[1]])
+	links.new(nodeMathPowerDiff.outputs["Value"], nodeMixRGBDiff.inputs[mixDiffIn[1]])
+	links.new(nodeMixRGBDiff.outputs[mixDiffOut[0]], nodeMathMultiplyDiff.inputs[0])
 	links.new(nodeMathMultiplyDiff.outputs["Value"], nodeMixDiff.inputs["Fac"])
 	links.new(nodeDiff.outputs["BSDF"], nodeMixDiff.inputs[1])
 	links.new(nodeGlossDiff.outputs["BSDF"], nodeMixDiff.inputs[2])
 	links.new(
-		nodeFresnelMetallic.outputs["Fac"], nodeMixRGBMetallic.inputs["Fac"])
+		nodeFresnelMetallic.outputs["Fac"], nodeMixRGBMetallic.inputs[mixMetallicIn[0]])
 	links.new(
-		nodeMathMetallic.outputs["Value"], nodeMixRGBMetallic.inputs["Color2"])
+		nodeMathMetallic.outputs["Value"], nodeMixRGBMetallic.inputs[mixMetallicIn[2]])
 	links.new(
-		nodeMixRGBMetallic.outputs["Color"], nodeGlossMetallic.inputs["Color"])
+		nodeMixRGBMetallic.outputs[mixMetallicOut[0]], nodeGlossMetallic.inputs["Color"])
 	links.new(nodeGlossMetallic.outputs["BSDF"], nodeMixMetallic.inputs[2])
 	links.new(nodeMixMetallic.outputs["Shader"], nodeMixEmit.inputs[1])
 	links.new(nodeMixCam.outputs["Shader"], nodeMixEmit.inputs[2])
@@ -1716,7 +1733,7 @@ def matgen_cycles_original(
 
 	nodeInputs = [
 		[
-			nodeMixRGBMetallic.inputs["Color1"],
+			nodeMixRGBMetallic.inputs[mixMetallicIn[1]],
 			nodeMathMetallic.inputs[0],
 			nodeDiff.inputs["Color"],
 			nodeEmit.inputs["Color"],
