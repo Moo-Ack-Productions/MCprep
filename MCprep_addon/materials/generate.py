@@ -1970,7 +1970,6 @@ def matgen_special_glass(mat, passes):
 	nodeNormalInv = create_node(nodes, 'ShaderNodeRGBCurve')
 	nodeGlass = create_node(nodes, 'ShaderNodeBsdfGlass')
 	nodeBrightContrast = create_node(nodes, 'ShaderNodeBrightContrast')
-	nodeFrame = create_node(nodes, "NodeFrame")
 
 	# Names and labels the neccecary nodes
 	nodeTexDiff.name = "Diffuse Tex"
