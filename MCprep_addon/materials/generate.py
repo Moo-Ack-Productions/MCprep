@@ -960,13 +960,19 @@ def set_saturation_material(mat):
 
 def create_node(tree_nodes, node_type):
 	"""Function to create node"""
-	# For MixRGB in 3.4 become Legacy 
+	# For any node MixRGB in 3.4 become Legacy 
+	sockets= {
+		"inputs": inputs,
+		"outputs": outputs
+	}
 	if node_type == 'ShaderNodeMixRGB' and bpy.app.version >= (3, 4, 0):
 		node = tree_nodes.new('ShaderNodeMix')
 		node.data_type = 'RGBA'
+		inputs = [5,6]
+		outputs = [2]
 	else:
 		node = tree_nodes.new(node_type) 
-	return node
+	return node,sockets
 
 # -----------------------------------------------------------------------------
 # Generating node groups
@@ -1050,14 +1056,14 @@ def texgen_specular(mat, passes, nodeInputs, use_reflections):
 	image_spec = passes["specular"]
 
 	# Creates the neccecary nodes
-	nodeTexDiff = create_node(nodes,"ShaderNodeTexImage")
-	nodeTexNorm = create_node(nodes,"ShaderNodeTexImage")
-	nodeTexSpec = create_node(nodes,"ShaderNodeTexImage")
+	nodeTexDiff = create_node(nodes, "ShaderNodeTexImage")
+	nodeTexNorm = create_node(nodes, "ShaderNodeTexImage")
+	nodeTexSpec = create_node(nodes, "ShaderNodeTexImage")
 
-	nodeSpecInv = create_node(nodes,"ShaderNodeInvert")
-	nodeSaturateMix = create_node(nodes,"ShaderNodeMixRGB")
-	nodeNormal = create_node(nodes,"ShaderNodeNormalMap")
-	nodeNormalInv = create_node(nodes,"ShaderNodeRGBCurve")
+	nodeSpecInv = create_node(nodes, "ShaderNodeInvert")
+	nodeSaturateMix, sockets = create_node(nodes, "ShaderNodeMixRGB")
+	nodeNormal = create_node(nodes, "ShaderNodeNormalMap")
+	nodeNormalInv = create_node(nodes, "ShaderNodeRGBCurve")
 
 	# Names and labels the neccecary nodes
 	nodeTexDiff.name = "Diffuse Texture"
@@ -1171,14 +1177,14 @@ def texgen_seus(mat, passes, nodeInputs, use_reflections):
 	image_spec = passes["specular"]
 
 	# Creates the neccecary nodes
-	nodeTexDiff = create_node(nodes,"ShaderNodeTexImage")
-	nodeTexNorm = create_node(nodes,"ShaderNodeTexImage")
-	nodeTexSpec = create_node(nodes,"ShaderNodeTexImage")
-	nodeSpecInv = create_node(nodes,"ShaderNodeInvert")
-	nodeSeperate = create_node(nodes,"ShaderNodeSeparateRGB")
-	nodeSaturateMix = create_node(nodes,"ShaderNodeMixRGB")
-	nodeNormal = create_node(nodes,"ShaderNodeNormalMap")
-	nodeNormalInv = create_node(nodes,"ShaderNodeRGBCurve")
+	nodeTexDiff = create_node(nodes, "ShaderNodeTexImage")
+	nodeTexNorm = create_node(nodes, "ShaderNodeTexImage")
+	nodeTexSpec = create_node(nodes, "ShaderNodeTexImage")
+	nodeSpecInv = create_node(nodes, "ShaderNodeInvert")
+	nodeSeperate = create_node(nodes, "ShaderNodeSeparateRGB")
+	nodeSaturateMix, sockets = create_node(nodes, "ShaderNodeMixRGB")
+	nodeNormal = create_node(nodes, "ShaderNodeNormalMap")
+	nodeNormalInv = create_node(nodes, "ShaderNodeRGBCurve")
 
 	# Names and labels the neccecary nodes
 	nodeTexDiff.name = "Diffuse Texture"
@@ -1318,12 +1324,12 @@ def matgen_cycles_simple(
 	links = mat.node_tree.links
 	nodes.clear()
 
-	nodeTexDiff = nodes.new("ShaderNodeTexImage")
-	nodeSaturateMix = nodes.new("ShaderNodeMixRGB")
+	nodeTexDiff = create_node(nodes, "ShaderNodeTexImage")
+	nodeSaturateMix, sockets = create_node(nodes, "ShaderNodeMixRGB")
 	nodeSaturateMix.name = "Add Color"
 	nodeSaturateMix.label = "Add Color"
-	principled = create_node(nodes,"ShaderNodeBsdfPrincipled")
-	node_out = create_node(nodes,"ShaderNodeOutputMaterial")
+	principled = create_node(nodes, "ShaderNodeBsdfPrincipled")
+	node_out = create_node(nodes, "ShaderNodeOutputMaterial")
 
 	# set location
 	nodeSaturateMix.location = (300, 0)
@@ -1435,16 +1441,16 @@ def matgen_cycles_principled(
 	links = mat.node_tree.links
 	nodes.clear()
 
-	principled = nodes.new("ShaderNodeBsdfPrincipled")
-	nodeEmit = nodes.new("ShaderNodeEmission")
-	nodeEmitCam = nodes.new("ShaderNodeEmission")
-	nodeMixCam = nodes.new("ShaderNodeMixShader")
-	nodeFalloff = nodes.new("ShaderNodeLightFalloff")
-	nodeLightPath = nodes.new("ShaderNodeLightPath")
-	nodeMixEmit = nodes.new("ShaderNodeMixShader")
-	nodeTrans = nodes.new("ShaderNodeBsdfTransparent")
-	nodeMixTrans = nodes.new("ShaderNodeMixShader")
-	nodeOut = nodes.new("ShaderNodeOutputMaterial")
+	principled = create_node(nodes, "ShaderNodeBsdfPrincipled")
+	nodeEmit = create_node(nodes, "ShaderNodeEmission")
+	nodeEmitCam = create_node(nodes, "ShaderNodeEmission")
+	nodeMixCam = create_node(nodes, "ShaderNodeMixShader")
+	nodeFalloff = create_node(nodes, "ShaderNodeLightFalloff")
+	nodeLightPath = create_node(nodes, "ShaderNodeLightPath")
+	nodeMixEmit = create_node(nodes, "ShaderNodeMixShader")
+	nodeTrans = create_node(nodes, "ShaderNodeBsdfTransparent")
+	nodeMixTrans = create_node(nodes, "ShaderNodeMixShader")
+	nodeOut = create_node(nodes, "ShaderNodeOutputMaterial")
 
 	# set location
 	nodeEmit.location = (120, 140)
@@ -1581,36 +1587,36 @@ def matgen_cycles_original(
 	nodes.clear()
 
 	# Shader
-	nodeDiff = nodes.new("ShaderNodeBsdfDiffuse")
-	nodeGlossDiff = nodes.new("ShaderNodeBsdfGlossy")
-	nodeGlossMetallic = nodes.new("ShaderNodeBsdfGlossy")
-	nodeTrans = nodes.new("ShaderNodeBsdfTransparent")
-	nodeEmit = nodes.new("ShaderNodeEmission")
-	nodeEmitCam = nodes.new("ShaderNodeEmission")
+	nodeDiff = create_node(nodes, "ShaderNodeBsdfDiffuse")
+	nodeGlossDiff = create_node(nodes, "ShaderNodeBsdfGlossy")
+	nodeGlossMetallic = create_node(nodes, "ShaderNodeBsdfGlossy")
+	nodeTrans = create_node(nodes, "ShaderNodeBsdfTransparent")
+	nodeEmit = create_node(nodes, "ShaderNodeEmission")
+	nodeEmitCam = create_node(nodes, "ShaderNodeEmission")
 	# Mix Shader
-	nodeMixDiff = nodes.new("ShaderNodeMixShader")
-	nodeMixMetallic = nodes.new("ShaderNodeMixShader")
-	nodeMixTrans = nodes.new("ShaderNodeMixShader")
-	nodeMixEmit = nodes.new("ShaderNodeMixShader")
-	nodeMixCam = nodes.new("ShaderNodeMixShader")
+	nodeMixDiff = create_node(nodes, "ShaderNodeMixShader")
+	nodeMixMetallic = create_node(nodes, "ShaderNodeMixShader")
+	nodeMixTrans = create_node(nodes, "ShaderNodeMixShader")
+	nodeMixEmit = create_node(nodes, "ShaderNodeMixShader")
+	nodeMixCam = create_node(nodes, "ShaderNodeMixShader")
 	# Mix 
-	nodeMixRGBDiff = nodes.new("ShaderNodeMixRGB")
-	nodeMixRGB = nodes.new("ShaderNodeMixRGB")
-	nodeMixRGBMetallic = nodes.new("ShaderNodeMixRGB")
+	nodeMixRGBDiff, mixDiffSockets = create_node(nodes, "ShaderNodeMixRGB")
+	nodeMixRGB, mixSockets = create_node(nodes, "ShaderNodeMixRGB")
+	nodeMixRGBMetallic, mixMetallicSockets = create_node(nodes, "ShaderNodeMixRGB")
 	# Input
-	nodeFresnel = nodes.new("ShaderNodeFresnel")
-	nodeFresnelMetallic = nodes.new("ShaderNodeFresnel")
-	nodeLightPath = nodes.new("ShaderNodeLightPath")
-	nodeGeometry = nodes.new("ShaderNodeNewGeometry")
+	nodeFresnel = create_node(nodes, "ShaderNodeFresnel")
+	nodeFresnelMetallic = create_node(nodes, "ShaderNodeFresnel")
+	nodeLightPath = create_node(nodes, "ShaderNodeLightPath")
+	nodeGeometry = create_node(nodes, "ShaderNodeNewGeometry")
 	# Math
-	nodeMathPower = nodes.new("ShaderNodeMath")
-	nodeMathPowerDiff = nodes.new("ShaderNodeMath")
-	nodeMathMultiplyDiff = nodes.new("ShaderNodeMath")
-	nodeMathMetallic = nodes.new("ShaderNodeMath")
+	nodeMathPower = create_node(nodes, "ShaderNodeMath")
+	nodeMathPowerDiff = create_node(nodes, "ShaderNodeMath")
+	nodeMathMultiplyDiff = create_node(nodes, "ShaderNodeMath")
+	nodeMathMetallic = create_node(nodes, "ShaderNodeMath")
 	# Etc
-	nodeBump = nodes.new("ShaderNodeBump")
-	nodeFalloff = nodes.new("ShaderNodeLightFalloff")
-	nodeOut = nodes.new("ShaderNodeOutputMaterial")
+	nodeBump = create_node(nodes, "ShaderNodeBump")
+	nodeFalloff = create_node(nodes, "ShaderNodeLightFalloff")
+	nodeOut = create_node(nodes, "ShaderNodeOutputMaterial")
 
 	# set location
 	nodeMixDiff.location = (1140, 40)
@@ -1812,7 +1818,7 @@ def matgen_special_water(mat, passes):
 	nodeNormal = create_node(nodes,'ShaderNodeNormalMap')
 	nodeNormalInv = create_node(nodes,'ShaderNodeRGBCurve')
 	nodeBrightContrast = create_node(nodes,'ShaderNodeBrightContrast')
-	nodeSaturateMix = create_node(nodes,'ShaderNodeMixRGB')
+	nodeSaturateMix, sockets = create_node(nodes,'ShaderNodeMixRGB')
 	nodeGlass = create_node(nodes,'ShaderNodeBsdfGlass')
 	nodeTrans = create_node(nodes,'ShaderNodeBsdfTransparent')
 	nodeMixTrans = create_node(nodes,'ShaderNodeMixShader')
@@ -1955,16 +1961,16 @@ def matgen_special_glass(mat, passes):
 	links = mat.node_tree.links
 	nodes.clear()
 
-	nodeDiff = nodes.new('ShaderNodeBsdfDiffuse')
-	nodeMixTrans = nodes.new('ShaderNodeMixShader')
-	nodeOut = nodes.new('ShaderNodeOutputMaterial')
-	nodeTexDiff = nodes.new('ShaderNodeTexImage')
-	nodeTexNorm = nodes.new('ShaderNodeTexImage')
-	nodeNormal = nodes.new('ShaderNodeNormalMap')
-	nodeNormalInv = nodes.new('ShaderNodeRGBCurve')
-	nodeGlass = nodes.new('ShaderNodeBsdfGlass')
-	nodeBrightContrast = nodes.new('ShaderNodeBrightContrast')
-	nodeFrame = nodes.new("NodeFrame")
+	nodeDiff = create_node(nodes, 'ShaderNodeBsdfDiffuse')
+	nodeMixTrans = create_node(nodes, 'ShaderNodeMixShader')
+	nodeOut = create_node(nodes, 'ShaderNodeOutputMaterial')
+	nodeTexDiff = create_node(nodes, 'ShaderNodeTexImage')
+	nodeTexNorm = create_node(nodes, 'ShaderNodeTexImage')
+	nodeNormal = create_node(nodes, 'ShaderNodeNormalMap')
+	nodeNormalInv = create_node(nodes, 'ShaderNodeRGBCurve')
+	nodeGlass = create_node(nodes, 'ShaderNodeBsdfGlass')
+	nodeBrightContrast = create_node(nodes, 'ShaderNodeBrightContrast')
+	nodeFrame = create_node(nodes, "NodeFrame")
 
 	# Names and labels the neccecary nodes
 	nodeTexDiff.name = "Diffuse Tex"
