@@ -958,27 +958,33 @@ def set_saturation_material(mat):
 		sat_node.mute = not bool(saturate)
 		sat_node.hide = not bool(saturate)
 
-def create_node(tree_nodes, node_type):
+def create_node(tree_nodes, node_type, **kwargs):
 	"""Function to create node"""
 	if node_type == 'ShaderNodeMixRGB': # For MixRGB in 3.4 become Legacy 
 		if util.min_bv((3, 4, 0)):
 			node = tree_nodes.new('ShaderNodeMix')
 			node.data_type = 'RGBA'
-			inputs = [0,6,7]
-			outputs = [2]
 		else:
 			node = tree_nodes.new('ShaderNodeMixRGB')
-			inputs = [0,1,2]
-			outputs = [0]
-		sockets= {
-			"inputs": inputs,
-			"outputs": outputs
-		}
-		return node, sockets
 	else:
 		node = tree_nodes.new(node_type) 
-		return node
+	for attr, value in kwargs.items():
+		if hasattr(node, attr):
+			setattr(node, attr, value)
+	return node
 	
+def get_sockets_node(node, is_input=True):
+	n_type = node.bl_idname
+	if n_type == 'ShaderNodeMix' or n_type == 'ShaderNodeMixRGB':
+		if util.min_bv((3, 4, 0)): # For MixRGB in 3.4 become Legacy 
+			if node.data_type == 'RGBA': 
+				inputs, outputs = [0,6,7], [2]
+		else:
+			inputs, outputs = [0,1,2], [0]
+	else:
+		inputs, outputs = [i for i in range(len(node.inputs))], [i for i in range(len(node.outputs))] 
+	print(inputs, outputs)
+	return inputs if is_input else outputs
 
 # -----------------------------------------------------------------------------
 # Generating node groups
@@ -1067,7 +1073,7 @@ def texgen_specular(mat, passes, nodeInputs, use_reflections):
 	nodeTexSpec = create_node(nodes, "ShaderNodeTexImage")
 
 	nodeSpecInv = create_node(nodes, "ShaderNodeInvert")
-	nodeSaturateMix, sockets = create_node(nodes, "ShaderNodeMixRGB")
+	nodeSaturateMix = create_node(nodes, "ShaderNodeMixRGB")
 	nodeNormal = create_node(nodes, "ShaderNodeNormalMap")
 	nodeNormalInv = create_node(nodes, "ShaderNodeRGBCurve")
 
@@ -1089,8 +1095,8 @@ def texgen_specular(mat, passes, nodeInputs, use_reflections):
 	nodeNormalInv.mapping.curves[1].points[0].location = (0, 1)
 	nodeNormalInv.mapping.curves[1].points[1].location = (1, 0)
 
-	saturateMixIn = sockets["inputs"]
-	saturateMixOut = sockets["outputs"]
+	saturateMixIn = get_sockets_node(nodeSaturateMix) #sockets["inputs"]
+	saturateMixOut = get_sockets_node(nodeSaturateMix, is_input=False) #sockets["outputs"]
 	# Positions the nodes
 	nodeTexDiff.location = (-380, 140)
 	nodeTexNorm.location = (-680, -500)
@@ -1190,7 +1196,7 @@ def texgen_seus(mat, passes, nodeInputs, use_reflections):
 	nodeTexSpec = create_node(nodes, "ShaderNodeTexImage")
 	nodeSpecInv = create_node(nodes, "ShaderNodeInvert")
 	nodeSeperate = create_node(nodes, "ShaderNodeSeparateRGB")
-	nodeSaturateMix, sockets = create_node(nodes, "ShaderNodeMixRGB")
+	nodeSaturateMix = create_node(nodes, "ShaderNodeMixRGB")
 	nodeNormal = create_node(nodes, "ShaderNodeNormalMap")
 	nodeNormalInv = create_node(nodes, "ShaderNodeRGBCurve")
 
@@ -1214,8 +1220,8 @@ def texgen_seus(mat, passes, nodeInputs, use_reflections):
 	nodeNormalInv.mapping.curves[1].points[0].location = (0, 1)
 	nodeNormalInv.mapping.curves[1].points[1].location = (1, 0)
 
-	saturateMixIn = sockets["inputs"]
-	saturateMixOut = sockets["outputs"]
+	saturateMixIn =  get_sockets_node(nodeSaturateMix) #sockets["inputs"]
+	saturateMixOut = get_sockets_node(nodeSaturateMix, is_input=False) #sockets["outputs"]
 	# Positions the nodes
 	nodeTexDiff.location = (-380, 140)
 	nodeTexSpec.location = (-580, -180)
@@ -1335,7 +1341,7 @@ def matgen_cycles_simple(
 	nodes.clear()
 
 	nodeTexDiff = create_node(nodes, "ShaderNodeTexImage")
-	nodeSaturateMix, sockets = create_node(nodes, "ShaderNodeMixRGB")
+	nodeSaturateMix = create_node(nodes, "ShaderNodeMixRGB")
 	nodeSaturateMix.name = "Add Color"
 	nodeSaturateMix.label = "Add Color"
 	principled = create_node(nodes, "ShaderNodeBsdfPrincipled")
@@ -1360,8 +1366,8 @@ def matgen_cycles_simple(
 	else:
 		principled.inputs["Metallic"].default_value = 0
 
-	saturateMixIn = sockets["inputs"]
-	saturateMixOut = sockets["outputs"]
+	saturateMixIn = get_sockets_node(nodeSaturateMix) #sockets["inputs"]
+	saturateMixOut = get_sockets_node(nodeSaturateMix, is_input=False) #sockets["outputs"]
 	# Specular tends to cause some issues with how blocks look, so let's disable it
 	principled.inputs["Specular"].default_value = 0
 
@@ -1612,9 +1618,9 @@ def matgen_cycles_original(
 	nodeMixEmit = create_node(nodes, "ShaderNodeMixShader")
 	nodeMixCam = create_node(nodes, "ShaderNodeMixShader")
 	# Mix 
-	nodeMixRGBDiff, mixDiffSockets = create_node(nodes, "ShaderNodeMixRGB")
-	nodeMixRGB, mixSockets = create_node(nodes, "ShaderNodeMixRGB")
-	nodeMixRGBMetallic, mixMetallicSockets = create_node(nodes, "ShaderNodeMixRGB")
+	nodeMixRGBDiff = create_node(nodes, "ShaderNodeMixRGB")
+	nodeMixRGB = create_node(nodes, "ShaderNodeMixRGB")
+	nodeMixRGBMetallic = create_node(nodes, "ShaderNodeMixRGB")
 	# Input
 	nodeFresnel = create_node(nodes, "ShaderNodeFresnel")
 	nodeFresnelMetallic = create_node(nodes, "ShaderNodeFresnel")
@@ -1658,12 +1664,12 @@ def matgen_cycles_original(
 	nodeOut.location = (2140, 0)
 
 	# Mix RGB sockets for 3.4
-	mixDiffIn = mixDiffSockets["inputs"]
-	mixDiffOut = mixDiffSockets["outputs"]
-	mixIn = mixSockets["inputs"]
-	mixOut = mixSockets["outputs"]
-	mixMetallicIn =  mixMetallicSockets["inputs"]
-	mixMetallicOut = mixMetallicSockets["outputs"]
+	mixDiffIn = get_sockets_node(nodeMixRGBDiff) #mixDiffSockets["inputs"]
+	mixDiffOut = get_sockets_node(nodeMixRGBDiff, is_input=False) #mixDiffSockets["outputs"]
+	mixIn = get_sockets_node(nodeMixRGB) #mixSockets["inputs"]
+	mixOut = get_sockets_node(nodeMixRGB, is_input=False) #mixSockets["outputs"]
+	mixMetallicIn =   get_sockets_node(nodeMixRGBMetallic) #mixMetallicSockets["inputs"]
+	mixMetallicOut = get_sockets_node(nodeMixRGBMetallic, is_input=False) #mixMetallicSockets["outputs"]
 
 	# Sets default transparency value
 	nodeMixTrans.inputs["Fac"].default_value = 1
@@ -1838,7 +1844,7 @@ def matgen_special_water(mat, passes):
 	nodeNormal = create_node(nodes,'ShaderNodeNormalMap')
 	nodeNormalInv = create_node(nodes,'ShaderNodeRGBCurve')
 	nodeBrightContrast = create_node(nodes,'ShaderNodeBrightContrast')
-	nodeSaturateMix, sockets = create_node(nodes,'ShaderNodeMixRGB')
+	nodeSaturateMix = create_node(nodes,'ShaderNodeMixRGB')
 	nodeGlass = create_node(nodes,'ShaderNodeBsdfGlass')
 	nodeTrans = create_node(nodes,'ShaderNodeBsdfTransparent')
 	nodeMixTrans = create_node(nodes,'ShaderNodeMixShader')
@@ -1863,8 +1869,8 @@ def matgen_special_water(mat, passes):
 	nodeTexNorm.label = "Normal Tex"
 	nodeNormalInv.label = "Normal Inverse"
 
-	saturateMixIn = sockets["inputs"]
-	saturateMixOut = sockets["outputs"]
+	saturateMixIn = get_sockets_node(nodeSaturateMix) #sockets["inputs"]
+	saturateMixOut = get_sockets_node(nodeSaturateMix, is_input=False) #sockets["outputs"]
 	# Sets default values
 	nodeNormalInv.mapping.curves[1].points[0].location = (0, 1)
 	nodeNormalInv.mapping.curves[1].points[1].location = (1, 0)
