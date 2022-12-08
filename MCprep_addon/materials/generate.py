@@ -983,7 +983,6 @@ def get_sockets_node(node, is_input=True):
 			inputs, outputs = [0,1,2], [0]
 	else:
 		inputs, outputs = [i for i in range(len(node.inputs))], [i for i in range(len(node.outputs))] 
-	print(inputs, outputs)
 	return inputs if is_input else outputs
 
 # -----------------------------------------------------------------------------
