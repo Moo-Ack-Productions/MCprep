@@ -1882,6 +1882,7 @@ def matgen_special_water(mat, passes):
 	nodeTexNorm.label = "Normal Tex"
 	nodeNormalInv.label = "Normal Inverse"
 
+	# Mix RGB sockets for 3.4
 	saturateMixIn = get_node_socket(nodeSaturateMix) # socket inputs
 	saturateMixOut = get_node_socket(nodeSaturateMix, is_input=False) # socket outputs
 	# Sets default values
