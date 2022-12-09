@@ -1196,8 +1196,8 @@ def texgen_seus(mat, passes, nodeInputs, use_reflections):
 	nodeNormalInv.mapping.curves[1].points[1].location = (1, 0)
 
 	# Get MixRGB sockets
-	saturateMixIn =  get_node_socket(nodeSaturateMix) #socket inputs
-	saturateMixOut = get_node_socket(nodeSaturateMix, is_input=False) #socket outputs
+	saturateMixIn =  get_node_socket(nodeSaturateMix) # socket inputs
+	saturateMixOut = get_node_socket(nodeSaturateMix, is_input=False) # socket outputs
 
 	# Links the nodes to the reroute nodes.
 	links.new(nodeTexDiff.outputs["Color"], nodeSaturateMix.inputs[saturateMixIn[1]])
@@ -1320,8 +1320,8 @@ def matgen_cycles_simple(
 		principled.inputs["Metallic"].default_value = 0
 
 	# Get MixRGB sockets
-	saturateMixIn = get_node_socket(nodeSaturateMix) #socket inputs
-	saturateMixOut = get_node_socket(nodeSaturateMix, is_input=False) #socket outputs
+	saturateMixIn = get_node_socket(nodeSaturateMix) # socket inputs
+	saturateMixOut = get_node_socket(nodeSaturateMix, is_input=False) # socket outputs
 
 	# Set values | Specular tends to cause some issues with how blocks look, so let's disable it
 	nodeSaturateMix.inputs[saturateMixIn[0]].default_value = 1.0
@@ -1570,13 +1570,13 @@ def matgen_cycles_original(
 	nodeFalloff = create_node(nodes, "ShaderNodeLightFalloff", location = (1140, 240))
 	nodeOut = create_node(nodes, "ShaderNodeOutputMaterial", location = (2140, 0))
 
-	# Mix RGB sockets for 3.4
-	mixDiffIn = get_node_socket(nodeMixRGBDiff) # socket inputs
-	mixDiffOut = get_node_socket(nodeMixRGBDiff, is_input=False) # socket outputs
-	mixIn = get_node_socket(nodeMixRGB) # socket inputs
-	mixOut = get_node_socket(nodeMixRGB, is_input=False) # socket outputs
-	mixMetallicIn =   get_node_socket(nodeMixRGBMetallic) # socket inputs
-	mixMetallicOut = get_node_socket(nodeMixRGBMetallic, is_input=False) # socket outputs
+	# Get MixRGB sockets
+	mixDiffIn = get_node_socket(nodeMixRGBDiff) #socket inputs
+	mixIn = get_node_socket(nodeMixRGB) 
+	mixMetallicIn = get_node_socket(nodeMixRGBMetallic)
+	mixOut = get_node_socket(nodeMixRGB, is_input=False) #socket outputs
+	mixDiffOut = get_node_socket(nodeMixRGBDiff, is_input=False)
+	mixMetallicOut = get_node_socket(nodeMixRGBMetallic, is_input=False) 
 
 	# Sets default transparency value
 	nodeMixTrans.inputs["Fac"].default_value = 1
