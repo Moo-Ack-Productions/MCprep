@@ -964,6 +964,7 @@ def create_node(tree_nodes, node_type, **attrs):
 		tree_nodes: the material node tree's nodes
 		node_type: the type of the node
 		**attrs: set attributes if that node type has (eg: location, name, blend_type...)
+		"hide_sockets" to hide the sockets only display linked when need
 	"""
 	if node_type == 'ShaderNodeMixRGB': # MixRGB in 3.4
 		if util.min_bv((3, 4, 0)):
@@ -976,6 +977,9 @@ def create_node(tree_nodes, node_type, **attrs):
 	for attr, value in attrs.items():
 		if hasattr(node, attr):
 			setattr(node, attr, value)
+		elif attr == 'hide_sockets': # option to hide socket for big node 
+			node.inputs.foreach_set('hide', [value] * len(node.inputs))
+			node.outputs.foreach_set('hide', [value] * len(node.outputs))
 	return node
 
 def get_node_socket(node, is_input=True):
@@ -1075,45 +1079,27 @@ def texgen_specular(mat, passes, nodeInputs, use_reflections):
 	image_spec = passes["specular"]
 
 	# Creates the necessary nodes
-	nodeTexDiff = create_node(nodes, "ShaderNodeTexImage")
-	nodeTexNorm = create_node(nodes, "ShaderNodeTexImage")
-	nodeTexSpec = create_node(nodes, "ShaderNodeTexImage")
+	nodeTexDiff = create_node(nodes, "ShaderNodeTexImage", name = "Diffuse Texture", label = "Diffuse Texture", 
+							location = (-380, 140),interpolation = 'Closest')
+	nodeTexNorm = create_node(nodes, "ShaderNodeTexImage", name = "Normal Texture", label = "Normal Texture", 
+							location = (-680, -500), interpolation = 'Closest')
+	nodeTexSpec = create_node(nodes, "ShaderNodeTexImage", name = "Specular Texture", label = "Specular Texture", 
+							location = (-380, -180), interpolation = 'Closest')
+	nodeSaturateMix = create_node(nodes, "ShaderNodeMixRGB", name = "Add Color", label = "Add Color", 
+							location = (-80, 140), blend_type = 'MULTIPLY',  mute = True, hide = True)
 
-	nodeSpecInv = create_node(nodes, "ShaderNodeInvert")
-	nodeSaturateMix = create_node(nodes, "ShaderNodeMixRGB")
-	nodeNormal = create_node(nodes, "ShaderNodeNormalMap")
-	nodeNormalInv = create_node(nodes, "ShaderNodeRGBCurve")
-
-	# Names and labels the necessary nodes
-	nodeTexDiff.name = "Diffuse Texture"
-	nodeTexDiff.label = "Diffuse Texture"
-	nodeTexNorm.name = "Normal Texture"
-	nodeTexNorm.label = "Normal Texture"
-	nodeTexSpec.name = "Specular Texture"
-	nodeTexSpec.label = "Specular Texture"
-	nodeSpecInv.name = "Specular Inverse"
-	nodeSpecInv.label = "Specular Inverse"
-	nodeSaturateMix.name = "Add Color"
-	nodeSaturateMix.label = "Add Color"
-	nodeNormalInv.name = "Normal Inverse"
-	nodeNormalInv.label = "Normal Inverse"
+	nodeSpecInv = create_node(nodes, "ShaderNodeInvert", name = "Specular Inverse", label = "Specular Inverse", location = (-80, -280))
+	nodeNormalInv = create_node(nodes, "ShaderNodeRGBCurve", name = "Normal Inverse", label = "Normal Inverse", location = (-380, -500))
+	nodeNormal = create_node(nodes, "ShaderNodeNormalMap", location = (-80, 140))
 
 	# Sets values
+	nodeSaturateMix.inputs[0].default_value = 1.0 # Graystyle Blending
 	nodeNormalInv.mapping.curves[1].points[0].location = (0, 1)
 	nodeNormalInv.mapping.curves[1].points[1].location = (1, 0)
 
 	# Get MixRGB sockets
 	saturateMixIn = get_node_socket(nodeSaturateMix) #socket inputs
 	saturateMixOut = get_node_socket(nodeSaturateMix, is_input=False) #socket outputs
-
-	# Positions the nodes
-	nodeTexDiff.location = (-380, 140)
-	nodeTexNorm.location = (-680, -500)
-	nodeTexSpec.location = (-380, -180)
-	nodeSpecInv.location = (-80, -280)
-	nodeSaturateMix.location = (-80, 140)
-	nodeNormal.location = (-80, -500)
-	nodeNormalInv.location = (-380, -500)
 
 	# Links the nodes to the reroute nodes.
 	links.new(nodeTexDiff.outputs["Color"], nodeSaturateMix.inputs[saturateMixIn[1]])
@@ -1147,20 +1133,10 @@ def texgen_specular(mat, passes, nodeInputs, use_reflections):
 		nodeNormalInv.mute = True
 		nodeNormal.mute = True
 
-	# Sets to closest instead of linear interpolation
-	if hasattr(nodeTexDiff, "interpolation"):  # 2.72+
-		nodeTexDiff.interpolation = 'Closest'
-		nodeTexSpec.interpolation = 'Closest'
-
 	# Update to use non-color data for spec and normal
 	util.apply_colorspace(nodeTexSpec, 'Non-Color')
 	util.apply_colorspace(nodeTexNorm, 'Non-Color')
 
-	# Graystyle Blending
-	nodeSaturateMix.inputs[0].default_value = 1.0
-	nodeSaturateMix.blend_type = 'MULTIPLY'  # changed from OVERLAY
-	nodeSaturateMix.mute = True
-	nodeSaturateMix.hide = True
 	if not checklist(canon, "desaturated"):
 		pass
 	elif not is_image_grayscale(image_diff):
@@ -1200,48 +1176,28 @@ def texgen_seus(mat, passes, nodeInputs, use_reflections):
 	image_spec = passes["specular"]
 
 	# Creates the necessary nodes
-	nodeTexDiff = create_node(nodes, "ShaderNodeTexImage")
-	nodeTexNorm = create_node(nodes, "ShaderNodeTexImage")
-	nodeTexSpec = create_node(nodes, "ShaderNodeTexImage")
-	nodeSpecInv = create_node(nodes, "ShaderNodeInvert")
-	nodeSeperate = create_node(nodes, "ShaderNodeSeparateRGB")
-	nodeSaturateMix = create_node(nodes, "ShaderNodeMixRGB")
-	nodeNormal = create_node(nodes, "ShaderNodeNormalMap")
-	nodeNormalInv = create_node(nodes, "ShaderNodeRGBCurve")
+	nodeTexDiff = create_node(nodes, "ShaderNodeTexImage", name = "Diffuse Texture",  label = "Diffuse Texture", 
+							location = (-380, 140), interpolation = 'Closest')
+	nodeTexNorm = create_node(nodes, "ShaderNodeTexImage", name = "Normal Texture", label = "Normal Texture", 
+							location = (-680, -500), interpolation = 'Closest')
+	nodeTexSpec = create_node(nodes, "ShaderNodeTexImage", name = "Specular Texture", label = "Specular Texture", 
+							location = (-580, -180), interpolation = 'Closest')
+	nodeSaturateMix = create_node(nodes, "ShaderNodeMixRGB", name = "Add Color", label = "Add Color", 
+							location = (-80, 140), blend_type = 'MULTIPLY', mute = True, hide = True)
 
-	# Names and labels the necessary nodes
-	nodeTexDiff.name = "Diffuse Texture"
-	nodeTexDiff.label = "Diffuse Texture"
-	nodeTexNorm.name = "Normal Texture"
-	nodeTexNorm.label = "Normal Texture"
-	nodeTexSpec.name = "Specular Texture"
-	nodeTexSpec.label = "Specular Texture"
-	nodeSpecInv.name = "Smooth Inverse"
-	nodeSpecInv.label = "Smooth Inverse"
-	nodeSeperate.name = "RGB Seperation"
-	nodeSeperate.label = "RGB Seperation"
-	nodeSaturateMix.name = "Add Color"
-	nodeSaturateMix.label = "Add Color"
-	nodeNormalInv.name = "Normal Inverse"
-	nodeNormalInv.label = "Normal Inverse"
+	nodeSpecInv = create_node(nodes, "ShaderNodeInvert", name = "Smooth Inverse", label = "Smooth Inverse", location = (-80, -280))
+	nodeSeperate = create_node(nodes, "ShaderNodeSeparateRGB", name = "RGB Seperation", label = "RGB Seperation", location = (-280, -280))
+	nodeNormal = create_node(nodes, "ShaderNodeNormalMap", location = (-80, -500))
+	nodeNormalInv = create_node(nodes, "ShaderNodeRGBCurve", name = "Normal Inverse", label = "Normal Inverse", location = (-380, -500))
 
 	# Sets values
+	nodeSaturateMix.inputs[0].default_value = 1.0 # Graystyle Blending
 	nodeNormalInv.mapping.curves[1].points[0].location = (0, 1)
 	nodeNormalInv.mapping.curves[1].points[1].location = (1, 0)
 
 	# Get MixRGB sockets
 	saturateMixIn =  get_node_socket(nodeSaturateMix) #socket inputs
 	saturateMixOut = get_node_socket(nodeSaturateMix, is_input=False) #socket outputs
-
-	# Positions the nodes
-	nodeTexDiff.location = (-380, 140)
-	nodeTexSpec.location = (-580, -180)
-	nodeTexNorm.location = (-680, -500)
-	nodeSeperate.location = (-280, -280)
-	nodeSpecInv.location = (-80, -280)
-	nodeSaturateMix.location = (-80, 140)
-	nodeNormal.location = (-80, -500)
-	nodeNormalInv.location = (-380, -500)
 
 	# Links the nodes to the reroute nodes.
 	links.new(nodeTexDiff.outputs["Color"], nodeSaturateMix.inputs[saturateMixIn[1]])
@@ -1264,7 +1220,7 @@ def texgen_seus(mat, passes, nodeInputs, use_reflections):
 	for i in nodeInputs[6]:
 		links.new(nodeNormal.outputs["Normal"], i)
 
-	# Mutes neccacary nodes if no specular map
+	# Mutes necessary nodes if no specular map
 	if image_spec:
 		nodeTexSpec.image = image_spec
 		nodeTexSpec.mute = False
@@ -1273,7 +1229,7 @@ def texgen_seus(mat, passes, nodeInputs, use_reflections):
 		nodeTexSpec.mute = True
 		nodeSeperate.mute = True
 
-	# Mutes neccacary nodes if no normal map
+	# Mutes necessary nodes if no normal map
 	if image_norm:
 		nodeTexNorm.image = image_norm
 		nodeTexNorm.mute = False
@@ -1284,21 +1240,11 @@ def texgen_seus(mat, passes, nodeInputs, use_reflections):
 		nodeNormalInv.mute = True
 		nodeNormal.mute = True
 
-	# Sets to closest instead of linear interpolation
-	if hasattr(nodeTexDiff, "interpolation"):  # 2.72+
-		nodeTexDiff.interpolation = 'Closest'
-		nodeTexSpec.interpolation = 'Closest'
-		nodeTexNorm.interpolation = 'Closest'
-
 	# Update to use non-color data for spec and normal
 	util.apply_colorspace(nodeTexSpec, 'Non-Color')
 	util.apply_colorspace(nodeTexNorm, 'Non-Color')
 
 	# Graystyle Blending
-	nodeSaturateMix.inputs[0].default_value = 1.0
-	nodeSaturateMix.blend_type = 'MULTIPLY'  # changed from OVERLAY
-	nodeSaturateMix.mute = True
-	nodeSaturateMix.hide = True
 	if not checklist(canon, "desaturated"):
 		pass
 	elif not is_image_grayscale(image_diff):
@@ -1351,17 +1297,13 @@ def matgen_cycles_simple(
 	links = mat.node_tree.links
 	nodes.clear()
 
-	nodeTexDiff = create_node(nodes, "ShaderNodeTexImage")
-	nodeSaturateMix = create_node(nodes, "ShaderNodeMixRGB")
-	nodeSaturateMix.name = "Add Color"
-	nodeSaturateMix.label = "Add Color"
-	principled = create_node(nodes, "ShaderNodeBsdfPrincipled")
-	node_out = create_node(nodes, "ShaderNodeOutputMaterial")
+	nodeTexDiff = create_node(nodes, "ShaderNodeTexImage", name = "Diffuse Texture", label = "Diffuse Texture", 
+							location = (0, 0), interpolation = 'Closest', image = image_diff)
+	nodeSaturateMix = create_node(nodes, "ShaderNodeMixRGB", name = "Add Color", label = "Add Color", 
+							location = (300, 0), blend_type = 'MULTIPLY', mute = True, hide = True)
 
-	# set location
-	nodeSaturateMix.location = (300, 0)
-	principled.location = (600, 0)
-	node_out.location = (900, 0)
+	principled = create_node(nodes, "ShaderNodeBsdfPrincipled", location = (600, 0))
+	node_out = create_node(nodes, "ShaderNodeOutputMaterial", location = (900, 0))
 
 	# Sets default reflective values
 	if use_reflections and checklist(canon, "reflective"):
@@ -1381,10 +1323,12 @@ def matgen_cycles_simple(
 	saturateMixIn = get_node_socket(nodeSaturateMix) #socket inputs
 	saturateMixOut = get_node_socket(nodeSaturateMix, is_input=False) #socket outputs
 
-	# Specular tends to cause some issues with how blocks look, so let's disable it
+	# Set values | Specular tends to cause some issues with how blocks look, so let's disable it
+	nodeSaturateMix.inputs[saturateMixIn[0]].default_value = 1.0
 	principled.inputs["Specular"].default_value = 0
 
 	# Connect nodes.
+	links.new(nodeTexDiff.outputs[0], nodeSaturateMix.inputs[saturateMixIn[1]])
 	links.new(nodeSaturateMix.outputs[saturateMixOut[0]], principled.inputs[0])
 	links.new(principled.outputs["BSDF"], node_out.inputs[0])
 
@@ -1411,16 +1355,7 @@ def matgen_cycles_simple(
 	# reapply animation data if any to generated nodes
 	apply_texture_animation_pass_settings(mat, animated_data)
 
-	# Now update texture image assignments.
-	nodeTexDiff.name = "Diffuse Texture"
-	# Sets to closest instead of linear interpolation.
-	if hasattr(nodeTexDiff, "interpolation"):  # 2.72+
-		nodeTexDiff.interpolation = 'Closest'
 	# Graystyle Blending
-	nodeSaturateMix.inputs[saturateMixIn[0]].default_value = 1.0
-	nodeSaturateMix.blend_type = 'MULTIPLY'  # changed from OVERLAY
-	nodeSaturateMix.mute = True
-	nodeSaturateMix.hide = True
 	if not checklist(canon, "desaturated"):
 		pass
 	elif not is_image_grayscale(image_diff):
@@ -1437,9 +1372,6 @@ def matgen_cycles_simple(
 	# annotate special nodes for finding later, and load images if available
 	nodeTexDiff["MCPREP_diffuse"] = True
 	nodeSaturateMix["SATURATE"] = True
-	nodeTexDiff.image = image_diff
-
-	links.new(nodeTexDiff.outputs[0], nodeSaturateMix.inputs[saturateMixIn[1]])
 
 	return 0
 
@@ -1472,28 +1404,17 @@ def matgen_cycles_principled(
 	links = mat.node_tree.links
 	nodes.clear()
 
-	principled = create_node(nodes, "ShaderNodeBsdfPrincipled")
-	nodeEmit = create_node(nodes, "ShaderNodeEmission")
-	nodeEmitCam = create_node(nodes, "ShaderNodeEmission")
-	nodeMixCam = create_node(nodes, "ShaderNodeMixShader")
-	nodeFalloff = create_node(nodes, "ShaderNodeLightFalloff")
-	nodeLightPath = create_node(nodes, "ShaderNodeLightPath")
-	nodeMixEmit = create_node(nodes, "ShaderNodeMixShader")
-	nodeTrans = create_node(nodes, "ShaderNodeBsdfTransparent")
-	nodeMixTrans = create_node(nodes, "ShaderNodeMixShader")
-	nodeOut = create_node(nodes, "ShaderNodeOutputMaterial")
+	principled = create_node(nodes, "ShaderNodeBsdfPrincipled", location = (120, 0))
+	nodeEmit = create_node(nodes, "ShaderNodeEmission", location = (120, 140))
+	nodeEmitCam = create_node(nodes, "ShaderNodeEmission", location = (120, 260))
+	nodeMixCam = create_node(nodes, "ShaderNodeMixShader", location = (320, 260))
+	nodeFalloff = create_node(nodes, "ShaderNodeLightFalloff", location = (-80, 320))
+	nodeLightPath = create_node(nodes, "ShaderNodeLightPath", location = (-320, 520))
+	nodeMixEmit = create_node(nodes, "ShaderNodeMixShader", location = (420, 0))
+	nodeTrans = create_node(nodes, "ShaderNodeBsdfTransparent", location = (420, 140))
+	nodeMixTrans = create_node(nodes, "ShaderNodeMixShader", location = (620, 0))
+	nodeOut = create_node(nodes, "ShaderNodeOutputMaterial", location = (820, 0))
 
-	# set location
-	nodeEmit.location = (120, 140)
-	nodeEmitCam.location = (120, 260)
-	nodeFalloff.location = (-80, 320)
-	nodeLightPath.location = (-320, 520)
-	nodeMixCam.location = (320, 260)
-	nodeTrans.location = (420, 140)
-	nodeMixEmit.location = (420, 0)
-	nodeMixTrans.location = (620, 0)
-	nodeOut.location = (820, 0)
-	principled.location = (120, 0)
 
 	# Sets default transparency value
 	nodeMixTrans.inputs[0].default_value = 1
@@ -1618,63 +1539,36 @@ def matgen_cycles_original(
 	nodes.clear()
 
 	# Shader
-	nodeDiff = create_node(nodes, "ShaderNodeBsdfDiffuse")
-	nodeGlossDiff = create_node(nodes, "ShaderNodeBsdfGlossy")
-	nodeGlossMetallic = create_node(nodes, "ShaderNodeBsdfGlossy")
-	nodeTrans = create_node(nodes, "ShaderNodeBsdfTransparent")
-	nodeEmit = create_node(nodes, "ShaderNodeEmission")
-	nodeEmitCam = create_node(nodes, "ShaderNodeEmission")
+	nodeDiff = create_node(nodes, "ShaderNodeBsdfDiffuse", location = (940, 200))
+	nodeGlossDiff = create_node(nodes, "ShaderNodeBsdfGlossy", location = (940, 60))
+	nodeGlossMetallic = create_node(nodes, "ShaderNodeBsdfGlossy", location = (1140, -120))
+	nodeTrans = create_node(nodes, "ShaderNodeBsdfTransparent", location = (1740, 120))
+	nodeEmit = create_node(nodes, "ShaderNodeEmission", location = (1340, 120))
+	nodeEmitCam = create_node(nodes, "ShaderNodeEmission", location = (1340, 240))
 	# Mix Shader
-	nodeMixDiff = create_node(nodes, "ShaderNodeMixShader")
-	nodeMixMetallic = create_node(nodes, "ShaderNodeMixShader")
-	nodeMixTrans = create_node(nodes, "ShaderNodeMixShader")
-	nodeMixEmit = create_node(nodes, "ShaderNodeMixShader")
-	nodeMixCam = create_node(nodes, "ShaderNodeMixShader")
+	nodeMixDiff = create_node(nodes, "ShaderNodeMixShader", location = (1140, 40))
+	nodeMixMetallic = create_node(nodes, "ShaderNodeMixShader", location = (1340, 0))
+	nodeMixTrans = create_node(nodes, "ShaderNodeMixShader", location = (1940, 0))
+	nodeMixEmit = create_node(nodes, "ShaderNodeMixShader", location = (1740, 0))
+	nodeMixCam = create_node(nodes, "ShaderNodeMixShader", location = (1540, 240))
 	# Mix 
-	nodeMixRGBDiff = create_node(nodes, "ShaderNodeMixRGB")
-	nodeMixRGB = create_node(nodes, "ShaderNodeMixRGB")
-	nodeMixRGBMetallic = create_node(nodes, "ShaderNodeMixRGB")
+	nodeMixRGBDiff = create_node(nodes, "ShaderNodeMixRGB", location = (560, 200))
+	nodeMixRGB = create_node(nodes, "ShaderNodeMixRGB", location = (180, 360))
+	nodeMixRGBMetallic = create_node(nodes, "ShaderNodeMixRGB", location = (940, -120))
 	# Input
-	nodeFresnel = create_node(nodes, "ShaderNodeFresnel")
-	nodeFresnelMetallic = create_node(nodes, "ShaderNodeFresnel")
-	nodeLightPath = create_node(nodes, "ShaderNodeLightPath")
-	nodeGeometry = create_node(nodes, "ShaderNodeNewGeometry")
+	nodeFresnel = create_node(nodes, "ShaderNodeFresnel", location = (360, 160))
+	nodeFresnelMetallic = create_node(nodes, "ShaderNodeFresnel", location = (740, -120))
+	nodeLightPath = create_node(nodes, "ShaderNodeLightPath", location = (1340, 600))
+	nodeGeometry = create_node(nodes, "ShaderNodeNewGeometry", location = (0, 600))
 	# Math
-	nodeMathPower = create_node(nodes, "ShaderNodeMath")
-	nodeMathPowerDiff = create_node(nodes, "ShaderNodeMath")
-	nodeMathMultiplyDiff = create_node(nodes, "ShaderNodeMath")
-	nodeMathMetallic = create_node(nodes, "ShaderNodeMath")
+	nodeMathPower = create_node(nodes, "ShaderNodeMath", location = (0, 360), operation = "POWER")
+	nodeMathPowerDiff = create_node(nodes, "ShaderNodeMath", location = (360, 360), operation = "POWER")
+	nodeMathMultiplyDiff = create_node(nodes, "ShaderNodeMath", location = (740, 200), operation = "MULTIPLY")
+	nodeMathMetallic = create_node(nodes, "ShaderNodeMath", location = (740, -280), operation = "MULTIPLY")
 	# Etc
-	nodeBump = create_node(nodes, "ShaderNodeBump")
-	nodeFalloff = create_node(nodes, "ShaderNodeLightFalloff")
-	nodeOut = create_node(nodes, "ShaderNodeOutputMaterial")
-
-	# set location
-	nodeMixDiff.location = (1140, 40)
-	nodeMathMultiplyDiff.location = (740, 200)
-	nodeMixRGBDiff.location = (560, 200)
-	nodeMathPowerDiff.location = (360, 360)
-	nodeMixRGB.location = (180, 360)
-	nodeFresnel.location = (360, 160)
-	nodeMathPower.location = (0, 360)
-	nodeGeometry.location = (0, 600)
-	nodeBump.location = (-200, 600)
-	nodeDiff.location = (940, 200)
-	nodeGlossDiff.location = (940, 60)
-	nodeFresnelMetallic.location = (740, -120)
-	nodeMathMetallic.location = (740, -280)
-	nodeMixRGBMetallic.location = (940, -120)
-	nodeGlossMetallic.location = (1140, -120)
-	nodeMixMetallic.location = (1340, 0)
-	nodeFalloff.location = (1140, 240)
-	nodeLightPath.location = ((1340, 600))
-	nodeEmit.location = (1340, 120)
-	nodeEmitCam.location = (1340, 240)
-	nodeMixCam.location = (1540, 240)
-	nodeMixEmit.location = (1740, 0)
-	nodeTrans.location = (1740, 120)
-	nodeMixTrans.location = (1940, 0)
-	nodeOut.location = (2140, 0)
+	nodeBump = create_node(nodes, "ShaderNodeBump", location = (-200, 600))
+	nodeFalloff = create_node(nodes, "ShaderNodeLightFalloff", location = (1140, 240))
+	nodeOut = create_node(nodes, "ShaderNodeOutputMaterial", location = (2140, 0))
 
 	# Mix RGB sockets for 3.4
 	mixDiffIn = get_node_socket(nodeMixRGBDiff) # socket inputs
@@ -1689,10 +1583,6 @@ def matgen_cycles_original(
 	nodeMathMultiplyDiff.inputs[1].default_value = 0.1
 	nodeFalloff.inputs["Strength"].default_value = 32
 	nodeEmitCam.inputs["Strength"].default_value = 4
-	nodeMathMetallic.operation = "POWER"
-	nodeMathPowerDiff.operation = "POWER"
-	nodeMathPower.operation = "POWER"
-	nodeMathMultiplyDiff.operation = "MULTIPLY"
 	nodeMathPowerDiff.inputs[0].default_value = 0
 	nodeMathPowerDiff.inputs[1].default_value = 2
 	nodeMathPower.inputs[1].default_value = 2
@@ -1852,40 +1742,27 @@ def matgen_special_water(mat, passes):
 	links = mat.node_tree.links
 	nodes.clear()
 
-	nodeTexDiff = create_node(nodes,'ShaderNodeTexImage')
-	nodeTexNorm = create_node(nodes,'ShaderNodeTexImage')
-	nodeNormal = create_node(nodes,'ShaderNodeNormalMap')
-	nodeNormalInv = create_node(nodes,'ShaderNodeRGBCurve')
-	nodeBrightContrast = create_node(nodes,'ShaderNodeBrightContrast')
-	nodeSaturateMix = create_node(nodes,'ShaderNodeMixRGB')
-	nodeGlass = create_node(nodes,'ShaderNodeBsdfGlass')
-	nodeTrans = create_node(nodes,'ShaderNodeBsdfTransparent')
-	nodeMixTrans = create_node(nodes,'ShaderNodeMixShader')
-	nodeOut = create_node(nodes,'ShaderNodeOutputMaterial')
-
-	# set location
-	nodeTexDiff.location = (-180, 140)
-	nodeTexNorm.location = (-290, -180)
-	nodeSaturateMix.location = (-80, 140)
-	nodeNormal.location = (310, -180)
-	nodeNormalInv.location = (10, -180)
-	nodeBrightContrast.location = (120, 140)
-	nodeSaturateMix.location = (320, 140)
-	nodeGlass.location = (520, 140)
-	nodeTrans.location = (520, 340)
-	nodeMixTrans.location = (720, 140)
-	nodeOut.location = (920, 140)
-
-	nodeTexDiff.name = "Diffuse Tex"
-	nodeTexDiff.label = "Diffuse Tex"
-	nodeTexNorm.name = "Normal Tex"
-	nodeTexNorm.label = "Normal Tex"
-	nodeNormalInv.label = "Normal Inverse"
+	nodeTexDiff = create_node(nodes,'ShaderNodeTexImage', name = "Diffuse Texure", label = "Diffuse Texure", 
+							location = (-180, 140), interpolation = 'Closest', image = image_diff)
+	nodeTexNorm = create_node(nodes,'ShaderNodeTexImage',name = "Normal Texure",label = "Normal Texure", 
+							location = (-290, -180), interpolation = 'Closest')
+	nodeSaturateMix = create_node(nodes,'ShaderNodeMixRGB', name = "Add Color", label = "Add Color",
+							location = (320, 140), blend_type = 'MULTIPLY', mute = True, hide = True)
+	nodeNormalInv = create_node(nodes,'ShaderNodeRGBCurve',name = "Normal Inverse", label = "Normal Inverse", location = (10, -180))
+	nodeNormal = create_node(nodes,'ShaderNodeNormalMap', location = (310, -180))
+	nodeBrightContrast = create_node(nodes,'ShaderNodeBrightContrast', location = (120, 140))
+	
+	nodeGlass = create_node(nodes,'ShaderNodeBsdfGlass', location = (520, 140))
+	nodeTrans = create_node(nodes,'ShaderNodeBsdfTransparent', location = (520, 340))
+	nodeMixTrans = create_node(nodes,'ShaderNodeMixShader', location = (720, 140))
+	nodeOut = create_node(nodes,'ShaderNodeOutputMaterial', location = (920, 140))
 
 	# Mix RGB sockets for 3.4
 	saturateMixIn = get_node_socket(nodeSaturateMix) # socket inputs
 	saturateMixOut = get_node_socket(nodeSaturateMix, is_input=False) # socket outputs
+
 	# Sets default values
+	nodeSaturateMix.inputs[0].default_value = 1.0 	# Graystyle Blending
 	nodeNormalInv.mapping.curves[1].points[0].location = (0, 1)
 	nodeNormalInv.mapping.curves[1].points[1].location = (1, 0)
 	nodeMixTrans.inputs[0].default_value = 0.8
@@ -1904,10 +1781,6 @@ def matgen_special_water(mat, passes):
 	links.new(nodeTexNorm.outputs[0], nodeNormalInv.inputs[0])
 	links.new(nodeNormalInv.outputs[0], nodeNormal.inputs[0])
 	links.new(nodeNormal.outputs[0], nodeGlass.inputs[3])
-
-	# Sets to closest instead of linear interpolation
-	if hasattr(nodeTexDiff, "interpolation"):  # 2.72+
-		nodeTexDiff.interpolation = 'Closest'
 
 	# Normal update
 	util.apply_colorspace(nodeTexNorm, 'Non-Color')
@@ -1947,10 +1820,6 @@ def matgen_special_water(mat, passes):
 	apply_texture_animation_pass_settings(mat, animated_data)
 
 	# Graystyle Blending
-	nodeSaturateMix.inputs[0].default_value = 1.0
-	nodeSaturateMix.blend_type = 'MULTIPLY'  # changed from OVERLAY
-	nodeSaturateMix.mute = True
-	nodeSaturateMix.hide = True
 	if not checklist(canon, "desaturated"):
 		pass
 	elif not is_image_grayscale(image_diff):
@@ -1969,7 +1838,6 @@ def matgen_special_water(mat, passes):
 	nodeTexNorm["MCPREP_normal"] = True
 	nodeNormal["MCPREP_normal"] = True  # to also be also muted if no normal tex
 	# nodeTexDisp["MCPREP_disp"] = True
-	nodeTexDiff.image = image_diff
 
 	return 0
 
@@ -2003,34 +1871,17 @@ def matgen_special_glass(mat, passes):
 	links = mat.node_tree.links
 	nodes.clear()
 
-	nodeDiff = create_node(nodes, 'ShaderNodeBsdfDiffuse')
-	nodeMixTrans = create_node(nodes, 'ShaderNodeMixShader')
-	nodeOut = create_node(nodes, 'ShaderNodeOutputMaterial')
-	nodeTexDiff = create_node(nodes, 'ShaderNodeTexImage')
-	nodeTexNorm = create_node(nodes, 'ShaderNodeTexImage')
-	nodeNormal = create_node(nodes, 'ShaderNodeNormalMap')
-	nodeNormalInv = create_node(nodes, 'ShaderNodeRGBCurve')
-	nodeGlass = create_node(nodes, 'ShaderNodeBsdfGlass')
-	nodeBrightContrast = create_node(nodes, 'ShaderNodeBrightContrast')
-
-	# Names and labels the neccecary nodes
-	nodeTexDiff.name = "Diffuse Tex"
-	nodeTexDiff.label = "Diffuse Tex"
-	nodeTexNorm.name = "Normal Tex"
-	nodeTexNorm.label = "Normal Tex"
-	nodeNormalInv.label = "Normal Inverse"
-
-	# Positions the nodes
-	nodeTexDiff.location = (-380, 140)
-	nodeTexNorm.location = (-680, -180)
-	nodeNormal.location = (-80, -180)
-	nodeNormalInv.location = (-380, -180)
-	nodeOut.location = (820, 0)
-	nodeDiff.location = (120, 0)
-	nodeGlass.location = (120, 240)
-	nodeMixTrans.location = (620, 0)
-	nodeOut.location = (820, 0)
-	nodeBrightContrast.location = (420, 0)
+	nodeTexDiff = create_node(nodes, 'ShaderNodeTexImage', name = "Diffuse Texture", label = "Diffuse Texture", 
+							location = (-380, 140), interpolation = 'Closest', image = image_diff)
+	nodeTexNorm = create_node(nodes, 'ShaderNodeTexImage', name = "Normal Texture", label = "Normal Texture", 
+							location = (-680, -180), interpolation = 'Closest')
+	nodeNormalInv = create_node(nodes, 'ShaderNodeRGBCurve', name = "Normal Inverse", label = "Normal Inverse", location = (-380, -180))
+	nodeNormal = create_node(nodes, 'ShaderNodeNormalMap', location = (-80, -180))
+	nodeDiff = create_node(nodes, 'ShaderNodeBsdfDiffuse', location = (120, 0))
+	nodeMixTrans = create_node(nodes, 'ShaderNodeMixShader', location = (620, 0))
+	nodeGlass = create_node(nodes, 'ShaderNodeBsdfGlass', location = (120, 240))
+	nodeBrightContrast = create_node(nodes, 'ShaderNodeBrightContrast', location = (420, 0))
+	nodeOut = create_node(nodes, 'ShaderNodeOutputMaterial', location = (820, 0))
 
 	# Sets default transparency value
 	nodeMixTrans.inputs[0].default_value = 1
@@ -2051,10 +1902,6 @@ def matgen_special_glass(mat, passes):
 	links.new(nodeTexNorm.outputs["Color"], nodeNormalInv.inputs["Color"])
 	links.new(nodeNormalInv.outputs["Color"], nodeNormal.inputs["Color"])
 	links.new(nodeNormal.outputs[0], nodeDiff.inputs[2])
-
-	# Sets to closest instead of linear interpolation
-	if hasattr(nodeTexDiff, "interpolation"):  # 2.72+
-		nodeTexDiff.interpolation = 'Closest'
 
 	# Normal update
 	util.apply_colorspace(nodeTexNorm, 'Non-Color')
@@ -2098,6 +1945,5 @@ def matgen_special_glass(mat, passes):
 	nodeTexNorm["MCPREP_normal"] = True
 	nodeNormal["MCPREP_normal"] = True  # to also be also muted if no normal tex
 	# nodeTexDisp["MCPREP_disp"] = True
-	nodeTexDiff.image = image_diff
 
 	return 0  # return 0 once implemented
