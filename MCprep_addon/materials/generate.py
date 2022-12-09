@@ -1090,7 +1090,7 @@ def texgen_specular(mat, passes, nodeInputs, use_reflections):
 
 	nodeSpecInv = create_node(nodes, "ShaderNodeInvert", name = "Specular Inverse", label = "Specular Inverse", location = (-80, -280))
 	nodeNormalInv = create_node(nodes, "ShaderNodeRGBCurve", name = "Normal Inverse", label = "Normal Inverse", location = (-380, -500))
-	nodeNormal = create_node(nodes, "ShaderNodeNormalMap", location = (-80, 140))
+	nodeNormal = create_node(nodes, "ShaderNodeNormalMap", location = (-80, -500))
 
 	# Sets values
 	nodeSaturateMix.inputs[0].default_value = 1.0 # Graystyle Blending
