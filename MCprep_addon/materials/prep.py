@@ -574,14 +574,14 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 		elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 			# need to create at least one texture node first, then the rest works
 			mat.use_nodes = True
-			node_diff = mat.node_tree.nodes.new('ShaderNodeTexImage')
-			node_diff.image = image
+			nodes = mat.node_tree.nodes
+			node_diff = generate.create_node(nodes, 'ShaderNodeTexImage', image = image)
 			node_diff["MCPREP_diffuse"] = True
 
 			# Initialize extra passes as well
-			node_spec = mat.node_tree.nodes.new('ShaderNodeTexImage')
+			node_spec = generate.create_node(nodes, 'ShaderNodeTexImage')
 			node_spec["MCPREP_specular"] = True
-			node_nrm = mat.node_tree.nodes.new('ShaderNodeTexImage')
+			node_nrm = generate.create_node(nodes, 'ShaderNodeTexImage')
 			node_nrm["MCPREP_normal"] = True
 
 			conf.log("Added blank texture node")

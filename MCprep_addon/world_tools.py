@@ -25,6 +25,7 @@ from bpy_extras.io_utils import ExportHelper, ImportHelper
 from . import conf
 from . import util
 from . import tracking
+from .materials import generate
 
 
 # -----------------------------------------------------------------------------
@@ -470,12 +471,9 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 
 		if "mcprep_world" not in context.scene.world:
 			world_nodes.clear()
-			skynode = world_nodes.new("ShaderNodeTexSky")
-			background = world_nodes.new("ShaderNodeBackground")
-			output = world_nodes.new("ShaderNodeOutputWorld")
-			skynode.location = (-280, 300)
-			background.location = (10, 300)
-			output.location = (300, 300)
+			skynode = generate.create_node(world_nodes, "ShaderNodeTexSky", location = (-280, 300))
+			background = generate.create_node(world_nodes, "ShaderNodeBackground", location = (10, 300))
+			output = generate.create_node(world_nodes, "ShaderNodeOutputWorld", location = (300, 300))
 			world_links.new(skynode.outputs["Color"], background.inputs[0])
 			world_links.new(background.outputs["Background"], output.inputs[0])
 
@@ -505,16 +503,11 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 
 		if "mcprep_world" not in context.scene.world:
 			world_nodes.clear()
-			light_paths = world_nodes.new("ShaderNodeLightPath")
-			background_camera = world_nodes.new("ShaderNodeBackground")
-			background_others = world_nodes.new("ShaderNodeBackground")
-			mix_shader = world_nodes.new("ShaderNodeMixShader")
-			output = world_nodes.new("ShaderNodeOutputWorld")
-			light_paths.location = (-150, 400)
-			background_others.location = (10, 300)
-			background_camera.location = (10, 150)
-			mix_shader.location = (300, 300)
-			output.location = (500, 300)
+			light_paths = generate.create_node(world_nodes, "ShaderNodeLightPath", location = (-150, 400))
+			background_camera = generate.create_node(world_nodes, "ShaderNodeBackground", location = (10, 150))
+			background_others = generate.create_node(world_nodes, "ShaderNodeBackground", location = (10, 300))
+			mix_shader =generate.create_node(world_nodes, "ShaderNodeMixShader", location = (300, 300))
+			output = generate.create_node(world_nodes, "ShaderNodeOutputWorld", location = (500, 300))
 			background_others.inputs["Color"].default_value = (0.14965, 0.425823, 1, 1)
 			background_others.inputs["Strength"].default_value = 0.1
 			background_camera.inputs["Color"].default_value = (0.14965, 0.425823, 1, 1)

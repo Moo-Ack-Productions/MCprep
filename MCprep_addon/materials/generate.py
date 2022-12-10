@@ -1137,6 +1137,7 @@ def texgen_specular(mat, passes, nodeInputs, use_reflections):
 	util.apply_colorspace(nodeTexSpec, 'Non-Color')
 	util.apply_colorspace(nodeTexNorm, 'Non-Color')
 
+	# Graystyle Blending
 	if not checklist(canon, "desaturated"):
 		pass
 	elif not is_image_grayscale(image_diff):
@@ -1418,7 +1419,6 @@ def matgen_cycles_principled(
 
 	# Sets default transparency value
 	nodeMixTrans.inputs[0].default_value = 1
-
 	nodeFalloff.inputs["Strength"].default_value = 32
 	nodeEmitCam.inputs["Strength"].default_value = 4
 
