@@ -22,7 +22,7 @@ import os
 import bpy
 from bpy.app.handlers import persistent
 
-from .. import conf
+from ..conf import env 
 from .. import tracking
 from .. import util
 
@@ -34,7 +34,7 @@ from ..conf import env
 
 @persistent
 def clear_sync_cache(scene):
-	conf.log("Resetting sync mat cache", vv_only=True)
+	env.log("Resetting sync mat cache", vv_only=True)
 	env.material_sync_cache = None
 
 
@@ -179,7 +179,7 @@ class MCPREP_OT_sync_materials(bpy.types.Operator):
 				last_err = err
 
 		if last_err:
-			conf.log("Most recent error during sync:" + str(last_err))
+			env.log("Most recent error during sync:" + str(last_err))
 
 		# Re-establish initial state, as append material clears selections
 		for obj in inital_selection:

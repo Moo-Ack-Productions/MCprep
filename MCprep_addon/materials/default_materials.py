@@ -21,7 +21,6 @@ import os
 
 import bpy
 
-from .. import conf
 from .. import tracking
 from .. import util
 from . import sync
@@ -139,7 +138,7 @@ class MCPREP_OT_default_material(bpy.types.Operator):
 			try:
 				err = sync_default_material(context, mat, material_name, self.engine) # no linking
 				if err:
-					conf.log(err)
+					env.log(err)
 			except Exception as e:
 				print(e)
 

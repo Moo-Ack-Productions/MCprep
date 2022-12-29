@@ -21,7 +21,7 @@ import bpy
 
 import time
 
-from .. import conf
+from ..conf import env
 from . import generate
 from .. import tracking
 from .. import util
@@ -98,7 +98,7 @@ def detect_invalid_uvs_from_objs(obj_list):
 	# rightfully not up against bounds of image. But generally, for combined
 	# images the area covered is closer to 0.05
 	thresh = 0.25
-	conf.log("Doing check for invalid UV faces", vv_only=True)
+	env.log("Doing check for invalid UV faces", vv_only=True)
 	t0 = time.time()
 
 	for obj in obj_list:
@@ -122,7 +122,7 @@ def detect_invalid_uvs_from_objs(obj_list):
 			invalid_objects.append(obj)
 	t1 = time.time()
 	t_diff = t1 - t0  # round to .1s
-	conf.log("UV check took {}s".format(t_diff), vv_only=True)
+	env.log("UV check took {}s".format(t_diff), vv_only=True)
 	return invalid, invalid_objects
 
 
@@ -187,7 +187,7 @@ class MCPREP_OT_scale_uv(bpy.types.Operator):
 
 		if ret is not None:
 			self.report({'ERROR'}, ret)
-			conf.log("Error, " + ret)
+			env.log("Error, " + ret)
 			return {'CANCELLED'}
 
 		return {'FINISHED'}
@@ -285,7 +285,7 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 			return {"CANCELLED"}
 
 		if not ret and self.delete:
-			conf.log("Delet faces")
+			env.log("Delet faces")
 			bpy.ops.mesh.delete(type='FACE')
 
 		return {"FINISHED"}
@@ -293,7 +293,7 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 	def select_alpha(self, ob, threshold):
 		"""Core function to select alpha faces based on active material/image."""
 		if not ob.material_slots:
-			conf.log("No materials, skipping.")
+			env.log("No materials, skipping.")
 			return "No materials"
 
 		# pre-cache the materials and their respective images for comparing
@@ -309,7 +309,7 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 				continue
 			elif image.channels != 4:
 				textures.append(None)  # no alpha channel anyways
-				conf.log("No alpha channel for: " + image.name)
+				env.log("No alpha channel for: " + image.name)
 				continue
 			textures.append(image)
 		data = [None for tex in textures]
@@ -321,7 +321,7 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 			fnd = f.material_index
 			image = textures[fnd]
 			if not image:
-				conf.log("Could not get image from face's material")
+				env.log("Could not get image from face's material")
 				return "Could not get image from face's material"
 
 			# lazy load alpha part of image to memory, hold for whole operator
@@ -348,7 +348,7 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 			xmax = round(max(xlist) * image.size[0]) - 0.5
 			ymin = round(min(ylist) * image.size[1]) - 0.5
 			ymax = round(max(ylist) * image.size[1]) - 0.5
-			conf.log(["\tSet size:", xmin, xmax, ymin, ymax], vv_only=True)
+			env.log(["\tSet size:", xmin, xmax, ymin, ymax], vv_only=True)
 
 			# assuming faces are roughly rectangular, sum pixels a face covers
 			asum = 0

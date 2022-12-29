@@ -25,7 +25,7 @@ from bpy_extras.io_utils import ImportHelper
 
 from .mineways_connector import MinewaysConnector
 from .jmc_connector import JmcConnector
-from .. import conf
+from ..conf import env
 from .. import util
 from .. import tracking
 
@@ -286,7 +286,7 @@ class MCPREP_OT_import_new_world(bpy.types.Operator):
 			"_" + connector.world + "_exp.mtl"
 			)
 
-		conf.log("Running Mineways bridge to import world "+ connector.world)
+		env.log("Running Mineways bridge to import world "+ connector.world)
 		connector.run_export_single(
 			obj_path,
 			list(self.first_corner),
@@ -297,14 +297,14 @@ class MCPREP_OT_import_new_world(bpy.types.Operator):
 		# TODO: Implement check/connector class check for success, not just file existing
 		if not os.path.isfile(obj_path):
 			self.report({"ERROR"}, "OBJ file not exported, try using Mineways on its own to export OBJ")
-			conf.log("OBJ file not found to import: "+obj_path)
+			env.log("OBJ file not found to import: "+obj_path)
 			return {"CANCELLED"}
-		conf.log("Now importing the exported obj into blender")
+		env.log("Now importing the exported obj into blender")
 		bpy.ops.import_scene.obj(filepath=obj_path)
 		# consider removing old world obj's?
 
 		t2 = time.time()
-		conf.log("Mineways bridge completed in: {}s (Mineways: {}s, obj import: {}s".format(
+		env.log("Mineways bridge completed in: {}s (Mineways: {}s, obj import: {}s".format(
 			int(t2-t0), int(t1-t0), int(t2-t1)))
 
 		self.report({'INFO'}, "Bridge completed finished")

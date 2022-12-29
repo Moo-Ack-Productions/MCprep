@@ -22,7 +22,6 @@ import os
 import bpy
 from bpy_extras.io_utils import ImportHelper
 
-from .. import conf
 from . import generate
 from . import sequences
 from .. import tracking
@@ -197,7 +196,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 
 		for mat in mat_list:
 			if not mat:
-				conf.log(
+				env.log(
 					"During prep, found null material:" + str(mat), vv_only=True)
 				continue
 
@@ -428,7 +427,7 @@ class MCPREP_OT_swap_texture_pack(
 		folder = self.filepath
 		if os.path.isfile(bpy.path.abspath(folder)):
 			folder = os.path.dirname(folder)
-		conf.log("Folder: " + folder)
+		env.log("Folder: " + folder)
 
 		if not os.path.isdir(bpy.path.abspath(folder)):
 			self.report({'ERROR'}, "Selected folder does not exist")
@@ -453,7 +452,7 @@ class MCPREP_OT_swap_texture_pack(
 		# set the scene's folder for the texturepack being swapped
 		context.scene.mcprep_texturepack_path = folder
 
-		conf.log("Materials detected: " + str(len(mat_list)))
+		env.log("Materials detected: " + str(len(mat_list)))
 		res = 0
 		for mat in mat_list:
 			self.preprocess_material(mat)
@@ -483,8 +482,8 @@ class MCPREP_OT_swap_texture_pack(
 			self.report({'ERROR'}, (
 				"Detected scaled UV's (all in one texture), be sure to use "
 				"Mineway's 'Export Individual Textures To..'' feature"))
-			conf.log("Detected scaledd UV's, incompatible with swap textures")
-			conf.log([ob.name for ob in affected_objs], vv_only=True)
+			env.log("Detected scaledd UV's, incompatible with swap textures")
+			env.log([ob.name for ob in affected_objs], vv_only=True)
 		else:
 			self.report({'INFO'}, "{} materials affected".format(res))
 		self.track_param = context.scene.render.engine
@@ -497,7 +496,7 @@ class MCPREP_OT_swap_texture_pack(
 		# but in Mineways export, this is the flattened grass/drit block side
 		if material.name == "grass_block_side_overlay":
 			material.name = "grass_block_side"
-			conf.log("Renamed material: grass_block_side_overlay to grass_block_side")
+			env.log("Renamed material: grass_block_side_overlay to grass_block_side")
 
 
 class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
@@ -586,7 +585,7 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 			node_nrm = mat.node_tree.nodes.new('ShaderNodeTexImage')
 			node_nrm["MCPREP_normal"] = True
 
-			conf.log("Added blank texture node")
+			env.log("Added blank texture node")
 
 			# now use standard method to update textures
 			generate.set_cycles_texture(image, mat, self.useExtraMaps)
@@ -598,14 +597,14 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 	def update_material(self, context, mat):
 		"""Update the initially created material"""
 		if not mat:
-			conf.log("During prep, found null material:" + str(mat), vv_only=True)
+			env.log("During prep, found null material:" + str(mat), vv_only=True)
 			return
 		elif mat.library:
 			return
 
 		engine = context.scene.render.engine
 		passes = generate.get_textures(mat)
-		conf.log("Load Mat Passes:" + str(passes), vv_only=True)
+		env.log("Load Mat Passes:" + str(passes), vv_only=True)
 		if not self.useExtraMaps:
 			for pass_name in passes:
 				if pass_name != "diffuse":

@@ -24,7 +24,6 @@ import shutil
 import urllib.request
 from bpy.app.handlers import persistent
 
-from .. import conf
 from . import generate
 from .. import tracking
 from .. import util
@@ -73,7 +72,7 @@ def reloadSkinList(context):
 
 def update_skin_path(self, context):
 	"""For UI list path callback"""
-	conf.log("Updating rig path", vv_only=True)
+	env.log("Updating rig path", vv_only=True)
 	reloadSkinList(context)
 
 
@@ -83,17 +82,17 @@ def handler_skins_enablehack(scene):
 		bpy.app.handlers.scene_update_pre.remove(handler_skins_enablehack)
 	except:
 		pass
-	conf.log("Triggering Handler_skins_load from first enable", vv_only=True)
+	env.log("Triggering Handler_skins_load from first enable", vv_only=True)
 	handler_skins_load(scene)
 
 
 @persistent
 def handler_skins_load(scene):
 	try:
-		conf.log("Reloading skins", vv_only=True)
+		env.log("Reloading skins", vv_only=True)
 		reloadSkinList(bpy.context)
 	except:
-		conf.log("Didn't run skin reloading callback", vv_only=True)
+		env.log("Didn't run skin reloading callback", vv_only=True)
 
 
 def loadSkinFile(self, context, filepath, new_material=False):
@@ -142,7 +141,7 @@ def convert_skin_layout(image_file):
 	"""
 
 	if not os.path.isfile(image_file):
-		conf.log("Error! Image file does not exist: " + image_file)
+		env.log("Error! Image file does not exist: " + image_file)
 		return False
 
 	img = bpy.data.images.load(image_file)
@@ -150,13 +149,13 @@ def convert_skin_layout(image_file):
 		return False
 	elif img.size[0] != img.size[1] * 2:
 		# some image that isn't the normal 64x32 of old skin formats
-		conf.log("Unknown skin image format, not converting layout")
+		env.log("Unknown skin image format, not converting layout")
 		return False
 	elif img.size[0] / 64 != int(img.size[0] / 64):
-		conf.log("Non-regular scaling of skin image, can't process")
+		env.log("Non-regular scaling of skin image, can't process")
 		return False
 
-	conf.log("Old image format detected, converting to post 1.8 layout")
+	env.log("Old image format detected, converting to post 1.8 layout")
 
 	scale = int(img.size[0] / 64)
 	has_alpha = img.channels == 4
@@ -196,7 +195,7 @@ def convert_skin_layout(image_file):
 			end = (row * block_width * 4) + block_width + (block_width * 2.5)
 			lower_half += upper_half[int(start):int(end)]
 		else:
-			conf.log("Bad math! Should never go above 4 blocks")
+			env.log("Bad math! Should never go above 4 blocks")
 			failout = True
 			break
 
@@ -207,7 +206,7 @@ def convert_skin_layout(image_file):
 		new_image.pixels = new_pixels
 		new_image.filepath_raw = image_file
 		new_image.save()
-		conf.log("Saved out post 1.8 converted skin file")
+		env.log("Saved out post 1.8 converted skin file")
 
 	# cleanup files
 	img.user_clear()
@@ -244,7 +243,7 @@ def getMatsFromSelected(selected, new_material=False):
 
 	for ob in obj_list:
 		if ob.data.library:
-			conf.log("Library object, skipping")
+			env.log("Library object, skipping")
 			linked_objs += 1
 			continue
 		elif new_material is False:
@@ -284,7 +283,7 @@ def setUVimage(objs, image):
 		if obj.type != "MESH":
 			continue
 		if not hasattr(obj.data, "uv_textures"):
-			conf.log("Called setUVimage on object with no uv_textures, 2.8?")
+			env.log("Called setUVimage on object with no uv_textures, 2.8?")
 			return
 		if obj.data.uv_textures.active is None:
 			continue
@@ -298,7 +297,7 @@ def download_user(self, context, username):
 	Reusable function from within two common operators for downloading skin.
 	Example link: http://minotar.net/skin/theduckcow
 	"""
-	conf.log("Downloading skin: " + username)
+	env.log("Downloading skin: " + username)
 
 	src_link = "http://minotar.net/skin/"
 	saveloc = os.path.join(
@@ -480,7 +479,7 @@ class MCPREP_OT_apply_username_skin(bpy.types.Operator):
 			bpy.ops.mcprep.reload_skins()
 			return {'FINISHED'}
 		else:
-			conf.log("Reusing downloaded skin")
+			env.log("Reusing downloaded skin")
 			ind = skins.index(self.username.lower())
 			res = loadSkinFile(self, context, paths[ind][1], self.new_material)
 			if res != 0:
@@ -791,7 +790,7 @@ def register():
 	bpy.types.Scene.mcprep_skins_list_index = bpy.props.IntProperty(default=0)
 
 	# to auto-load the skins
-	conf.log("Adding reload skin handler to scene", vv_only=True)
+	env.log("Adding reload skin handler to scene", vv_only=True)
 	try:
 		bpy.app.handlers.scene_update_pre.append(handler_skins_enablehack)
 	except:
