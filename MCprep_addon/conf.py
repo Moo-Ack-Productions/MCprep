@@ -101,7 +101,6 @@ class MCprepEnv:
 		# start with custom icons
 		# put into a try statement in case older blender version!
 		global preview_collections
-		global v
 
 		collection_sets = [
 			"main", "skins", "mobs", "entities", "blocks", "items", "effects", "materials"]
@@ -154,7 +153,7 @@ class MCprepEnv:
 		elif self.verbose:
 			print(statement)
 
-ENV = MCprepEnv(dev_build=True, verbose=True)
+env = MCprepEnv(dev_build=True, verbose=True)
 
 # ! Deprecated as of MCprep 3.4.2
 def init():
@@ -318,9 +317,9 @@ def icons_init():
 
 # ! Deprecated as of MCprep 3.4.2
 def log(statement, vv_only=False):
-    if ENV.verbose and vv_only and ENV.very_verbose:
+    if env.verbose and vv_only and env.very_verbose:
         print(statement)
-    elif ENV.verbose:
+    elif env.verbose:
         print(statement)
 
 def updater_select_link_function(self, tag):
@@ -346,17 +345,17 @@ def register():
 
 
 def unregister():
-	if ENV.use_icons:
-		for pcoll in ENV.preview_collections.values():
+	if env.use_icons:
+		for pcoll in env.preview_collections.values():
 			try:
 				bpy.utils.previews.remove(pcoll)
 			except:
 				log('Issue clearing preview set ' + str(pcoll))
-	ENV.preview_collections.clear()
+	env.preview_collections.clear()
 
-	ENV.json_data = None  # actively clearing out json data for next open
+	env.json_data = None  # actively clearing out json data for next open
 
-	ENV.loaded_all_spawners = False
-	ENV.skin_list = []
-	ENV.rig_categories = []
-	ENV.material_sync_cache = []
+	env.loaded_all_spawners = False
+	env.skin_list = []
+	env.rig_categories = []
+	env.material_sync_cache = []

@@ -31,7 +31,7 @@ from .. import tracking
 
 from . import spawn_util
 
-from ..conf import ENV
+from ..conf import env
 
 # -----------------------------------------------------------------------------
 # Global enum values
@@ -743,9 +743,9 @@ def update_effects_list(context):
 	mcprep_props = context.scene.mcprep_props
 	mcprep_props.effects_list.clear()
 
-	if ENV.use_icons and ENV.preview_collections["effects"]:
+	if env.use_icons and ENV.preview_collections["effects"]:
 		try:
-			bpy.utils.previews.remove(ENV.preview_collections["effects"])
+			bpy.utils.previews.remove(env.preview_collections["effects"])
 		except Exception as e:
 			print(e)
 			conf.log("MCPREP: Failed to remove icon set, effects")
@@ -948,7 +948,7 @@ def load_image_sequence_effects(context):
 		effect.index = len(mcprep_props.effects_list) - 1  # For icon index.
 
 		# Try to load a middle frame as the icon.
-		if not ENV.use_icons or ENV.preview_collections["effects"] == "":
+		if not env.use_icons or ENV.preview_collections["effects"] == "":
 			continue
 		effect_files = [
 			os.path.join(resource_folder, fname)
@@ -960,7 +960,7 @@ def load_image_sequence_effects(context):
 		if effect_files:
 			# 0 if 1 item, otherwise greater side of median.
 			e_index = int(len(effect_files) / 2)
-			ENV.preview_collections["effects"].load(
+			env.preview_collections["effects"].load(
 				"effects-{}".format(effect.index), effect_files[e_index], 'IMAGE')
 
 

@@ -22,7 +22,7 @@ import bpy
 from .. import conf
 from .. import util
 
-from ..conf import ENV
+from ..conf import env
 
 
 # -----------------------------------------------------------------------------
@@ -35,7 +35,7 @@ def update_mcprep_texturepack_path(self, context):
 	bpy.ops.mcprep.reload_items()
 	bpy.ops.mcprep.reload_materials()
 	bpy.ops.mcprep.reload_models()
-	ENV.material_sync_cache = None
+	env.material_sync_cache = None
 
 
 def get_mc_canonical_name(name):
@@ -46,7 +46,7 @@ def get_mc_canonical_name(name):
 		form (mc, jmc, or mineways)
 	"""
 	general_name = util.nameGeneralize(name)
-	if not ENV.json_data:
+	if not env.json_data:
 		res = util.load_mcprep_json()
 		if not res:
 			return general_name, None
@@ -57,10 +57,10 @@ def get_mc_canonical_name(name):
 	if ".emit" in general_name and general_name != ".emit":
 		general_name = general_name.replace(".emit", "")
 
-	no_missing = "blocks" in ENV.json_data
-	no_missing &= "block_mapping_mc" in ENV.json_data["blocks"]
-	no_missing &= "block_mapping_jmc" in ENV.json_data["blocks"]
-	no_missing &= "block_mapping_mineways" in ENV.json_data["blocks"]
+	no_missing = "blocks" in env.json_data
+	no_missing &= "block_mapping_mc" in env.json_data["blocks"]
+	no_missing &= "block_mapping_jmc" in env.json_data["blocks"]
+	no_missing &= "block_mapping_mineways" in env.json_data["blocks"]
 
 	if no_missing is False:
 		conf.log("Missing key values in json")
@@ -76,21 +76,21 @@ def get_mc_canonical_name(name):
 	else:
 		jmc_prefix = False
 
-	if general_name in ENV.json_data["blocks"]["block_mapping_mc"]:
-		canon = ENV.json_data["blocks"]["block_mapping_mc"][general_name]
+	if general_name in env.json_data["blocks"]["block_mapping_mc"]:
+		canon = env.json_data["blocks"]["block_mapping_mc"][general_name]
 		form = "mc" if not jmc_prefix else "jmc2obj"
-	elif general_name in ENV.json_data["blocks"]["block_mapping_jmc"]:
-		canon = ENV.json_data["blocks"]["block_mapping_jmc"][general_name]
+	elif general_name in env.json_data["blocks"]["block_mapping_jmc"]:
+		canon = env.json_data["blocks"]["block_mapping_jmc"][general_name]
 		form = "jmc2obj"
-	elif general_name in ENV.json_data["blocks"]["block_mapping_mineways"]:
-		canon = ENV.json_data["blocks"]["block_mapping_mineways"][general_name]
+	elif general_name in env.json_data["blocks"]["block_mapping_mineways"]:
+		canon = env.json_data["blocks"]["block_mapping_mineways"][general_name]
 		form = "mineways"
-	elif general_name.lower() in ENV.json_data["blocks"]["block_mapping_jmc"]:
-		canon = ENV.json_data["blocks"]["block_mapping_jmc"][
+	elif general_name.lower() in env.json_data["blocks"]["block_mapping_jmc"]:
+		canon = env.json_data["blocks"]["block_mapping_jmc"][
 			general_name.lower()]
 		form = "jmc2obj"
-	elif general_name.lower() in ENV.json_data["blocks"]["block_mapping_mineways"]:
-		canon = ENV.json_data["blocks"]["block_mapping_mineways"][
+	elif general_name.lower() in env.json_data["blocks"]["block_mapping_mineways"]:
+		canon = env.json_data["blocks"]["block_mapping_mineways"][
 			general_name.lower()]
 		form = "mineways"
 	else:
@@ -219,15 +219,15 @@ def detect_form(materials):
 
 def checklist(matName, listName):
 	"""Helper to expand single wildcard within generalized material names"""
-	if not ENV.json_data:
+	if not env.json_data:
 		conf.log("No json_data for checklist to call from!")
-	if "blocks" not in ENV.json_data or listName not in ENV.json_data["blocks"]:
+	if "blocks" not in env.json_data or listName not in ENV.json_data["blocks"]:
 		conf.log(
-			"ENV.json_data is missing blocks or listName " + str(listName))
+			"env.json_data is missing blocks or listName " + str(listName))
 		return False
-	if matName in ENV.json_data["blocks"][listName]:
+	if matName in env.json_data["blocks"][listName]:
 		return True
-	for name in ENV.json_data["blocks"][listName]:
+	for name in env.json_data["blocks"][listName]:
 		if '*' not in name:
 			continue
 		x = name.split('*')
@@ -242,7 +242,7 @@ def matprep_internal(mat, passes, use_reflections, only_solid):
 	"""Update existing internal materials with improved settings.
 	Will not necessarily properly convert cycles materials into internal."""
 
-	if not ENV.json_data:
+	if not env.json_data:
 		_ = util.load_mcprep_json()
 
 	newName = mat.name + '_tex'
@@ -350,7 +350,7 @@ def matprep_internal(mat, passes, use_reflections, only_solid):
 		new_tex.use_color_ramp = True
 		for _ in range(len(new_tex.color_ramp.elements) - 1):
 			new_tex.color_ramp.elements.remove(new_tex.color_ramp.elements[0])
-		desat_color = ENV.json_data['blocks']['desaturated'][canon]
+		desat_color = env.json_data['blocks']['desaturated'][canon]
 		if len(desat_color) < len(new_tex.color_ramp.elements[0].color):
 			desat_color.append(1.0)
 		new_tex.color_ramp.elements[0].color = desat_color
@@ -637,7 +637,7 @@ def set_internal_texture(image, material, extra_passes=False):
 			new_tex.use_color_ramp = True
 			for _ in range(len(new_tex.color_ramp.elements) - 1):
 				new_tex.color_ramp.elements.remove(new_tex.color_ramp.elements[0])
-			desat_color = ENV.json_data['blocks']['desaturated'][canon]
+			desat_color = env.json_data['blocks']['desaturated'][canon]
 			if len(desat_color) < len(new_tex.color_ramp.elements[0].color):
 				desat_color.append(1.0)
 			new_tex.color_ramp.elements[0].color = desat_color
@@ -923,7 +923,7 @@ def set_saturation_material(mat):
 
 	saturate = is_image_grayscale(diff_img)
 
-	desat_color = ENV.json_data['blocks']['desaturated'][canon]
+	desat_color = env.json_data['blocks']['desaturated'][canon]
 	engine = bpy.context.scene.render.engine
 
 	if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
@@ -1131,7 +1131,7 @@ def texgen_specular(mat, passes, nodeInputs, use_reflections):
 		pass
 	else:
 		conf.log("Texture desaturated: " + canon, vv_only=True)
-		desat_color = ENV.json_data['blocks']['desaturated'][canon]
+		desat_color = env.json_data['blocks']['desaturated'][canon]
 		if len(desat_color) < len(nodeSaturateMix.inputs[2].default_value):
 			desat_color.append(1.0)
 		nodeSaturateMix.inputs[2].default_value = desat_color
@@ -1265,7 +1265,7 @@ def texgen_seus(mat, passes, nodeInputs, use_reflections):
 		pass
 	else:
 		conf.log("Texture desaturated: " + canon, vv_only=True)
-		desat_color = ENV.json_data['blocks']['desaturated'][canon]
+		desat_color = env.json_data['blocks']['desaturated'][canon]
 		if len(desat_color) < len(nodeSaturateMix.inputs[2].default_value):
 			desat_color.append(1.0)
 		nodeSaturateMix.inputs[2].default_value = desat_color
@@ -1383,7 +1383,7 @@ def matgen_cycles_simple(
 		pass
 	else:
 		conf.log("Texture desaturated: " + canon, vv_only=True)
-		desat_color = ENV.json_data['blocks']['desaturated'][canon]
+		desat_color = env.json_data['blocks']['desaturated'][canon]
 		if len(desat_color) < len(nodeSaturateMix.inputs[2].default_value):
 			desat_color.append(1.0)
 		nodeSaturateMix.inputs[2].default_value = desat_color
@@ -1896,7 +1896,7 @@ def matgen_special_water(mat, passes):
 		pass
 	else:
 		conf.log("Texture desaturated: " + canon, vv_only=True)
-		desat_color = ENV.json_data['blocks']['desaturated'][canon]
+		desat_color = env.json_data['blocks']['desaturated'][canon]
 		if len(desat_color) < len(nodeSaturateMix.inputs[2].default_value):
 			desat_color.append(1.0)
 		nodeSaturateMix.inputs[2].default_value = desat_color

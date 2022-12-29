@@ -27,6 +27,7 @@ import mathutils
 
 from . import spawn_util
 from .. import conf
+from ..conf import env
 from ..materials import generate
 from .. import util
 from .. import tracking
@@ -735,7 +736,6 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		t5 = time.time()
 
 		# run timing calculations
-		env = conf.MCprepEnv()
 		if env.very_verbose:
 			loop_prep = sum(t1s) - sum(t0s)
 			face_process = sum(t2s) - sum(t1s)

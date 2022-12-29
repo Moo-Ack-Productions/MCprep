@@ -29,7 +29,7 @@ from .. import tracking
 from .. import util
 from . import uv_tools
 
-from ..conf import ENV
+from ..conf import env
 
 # -----------------------------------------------------------------------------
 # Material class functions
@@ -301,9 +301,9 @@ class MCPREP_OT_materials_help(bpy.types.Operator):
 
 	def update_supress_help(self, context):
 		"""Update trigger for supressing help popups."""
-		if ENV.verbose and self.suppress_help:
+		if env.verbose and self.suppress_help:
 			print("Supressing future help popups")
-		elif ENV.verbose and not self.suppress_help:
+		elif env.verbose and not self.suppress_help:
 			print("Re-enabling popup warnings")
 
 	help_num = bpy.props.IntProperty(

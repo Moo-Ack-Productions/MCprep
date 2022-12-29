@@ -30,7 +30,7 @@ from .. import tracking
 from .. import util
 from . import uv_tools
 
-from ..conf import ENV
+from ..conf import env
 
 # -----------------------------------------------------------------------------
 # Supporting functions
@@ -187,7 +187,7 @@ def generate_material_sequence(
 		# export to save frames in currently selected texturepack (could be addon)
 		seq_path_base = os.path.dirname(bpy.path.abspath(image_path))
 
-	if ENV.very_verbose:
+	if env.very_verbose:
 		conf.log("Pre-sequence details")
 		conf.log(image_path)
 		conf.log(image_dict)

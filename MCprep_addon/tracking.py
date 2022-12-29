@@ -43,7 +43,7 @@ try:
 	import textwrap
 	import time
 	from datetime import datetime
-	from .conf import ENV
+	from .conf import env
 except Exception as err:
 	print("[MCPREP Error] Failed tracker module load, invalid import module:")
 	print('\t'+str(err))
@@ -1000,7 +1000,7 @@ def register(bl_info):
 
 	# used to define which server source, not just if's below
 	if VALID_IMPORT:
-		Tracker.dev = ENV.dev_build # True or False
+		Tracker.dev = env.dev_build # True or False
 	else:
 		Tracker.dev = False
 

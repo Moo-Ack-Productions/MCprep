@@ -27,7 +27,7 @@ from . import sequences
 from .. import tracking
 from .. import util
 
-from ..conf import ENV
+from ..conf import env
 
 
 # -----------------------------------------------------------------------------
@@ -42,9 +42,9 @@ def reload_materials(context):
 	extensions = [".png", ".jpg", ".jpeg"]
 
 	mcprep_props.material_list.clear()
-	if ENV.use_icons and ENV.preview_collections["materials"]:
+	if env.use_icons and ENV.preview_collections["materials"]:
 		try:
-			bpy.utils.previews.remove(ENV.preview_collections["materials"])
+			bpy.utils.previews.remove(env.preview_collections["materials"])
 		except:
 			conf.log("Failed to remove icon set, materials")
 
@@ -90,9 +90,9 @@ def reload_materials(context):
 		asset.index = i
 
 		# if available, load the custom icon too
-		if not ENV.use_icons or ENV.preview_collections["materials"] == "":
+		if not env.use_icons or ENV.preview_collections["materials"] == "":
 			continue
-		ENV.preview_collections["materials"].load(
+		env.preview_collections["materials"].load(
 			"material-{}".format(i), image_file, 'IMAGE')
 
 	if mcprep_props.material_list_index >= len(mcprep_props.material_list):

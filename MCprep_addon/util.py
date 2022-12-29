@@ -28,7 +28,7 @@ import subprocess
 import bpy
 
 from . import conf
-from .conf import ENV
+from .conf import env
 
 
 # Commonly used name for an excluded collection in Blender 2.8+
@@ -418,7 +418,7 @@ def addGroupInstance(group_name, loc, select=True):
 
 def load_mcprep_json():
 	"""Load in the json file, defered so not at addon enable time."""
-	path = ENV.json_path
+	path = env.json_path
 	default = {
 		"blocks": {
 			"reflective": [],
@@ -437,17 +437,17 @@ def load_mcprep_json():
 	}
 	if not os.path.isfile(path):
 		conf.log("Error, json file does not exist: " + path)
-		ENV.json_data = default
+		env.json_data = default
 		return False
 	with open(path) as data_file:
 		try:
-			ENV.json_data = json.load(data_file)
+			env.json_data = json.load(data_file)
 			conf.log("Successfully read the JSON file")
 			return True
 		except Exception as err:
 			print("Failed to load json file:")
 			print('\t', err)
-			ENV.json_data = default
+			env.json_data = default
 
 
 def ui_scale():
