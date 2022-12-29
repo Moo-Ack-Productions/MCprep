@@ -171,7 +171,29 @@ One other detail: MCprep uses git lfs or Large File Storage, to avoid saving bin
 
 Run into other gotchas? Please open a [new issue](https://github.com/TheDuckCow/MCprep/issues)!
 
-## Installing `bpy` for IDEs
+## IDE Support
 If you're using an IDE, it's recommened to install `bpy` as a Python module. In my (StandingPad) experiance, the [fake-bpy package](https://github.com/nutti/fake-bpy-module) seems to be the best.
 
-It's also recommened to use a virtual environment (especially if you're on Linux) as to avoid issues with system wide packages. [See this for more details](https://realpython.com/python-virtual-environments-a-primer/)
+It's also recommened to use a virtual environment (especially if you're on Linux) as to avoid issues with system wide packages and different versions of `bpy`. [See this for more details](https://realpython.com/python-virtual-environments-a-primer/)
+
+### Creating a Virtual Environment and Setting up `bpy`
+First, we need to come up with a name. For MCprep development, it's recommended to use the following convention:
+`mcprep_venv_<version>`
+
+For example, if I was making a virtul environment for 3.3, I would do `mcprep_venv_3.3`.
+
+To create a virtual environment, do the following
+`python3 -m venv mcprep_venv_<version>`
+
+Then to enable it, then:
+Windows: `venv\Scripts\activate`
+MacOS and Linux: `source venv\Scripts\activate`
+
+This will make your terminal use the virtual environment until you close it or use `deactivate`. Each time you open your terminal after this, remember to enable the virtual environment
+
+Next we need to install `fake-bpy`:
+`python3 -m pip install fake-bpy-module-<version>`
+
+If you use PyCharm, you should check the GitHub for [additional instructions](https://github.com/nutti/fake-bpy-module#install-via-pip-package)
+
+Now you're ready to do MCprep development
