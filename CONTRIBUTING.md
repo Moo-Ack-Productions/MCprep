@@ -180,6 +180,8 @@ It's also recommened to use a virtual environment (especially if you're on Linux
 First, we need to come up with a name. For MCprep development, it's recommended to use the following convention:
 `mcprep_venv_<version>`
 
+This allows you to have multiple versions of `bpy` side by side in their own environments.
+
 For example, if I was making a virtul environment for 3.3, I would do `mcprep_venv_3.3`.
 
 To create a virtual environment, do the following:
@@ -188,9 +190,9 @@ To create a virtual environment, do the following:
 
 Then to enable it, then:
 
-Windows: `venv\Scripts\activate`
+Windows: `mcprep_venv_<version>\Scripts\activate`
 
-MacOS and Linux: `source venv\Scripts\activate`
+MacOS and Linux: `source mcprep_venv_<version>\Scripts\activate`
 
 This will make your terminal use the virtual environment until you close it or use `deactivate`. Each time you open your terminal after this, remember to enable the virtual environment
 
