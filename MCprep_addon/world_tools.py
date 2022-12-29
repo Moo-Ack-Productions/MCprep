@@ -23,6 +23,7 @@ import bpy
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
 from . import conf
+from .conf import env
 from . import util
 from . import tracking
 
@@ -566,11 +567,11 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 				sky_used = True
 				break
 		if sky_used:
-			conf.log("MCprep sky being used with atmosphere")
+			env.log("MCprep sky being used with atmosphere")
 			context.scene.world.use_sky_blend = False
 			context.scene.world.horizon_color = (0.00938029, 0.0125943, 0.0140572)
 		else:
-			conf.log("No MCprep sky with atmosphere")
+			env.log("No MCprep sky with atmosphere")
 			context.scene.world.use_sky_blend = True
 			context.scene.world.horizon_color = (0.647705, 0.859927, 0.940392)
 			context.scene.world.zenith_color = (0.0954261, 0.546859, 1)
@@ -712,7 +713,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 				self.report(
 					{'ERROR'},
 					"Source MCprep world blend file does not exist: " + blendfile)
-				conf.log(
+				env.log(
 					"Source MCprep world blend file does not exist: " + blendfile)
 				return {'CANCELLED'}
 			if wname in bpy.data.worlds:
@@ -745,7 +746,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 
 			time_obj = get_time_object()
 			if not time_obj:
-				conf.log(
+				env.log(
 					"TODO: implement create time_obj, parent sun to it & driver setup")
 
 		if self.world_type in ("world_static_mesh", "world_mesh"):
@@ -753,7 +754,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 				self.report(
 					{'ERROR'},
 					"Source MCprep world blend file does not exist: " + blendfile)
-				conf.log(
+				env.log(
 					"Source MCprep world blend file does not exist: " + blendfile)
 				return {'CANCELLED'}
 			resource = blendfile + "/Object"
@@ -855,7 +856,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			context.scene.world["mcprep_world"] = True
 		else:
 			self.report({'ERROR'}, "Failed to import new world")
-			conf.log("Failed to import new world")
+			env.log("Failed to import new world")
 
 		# assign sun/moon shader accordingly
 		use_shader = 1 if self.world_type == "world_shader" else 0
@@ -877,7 +878,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 
 		# if needed: create time object and setup drivers
 		# if not time_obj:
-		# 	conf.log("Creating time_obj")
+		# 	env.log("Creating time_obj")
 		# 	time_obj = bpy.data.objects.new('MCprep Time Control', None)
 		# 	util.obj_link_scene(time_obj, context)
 		# 	global time_obj_cache
@@ -891,7 +892,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 		# if (not world.node_tree.animation_data
 		# 		or not world.node_tree.animation_data.drivers
 		# 		or not world.node_tree.animation_data.drivers[0].driver):
-		# 	conf.log("Could not get driver from imported dynamic world")
+		# 	env.log("Could not get driver from imported dynamic world")
 		# 	self.report({'WARNING'}, "Could not update driver for dynamic world")
 		# 	driver = None
 		# else:
@@ -993,7 +994,7 @@ class MCPREP_OT_render_helper():
 
 	def cleanup_scene(self):
 		# Clean up
-		conf.log("Cleanup pano rendering")
+		env.log("Cleanup pano rendering")
 		for i in range(len(self.render_queue_cleanup)):
 			util.obj_unlink_remove(self.render_queue_cleanup[i]["camera"], True)
 
@@ -1030,7 +1031,7 @@ class MCPREP_OT_render_helper():
 		return camera
 
 	def cancel_render(self, scene):
-		conf.log("Cancelling pano render queue")
+		env.log("Cancelling pano render queue")
 		self.render_queue = []
 		self.cleanup_scene()
 
@@ -1056,7 +1057,7 @@ class MCPREP_OT_render_helper():
 		else:
 			header_text = "Pano render finished"
 
-		conf.log(header_text)
+		env.log(header_text)
 		area.header_text_set(header_text)
 		area.show_menus = False
 
@@ -1086,7 +1087,7 @@ class MCPREP_OT_render_helper():
 			self.prior_frame = self.current_render
 
 		if not self.render_queue:
-			conf.log("Finished pano render queue")
+			env.log("Finished pano render queue")
 			self.cleanup_scene()
 			return
 
@@ -1097,7 +1098,7 @@ class MCPREP_OT_render_helper():
 		bpy.context.scene.render.filepath = os.path.join(
 			self.filepath, self.current_render["filename"])
 
-		conf.log("Starting pano render {}".format(self.current_render["filename"]))
+		env.log("Starting pano render {}".format(self.current_render["filename"]))
 		self.display_current()
 
 		bpy.app.timers.register(
@@ -1109,7 +1110,7 @@ render_helper = MCPREP_OT_render_helper()
 
 def init_render_timer():
 	"""Helper for pano renders to offset the start of the queue from op run."""
-	conf.log("Initial render timer started pano queue")
+	env.log("Initial render timer started pano queue")
 	render_helper.render_next_in_queue(None, None)
 
 

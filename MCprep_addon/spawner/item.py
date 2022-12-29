@@ -22,7 +22,6 @@ import bpy
 from bpy_extras.io_utils import ImportHelper
 import mathutils
 
-from .. import conf
 from .. import util
 from .. import tracking
 
@@ -51,7 +50,7 @@ def reload_items(context):
 			bpy.utils.previews.remove(env.preview_collections["items"])
 		except Exception as e:
 			print(e)
-			conf.log("MCPREP: Failed to remove icon set, items")
+			env.log("MCPREP: Failed to remove icon set, items")
 
 	# Check levels
 	lvl_1 = os.path.join(resource_folder, "textures")
@@ -59,7 +58,7 @@ def reload_items(context):
 	lvl_3 = os.path.join(resource_folder, "assets", "minecraft", "textures")
 
 	if not os.path.isdir(resource_folder):
-		conf.log("Error, resource folder does not exist")
+		env.log("Error, resource folder does not exist")
 		return
 	elif os.path.isdir(lvl_1):
 		resource_folder = lvl_1

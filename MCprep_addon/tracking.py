@@ -612,9 +612,9 @@ class TRACK_OT_popup_report_error(bpy.types.Operator):
 	def execute(self, context):
 		# if in headless mode, skip
 		if bpy.app.background:
-			conf.log("Skip Report logging, running headless")
-			conf.log("Would have reported:")
-			#conf.log(self.error_report)
+			env.log("Skip Report logging, running headless")
+			env.log("Would have reported:")
+			#env.log(self.error_report)
 			raise Exception(self.error_report)
 			return {'CANCELLED'}
 
@@ -862,7 +862,7 @@ def report_error(function):
 		elif hasattr(self, "skipUsage") and self.skipUsage is True:
 			return res  # skip running usage
 		elif VALID_IMPORT is False:
-			conf.log("Skipping usage, VALID_IMPORT is False")
+			env.log("Skipping usage, VALID_IMPORT is False")
 			return
 
 		try:
@@ -885,12 +885,12 @@ def report_error(function):
 			and Tracker._last_request.get("function") == self.track_function
 			and Tracker._last_request.get("time") + Tracker._debounce > time.time()
 			):
-			conf.log("Skipping usage due to debounce")
+			env.log("Skipping usage due to debounce")
 			run_track = False
 
 		# If successful completion, run analytics function if relevant
 		if bpy.app.background and run_track:
-			conf.log("Background mode, would have tracked usage: " + self.track_function)
+			env.log("Background mode, would have tracked usage: " + self.track_function)
 		elif run_track:
 			param = None
 			exporter = None

@@ -25,7 +25,7 @@ import bpy
 import bmesh
 from bpy_extras.io_utils import ImportHelper
 
-from .. import conf
+from ..conf import env
 from .. import util
 from .. import tracking
 
@@ -102,7 +102,7 @@ def add_element(
 
 def add_material(name="material", path=""):
 	"""Creates a simple material with an image texture from path."""
-	conf.log(name + ": " + path, vv_only=True)
+	env.log(name + ": " + path, vv_only=True)
 	mat = bpy.data.materials.new(name=name)
 	mat.blend_method = 'CLIP'
 	mat.shadow_method = 'CLIP'
@@ -211,7 +211,7 @@ def read_model(context, model_filepath):
 			elif os.path.isfile(base_path):
 				elements, textures = read_model(context, base_path)
 			else:
-				conf.log("Failed to find mcmodel file " + parent_filepath)
+				env.log("Failed to find mcmodel file " + parent_filepath)
 
 	current_elements = obj_data.get("elements")
 	if current_elements is not None:
@@ -225,10 +225,10 @@ def read_model(context, model_filepath):
 			for img in current_textures:
 				textures[img] = current_textures[img]
 
-	conf.log("\nfile:" + str(model_filepath), vv_only=True)
-	# conf.log("parent:" + str(parent))
-	# conf.log("elements:" + str(elements))
-	# conf.log("textures:" + str(textures))
+	env.log("\nfile:" + str(model_filepath), vv_only=True)
+	# env.log("parent:" + str(parent))
+	# env.log("elements:" + str(elements))
+	# env.log("textures:" + str(textures))
 
 	return elements, textures
 
@@ -362,7 +362,7 @@ def update_model_list(context):
 	if not os.path.isdir(active_pack):
 		scn_props.model_list.clear()
 		scn_props.model_list_index = 0
-		conf.log("No models found for active path " + active_pack)
+		env.log("No models found for active path " + active_pack)
 		return
 	base_has_models = os.path.isdir(base_pack)
 
@@ -377,7 +377,7 @@ def update_model_list(context):
 			if os.path.isfile(os.path.join(active_pack, model))
 			and model.lower().endswith(".json")]
 	else:
-		conf.log("Base resource pack has no models folder: " + base_pack)
+		env.log("Base resource pack has no models folder: " + base_pack)
 		base_models = []
 
 	sorted_models = [

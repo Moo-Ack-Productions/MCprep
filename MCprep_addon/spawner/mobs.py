@@ -26,6 +26,7 @@ import bpy
 from bpy_extras.io_utils import ImportHelper
 
 from .. import conf
+from ..conf import env
 from .. import util
 from .. import tracking
 
@@ -51,7 +52,7 @@ def get_rig_list(context):
 
 def update_rig_path(self, context):
 	"""List for UI mobs callback of property spawn_rig_category."""
-	conf.log("Updating rig path", vv_only=True)
+	env.log("Updating rig path", vv_only=True)
 	conf.rig_categories = []
 	update_rig_list(context)
 	spawn_rigs_categories(self, context)
@@ -118,10 +119,10 @@ def update_rig_list(context):
 		try:
 			bpy.utils.previews.remove(conf.preview_collections["mobs"])
 		except:
-			conf.log("MCPREP: Failed to remove icon set, mobs")
+			env.log("MCPREP: Failed to remove icon set, mobs")
 
 	if os.path.isdir(rigpath) is False:
-		conf.log("Rigpath directory not found")
+		env.log("Rigpath directory not found")
 		return
 
 	categories = [
@@ -163,7 +164,7 @@ def update_rig_category(context):
 	scn_props = context.scene.mcprep_props
 
 	if not scn_props.mob_list_all:
-		conf.log("No rigs found, failed to update category")
+		env.log("No rigs found, failed to update category")
 		scn_props.mob_list.clear()
 		return
 
@@ -267,11 +268,11 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 		try:
 			[path, name] = self.mcmob_type.split(':/:')
 		except Exception as err:
-			conf.log("Error: Failed to parse mcmob_type")
+			env.log("Error: Failed to parse mcmob_type")
 			self.report({'ERROR'}, "Failed to parse mcmob_type, try reloading mobs")
 			return {'CANCELLED'}
 		path = os.path.join(context.scene.mcprep_mob_path, path)
-		conf.log("Path is now ", path)
+		env.log("Path is now ", path)
 
 		try:
 			# must be in object mode, this make similar behavior to other objs
@@ -283,7 +284,7 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 
 		if self.toLink:
 			if path == '//':
-				conf.log("This is the local file. Cancelling...")
+				env.log("This is the local file. Cancelling...")
 				return {'CANCELLED'}
 			_ = spawn_util.load_linked(self, context, path, name)
 		else:
@@ -325,7 +326,7 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 		for obj in mod_objs:
 			if obj not in list(context.scene.collection.all_objects):
 				obj.use_fake_user = True
-				conf.log("Set {} as fake user".format(obj.name))
+				env.log("Set {} as fake user".format(obj.name))
 
 
 class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
@@ -367,19 +368,19 @@ class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
 		newrig = bpy.path.abspath(self.filepath)
 
 		if not os.path.isfile(newrig):
-			conf.log("Error: Rig blend file not found!")
+			env.log("Error: Rig blend file not found!")
 			self.report({'ERROR'}, "Rig blend file not found!")
 			return {'CANCELLED'}
 
 		if not newrig.lower().endswith('.blend'):
-			conf.log("Error: Not a blend file! Select a .blend file with a rig")
+			env.log("Error: Not a blend file! Select a .blend file with a rig")
 			self.report({'ERROR'}, "Not a blend file! Select a .blend file with a rig")
 			return {'CANCELLED'}
 
 		# now check the rigs folder indeed exists
 		drpath = bpy.path.abspath(drpath)
 		if not os.path.isdir(drpath):
-			conf.log("Error: Rig directory is not valid!")
+			env.log("Error: Rig directory is not valid!")
 			self.report({'ERROR'}, "Rig directory is not valid!")
 			return {'CANCELLED'}
 
@@ -391,7 +392,7 @@ class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
 			install_groups.pop(install_groups.index('Collection'))
 
 		if not install_groups:
-			conf.log("Error: no groups found in blend file!")
+			env.log("Error: no groups found in blend file!")
 			self.report({'ERROR'}, "No groups found in blend file!")
 			return {'CANCELLED'}
 
@@ -564,18 +565,18 @@ class MCPREP_OT_uninstall_mob(bpy.types.Operator):
 			return {'CANCELLED'}
 
 		if os.path.isfile(path) is False:
-			conf.log("Error: Source filepath not found, didn't delete: " + path)
+			env.log("Error: Source filepath not found, didn't delete: " + path)
 			self.report({'ERROR'}, "Source filepath not found, didn't delete")
 			return {'CANCELLED'}
 		else:
 			try:
 				os.remove(path)
 			except Exception as err:
-				conf.log("Error: could not delete file: " + str(err))
+				env.log("Error: could not delete file: " + str(err))
 				self.report({'ERROR'}, "Could not delete file")
 				return {'CANCELLED'}
 		self.report({'INFO'}, "Removed: " + str(path))
-		conf.log("Removed file: " + str(path))
+		env.log("Removed file: " + str(path))
 		bpy.ops.mcprep.reload_mobs()
 		return {'FINISHED'}
 

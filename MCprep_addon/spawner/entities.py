@@ -53,10 +53,10 @@ def get_entity_cache(context, clear=False):
 	# Note: Only using groups, not objects, for entities.
 	entity_cache = {"groups": [], "objects": []}
 	if not os.path.isfile(entity_path):
-		conf.log("Entity path not found")
+		env.log("Entity path not found")
 		return entity_cache
 	if not entity_path.lower().endswith('.blend'):
-		conf.log("Entity path must be a .blend file")
+		env.log("Entity path must be a .blend file")
 		return entity_cache
 
 	with bpy.data.libraries.load(entity_path) as (data_from, _):
@@ -78,7 +78,7 @@ def getEntityList(context):
 
 def update_entity_path(self, context):
 	"""for UI list path callback"""
-	conf.log("Updating entity path", vv_only=True)
+	env.log("Updating entity path", vv_only=True)
 	if not context.scene.entity_path.lower().endswith('.blend'):
 		print("Entity file is not a .blend, and should be")
 	if not os.path.isfile(bpy.path.abspath(context.scene.entity_path)):
