@@ -182,16 +182,20 @@ First, we need to come up with a name. For MCprep development, it's recommended 
 
 For example, if I was making a virtul environment for 3.3, I would do `mcprep_venv_3.3`.
 
-To create a virtual environment, do the following
+To create a virtual environment, do the following:
+
 `python3 -m venv mcprep_venv_<version>`
 
 Then to enable it, then:
+
 Windows: `venv\Scripts\activate`
+
 MacOS and Linux: `source venv\Scripts\activate`
 
 This will make your terminal use the virtual environment until you close it or use `deactivate`. Each time you open your terminal after this, remember to enable the virtual environment
 
 Next we need to install `fake-bpy`:
+
 `python3 -m pip install fake-bpy-module-<version>`
 
 If you use PyCharm, you should check the GitHub for [additional instructions](https://github.com/nutti/fake-bpy-module#install-via-pip-package)
