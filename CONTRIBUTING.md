@@ -170,3 +170,8 @@ One other detail: MCprep uses git lfs or Large File Storage, to avoid saving bin
 - Alternatively, try using Git for Windows and its console.
 
 Run into other gotchas? Please open a [new issue](https://github.com/TheDuckCow/MCprep/issues)!
+
+## Installing `bpy` for IDEs
+If you're using an IDE, it's recommened to install `bpy` as a Python module. In my (StandingPad) experiance, the [fake-bpy package](https://github.com/nutti/fake-bpy-module) seems to be the best.
+
+It's also recommened to use a virtual environment (especially if you're on Linux) as to avoid issues with system wide packages. [See this for more details](https://realpython.com/python-virtual-environments-a-primer/)
