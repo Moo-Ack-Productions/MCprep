@@ -192,7 +192,7 @@ Then to enable it, then:
 
 Windows: `mcprep_venv_<version>\Scripts\activate`
 
-MacOS and Linux: `source mcprep_venv_<version>\Scripts\activate`
+MacOS and Linux: `source mcprep_venv_<version>\bin\activate`
 
 This will make your terminal use the virtual environment until you close it or use `deactivate`. Each time you open your terminal after this, remember to enable the virtual environment
 
