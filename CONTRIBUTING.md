@@ -26,6 +26,19 @@ This is largely possible for a few reasons:
 1. Abstracting API changes vs directly implementing changes. Instead of swapping "group" for "collection" in the change to blender 2.8, we create if/else statements and wrapper functions that fetch the attribute that exists based on the version of blender. Want more info about this? See [the article here](https://theduckcow.com/2019/update-addons-both-blender-28-and-27-support/).
 1. No python annotations. This syntax wasn't supported in old versions of python that came with blender (namely, in Blender 2.7) and so we don't use annotations in this repository. Some workarounds are in place to avoid excessive printouts as a result.
 
+## Internal Rewrites
+MCprep has a separate branch for internal rewrites based on the dev branch. Sometimes, internal tools are deprecated, and requires features to be changed to reflect those deprecations.
+
+Developers should not worry about this. If a features uses depracated features, it will be fixed in the next internal rewrite. 
+
+It may be tempting to try and use the `internal-rewrites` branch to write new features. Don't, as pull requests for `internal-rewrites` will only be accepted if they deal with rewriting parts of MCprep itself. Pull requests for new features that only use `internal-rewrites` for the sake of avoiding the use of deprecated features will not be accepted.
+
+Also, when something is deprecated, it will still remain in MCprep for one full version and be removed by the next release. For instance, if during the development of MCprep X a feature is deprecated, then that feature will only be removed officially starting with the development of MCprep Y. Thus, any new features in MCprep X that use a deprecated feature will be fixed in the `internal-rewrites` branch for the development cycle of MCprep Y.
+
+There will also be a pull request for `internal-rewrites` for each devlopment cycle of MCprep. This pull request will contain all newly deprecated and removed features, as well as their replacements. This exists as a heads up to developers so that they know what to expect.
+
+New features go into the `dev` branch, rewriting of old features to account for deprecations go into the `internal-rewrites` branch. When in doubt, simply ask.
+
 ## Compiling and running tests
 
 As above, a critical component of maintaining support and ensuring the wide number of MCprep features are stable, is running automated tests.
@@ -157,3 +170,8 @@ One other detail: MCprep uses git lfs or Large File Storage, to avoid saving bin
 - Alternatively, try using Git for Windows and its console.
 
 Run into other gotchas? Please open a [new issue](https://github.com/TheDuckCow/MCprep/issues)!
+
+## Installing `bpy` for IDEs
+If you're using an IDE, it's recommened to install `bpy` as a Python module. In my (StandingPad) experiance, the [fake-bpy package](https://github.com/nutti/fake-bpy-module) seems to be the best.
+
+It's also recommened to use a virtual environment (especially if you're on Linux) as to avoid issues with system wide packages. [See this for more details](https://realpython.com/python-virtual-environments-a-primer/)
