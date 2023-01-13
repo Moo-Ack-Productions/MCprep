@@ -964,6 +964,7 @@ def create_node(tree_nodes, node_type, **attrs):
 		tree_nodes: the material node tree's nodes
 		node_type: the type of the node
 		**attrs: set attributes if that node type has (eg: location, name, blend_type...)
+		"node_tree" can be referencing nodegroup or name of that nodegroup
 		"hide_sockets" to hide the sockets only display linked when need
 	"""
 	if node_type == 'ShaderNodeMixRGB': # MixRGB in 3.4
@@ -975,8 +976,10 @@ def create_node(tree_nodes, node_type, **attrs):
 	else:
 		node = tree_nodes.new(node_type) 
 	for attr, value in attrs.items():
-		if hasattr(node, attr):
+		if hasattr(node, attr) and attr != 'node_tree':
 			setattr(node, attr, value)
+		elif attr == 'node_tree': #node group
+			setattr(node, attr, bpy.data.node_groups[value] if type(value) is str else value)
 		elif attr == 'hide_sockets': # option to hide socket for big node 
 			node.inputs.foreach_set('hide', [value] * len(node.inputs))
 			node.outputs.foreach_set('hide', [value] * len(node.outputs))
@@ -1082,7 +1085,7 @@ def texgen_specular(mat, passes, nodeInputs, use_reflections):
 	nodeTexDiff = create_node(nodes, "ShaderNodeTexImage", name = "Diffuse Texture", label = "Diffuse Texture", 
 							location = (-380, 140),interpolation = 'Closest')
 	nodeTexNorm = create_node(nodes, "ShaderNodeTexImage", name = "Normal Texture", label = "Normal Texture", 
-							location = (-680, -500), interpolation = 'Closest')
+							location = (-680, -500))
 	nodeTexSpec = create_node(nodes, "ShaderNodeTexImage", name = "Specular Texture", label = "Specular Texture", 
 							location = (-380, -180), interpolation = 'Closest')
 	nodeSaturateMix = create_node(nodes, "ShaderNodeMixRGB", name = "Add Color", label = "Add Color", 
@@ -1180,7 +1183,7 @@ def texgen_seus(mat, passes, nodeInputs, use_reflections):
 	nodeTexDiff = create_node(nodes, "ShaderNodeTexImage", name = "Diffuse Texture",  label = "Diffuse Texture", 
 							location = (-380, 140), interpolation = 'Closest')
 	nodeTexNorm = create_node(nodes, "ShaderNodeTexImage", name = "Normal Texture", label = "Normal Texture", 
-							location = (-680, -500), interpolation = 'Closest')
+							location = (-680, -500))
 	nodeTexSpec = create_node(nodes, "ShaderNodeTexImage", name = "Specular Texture", label = "Specular Texture", 
 							location = (-580, -180), interpolation = 'Closest')
 	nodeSaturateMix = create_node(nodes, "ShaderNodeMixRGB", name = "Add Color", label = "Add Color", 
@@ -1874,7 +1877,7 @@ def matgen_special_glass(mat, passes):
 	nodeTexDiff = create_node(nodes, 'ShaderNodeTexImage', name = "Diffuse Texture", label = "Diffuse Texture", 
 							location = (-380, 140), interpolation = 'Closest', image = image_diff)
 	nodeTexNorm = create_node(nodes, 'ShaderNodeTexImage', name = "Normal Texture", label = "Normal Texture", 
-							location = (-680, -180), interpolation = 'Closest')
+							location = (-680, -180))
 	nodeNormalInv = create_node(nodes, 'ShaderNodeRGBCurve', name = "Normal Inverse", label = "Normal Inverse", location = (-380, -180))
 	nodeNormal = create_node(nodes, 'ShaderNodeNormalMap', location = (-80, -180))
 	nodeDiff = create_node(nodes, 'ShaderNodeBsdfDiffuse', location = (120, 0))
