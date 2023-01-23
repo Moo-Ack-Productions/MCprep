@@ -1612,7 +1612,7 @@ def matgen_cycles_principled(
 
 
 def matgen_cycles_original(
-	mat, passes, use_reflections, use_emission, only_solid, pack_format):
+	mat, passes, use_reflections, use_emission, only_solid, pack_format, use_emission_nodes):
 	"""Generate principled cycles material"""
 
 	matGen = util.nameGeneralize(mat.name)
