@@ -1463,7 +1463,7 @@ def matgen_cycles_simple(
 
 
 def matgen_cycles_principled(
-	mat, passes, use_reflections, use_emission, only_solid, pack_format):
+	mat, passes, use_reflections, use_emission, only_solid, pack_format, use_emission_nodes):
 	"""Generate principled cycles material"""
 
 	matGen = util.nameGeneralize(mat.name)
@@ -1492,18 +1492,6 @@ def matgen_cycles_principled(
 
 	principled = create_node(
 		nodes, "ShaderNodeBsdfPrincipled", location=(120, 0))
-	nodeEmit = create_node(
-		nodes, "ShaderNodeEmission", location=(120, 140))
-	nodeEmitCam = create_node(
-		nodes, "ShaderNodeEmission", location=(120, 260))
-	nodeMixCam = create_node(
-		nodes, "ShaderNodeMixShader", location=(320, 260))
-	nodeFalloff = create_node(
-		nodes, "ShaderNodeLightFalloff", location=(-80, 320))
-	nodeLightPath = create_node(
-		nodes, "ShaderNodeLightPath", location=(-320, 520))
-	nodeMixEmit = create_node(
-		nodes, "ShaderNodeMixShader", location=(420, 0))
 	nodeTrans = create_node(
 		nodes, "ShaderNodeBsdfTransparent", location=(420, 140))
 	nodeMixTrans = create_node(
@@ -1531,15 +1519,39 @@ def matgen_cycles_principled(
 		principled.inputs["Metallic"].default_value = 0
 
 	# Connect nodes
-	links.new(principled.outputs["BSDF"], nodeMixEmit.inputs[1])
-	links.new(nodeLightPath.outputs["Is Camera Ray"], nodeMixCam.inputs["Fac"])
-	links.new(nodeFalloff.outputs["Linear"], nodeEmit.inputs["Strength"])
-	links.new(nodeEmit.outputs["Emission"], nodeMixCam.inputs[1])
-	links.new(nodeEmitCam.outputs["Emission"], nodeMixCam.inputs[2])
-	links.new(nodeMixCam.outputs["Shader"], nodeMixEmit.inputs[2])
 	links.new(nodeTrans.outputs["BSDF"], nodeMixTrans.inputs[1])
-	links.new(nodeMixEmit.outputs["Shader"], nodeMixTrans.inputs[2])
 	links.new(nodeMixTrans.outputs["Shader"], nodeOut.inputs[0])
+
+	if use_emission_nodes:
+		# Create emission nodes
+		nodeEmit = create_node(
+			nodes, "ShaderNodeEmission", location=(120, 140))
+		nodeEmitCam = create_node(
+			nodes, "ShaderNodeEmission", location=(120, 260))
+		nodeMixCam = create_node(
+			nodes, "ShaderNodeMixShader", location=(320, 260))
+		nodeFalloff = create_node(
+			nodes, "ShaderNodeLightFalloff", location=(-80, 320))
+		nodeLightPath = create_node(
+			nodes, "ShaderNodeLightPath", location=(-320, 520))
+		nodeMixEmit = create_node(
+			nodes, "ShaderNodeMixShader", location=(420, 0))
+		
+		# Create the links
+		links.new(principled.outputs["BSDF"], nodeMixEmit.inputs[1])
+		links.new(nodeLightPath.outputs["Is Camera Ray"], nodeMixCam.inputs["Fac"])
+		links.new(nodeFalloff.outputs["Linear"], nodeEmit.inputs["Strength"])
+		links.new(nodeEmit.outputs["Emission"], nodeMixCam.inputs[1])
+		links.new(nodeEmitCam.outputs["Emission"], nodeMixCam.inputs[2])
+		links.new(nodeMixCam.outputs["Shader"], nodeMixEmit.inputs[2])
+		links.new(nodeMixEmit.outputs["Shader"], nodeMixTrans.inputs[2])
+
+		if use_emission:
+			nodeMixEmit.inputs[0].default_value = 1
+		else:
+			nodeMixEmit.inputs[0].default_value = 0
+
+
 
 	nodeInputs = [
 		[
@@ -1592,12 +1604,7 @@ def matgen_cycles_principled(
 			# both work fine with depth of field.
 
 			# but, BLEND does NOT work well with Depth of Field or layering
-
-	if use_emission:
-		nodeMixEmit.inputs[0].default_value = 1
-	else:
-		nodeMixEmit.inputs[0].default_value = 0
-
+	
 	# reapply animation data if any to generated nodes
 	apply_texture_animation_pass_settings(mat, animated_data)
 
