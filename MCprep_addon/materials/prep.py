@@ -119,6 +119,11 @@ class McprepMaterialProps():
 		description="Change the pack format when using a PBR resource pack.",
 		items=pack_formats
 	)
+	useEmission = bpy.props.EnumProperty(
+		name="Use Emission",
+		description="Make emmisive materials emit light",
+		default=True
+	)
 
 
 def draw_mats_common(self, context):
@@ -149,6 +154,7 @@ def draw_mats_common(self, context):
 	col.prop(self, "combineMaterials")
 	row = self.layout.row()
 	row.prop(self, "optimizeScene")
+	row.prop(self, "useEmission")
 
 
 class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
@@ -239,7 +245,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 			elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 				res = generate.matprep_cycles(
 					mat, passes, self.useReflections,
-					self.usePrincipledShader, self.makeSolid, self.packFormat)
+					self.usePrincipledShader, self.makeSolid, self.packFormat, self.useEmission)
 				if res == 0:
 					count += 1
 			else:

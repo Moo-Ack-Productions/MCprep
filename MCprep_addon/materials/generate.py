@@ -357,7 +357,7 @@ def matprep_internal(mat, passes, use_reflections, only_solid):
 
 
 def matprep_cycles(
-	mat, passes, use_reflections, use_principled, only_solid, pack_format):
+	mat, passes, use_reflections, use_principled, only_solid, pack_format, use_emission_nodes):
 	"""Determine how to prep or generate the cycles materials.
 
 	Args:
@@ -381,18 +381,18 @@ def matprep_cycles(
 
 	# TODO: Update different options for water before enabling this
 	# if use_reflections and checklist(canon, "water"):
-	# 	res = matgen_special_water(mat, passes)
+	#	res = matgen_special_water(mat, passes)
 	# if use_reflections and checklist(canon, "glass"):
-	# 	res = matgen_special_glass(mat, passes)
+	#	res = matgen_special_glass(mat, passes)
 	if pack_format == "simple" and util.bv28():
 		res = matgen_cycles_simple(
-			mat, passes, use_reflections, use_emission, only_solid, use_principled)
+			mat, passes, use_reflections, use_emission, only_solid, use_principled, use_emission_nodes)
 	elif use_principled and hasattr(bpy.types, 'ShaderNodeBsdfPrincipled'):
 		res = matgen_cycles_principled(
-			mat, passes, use_reflections, use_emission, only_solid, pack_format)
+			mat, passes, use_reflections, use_emission, only_solid, pack_format, use_emission_nodes)
 	else:
 		res = matgen_cycles_original(
-			mat, passes, use_reflections, use_emission, only_solid, pack_format)
+			mat, passes, use_reflections, use_emission, only_solid, pack_format, use_emission_nodes)
 	return res
 
 
@@ -1340,7 +1340,7 @@ def texgen_seus(mat, passes, nodeInputs, use_reflections):
 
 
 def matgen_cycles_simple(
-	mat, passes, use_reflections, use_emission, only_solid, use_principled):
+	mat, passes, use_reflections, use_emission, only_solid, use_principled, use_emission_nodes):
 	"""Generate principled cycles material."""
 
 	matGen = util.nameGeneralize(mat.name)
@@ -1427,14 +1427,15 @@ def matgen_cycles_simple(
 				mat.blend_method = 'HASHED'
 			if hasattr(mat, "shadow_method"):
 				mat.shadow_method = 'HASHED'
-
-	if use_emission:
-		inputs = [inp.name for inp in principled.inputs]
-		if 'Emission Strength' in inputs:  # Later 2.9 versions only.
-			principled.inputs['Emission Strength'].default_value = 1
-		links.new(
-			nodeSaturateMix.outputs[saturateMixOut[0]],
-			principled.inputs["Emission"])
+	
+	if use_emission_nodes:
+		if use_emission:
+			inputs = [inp.name for inp in principled.inputs]
+			if 'Emission Strength' in inputs:  # Later 2.9 versions only.
+				principled.inputs['Emission Strength'].default_value = 1
+			links.new(
+				nodeSaturateMix.outputs[saturateMixOut[0]],
+				principled.inputs["Emission"])
 
 	# reapply animation data if any to generated nodes
 	apply_texture_animation_pass_settings(mat, animated_data)
@@ -1908,7 +1909,7 @@ def matgen_special_water(mat, passes):
 	saturateMixOut = get_node_socket(nodeSaturateMix, is_input=False)
 
 	# Sets default values
-	nodeSaturateMix.inputs[0].default_value = 1.0 	# Graystyle Blending
+	nodeSaturateMix.inputs[0].default_value = 1.0	# Graystyle Blending
 	nodeNormalInv.mapping.curves[1].points[0].location = (0, 1)
 	nodeNormalInv.mapping.curves[1].points[1].location = (1, 0)
 	nodeMixTrans.inputs[0].default_value = 0.8
