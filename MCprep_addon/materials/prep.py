@@ -119,6 +119,11 @@ class McprepMaterialProps():
 		description="Change the pack format when using a PBR resource pack.",
 		items=pack_formats
 	)
+	useEmission = bpy.props.EnumProperty(
+		name="Use Emission",
+		description="Make emmisive materials emit light",
+		default=True
+	)
 
 
 def draw_mats_common(self, context):
@@ -149,6 +154,7 @@ def draw_mats_common(self, context):
 	col.prop(self, "combineMaterials")
 	row = self.layout.row()
 	row.prop(self, "optimizeScene")
+	row.prop(self, "useEmission")
 
 
 class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
@@ -239,7 +245,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 			elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 				res = generate.matprep_cycles(
 					mat, passes, self.useReflections,
-					self.usePrincipledShader, self.makeSolid, self.packFormat)
+					self.usePrincipledShader, self.makeSolid, self.packFormat, self.useEmission)
 				if res == 0:
 					count += 1
 			else:
@@ -574,14 +580,14 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 		elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 			# need to create at least one texture node first, then the rest works
 			mat.use_nodes = True
-			node_diff = mat.node_tree.nodes.new('ShaderNodeTexImage')
-			node_diff.image = image
+			nodes = mat.node_tree.nodes
+			node_diff = generate.create_node(nodes, 'ShaderNodeTexImage', image = image)
 			node_diff["MCPREP_diffuse"] = True
 
 			# Initialize extra passes as well
-			node_spec = mat.node_tree.nodes.new('ShaderNodeTexImage')
+			node_spec = generate.create_node(nodes, 'ShaderNodeTexImage')
 			node_spec["MCPREP_specular"] = True
-			node_nrm = mat.node_tree.nodes.new('ShaderNodeTexImage')
+			node_nrm = generate.create_node(nodes, 'ShaderNodeTexImage')
 			node_nrm["MCPREP_normal"] = True
 
 			conf.log("Added blank texture node")

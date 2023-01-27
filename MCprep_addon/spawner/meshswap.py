@@ -551,16 +551,16 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 
 		direc = context.scene.meshswap_path
 		if not direc.lower().endswith('.blend'):
-			self.report({'ERROR'}, "Meshswap file must be a .blend!")
+			self.report({'WARNING'}, "Meshswap file must be a .blend!")
+			bpy.ops.mcprep.prompt_reset_spawners('INVOKE_DEFAULT')
 			return {'CANCELLED'}
 
 		if not os.path.isfile(direc):
 			direc = bpy.path.abspath(direc)
-			# DOES work! but less streamlined
-			# bpy.ops.object.dialogue('INVOKE_DEFAULT')
 			if not os.path.isfile(direc):
 				# better, actual "error" popup.
-				self.report({'ERROR'}, "Meshswap blend file not found!")
+				self.report({'WARNING'}, "Meshswap blend file not found!")
+				bpy.ops.mcprep.prompt_reset_spawners('INVOKE_DEFAULT')
 				return {'CANCELLED'}
 
 		# Assign vars used across operator

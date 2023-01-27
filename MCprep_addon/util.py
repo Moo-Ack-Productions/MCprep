@@ -122,6 +122,8 @@ def bAppendLink(directory, name, toLink, active_layer=True):
 		directory: xyz.blend/Type, where Type is: Collection, Group, Material...
 		name: asset name
 		toLink: bool
+
+	Returns: true if successful, false if not.
 	"""
 
 	conf.log("Appending " + directory + " : " + name, vv_only=True)
@@ -133,21 +135,36 @@ def bAppendLink(directory, name, toLink, active_layer=True):
 	if "link_append" in dir(bpy.ops.wm):
 		# OLD method of importing, e.g. in blender 2.70
 		conf.log("Using old method of append/link, 2.72 <=", vv_only=True)
-		bpy.ops.wm.link_append(directory=directory, filename=name, link=toLink)
+		try:
+			bpy.ops.wm.link_append(directory=directory, filename=name, link=toLink)
+			return True
+		except RuntimeError as e:
+			print("bAppendLink", e)
+			return False
 	elif "link" in dir(bpy.ops.wm) and "append" in dir(bpy.ops.wm):
 		conf.log("Using post-2.72 method of append/link", vv_only=True)
 		if toLink:
 			bpy.ops.wm.link(directory=directory, filename=name)
 		elif bv28():
-			bpy.ops.wm.append(
-				directory=directory,
-				filename=name)
+			try:
+				bpy.ops.wm.append(
+					directory=directory,
+					filename=name)
+				return True
+			except RuntimeError as e:
+				print("bAppendLink", e)
+				return False
 		else:
 			conf.log("{} {} {}".format(directory, name, active_layer))
-			bpy.ops.wm.append(
-				directory=directory,
-				filename=name,
-				active_layer=active_layer)
+			try:
+				bpy.ops.wm.append(
+					directory=directory,
+					filename=name,
+					active_layer=active_layer)
+				return True
+			except RuntimeError as e:
+				print("bAppendLink", e)
+				return False
 
 
 def obj_copy(base, context=None, vertex_groups=True, modifiers=True):
