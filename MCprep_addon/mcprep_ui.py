@@ -314,6 +314,29 @@ def feature_set_update(self, context):
 	tracking.Tracker.feature_set = self.feature_set
 	tracking.trackUsage("feature_set", param=self.feature_set)
 
+def simple_prep(self, context):
+	unsimple_panels = (
+		# Shift-A Menu
+		MCPREP_MT_3dview_add, 
+		MCPREP_PT_skins, # Skin panel 
+		MCPREP_PT_world_tools, # World tools panel
+		
+		# Spawn panel
+		MCPREP_PT_spawn, 
+		MCPREP_PT_mob_spawner, 
+		MCPREP_PT_item_spawner,
+		MCPREP_PT_model_spawner,
+		MCPREP_PT_entity_spawner,
+		MCPREP_PT_effects_spawner,
+		MCPREP_PT_meshswap_spawner,
+	)
+
+	if self.simple_prep:
+		for cls in unsimple_panels:
+			bpy.utils.unregister_class(cls)
+	else:
+		for cls in unsimple_panels:
+			bpy.utils.register_class(cls)
 
 class McprepPreference(bpy.types.AddonPreferences):
 	bl_idname = __package__
@@ -321,7 +344,13 @@ class McprepPreference(bpy.types.AddonPreferences):
 
 	def change_verbose(self, context):
 		conf.v = self.verbose
-
+	
+	simple_prep = bpy.props.BoolProperty(
+		name="SimplePrep",
+		description="Strips the MCprep UI to the bare minimum",
+		default=False,
+		update=simple_prep
+	)
 	meshswap_path = bpy.props.StringProperty(
 		name="Meshswap path",
 		description=(
@@ -584,6 +613,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 			row = layout.row()
 			row.prop(self, "verbose")
 			row.prop(self, "feature_set")
+			row.prop(self, "simple_prep")
 
 			if self.feature_set != "supported":
 				row = layout.row()
