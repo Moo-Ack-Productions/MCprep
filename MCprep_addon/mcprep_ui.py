@@ -44,6 +44,7 @@ LOAD_FACTORY = 'LOOP_BACK' if util.bv28() else 'LOAD_FACTORY'
 HAND_ICON = 'FILE_REFRESH' if util.bv28() else 'HAND'
 OPT_IN = 'URL' if util.bv28() else 'HAND'
 
+SIMPLE_UI = False
 
 # -----------------------------------------------------------------------------
 # Above for class functions/operators
@@ -314,8 +315,8 @@ def feature_set_update(self, context):
 	tracking.Tracker.feature_set = self.feature_set
 	tracking.trackUsage("feature_set", param=self.feature_set)
 
-def simple_prep(self, context):
-	unsimple_panels = (
+def get_unsimple_list():
+	return (
 		# Shift-A Menu
 		MCPREP_MT_3dview_add, 
 		MCPREP_PT_skins, # Skin panel 
@@ -331,12 +332,17 @@ def simple_prep(self, context):
 		MCPREP_PT_meshswap_spawner,
 	)
 
+def simple_prep(self, context):
+	unsimple_panels = get_unsimple_list()
 	if self.simple_prep:
 		for cls in unsimple_panels:
 			bpy.utils.unregister_class(cls)
 	else:
 		for cls in unsimple_panels:
 			bpy.utils.register_class(cls)
+	
+	global SIMPLE_UI
+	SIMPLE_UI = self.simple_prep
 
 class McprepPreference(bpy.types.AddonPreferences):
 	bl_idname = __package__
@@ -1910,7 +1916,7 @@ class McprepProps(bpy.types.PropertyGroup):
 # -----------------------------------------------------------------------------
 
 
-classes = (
+classes = [
 	McprepPreference,
 	McprepProps,
 	MCPREP_MT_mob_spawner,
@@ -1933,7 +1939,7 @@ classes = (
 	MCPREP_PT_meshswap_spawner,
 	MCPREP_PT_materials,
 	MCPREP_PT_materials_subsettings,
-)
+]
 
 
 def register():
@@ -2000,6 +2006,10 @@ def register():
 
 
 def unregister():
+	if SIMPLE_UI:
+		unsimple_list = get_unsimple_list()
+		classes = [cls for cls in classes if not cls in unsimple_list]
+
 	for cls in reversed(classes):
 		bpy.utils.unregister_class(cls)
 
