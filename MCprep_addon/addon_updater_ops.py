@@ -74,7 +74,7 @@ except Exception as e:
 # not match and have errors. Must be all lowercase and no spaces! Should also
 # be unique among any other addons that could exist (using this updater code),
 # to avoid clashes in operator registration.
-updater.addon = "mcprep-kaion"
+updater.addon = "mcprep_kaion"
 
 
 # -----------------------------------------------------------------------------
