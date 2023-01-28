@@ -22,6 +22,7 @@ import bpy
 import os
 
 from bpy.types import DATA_PT_EEVEE_shadow, WM_MT_splash_quick_setup
+from bpy.utils import register_class
 
 # addon imports
 from . import addon_updater_ops
@@ -338,20 +339,65 @@ def get_unsimple_list(mcprep_add, skins, world_tools, spawner):
 		classes = classes + [cls for cls in spawn_classes]
 	return classes
 
+def simple_class_reregister(mcprep_add, skins, world_tools, spawner):
+	global SIMPLE_UI
+	if not mcprep_add:
+		if MCPREP_MT_3dview_add in SIMPLE_UI:
+			bpy.utils.register_class(MCPREP_MT_3dview_add)
+			SIMPLE_UI.remove(MCPREP_MT_3dview_add)
+
+	if not skins:
+		if MCPREP_PT_skins in SIMPLE_UI:
+			bpy.utils.register_class(MCPREP_PT_skins)
+			SIMPLE_UI.remove(MCPREP_PT_skins)
+
+	if not world_tools:
+		if MCPREP_PT_world_tools in SIMPLE_UI:
+			bpy.utils.register_class(MCPREP_PT_world_tools)
+			SIMPLE_UI.remove(MCPREP_PT_world_tools)
+	
+	if not spawner:
+		spawn_classes = (
+			MCPREP_PT_spawn, 
+			MCPREP_PT_mob_spawner, 
+			MCPREP_PT_item_spawner,
+			MCPREP_PT_model_spawner,
+			MCPREP_PT_entity_spawner,
+			MCPREP_PT_effects_spawner,
+			MCPREP_PT_meshswap_spawner,
+		)
+		# Only get the classes that are in the SIMPLE_UI variable
+		rereg_classes = [cls for cls in spawn_classes if cls in SIMPLE_UI]
+		for cls in rereg_classes:
+			bpy.utils.register_class(cls)
+			SIMPLE_UI.remove(cls)
+
 def simple_prep_func(self, context):
 	global SIMPLE_UI
 	if self.simple_prep:
-		unsimple_panels = get_unsimple_list(self.simple_prep_remove_mcprep_add, 
+		unsimple_list = get_unsimple_list(self.simple_prep_remove_mcprep_add, 
 										self.simple_prep_remove_skins, 
 										self.simple_prep_remove_world_tools, 
 										self.simple_prep_remove_spawner)
-		for cls in unsimple_panels:
+		
+		# Remove classes that are already in SIMPLE_UI
+		unsimple_list = [cls for cls in unsimple_list if cls not in SIMPLE_UI]
+		for cls in unsimple_list:
 			bpy.utils.unregister_class(cls)
-			SIMPLE_UI = unsimple_panels
+
+		# Reregister classes
+		simple_class_reregister(self.simple_prep_remove_mcprep_add, 
+							self.simple_prep_remove_skins, 
+							self.simple_prep_remove_world_tools, 
+							self.simple_prep_remove_spawner)
+		
+
 	else:
-		for cls in SIMPLE_UI:
-			bpy.utils.register_class(cls)
-			SIMPLE_UI = []
+		# Check to make sure we have classes in this list as to avoid unregistering already unregistered classes
+		if len(SIMPLE_UI) > 0:
+			for cls in SIMPLE_UI:
+				bpy.utils.register_class(cls)
+		SIMPLE_UI = []
 	
 
 class McprepPreference(bpy.types.AddonPreferences):
@@ -1999,7 +2045,6 @@ def register():
 
 	# scene settings (later re-attempt to put into props group)
 	addon_prefs = util.get_user_preferences()
-
 	bpy.types.Scene.mcprep_mob_path = bpy.props.StringProperty(
 		name="Mob folder",
 		description="Folder for rigs to spawn in, saved with this blend file data",
