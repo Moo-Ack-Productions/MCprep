@@ -121,10 +121,10 @@ class Singleton_tracking(object):
 
 	@property
 	def tracking_enabled(self):
-		return self._tracking_enabled
+		return False
 	@tracking_enabled.setter
 	def tracking_enabled(self, value):
-		self._tracking_enabled = bool(value)
+		self._tracking_enabled = False
 		self.enable_tracking(False, value)
 
 	@property
@@ -248,27 +248,6 @@ class Singleton_tracking(object):
 		return str(res)
 
 	def initialize(self, appurl, version, language=None, blender_version=None):
-		"""Load the enable_tracking-preference (in/out), create tracker data."""
-		if not VALID_IMPORT:
-			return
-
-		self._appurl = appurl
-		self._version = version
-		self.platform = self.get_platform_details()
-		# self.blender_version = blender_version
-		self._blender_version = str(blender_version)
-		self.language = language
-
-		self._tracker_idbackup = os.path.join(os.path.dirname(__file__),
-							os.pardir,self._addon+"_trackerid.json")
-		self._tracker_json = os.path.join(os.path.dirname(__file__),
-							self._addon+"_tracker.json")
-
-		# create the local file
-		# push into BG push update info if true
-		# create local cache file locations
-		# including search for previous
-		self.set_tracker_json()
 		return
 
 	def request(self, method, path, payload, background=False, callback=None):
