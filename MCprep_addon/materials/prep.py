@@ -119,7 +119,7 @@ class McprepMaterialProps():
 		description="Change the pack format when using a PBR resource pack.",
 		items=pack_formats
 	)
-	useEmission = bpy.props.EnumProperty(
+	useEmission = bpy.props.BoolProperty(
 		name="Use Emission",
 		description="Make emmisive materials emit light",
 		default=True
