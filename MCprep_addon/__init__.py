@@ -41,7 +41,7 @@ Disclaimer: This is not an official Google product
 bl_info = {
 	"name": "MCprep Kaion",
 	"category": "Object",
-	"version": (3, 4, 1, 1),
+	"version": (3, 4, 1, 2),
 	"blender": (2, 80, 0),
 	"location": "3D window toolshelf > MCprep tab",
 	"description": "Rolling release version of MCprep",
