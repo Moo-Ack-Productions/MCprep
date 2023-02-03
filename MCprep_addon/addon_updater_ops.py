@@ -1370,7 +1370,7 @@ def register(bl_info):
 	updater.clear_state()  # Clear internal vars, avoids reloading oddities.
 
 	updater.engine = "Github"
-	updater.user = "standingpad-animations"
+	updater.user = "standingpadanimations"
 	updater.repo = "mcprep-kaion"
 	updater.website = "https://github.com/StandingPadAnimations/MCprep-Kaion"
 	updater.subfolder_path = "MCprep_addon/"
