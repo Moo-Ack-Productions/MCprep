@@ -676,6 +676,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 		if engine == "BLENDER_EEVEE":
 			blend = "clouds_moon_sun_eevee.blend"
 			wname = "MCprepWorldEevee"
+			bpy.context.scene.eevee.use_soft_shadows = True
 		else:
 			blend = "clouds_moon_sun.blend"
 			wname = "MCprepWorldCycles"
@@ -863,34 +864,34 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 
 		# # update drivers, needed if time has changed vs import source
 		# if context.scene.world.node_tree.animation_data:
-		# 	# context.scene.world.node_tree.animation_data.drivers[0].update()
-		# 	drivers = context.scene.world.node_tree.animation_data.drivers[0]
-		# 	drivers.driver.variables[0].targets[0].id = time_obj
-		# 	# nope, still doesn't work.
+		#	# context.scene.world.node_tree.animation_data.drivers[0].update()
+		#	drivers = context.scene.world.node_tree.animation_data.drivers[0]
+		#	drivers.driver.variables[0].targets[0].id = time_obj
+		#	# nope, still doesn't work.
 
 		# if needed: create time object and setup drivers
 		# if not time_obj:
-		# 	conf.log("Creating time_obj")
-		# 	time_obj = bpy.data.objects.new('MCprep Time Control', None)
-		# 	util.obj_link_scene(time_obj, context)
-		# 	global time_obj_cache
-		# 	time_obj_cache = time_obj
-		# 	if hasattr(time_obj, "empty_draw_type"):  # 2.7
-		# 		time_obj.empty_draw_type = 'SPHERE'
-		# 	else:  # 2.8
-		# 		time_obj.empty_display_type = 'SPHERE'
+		#	conf.log("Creating time_obj")
+		#	time_obj = bpy.data.objects.new('MCprep Time Control', None)
+		#	util.obj_link_scene(time_obj, context)
+		#	global time_obj_cache
+		#	time_obj_cache = time_obj
+		#	if hasattr(time_obj, "empty_draw_type"):  # 2.7
+		#		time_obj.empty_draw_type = 'SPHERE'
+		#	else:  # 2.8
+		#		time_obj.empty_display_type = 'SPHERE'
 
 		# first, get the driver
 		# if (not world.node_tree.animation_data
-		# 		or not world.node_tree.animation_data.drivers
-		# 		or not world.node_tree.animation_data.drivers[0].driver):
-		# 	conf.log("Could not get driver from imported dynamic world")
-		# 	self.report({'WARNING'}, "Could not update driver for dynamic world")
-		# 	driver = None
+		#		or not world.node_tree.animation_data.drivers
+		#		or not world.node_tree.animation_data.drivers[0].driver):
+		#	conf.log("Could not get driver from imported dynamic world")
+		#	self.report({'WARNING'}, "Could not update driver for dynamic world")
+		#	driver = None
 		# else:
-		# 	driver = world.node_tree.animation_data.drivers[0].driver
+		#	driver = world.node_tree.animation_data.drivers[0].driver
 		# if driver and driver.variables[0].targets[0].id_type == 'OBJECT':
-		# 	driver.variables[0].targets[0].id = time_obj
+		#	driver.variables[0].targets[0].id = time_obj
 		# add driver to control obj's x rotation
 
 		return obj_list
