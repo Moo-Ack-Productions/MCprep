@@ -382,8 +382,11 @@ def simple_prep_func(self, context):
 		
 		# Remove classes that are already in SIMPLE_UI
 		unsimple_list = [cls for cls in unsimple_list if cls not in SIMPLE_UI]
+		# Add the new classes to the SIMPLE_UI list
+		SIMPLE_UI += unsimple_list
 		for cls in unsimple_list:
 			bpy.utils.unregister_class(cls)
+
 
 		# Reregister classes
 		simple_class_reregister(self.simple_prep_remove_mcprep_add, 
