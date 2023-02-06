@@ -21,9 +21,6 @@
 import bpy
 import os
 
-from bpy.types import DATA_PT_EEVEE_shadow, WM_MT_splash_quick_setup
-from bpy.utils import register_class
-
 # addon imports
 from . import addon_updater_ops
 from . import conf
