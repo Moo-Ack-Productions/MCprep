@@ -44,8 +44,6 @@ LOAD_FACTORY = 'LOOP_BACK' if util.bv28() else 'LOAD_FACTORY'
 HAND_ICON = 'FILE_REFRESH' if util.bv28() else 'HAND'
 OPT_IN = 'URL' if util.bv28() else 'HAND'
 
-SIMPLE_UI = []
-
 # -----------------------------------------------------------------------------
 # Above for class functions/operators
 # Below for UI
@@ -236,6 +234,13 @@ class MCPREP_MT_3dview_add(bpy.types.Menu):
 	bl_label = "MCprep"
 	bl_idname = "MCPREP_MT_3dview_add"
 
+	@classmethod
+	def poll(self, context):
+		addon_prefs = util.get_user_preferences()
+		if addon_prefs.simple_prep:
+			return not addon_prefs.simple_prep_remove_mcprep_add
+		return True
+
 	def draw(self, context):
 		layout = self.layout
 		props = context.scene.mcprep_props
@@ -336,70 +341,6 @@ def get_unsimple_list(mcprep_add, skins, world_tools, spawner):
 		classes = classes + [cls for cls in spawn_classes]
 	return classes
 
-def simple_class_reregister(mcprep_add, skins, world_tools, spawner):
-	global SIMPLE_UI
-	if not mcprep_add:
-		if MCPREP_MT_3dview_add in SIMPLE_UI:
-			bpy.utils.register_class(MCPREP_MT_3dview_add)
-			SIMPLE_UI.remove(MCPREP_MT_3dview_add)
-
-	if not skins:
-		if MCPREP_PT_skins in SIMPLE_UI:
-			bpy.utils.register_class(MCPREP_PT_skins)
-			SIMPLE_UI.remove(MCPREP_PT_skins)
-
-	if not world_tools:
-		if MCPREP_PT_world_tools in SIMPLE_UI:
-			bpy.utils.register_class(MCPREP_PT_world_tools)
-			SIMPLE_UI.remove(MCPREP_PT_world_tools)
-	
-	if not spawner:
-		spawn_classes = (
-			MCPREP_PT_spawn, 
-			MCPREP_PT_mob_spawner, 
-			MCPREP_PT_item_spawner,
-			MCPREP_PT_model_spawner,
-			MCPREP_PT_entity_spawner,
-			MCPREP_PT_effects_spawner,
-			MCPREP_PT_meshswap_spawner,
-		)
-		# Only get the classes that are in the SIMPLE_UI variable
-		rereg_classes = [cls for cls in spawn_classes if cls in SIMPLE_UI]
-		for cls in rereg_classes:
-			bpy.utils.register_class(cls)
-			SIMPLE_UI.remove(cls)
-
-def simple_prep_func(self, context):
-	global SIMPLE_UI
-	if self.simple_prep:
-		unsimple_list = get_unsimple_list(self.simple_prep_remove_mcprep_add, 
-										self.simple_prep_remove_skins, 
-										self.simple_prep_remove_world_tools, 
-										self.simple_prep_remove_spawner)
-		
-		# Remove classes that are already in SIMPLE_UI
-		unsimple_list = [cls for cls in unsimple_list if cls not in SIMPLE_UI]
-		# Add the new classes to the SIMPLE_UI list
-		SIMPLE_UI += unsimple_list
-		for cls in unsimple_list:
-			bpy.utils.unregister_class(cls)
-
-
-		# Reregister classes
-		simple_class_reregister(self.simple_prep_remove_mcprep_add, 
-							self.simple_prep_remove_skins, 
-							self.simple_prep_remove_world_tools, 
-							self.simple_prep_remove_spawner)
-		
-
-	else:
-		# Check to make sure we have classes in this list as to avoid unregistering already unregistered classes
-		if len(SIMPLE_UI) > 0:
-			for cls in SIMPLE_UI:
-				bpy.utils.register_class(cls)
-		SIMPLE_UI = []
-	
-
 class McprepPreference(bpy.types.AddonPreferences):
 	bl_idname = __package__
 	scriptdir = bpy.path.abspath(os.path.dirname(__file__))
@@ -414,31 +355,26 @@ class McprepPreference(bpy.types.AddonPreferences):
 		name="SimplePrep",
 		description="Strips the MCprep UI to the bare minimum",
 		default=False,
-		update=simple_prep_func,
 	)
 	simple_prep_remove_spawner = bpy.props.BoolProperty(
 		name="Remove Spawn Panel",
 		description="Removes the spawn panel",
 		default=True,
-		update=simple_prep_func
 	)
 	simple_prep_remove_mcprep_add = bpy.props.BoolProperty(
 		name="Remove MCprep Shift+A panel",
 		description="Removes the MCprep part of the Shift+A menu",
 		default=True,
-		update=simple_prep_func
 	)
 	simple_prep_remove_skins = bpy.props.BoolProperty(
 		name="Remove Skins Panel",
 		description="Removes skin panel",
 		default=True,
-		update=simple_prep_func
 	)
 	simple_prep_remove_world_tools = bpy.props.BoolProperty(
 		name="Remove World Tools",
 		description="Removes world tools panel",
 		default=True,
-		update=simple_prep_func
 	)
 	
 	"""
@@ -975,6 +911,13 @@ class MCPREP_PT_world_tools(bpy.types.Panel):
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
 	bl_category = "MCprep"
 
+	@classmethod
+	def poll(self, context):
+		addon_prefs = util.get_user_preferences()
+		if addon_prefs.simple_prep:
+			return not addon_prefs.simple_prep_remove_world_tools
+		return True
+
 	def draw(self, context):
 		layout = self.layout
 		rw = layout.row()
@@ -1025,6 +968,14 @@ class MCPREP_PT_skins(bpy.types.Panel):
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
 	bl_category = "MCprep"
+
+	@classmethod
+	def poll(self, context):
+		addon_prefs = util.get_user_preferences()
+		if addon_prefs.simple_prep:
+			return not addon_prefs.simple_prep_remove_skins
+		return True
+
 
 	def draw(self, context):
 		layout = self.layout
@@ -1714,6 +1665,13 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
 	bl_category = "MCprep"
 
+	@classmethod
+	def poll(self, context):
+		addon_prefs = util.get_user_preferences()
+		if addon_prefs.simple_prep:
+			return not addon_prefs.simple_prep_remove_spawner
+		return True
+
 	def draw(self, context):
 		row = self.layout.row(align=True)
 		row.label(text="Click triangle to open")
@@ -1731,6 +1689,13 @@ class MCPREP_PT_mob_spawner(bpy.types.Panel):
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
 	bl_category = "MCprep"
 	bl_options = {'DEFAULT_CLOSED'}
+
+	@classmethod
+	def poll(self, context):
+		addon_prefs = util.get_user_preferences()
+		if addon_prefs.simple_prep:
+			return not addon_prefs.simple_prep_remove_spawner
+		return True
 
 	def draw(self, context):
 		is_obj_mode = context.mode == "OBJECT"
@@ -1757,6 +1722,13 @@ class MCPREP_PT_model_spawner(bpy.types.Panel):
 	bl_category = "MCprep"
 	bl_options = {'DEFAULT_CLOSED'}
 
+	@classmethod
+	def poll(self, context):
+		addon_prefs = util.get_user_preferences()
+		if addon_prefs.simple_prep:
+			return not addon_prefs.simple_prep_remove_spawner
+		return True
+
 	def draw(self, context):
 		is_obj_mode = context.mode == "OBJECT"
 		if not is_obj_mode:
@@ -1781,6 +1753,13 @@ class MCPREP_PT_item_spawner(bpy.types.Panel):
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
 	bl_category = "MCprep"
 	bl_options = {'DEFAULT_CLOSED'}
+
+	@classmethod
+	def poll(self, context):
+		addon_prefs = util.get_user_preferences()
+		if addon_prefs.simple_prep:
+			return not addon_prefs.simple_prep_remove_spawner
+		return True
 
 	def draw(self, context):
 		is_obj_mode = context.mode == "OBJECT"
@@ -1807,6 +1786,13 @@ class MCPREP_PT_effects_spawner(bpy.types.Panel):
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
 	bl_category = "MCprep"
 	bl_options = {'DEFAULT_CLOSED'}
+
+	@classmethod
+	def poll(self, context):
+		addon_prefs = util.get_user_preferences()
+		if addon_prefs.simple_prep:
+			return not addon_prefs.simple_prep_remove_spawner
+		return True
 
 	def draw(self, context):
 		is_obj_mode = context.mode == "OBJECT"
@@ -1840,6 +1826,13 @@ class MCPREP_PT_entity_spawner(bpy.types.Panel):
 			return
 		entity_spawner(self, context)
 
+	@classmethod
+	def poll(self, context):
+		addon_prefs = util.get_user_preferences()
+		if addon_prefs.simple_prep:
+			return not addon_prefs.simple_prep_remove_spawner
+		return True
+
 	def draw_header(self, context):
 		if not conf.use_icons or conf.preview_collections["main"] == "":
 			return
@@ -1857,6 +1850,13 @@ class MCPREP_PT_meshswap_spawner(bpy.types.Panel):
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
 	bl_category = "MCprep"
 	bl_options = {'DEFAULT_CLOSED'}
+
+	@classmethod
+	def poll(self, context):
+		addon_prefs = util.get_user_preferences()
+		if addon_prefs.simple_prep:
+			return not addon_prefs.simple_prep_remove_spawner
+		return True
 
 	def draw(self, context):
 		is_obj_mode = context.mode == "OBJECT"
@@ -2099,10 +2099,6 @@ def register():
 
 
 def unregister():
-	global classes
-	if SIMPLE_UI:
-		classes = [cls for cls in classes if not cls in SIMPLE_UI]
-
 	for cls in reversed(classes):
 		bpy.utils.unregister_class(cls)
 
