@@ -1,13 +1,17 @@
 # MCprep Kaion
 
 ## What is it?
-A fork of MCprep designed to be updated as often as possible. Think of it as a rolling release version of MCprep. It allows new features to be tested for bugs. This version also has new features that will eventually be merged upstream with MCprep.
+A fork of MCprep that aims to bring new features faster, from both MCprep's dev branch and us
 
 ## What New Features?
-As of the latest release, they include (this list is contains features not yet in MCprep master):
-* SimplePrep: Reduce the MCprep UI down to a couple of panels for those that don't want the extra features of MCprep ([Pull Request made upstream](https://github.com/TheDuckCow/MCprep/pull/366))
+We have two types of features, "Intended for Upstream" and "Kaion Quirks"
+
+### Intended for Upstream
 * Emission Option for Prep Materials ([Pull Request made upstream](https://github.com/TheDuckCow/MCprep/pull/364))
 * Proper moon lamp with some fixes ([Pull Request made upstream](https://github.com/TheDuckCow/MCprep/pull/370))
+
+### Kaion Quirks
+* SimplePrep: Reduce the MCprep UI down to a couple of panels for those that don't want the extra features of MCprep (Decided upstream to be too niche)
 
 ## Why?
 For starters, MCprep doesn't recieve updates often. At most MCprep gets updated a couple of times a year. Each release has a massive amount of features, but also a lot of bugs. MCprep Kaion meanwhile will recieve at least one update every month, if not more. That means you'll get the latest and greatest in the world of MCprep, but it also benefits MCprep by allowing WIP features to go in the wild, where bugs can be discovered and fixed early. It's a win-win, less bugs when MCprep does recieve a new update and early access to new features for users.
