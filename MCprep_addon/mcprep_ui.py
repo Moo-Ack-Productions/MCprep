@@ -743,7 +743,7 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
 	# bl_context = "objectmode"
-	bl_category = "MCprep"
+	bl_category = "MCprep Kaion"
 
 	def draw(self, context):
 		addon_prefs = util.get_user_preferences(context)
@@ -897,7 +897,7 @@ class MCPREP_PT_bridge(bpy.types.Panel):
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
 	bl_context = "objectmode"
-	bl_category = "MCprep"
+	bl_category = "MCprep Kaion"
 
 	def draw(self, context):
 		# bridge.panel_draw(self, context)
@@ -909,7 +909,7 @@ class MCPREP_PT_world_tools(bpy.types.Panel):
 	bl_label = "World Tools"
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
-	bl_category = "MCprep"
+	bl_category = "MCprep Kaion"
 
 	@classmethod
 	def poll(self, context):
@@ -967,7 +967,7 @@ class MCPREP_PT_skins(bpy.types.Panel):
 	bl_label = "Skin Swapper"
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
-	bl_category = "MCprep"
+	bl_category = "MCprep Kaion"
 
 	@classmethod
 	def poll(self, context):
@@ -1663,7 +1663,7 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 	bl_label = "Spawner"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
-	bl_category = "MCprep"
+	bl_category = "MCprep Kaion"
 
 	@classmethod
 	def poll(self, context):
@@ -1687,7 +1687,7 @@ class MCPREP_PT_mob_spawner(bpy.types.Panel):
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
-	bl_category = "MCprep"
+	bl_category = "MCprep Kaion"
 	bl_options = {'DEFAULT_CLOSED'}
 
 	@classmethod
@@ -1719,7 +1719,7 @@ class MCPREP_PT_model_spawner(bpy.types.Panel):
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
-	bl_category = "MCprep"
+	bl_category = "MCprep Kaion"
 	bl_options = {'DEFAULT_CLOSED'}
 
 	@classmethod
@@ -1751,7 +1751,7 @@ class MCPREP_PT_item_spawner(bpy.types.Panel):
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
-	bl_category = "MCprep"
+	bl_category = "MCprep Kaion"
 	bl_options = {'DEFAULT_CLOSED'}
 
 	@classmethod
@@ -1784,7 +1784,7 @@ class MCPREP_PT_effects_spawner(bpy.types.Panel):
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
-	bl_category = "MCprep"
+	bl_category = "MCprep Kaion"
 	bl_options = {'DEFAULT_CLOSED'}
 
 	@classmethod
@@ -1816,7 +1816,7 @@ class MCPREP_PT_entity_spawner(bpy.types.Panel):
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
-	bl_category = "MCprep"
+	bl_category = "MCprep Kaion"
 	bl_options = {'DEFAULT_CLOSED'}
 
 	def draw(self, context):
@@ -1848,7 +1848,7 @@ class MCPREP_PT_meshswap_spawner(bpy.types.Panel):
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
-	bl_category = "MCprep"
+	bl_category = "MCprep Kaion"
 	bl_options = {'DEFAULT_CLOSED'}
 
 	@classmethod
