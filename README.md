@@ -12,6 +12,7 @@ We have two types of features, "Intended for Upstream" and "Kaion Quirks"
 
 ### Kaion Quirks
 * SimplePrep: Reduce the MCprep UI down to a couple of panels for those that don't want the extra features of MCprep (Decided upstream to be too niche)
+* Signed Releases: All releases are signed with Gpg and come with a signature that verify that releases have not been modified on Github (the public key is `7F6A0E6FA332BAD0EC9E76B383C7F596A88BE583`)
 
 ## Why?
 For starters, MCprep doesn't recieve updates often. At most MCprep gets updated a couple of times a year. Each release has a massive amount of features, but also a lot of bugs. MCprep Kaion meanwhile will recieve at least one update every month, if not more. That means you'll get the latest and greatest in the world of MCprep, but it also benefits MCprep by allowing WIP features to go in the wild, where bugs can be discovered and fixed early. It's a win-win, less bugs when MCprep does recieve a new update and early access to new features for users.
