@@ -63,6 +63,7 @@ def get_time_object():
 	return time_obj_cache
 
 
+OBJ_HEADER_TEXTURE_KEY = "TEXTURE_TYPE"
 def detect_world_exporter(filepath):
 	"""Detect whether Mineways or jmc2obj was used, based on prefix info.
 
@@ -74,15 +75,28 @@ def detect_world_exporter(filepath):
 		A valid string value for preferences ENUM MCprep_exporter_type
 	"""
 	with open(filepath, 'r') as obj_fd:
+		# Header options for OBJs
+		header_options = {
+			OBJ_HEADER_TEXTURE_KEY : "",
+		}
 		try:
 			header = obj_fd.readline()
+			if 'mineways' in header.lower():
+				# form of: # Wavefront OBJ file made by Mineways version 5.10...		 
+				for line in obj_fd:
+					if line.startswith("# File type:"):
+						header = line
+				
+				# The issue here is that Mineways has changed how the header is generated. As such, we're limited with only a couple of OBJs, some from 2020 and some from 2023, so we'll assume people are using an up to date version.
+				if "textures to three large images" in header or "full color texture patterns": # If a texture atlas is used
+					header_options[OBJ_HEADER_TEXTURE_KEY] = "ATLAS"
+				elif "Export individual textures" in header or "tiles for textures" in header: # If the OBJ uses individual textures
+					header_options[OBJ_HEADER_TEXTURE_KEY] = "INDIVIDUAL_TILES"
+				return 'Mineways', header_options
 		except UnicodeDecodeError:
 			print("failed to read first line of obj: " + filepath)
-			return '(choose)'
-	if 'mineways' in header.lower():
-		# form of: # Wavefront OBJ file made by Mineways version 5.10...
-		return 'Mineways'
-	return 'jmc2obj'
+			return '(choose)', header_options
+		return 'jmc2obj', header_options
 
 
 # -----------------------------------------------------------------------------
@@ -387,7 +401,8 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			return {'CANCELLED'}
 
 		prefs = util.get_user_preferences(context)
-		prefs.MCprep_exporter_type = detect_world_exporter(self.filepath)
+		prefs.MCprep_exporter_type, header_info = detect_world_exporter(self.filepath)
+		print(header_info)
 
 		if util.bv28():
 			self.split_world_by_material(context)
@@ -863,34 +878,34 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 
 		# # update drivers, needed if time has changed vs import source
 		# if context.scene.world.node_tree.animation_data:
-		# 	# context.scene.world.node_tree.animation_data.drivers[0].update()
-		# 	drivers = context.scene.world.node_tree.animation_data.drivers[0]
-		# 	drivers.driver.variables[0].targets[0].id = time_obj
-		# 	# nope, still doesn't work.
+		#	# context.scene.world.node_tree.animation_data.drivers[0].update()
+		#	drivers = context.scene.world.node_tree.animation_data.drivers[0]
+		#	drivers.driver.variables[0].targets[0].id = time_obj
+		#	# nope, still doesn't work.
 
 		# if needed: create time object and setup drivers
 		# if not time_obj:
-		# 	conf.log("Creating time_obj")
-		# 	time_obj = bpy.data.objects.new('MCprep Time Control', None)
-		# 	util.obj_link_scene(time_obj, context)
-		# 	global time_obj_cache
-		# 	time_obj_cache = time_obj
-		# 	if hasattr(time_obj, "empty_draw_type"):  # 2.7
-		# 		time_obj.empty_draw_type = 'SPHERE'
-		# 	else:  # 2.8
-		# 		time_obj.empty_display_type = 'SPHERE'
+		#	conf.log("Creating time_obj")
+		#	time_obj = bpy.data.objects.new('MCprep Time Control', None)
+		#	util.obj_link_scene(time_obj, context)
+		#	global time_obj_cache
+		#	time_obj_cache = time_obj
+		#	if hasattr(time_obj, "empty_draw_type"):  # 2.7
+		#		time_obj.empty_draw_type = 'SPHERE'
+		#	else:  # 2.8
+		#		time_obj.empty_display_type = 'SPHERE'
 
 		# first, get the driver
 		# if (not world.node_tree.animation_data
-		# 		or not world.node_tree.animation_data.drivers
-		# 		or not world.node_tree.animation_data.drivers[0].driver):
-		# 	conf.log("Could not get driver from imported dynamic world")
-		# 	self.report({'WARNING'}, "Could not update driver for dynamic world")
-		# 	driver = None
+		#		or not world.node_tree.animation_data.drivers
+		#		or not world.node_tree.animation_data.drivers[0].driver):
+		#	conf.log("Could not get driver from imported dynamic world")
+		#	self.report({'WARNING'}, "Could not update driver for dynamic world")
+		#	driver = None
 		# else:
-		# 	driver = world.node_tree.animation_data.drivers[0].driver
+		#	driver = world.node_tree.animation_data.drivers[0].driver
 		# if driver and driver.variables[0].targets[0].id_type == 'OBJECT':
-		# 	driver.variables[0].targets[0].id = time_obj
+		#	driver.variables[0].targets[0].id = time_obj
 		# add driver to control obj's x rotation
 
 		return obj_list
