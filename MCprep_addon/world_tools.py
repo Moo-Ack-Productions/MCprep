@@ -36,7 +36,6 @@ from .materials import generate
 
 time_obj_cache = None
 
-
 def get_time_object():
 	"""Returns the time object if present in the file"""
 	global time_obj_cache  # to avoid re parsing every time
@@ -63,60 +62,18 @@ def get_time_object():
 
 	return time_obj_cache
 
-
-class ObjHeaderOptions:
-	def __init__(self):
-		self._exporter = None
-		self._file_type = None
-	
-	"""
-	Wrapper functions to avoid typos causing issues
-	"""
-	def set_mineways(self):
-		self._exporter = "Mineways"
-	def set_jmc2obj(self):
-		self._exporter = "jmc1obj"
-
-	def set_atlas(self):
-		self._file_type = "ATLAS"
-	def set_seperated(self):
-		self._file_type = "INDIVIDUAL_TILES"
-
-	"""
-	Determines if the OBJ is compatible with textureswap
-	"""
-	def texture_swap_compatible(self):
-		if self._file_type == "INDIVIDUAL_TILES":
-			return True
-		return False
-
-	"""
-	Returns the exporter used
-	"""
-	def exporter(self):
-		return self._exporter if self._exporter is not None else "(choose)"
-
-	"""
-	Returns the type of textures
-	"""
-	def texture_type(self):
-		return self._file_type if self._file_type is not None else "NONE"
-			
 def detect_world_exporter(filepath):
 	"""Detect whether Mineways or jmc2obj was used, based on prefix info.
 
 	Primary heruistic: if detect Mineways header, assert Mineways, else
 	assume jmc2obj. All Mineways exports for a long time have prefix info
 	set in the obj file as comments.
-
-	Returns:
-		A valid string value for preferences ENUM MCprep_exporter_type
 	"""
 	with open(filepath, 'r') as obj_fd:
-		header_options = ObjHeaderOptions()
 		try:
 			header = obj_fd.readline()
 			if 'mineways' in header.lower():
+				conf.obj_header.set_mineways()
 				# form of: # Wavefront OBJ file made by Mineways version 5.10...
 				for line in obj_fd:
 					if line.startswith("# File type:"):
@@ -126,15 +83,14 @@ def detect_world_exporter(filepath):
 				atlas = re.compile(r'\btextures to three large images|full color texture patterns\b')
 				tiles = re.compile(r'\bexport individual textures|tiles for textures\b')
 				if re.search(atlas, header.lower()) is not None: # If a texture atlas is used
-					header_options.set_atlas()
+					conf.obj_header.set_atlas()
 				elif re.search(tiles, header.lower()) is not None: # If the OBJ uses individual textures
-					header_options.set_seperated()
-				
-				return header_options
+					conf.obj_header.set_seperated()
+				return
 		except UnicodeDecodeError:
 			print("failed to read first line of obj: " + filepath)
-			return header_options
-		return header_options
+			return
+		conf.obj_header.set_jmc2obj()
 
 # -----------------------------------------------------------------------------
 # open mineways/jmc2obj related
@@ -303,7 +259,6 @@ class MCPREP_OT_install_mineways(bpy.types.Operator):
 # Additional world tools
 # -----------------------------------------------------------------------------
 
-
 class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 	"""Imports an obj file, and auto splits it by material"""
 	bl_idname = "mcprep.import_world_split"
@@ -438,9 +393,9 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			return {'CANCELLED'}
 
 		prefs = util.get_user_preferences(context)
-		header_info = detect_world_exporter(self.filepath)
-		prefs.MCprep_exporter_type = header_info.exporter()
-		print(header_info.texture_type())
+		detect_world_exporter(self.filepath)
+		print(conf.obj_header.exporter())
+		prefs.MCprep_exporter_type = conf.obj_header.exporter()
 
 		if util.bv28():
 			self.split_world_by_material(context)
