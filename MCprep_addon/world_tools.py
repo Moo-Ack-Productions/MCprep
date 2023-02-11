@@ -18,6 +18,7 @@
 
 import os
 import math
+import re
 
 import bpy
 from bpy_extras.io_utils import ExportHelper, ImportHelper
@@ -63,7 +64,44 @@ def get_time_object():
 	return time_obj_cache
 
 
-OBJ_HEADER_TEXTURE_KEY = "TEXTURE_TYPE"
+class ObjHeaderOptions:
+	def __init__(self):
+		self._exporter = None
+		self._file_type = None
+	
+	"""
+	Wrapper functions to avoid typos causing issues
+	"""
+	def set_mineways(self):
+		self._exporter = "Mineways"
+	def set_jmc2obj(self):
+		self._exporter = "jmc1obj"
+
+	def set_atlas(self):
+		self._file_type = "ATLAS"
+	def set_seperated(self):
+		self._file_type = "INDIVIDUAL_TILES"
+
+	"""
+	Determines if the OBJ is compatible with textureswap
+	"""
+	def texture_swap_compatible(self):
+		if self._file_type == "INDIVIDUAL_TILES":
+			return True
+		return False
+
+	"""
+	Returns the exporter used
+	"""
+	def exporter(self):
+		return self._exporter if self._exporter is not None else "(choose)"
+
+	"""
+	Returns the type of textures
+	"""
+	def texture_type(self):
+		return self._file_type if self._file_type is not None else "NONE"
+			
 def detect_world_exporter(filepath):
 	"""Detect whether Mineways or jmc2obj was used, based on prefix info.
 
@@ -75,29 +113,28 @@ def detect_world_exporter(filepath):
 		A valid string value for preferences ENUM MCprep_exporter_type
 	"""
 	with open(filepath, 'r') as obj_fd:
-		# Header options for OBJs
-		header_options = {
-			OBJ_HEADER_TEXTURE_KEY : "",
-		}
+		header_options = ObjHeaderOptions()
 		try:
 			header = obj_fd.readline()
 			if 'mineways' in header.lower():
-				# form of: # Wavefront OBJ file made by Mineways version 5.10...		 
+				# form of: # Wavefront OBJ file made by Mineways version 5.10...
 				for line in obj_fd:
 					if line.startswith("# File type:"):
 						header = line
 				
 				# The issue here is that Mineways has changed how the header is generated. As such, we're limited with only a couple of OBJs, some from 2020 and some from 2023, so we'll assume people are using an up to date version.
-				if "textures to three large images" in header or "full color texture patterns": # If a texture atlas is used
-					header_options[OBJ_HEADER_TEXTURE_KEY] = "ATLAS"
-				elif "Export individual textures" in header or "tiles for textures" in header: # If the OBJ uses individual textures
-					header_options[OBJ_HEADER_TEXTURE_KEY] = "INDIVIDUAL_TILES"
-				return 'Mineways', header_options
+				atlas = re.compile(r'\btextures to three large images|full color texture patterns\b')
+				tiles = re.compile(r'\bexport individual textures|tiles for textures\b')
+				if re.search(atlas, header.lower()) is not None: # If a texture atlas is used
+					header_options.set_atlas()
+				elif re.search(tiles, header.lower()) is not None: # If the OBJ uses individual textures
+					header_options.set_seperated()
+				
+				return header_options
 		except UnicodeDecodeError:
 			print("failed to read first line of obj: " + filepath)
-			return '(choose)', header_options
-		return 'jmc2obj', header_options
-
+			return header_options
+		return header_options
 
 # -----------------------------------------------------------------------------
 # open mineways/jmc2obj related
@@ -401,8 +438,9 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			return {'CANCELLED'}
 
 		prefs = util.get_user_preferences(context)
-		prefs.MCprep_exporter_type, header_info = detect_world_exporter(self.filepath)
-		print(header_info)
+		header_info = detect_world_exporter(self.filepath)
+		prefs.MCprep_exporter_type = header_info.exporter()
+		print(header_info.texture_type())
 
 		if util.bv28():
 			self.split_world_by_material(context)
