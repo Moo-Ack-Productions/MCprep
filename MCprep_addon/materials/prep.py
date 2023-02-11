@@ -391,7 +391,9 @@ class MCPREP_OT_swap_texture_pack(
 	@classmethod
 	def poll(cls, context):
 		addon_prefs = util.get_user_preferences(context)
-		return addon_prefs.MCprep_exporter_type != "(choose)"
+		if addon_prefs.MCprep_exporter_type != "(choose)":
+			return conf.obj_header.texture_swap_compatible()
+		return False
 
 	def draw(self, context):
 		row = self.layout.row()
