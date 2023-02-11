@@ -394,8 +394,11 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 
 		prefs = util.get_user_preferences(context)
 		detect_world_exporter(self.filepath)
-		print(conf.obj_header.exporter())
 		prefs.MCprep_exporter_type = conf.obj_header.exporter()
+		
+		for obj in context.selected_objects:
+			obj["MCPREP_OBJ_HEADER"] = True
+			obj["MCPREP_OBJ_FILE_TYPE"] = conf.obj_header.texture_type()
 
 		if util.bv28():
 			self.split_world_by_material(context)
@@ -403,7 +406,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		addon_prefs = util.get_user_preferences(context)
 		self.track_exporter = addon_prefs.MCprep_exporter_type  # Soft detect.
 		return {'FINISHED'}
-
+	
 	def obj_name_to_material(self, obj):
 		"""Update an objects name based on its first material"""
 		if not obj:
