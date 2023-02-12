@@ -220,6 +220,27 @@ def bv30():
 	return min_bv((3, 00))
 
 
+def isTextureSwapCompatible(context):
+	"""Check if the selected objects are textureswap compatible"""
+	if len(context.selected_objects):
+		file_types = {
+			"ATLAS" : 0,
+			"INDIVIDUAL" : 0
+		}
+		for obj in context.selected_objects:
+			# If the header exists then we should be fine
+			if obj["MCPREP_OBJ_HEADER"] is not None:
+				if obj["MCPREP_OBJ_FILE_TYPE"] == "ATLAS":
+					file_types["ATLAS"] += 1
+				else:
+					file_types["INDIVIDUAL"] += 1
+			else:
+				# Perform early return, though this causes undefined behavior in edge cases where one object may have the header property and another may not
+				return True
+		if file_types["ATLAS"] == 0:
+			return True
+		return False
+
 def face_on_edge(faceLoc):
 	"""Check if a face is on the boundary between two blocks (local coordinates)."""
 	face_decimals = [loc - loc // 1 for loc in faceLoc]

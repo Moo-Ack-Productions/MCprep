@@ -111,9 +111,9 @@ class McprepMaterialProps():
 			"pack's materials.blend file"),
 		default=True)
 	# newDefault = bpy.props.BoolProperty(
-	# 	name="Use custom default material",
-	# 	description="Use a custom default material if you have one set up",
-	# 	default=False)
+	#	name="Use custom default material",
+	#	description="Use a custom default material if you have one set up",
+	#	default=False)
 	packFormat = bpy.props.EnumProperty(
 		name="Pack Format",
 		description="Change the pack format when using a PBR resource pack.",
@@ -135,7 +135,10 @@ def draw_mats_common(self, context):
 		col.prop(self, "usePrincipledShader")
 	col.prop(self, "useReflections")
 	col.prop(self, "makeSolid")
-	col.prop(self, "animateTextures")
+		
+	if util.isTextureSwapCompatible(context):
+		col.prop(self, "animateTextures")
+
 	col.prop(self, "autoFindMissingTextures")
 
 	row = self.layout.row()
@@ -397,7 +400,9 @@ class MCPREP_OT_swap_texture_pack(
 	@classmethod
 	def poll(cls, context):
 		addon_prefs = util.get_user_preferences(context)
-		return addon_prefs.MCprep_exporter_type != "(choose)"
+		if addon_prefs.MCprep_exporter_type != "(choose)":
+			return util.isTextureSwapCompatible(context)
+		return False
 
 	def draw(self, context):
 		row = self.layout.row()
