@@ -229,7 +229,7 @@ def isTextureSwapCompatible(context):
 		}
 		for obj in context.selected_objects:
 			# If the header exists then we should be fine
-			if obj["MCPREP_OBJ_HEADER"] is not None:
+			if "MCPREP_OBJ_HEADER" in obj:
 				if obj["MCPREP_OBJ_FILE_TYPE"] == "ATLAS":
 					file_types["ATLAS"] += 1
 				else:
@@ -239,7 +239,6 @@ def isTextureSwapCompatible(context):
 				return True
 		if file_types["ATLAS"] == 0:
 			return True
-	
 	return False
 
 def face_on_edge(faceLoc):
