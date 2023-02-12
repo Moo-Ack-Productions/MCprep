@@ -138,7 +138,6 @@ def draw_mats_common(self, context):
 		
 	if util.isTextureSwapCompatible(context):
 		col.prop(self, "animateTextures")
-
 	col.prop(self, "autoFindMissingTextures")
 
 	row = self.layout.row()

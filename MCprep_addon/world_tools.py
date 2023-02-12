@@ -18,7 +18,6 @@
 
 import os
 import math
-import re
 
 import bpy
 from bpy_extras.io_utils import ExportHelper, ImportHelper
@@ -104,18 +103,25 @@ def detect_world_exporter(filepath):
 		try:
 			header = obj_fd.readline()
 			if 'mineways' in header.lower():
-				conf.obj_header.set_mineways()
+				obj_header.set_mineways()
 				# form of: # Wavefront OBJ file made by Mineways version 5.10...
 				for line in obj_fd:
 					if line.startswith("# File type:"):
-						header = line
+						header = line.rstrip() # Remove trailing newline
 				
 				# The issue here is that Mineways has changed how the header is generated. As such, we're limited with only a couple of OBJs, some from 2020 and some from 2023, so we'll assume people are using an up to date version.
-				atlas = re.compile(r'\btextures to three large images|full color texture patterns\b')
-				tiles = re.compile(r'\bexport individual textures|tiles for textures\b')
-				if re.search(atlas, header.lower()) is not None: # If a texture atlas is used
+				atlas = (
+					"# File type: Export all textures to three large images",
+					"# File type: Export full color texture patterns"
+				)
+				tiles = (
+					"# File type: Export tiles for textures to directory textures",
+					"# File type: Export individual textures to directory tex"
+				)
+				print(f"\"{header}\"")
+				if header in atlas: # If a texture atlas is used
 					obj_header.set_atlas()
-				elif re.search(tiles, header.lower()) is not None: # If the OBJ uses individual textures
+				elif header in tiles: # If the OBJ uses individual textures
 					obj_header.set_seperated()
 				return
 		except UnicodeDecodeError:

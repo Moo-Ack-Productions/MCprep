@@ -789,12 +789,8 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		col.label(text="MCprep tools")
 		col.operator("mcprep.prep_materials", text="Prep Materials")
 
-		if len(context.selected_objects):
-			for obj in context.selected_objects:
-				if obj["MCPREP_OBJ_HEADER"] == 1:
-					if obj["MCPREP_OBJ_FILE_TYPE"] == "ATLAS":
-						col.label(text="OBJ not exported with the correct settings for textureswap")
-						break
+		if not util.isTextureSwapCompatible(context):
+			col.label(text="OBJ not exported with the correct settings for textureswap")
 		p = col.operator("mcprep.swap_texture_pack")
 		p.filepath = context.scene.mcprep_texturepack_path
 		if context.mode == "OBJECT":
