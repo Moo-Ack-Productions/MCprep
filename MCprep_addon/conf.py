@@ -31,45 +31,6 @@ except:
 # ADDON GLOBAL VARIABLES AND INITIAL SETTINGS
 # -----------------------------------------------------------------------------
 
-
-class ObjHeaderOptions:
-	def __init__(self):
-		self._exporter = None
-		self._file_type = None
-	
-	"""
-	Wrapper functions to avoid typos causing issues
-	"""
-	def set_mineways(self):
-		self._exporter = "Mineways"
-	def set_jmc2obj(self):
-		self._exporter = "jmc2obj"
-
-	def set_atlas(self):
-		self._file_type = "ATLAS"
-	def set_seperated(self):
-		self._file_type = "INDIVIDUAL_TILES"
-
-	"""
-	Determines if the OBJ is compatible with textureswap
-	"""
-	def texture_swap_compatible(self):
-		if self._file_type == "INDIVIDUAL_TILES":
-			return True
-		return False
-
-	"""
-	Returns the exporter used
-	"""
-	def exporter(self):
-		return self._exporter if self._exporter is not None else "(choose)"
-
-	"""
-	Returns the type of textures
-	"""
-	def texture_type(self):
-		return self._file_type if self._file_type is not None else "NONE"
-
 def init():
 
 	# -----------------------------------------------
@@ -124,9 +85,6 @@ def init():
 	use_icons = True
 	global preview_collections
 	preview_collections = {}
-
-	global obj_header
-	obj_header = ObjHeaderOptions()
 
 	# -----------------------------------------------
 	# For initializing the custom icons

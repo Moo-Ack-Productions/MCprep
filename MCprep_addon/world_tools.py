@@ -62,6 +62,37 @@ def get_time_object():
 
 	return time_obj_cache
 
+class ObjHeaderOptions:
+	def __init__(self):
+		self._exporter = None
+		self._file_type = None
+	
+	"""
+	Wrapper functions to avoid typos causing issues
+	"""
+	def set_mineways(self):
+		self._exporter = "Mineways"
+	def set_jmc2obj(self):
+		self._exporter = "jmc2obj"
+
+	def set_atlas(self):
+		self._file_type = "ATLAS"
+	def set_seperated(self):
+		self._file_type = "INDIVIDUAL_TILES"
+
+	"""
+	Returns the exporter used
+	"""
+	def exporter(self):
+		return self._exporter if self._exporter is not None else "(choose)"
+
+	"""
+	Returns the type of textures
+	"""
+	def texture_type(self):
+		return self._file_type if self._file_type is not None else "NONE"
+
+obj_header = ObjHeaderOptions()
 def detect_world_exporter(filepath):
 	"""Detect whether Mineways or jmc2obj was used, based on prefix info.
 
@@ -83,14 +114,14 @@ def detect_world_exporter(filepath):
 				atlas = re.compile(r'\btextures to three large images|full color texture patterns\b')
 				tiles = re.compile(r'\bexport individual textures|tiles for textures\b')
 				if re.search(atlas, header.lower()) is not None: # If a texture atlas is used
-					conf.obj_header.set_atlas()
+					obj_header.set_atlas()
 				elif re.search(tiles, header.lower()) is not None: # If the OBJ uses individual textures
-					conf.obj_header.set_seperated()
+					obj_header.set_seperated()
 				return
 		except UnicodeDecodeError:
 			print("failed to read first line of obj: " + filepath)
 			return
-		conf.obj_header.set_jmc2obj()
+		obj_header.set_jmc2obj()
 
 # -----------------------------------------------------------------------------
 # open mineways/jmc2obj related
@@ -394,11 +425,11 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 
 		prefs = util.get_user_preferences(context)
 		detect_world_exporter(self.filepath)
-		prefs.MCprep_exporter_type = conf.obj_header.exporter()
+		prefs.MCprep_exporter_type = obj_header.exporter()
 		
 		for obj in context.selected_objects:
 			obj["MCPREP_OBJ_HEADER"] = True
-			obj["MCPREP_OBJ_FILE_TYPE"] = conf.obj_header.texture_type()
+			obj["MCPREP_OBJ_FILE_TYPE"] = obj_header.texture_type()
 
 		if util.bv28():
 			self.split_world_by_material(context)
