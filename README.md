@@ -9,6 +9,7 @@ We have two types of features, "Intended for Upstream" and "Kaion Quirks"
 ### Intended for Upstream
 * Emission Option for Prep Materials ([Pull Request made upstream](https://github.com/TheDuckCow/MCprep/pull/364))
 * Proper moon lamp with some fixes ([Pull Request made upstream](https://github.com/TheDuckCow/MCprep/pull/370))
+* Inspecting OBJ to determine compatibility with texture swap and animate textures ([Pull Request made upstreal](https://github.com/TheDuckCow/MCprep/pull/372))
 
 ### Kaion Quirks
 * SimplePrep: Reduce the MCprep UI down to a couple of panels for those that don't want the extra features of MCprep (Decided upstream to be too niche)
