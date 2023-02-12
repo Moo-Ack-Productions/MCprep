@@ -239,7 +239,8 @@ def isTextureSwapCompatible(context):
 				return True
 		if file_types["ATLAS"] == 0:
 			return True
-		return False
+	
+	return False
 
 def face_on_edge(faceLoc):
 	"""Check if a face is on the boundary between two blocks (local coordinates)."""
