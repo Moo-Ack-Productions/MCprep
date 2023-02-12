@@ -130,25 +130,11 @@ def draw_mats_common(self, context):
 		col.prop(self, "usePrincipledShader")
 	col.prop(self, "useReflections")
 	col.prop(self, "makeSolid")
-	if len(context.selected_objects):
-		file_types = {
-			"ATLAS" : 0,
-			"INDIVIDUAL" : 0
-		}
-		for obj in context.selected_objects:
-			# If the header exists then we should be fine
-			if obj["MCPREP_OBJ_HEADER"] is not None:
-				if obj["MCPREP_OBJ_FILE_TYPE"] == "ATLAS":
-					file_types["ATLAS"] += 1
-				else:
-					file_types["INDIVIDUAL"] += 1
-			else:
-				# Perform early return, though this causes undefined behavior in edge cases where one object may have the header property and another may not
-				col.prop(self, "animateTextures")
-		if file_types["ATLAS"] == 0:
-			col.prop(self, "animateTextures")
+		
+	if util.isTextureSwapCompatible(context):
+		col.prop(self, "animateTextures")
 
-		col.prop(self, "autoFindMissingTextures")
+	col.prop(self, "autoFindMissingTextures")
 
 	row = self.layout.row()
 	row.prop(self, "useExtraMaps")
@@ -409,23 +395,7 @@ class MCPREP_OT_swap_texture_pack(
 	def poll(cls, context):
 		addon_prefs = util.get_user_preferences(context)
 		if addon_prefs.MCprep_exporter_type != "(choose)":
-			if len(context.selected_objects):
-				file_types = {
-					"ATLAS" : 0,
-					"INDIVIDUAL" : 0
-				}
-				for obj in context.selected_objects:
-					# If the header exists then we should be fine
-					if obj["MCPREP_OBJ_HEADER"] is not None:
-						if obj["MCPREP_OBJ_FILE_TYPE"] == "ATLAS":
-							file_types["ATLAS"] += 1
-						else:
-							file_types["INDIVIDUAL"] += 1
-					else:
-						# Perform early return, though this causes undefined behavior in edge cases where one object may have the header property and another may not
-						return True 
-				if file_types["ATLAS"] == 0:
-					return True
+			return util.isTextureSwapCompatible(context)
 		return False
 
 	def draw(self, context):
