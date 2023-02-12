@@ -122,6 +122,7 @@ def detect_world_exporter(filepath):
 			print("failed to read first line of obj: " + filepath)
 			return
 		obj_header.set_jmc2obj()
+		obj_header.set_seperated() # Since this is the default for Jmc2Obj, we'll assume this is what the OBJ is using
 
 # -----------------------------------------------------------------------------
 # open mineways/jmc2obj related
