@@ -723,7 +723,7 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		col.label(text="MCprep tools")
 		col.operator("mcprep.prep_materials", text="Prep Materials")
 
-		if util.isTextureSwapCompatible(context):
+		if not util.isTextureSwapCompatible(context):
 			col.label(text="OBJ not exported with the correct settings for textureswap")
 		p = col.operator("mcprep.swap_texture_pack")
 		p.filepath = context.scene.mcprep_texturepack_path
