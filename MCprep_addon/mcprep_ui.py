@@ -724,7 +724,11 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		col.operator("mcprep.prep_materials", text="Prep Materials")
 
 		if not util.isTextureSwapCompatible(context):
-			col.label(text="OBJ not exported with the correct settings for textureswap")
+			row = col.row()
+			row.operator(
+				"mcprep.open_help", text="", icon="QUESTION", emboss=False
+			).url = "https://github.com/StandingPadAnimations/MCprep-Kaion/blob/obj-metadata/docs/common_errors.md#obj-not-exported-with-the-correct-settings-for-textureswap"
+			row.label(text="OBJ not exported with the correct settings for textureswap")
 		p = col.operator("mcprep.swap_texture_pack")
 		p.filepath = context.scene.mcprep_texturepack_path
 		if context.mode == "OBJECT":
