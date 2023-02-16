@@ -1501,9 +1501,7 @@ def matgen_cycles_principled(
 
 	# Sets default transparency value
 	nodeMixTrans.inputs[0].default_value = 1
-	nodeFalloff.inputs["Strength"].default_value = 32
-	nodeEmitCam.inputs["Strength"].default_value = 4
-
+	
 	# Sets default reflective values
 	if use_reflections and checklist(canon, "reflective"):
 		principled.inputs["Roughness"].default_value = 0
@@ -1522,21 +1520,25 @@ def matgen_cycles_principled(
 	links.new(nodeTrans.outputs["BSDF"], nodeMixTrans.inputs[1])
 	links.new(nodeMixTrans.outputs["Shader"], nodeOut.inputs[0])
 
+	nodeEmit = create_node(
+			nodes, "ShaderNodeEmission", location=(120, 140))
+	nodeEmitCam = create_node(
+			nodes, "ShaderNodeEmission", location=(120, 260))
+	nodeMixEmit = create_node(
+			nodes, "ShaderNodeMixShader", location=(420, 0))
 	if use_emission_nodes:
 		# Create emission nodes
-		nodeEmit = create_node(
-			nodes, "ShaderNodeEmission", location=(120, 140))
-		nodeEmitCam = create_node(
-			nodes, "ShaderNodeEmission", location=(120, 260))
 		nodeMixCam = create_node(
 			nodes, "ShaderNodeMixShader", location=(320, 260))
 		nodeFalloff = create_node(
 			nodes, "ShaderNodeLightFalloff", location=(-80, 320))
 		nodeLightPath = create_node(
 			nodes, "ShaderNodeLightPath", location=(-320, 520))
-		nodeMixEmit = create_node(
-			nodes, "ShaderNodeMixShader", location=(420, 0))
-		
+				
+		# Set values
+		nodeFalloff.inputs["Strength"].default_value = 32
+		nodeEmitCam.inputs["Strength"].default_value = 4
+
 		# Create the links
 		links.new(principled.outputs["BSDF"], nodeMixEmit.inputs[1])
 		links.new(nodeLightPath.outputs["Is Camera Ray"], nodeMixCam.inputs["Fac"])
@@ -1550,7 +1552,8 @@ def matgen_cycles_principled(
 			nodeMixEmit.inputs[0].default_value = 1
 		else:
 			nodeMixEmit.inputs[0].default_value = 0
-
+	else:
+		links.new(principled.outputs[0], nodeMixTrans.inputs[2])
 
 
 	nodeInputs = [
@@ -1564,9 +1567,12 @@ def matgen_cycles_principled(
 		[principled.inputs["Metallic"]],
 		[principled.inputs["Specular"]],
 		[principled.inputs["Normal"]]]
-
+	
+	if not use_emission_nodes:
+		nodes.remove(nodeEmit)
+		nodes.remove(nodeEmitCam)
+		nodes.remove(nodeMixEmit)
 	# generate texture format and connect
-
 	if pack_format == "specular":
 		texgen_specular(mat, passes, nodeInputs, use_reflections)
 	elif pack_format == "seus":
@@ -1576,7 +1582,9 @@ def matgen_cycles_principled(
 		nodes.remove(nodeTrans)
 		nodes.remove(nodeMixTrans)
 		nodeOut.location = (620, 0)
-		links.new(nodeMixEmit.outputs[0], nodeOut.inputs[0])
+
+		if use_emission_nodes:
+			links.new(nodeMixEmit.outputs[0], nodeOut.inputs[0])
 
 		# faster, and appropriate for non-transparent (and refelctive?) materials
 		principled.distribution = 'GGX'
