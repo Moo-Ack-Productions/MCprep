@@ -4,15 +4,24 @@
 A fork of MCprep that aims to bring new features faster, from both MCprep's dev branch and us
 
 ## What New Features?
-We have two types of features, "Intended for Upstream" and "Kaion Quirks"
+We have three types of features, "Upstream Dev", Intended for Upstream", and "Kaion Quirks"
+
+### Upstream Dev
+Features implemented in the MCprep Dev branch
+
+* Support for the Blender 3.4 MixRGB node
 
 ### Intended for Upstream
+These are features that are currently only in Kaion but are planned to be merged upstream
+
 * Emission Option for Prep Materials ([Pull Request made upstream](https://github.com/TheDuckCow/MCprep/pull/364))
 * Proper moon lamp with some fixes ([Pull Request made upstream](https://github.com/TheDuckCow/MCprep/pull/370))
 * Inspecting OBJ to determine compatibility with texture swap and animate textures ([Pull Request made upstreal](https://github.com/TheDuckCow/MCprep/pull/372))
 * Using the new C++ OBJ importer in Blender 3.1 and above, as well as adding support for non-standard colorspaces ([Pull Request made upstream](https://github.com/TheDuckCow/MCprep/pull/373))
 
 ### Kaion Quirks
+Kaion exclusive features
+
 * SimplePrep: Reduce the MCprep UI down to a couple of panels for those that don't want the extra features of MCprep (Decided upstream to be too niche)
 * Signed Releases: All releases are signed with GPG and come with a signature that verify that releases have not been modified on Github (the public key is `7F6A0E6FA332BAD0EC9E76B383C7F596A88BE583`)
 
