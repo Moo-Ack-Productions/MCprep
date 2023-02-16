@@ -354,12 +354,34 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		obj_import_mem_msg = (
 			"Memory error during OBJ import, try exporting a smaller world")
 		try:
+			BLENDER_STANDARD = (
+				"Standard",
+				"Filmic",
+				"Filmic Log",
+				"Raw",
+				"False Color"
+			)
+			MTL = self.filepath.rsplit(".", 1)[0] + '.mtl'
+			LINES = None
+			if bpy.context.scene.view_settings.view_transform not in BLENDER_STANDARD:
+				with open(MTL, 'r') as mtl_file:
+					LINES = mtl_file.readlines()
+					for index, line in enumerate(LINES):
+						if line.startswith("map_d"):
+							print(line)
+							LINES[index] = "# " + line
+				with open(MTL, 'w') as mtl_file:
+					mtl_file.writelines(LINES)
+
 			res = None
+			if util.min_bv((3, 5)):
+				res = bpy.ops.wm.obj_import(
+					filepath=self.filepath, use_split_groups=True) # Returns functionality missing in 3.1 - 3.4 
 			if util.min_bv((3, 1)):
 				res = bpy.ops.wm.obj_import(
 					filepath=self.filepath)
 			else:
-				res = bpy.ops.wm.obj_import(
+				res = bpy.ops.import_scene.obj(
 					filepath=self.filepath, use_split_groups=True)	
 		except MemoryError as err:
 			print("Memory error during import OBJ:")
@@ -448,6 +470,14 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 
 		addon_prefs = util.get_user_preferences(context)
 		self.track_exporter = addon_prefs.MCprep_exporter_type  # Soft detect.
+
+		if bpy.context.scene.view_settings.view_transform not in BLENDER_STANDARD:
+			for index, line in enumerate(LINES):
+				if line.startswith("# map_d"):
+					LINES[index] = line[2:] # remove # and the space
+			with open(MTL, 'w') as mtl_file:
+				mtl_file.writelines(LINES)
+		
 		return {'FINISHED'}
 	
 	def obj_name_to_material(self, obj):
