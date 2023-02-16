@@ -368,7 +368,6 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 					LINES = mtl_file.readlines()
 					for index, line in enumerate(LINES):
 						if line.startswith("map_d"):
-							print(line)
 							LINES[index] = "# " + line
 				with open(MTL, 'w') as mtl_file:
 					mtl_file.writelines(LINES)
