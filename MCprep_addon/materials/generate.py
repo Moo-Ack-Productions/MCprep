@@ -1428,14 +1428,13 @@ def matgen_cycles_simple(
 			if hasattr(mat, "shadow_method"):
 				mat.shadow_method = 'HASHED'
 	
-	if use_emission_nodes:
-		if use_emission:
-			inputs = [inp.name for inp in principled.inputs]
-			if 'Emission Strength' in inputs:  # Later 2.9 versions only.
-				principled.inputs['Emission Strength'].default_value = 1
-			links.new(
-				nodeSaturateMix.outputs[saturateMixOut[0]],
-				principled.inputs["Emission"])
+	if use_emission_nodes and use_emission:
+		inputs = [inp.name for inp in principled.inputs]
+		if 'Emission Strength' in inputs:  # Later 2.9 versions only.
+			principled.inputs['Emission Strength'].default_value = 1
+		links.new(
+			nodeSaturateMix.outputs[saturateMixOut[0]],
+			principled.inputs["Emission"])
 
 	# reapply animation data if any to generated nodes
 	apply_texture_animation_pass_settings(mat, animated_data)
