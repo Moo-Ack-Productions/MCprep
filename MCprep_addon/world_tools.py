@@ -311,6 +311,9 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			"Memory error during OBJ import, try exporting a smaller world")
 		try:
 			res = None
+			if util.min_bv((3, 5)):
+				res = bpy.ops.wm.obj_import(
+					filepath=self.filepath, use_split_groups=True) # Returns functionality missing in 3.1 - 3.4 
 			if util.min_bv((3, 1)):
 				res = bpy.ops.wm.obj_import(
 					filepath=self.filepath)
