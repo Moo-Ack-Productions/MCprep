@@ -9,3 +9,8 @@ rm -rf ./MCprep_addon/MCprep_resources/**
 mv -f ./MCprep_stable_release/MCprep_addon/MCprep_resources/** ./MCprep_addon/MCprep_resources 
 # Remove the stable release
 rm -rf ./MCprep_stable_release MCprep_addon_v*.zip
+
+# Compile the code
+sh ./compile.sh
+rm -rf ./MCprep_addon/MCprep_resources/**
+
