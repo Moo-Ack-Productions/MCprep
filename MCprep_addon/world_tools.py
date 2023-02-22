@@ -310,23 +310,26 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		obj_import_mem_msg = (
 			"Memory error during OBJ import, try exporting a smaller world")
 		try:
-			BLENDER_STANDARD = (
-				"Standard",
-				"Filmic",
-				"Filmic Log",
-				"Raw",
-				"False Color"
-			)
-			MTL = self.filepath.rsplit(".", 1)[0] + '.mtl'
-			LINES = None
-			if bpy.context.scene.view_settings.view_transform not in BLENDER_STANDARD:
-				with open(MTL, 'r') as mtl_file:
-					LINES = mtl_file.readlines()
-					for index, line in enumerate(LINES):
-						if line.startswith("map_d"):
-							LINES[index] = "# " + line
-				with open(MTL, 'w') as mtl_file:
-					mtl_file.writelines(LINES)
+			try:
+				BLENDER_STANDARD = (
+					"Standard",
+					"Filmic",
+					"Filmic Log",
+					"Raw",
+					"False Color"
+				)
+				MTL = self.filepath.rsplit(".", 1)[0] + '.mtl'
+				LINES = None
+				if bpy.context.scene.view_settings.view_transform not in BLENDER_STANDARD:
+					with open(MTL, 'r') as mtl_file:
+						LINES = mtl_file.readlines()
+						for index, line in enumerate(LINES):
+							if line.startswith("map_d"):
+								LINES[index] = "# " + line
+					with open(MTL, 'w') as mtl_file:
+						mtl_file.writelines(LINES)
+			except Exception:
+				self.report({"ERROR"}, "Failed to convert MTL for compatbility")
 
 			res = None
 			if util.min_bv((3, 5)):
