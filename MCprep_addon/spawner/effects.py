@@ -372,6 +372,22 @@ def add_particle_planes_effect(context, image_path, location, frame):
 	pcoll = get_or_create_particle_meshes_coll(
 		context, f_name, img)
 
+	# Set the material for the emitter object. Though not actually rendered,
+	# this helps clarify which particle is being emitted from this object.
+	mat = None
+	for ob in pcoll.objects:
+		if ob.material_slots and ob.material_slots[0].material:
+			mat = ob.material_slots[0].material
+			break
+	if mat:
+		if not obj.material_slots:
+			obj.data.materials.append(mat)
+		# Must use 'OBEJCT' instead of mesh data, otherwise all particle
+		# emitters will have the same material (how it was initially working)
+		obj.material_slots[0].link = 'OBJECT'
+		obj.material_slots[0].material = mat
+		print("Linked {} with {}".format(obj.name, mat.name))
+
 	apply_particle_settings(obj, frame, base_name, pcoll)
 
 
@@ -600,7 +616,7 @@ def apply_particle_settings(obj, frame, base_name, pcoll):
 	psystem.settings.lifetime_random = 0.2
 	psystem.settings.emit_from = 'FACE'
 	psystem.settings.distribution = 'RAND'
-	psystem.settings.normal_factor = -1.5
+	psystem.settings.normal_factor = 1.5
 	psystem.settings.use_rotations = True
 	psystem.settings.rotation_factor_random = 1
 	psystem.settings.particle_size = 0.2

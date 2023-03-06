@@ -1546,6 +1546,19 @@ def effects_spawner(self, context):
 	ops.location = util.get_cuser_location(context)
 	ops.frame = context.scene.frame_current
 
+	initial_sel = os.path.join(
+		context.scene.mcprep_texturepack_path,
+		"assets", "minecraft", "textures", "block", "dirt.png")
+	alt_sel = os.path.join(
+		context.scene.mcprep_texturepack_path,
+		"assets", "minecraft", "textures", "block")
+	if os.path.isfile(initial_sel):
+		ops.filepath = initial_sel
+	elif os.path.isdir(alt_sel):
+		ops.filepath = alt_sel
+	else:
+		ops.filepath = context.scene.mcprep_texturepack_path
+
 	col = layout.column()
 	if not scn_props.show_settings_effect:
 		col.prop(
