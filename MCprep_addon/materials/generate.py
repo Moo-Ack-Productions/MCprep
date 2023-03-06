@@ -954,7 +954,9 @@ def set_saturation_material(mat):
 			return  # requires regenerating material to add back
 		if len(desat_color) == 3:
 			desat_color += [1]  # add in alpha
-		sat_node.inputs[2].default_value = desat_color
+
+		sat_node_in = get_node_socket(node, is_input=True) # Get the node sockets in a version agnostic way	
+		sat_node.inputs[sat_node_in[2]].default_value = desat_color
 		sat_node.mute = not bool(saturate)
 		sat_node.hide = not bool(saturate)
 
