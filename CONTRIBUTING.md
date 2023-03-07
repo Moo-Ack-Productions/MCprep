@@ -190,6 +190,20 @@ OBJ files
 
 The first line is a summary, and should be less then 50 characters.
 
+Git won't automatically wrap messages either, so each line should have a limit of 72 characters.
+
+Here's a template I found that can help (modified for simplicity):
+```
+# Title: Summary, imperative, start upper case, don't end with a period
+# No more than 50 chars. #### 50 chars is here:  #
+
+# Body: Explain *what* and *why* (not *how*). Include task ID (Jira issue).
+# Wrap at 72 chars. ################################## which is here:  #
+
+```
+Add this to a file called .gitmessage, and then execute the following command:
+`git config --global commit.template /path/to/.gitmessage`
+
 ## IDE Support
 If you're using an IDE, it's recommened to install `bpy` as a Python module. In my (StandingPad) experiance, the [fake-bpy package](https://github.com/nutti/fake-bpy-module) seems to be the best.
 
