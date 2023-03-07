@@ -18,6 +18,8 @@
 
 import os
 import math
+from pathlib import Path
+import shutil
 
 import bpy
 from bpy_extras.io_utils import ExportHelper, ImportHelper
@@ -284,7 +286,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		if not self.filepath.lower().endswith(".obj"):
 			self.report({"ERROR"}, "You must select a .obj file to import")
 			return {'CANCELLED'}
-
+		
 		if "obj" not in dir(bpy.ops.import_scene):
 			try:
 				bpy.ops.preferences.addon_enable(module="io_scene_obj")
@@ -321,6 +323,14 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 				MTL = self.filepath.rsplit(".", 1)[0] + '.mtl'
 				LINES = None
 				if bpy.context.scene.view_settings.view_transform not in BLENDER_STANDARD:
+					# This represents a new folder that'll backup the MTL file
+					original_mtl_path = Path(self.filepath).parent.absolute() / "ORIGINAL_MTLS" # Pathlib is weird when it comes to appending
+					
+					# TODO: make sure this works in 2.7x. It should since 2.8 uses 3.7 but we should confirm nonetheless
+					original_mtl_path.mkdir(parents=True, exist_ok=True)
+					shutil.copy2(MTL, original_mtl_path.absolute()) # Copy the MTL with metadata
+
+					# Open the MTL
 					with open(MTL, 'r') as mtl_file:
 						LINES = mtl_file.readlines()
 						for index, line in enumerate(LINES):
@@ -421,13 +431,6 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		addon_prefs = util.get_user_preferences(context)
 		self.track_exporter = addon_prefs.MCprep_exporter_type  # Soft detect.
 
-		if bpy.context.scene.view_settings.view_transform not in BLENDER_STANDARD:
-			for index, line in enumerate(LINES):
-				if line.startswith("# map_d"):
-					LINES[index] = line[2:] # remove # and the space
-			with open(MTL, 'w') as mtl_file:
-				mtl_file.writelines(LINES)
-		
 		return {'FINISHED'}
 
 	def obj_name_to_material(self, obj):
