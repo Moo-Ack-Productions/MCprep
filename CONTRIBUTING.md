@@ -171,6 +171,25 @@ One other detail: MCprep uses git lfs or Large File Storage, to avoid saving bin
 
 Run into other gotchas? Please open a [new issue](https://github.com/TheDuckCow/MCprep/issues)!
 
+
+## Commit Messages
+Git commits should explain why a change was made, because the diff will show the changes made. For example, instead of writing:
+```
+Added ability to "import" MTL files
+```
+
+Instead do:
+```
+Added the ability to "import" MTL files
+
+MCprep's file explorer shows both OBJs and MTLs, and sometimes users end up clicking
+MTL files. This brings a quality of life improvement to change the extension
+if the file selected is an MTL, since MTLs share the same name as their corresponding
+OBJ files
+```
+
+The first line is a summary, and should be less then 50 characters.
+
 ## IDE Support
 If you're using an IDE, it's recommened to install `bpy` as a Python module. In my (StandingPad) experiance, the [fake-bpy package](https://github.com/nutti/fake-bpy-module) seems to be the best.
 
