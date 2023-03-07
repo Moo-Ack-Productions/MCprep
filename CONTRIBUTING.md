@@ -188,11 +188,11 @@ if the file selected is an MTL, since MTLs share the same name as their correspo
 OBJ files
 ```
 
-The first line is a summary, and should be less then 50 characters.
+The first line is a summary of the changes, and should be less then 50 characters. The rest should justify the changes. Convince us why these changes are important and why they've been made this way.
 
 Git won't automatically wrap messages either, so each line should have a limit of 72 characters.
 
-Here's a template I found that can help (modified for simplicity):
+Here's a template I found that can help (modified for simplicity) by using # to define which is the limit Git can display for each line:
 ```
 # Title: Summary, imperative, start upper case, don't end with a period
 # No more than 50 chars. #### 50 chars is here:  #
@@ -202,7 +202,9 @@ Here's a template I found that can help (modified for simplicity):
 
 ```
 Add this to a file called .gitmessage, and then execute the following command:
-`git config --global commit.template /path/to/.gitmessage`
+`git config --local commit.template /path/to/.gitmessage`
+
+To use for each commit, you can use `git config --local commit.verbose true` to tell Git to perform a verbose commit all the time for just the MCprep repo.
 
 ## IDE Support
 If you're using an IDE, it's recommened to install `bpy` as a Python module. In my (StandingPad) experiance, the [fake-bpy package](https://github.com/nutti/fake-bpy-module) seems to be the best.
