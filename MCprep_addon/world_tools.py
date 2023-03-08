@@ -18,6 +18,7 @@
 
 import os
 import math
+from pathlib import Path
 
 import bpy
 from bpy_extras.io_utils import ExportHelper, ImportHelper
@@ -316,14 +317,15 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 	@tracking.report_error
 	def execute(self, context):
 		# for consistency with the built in one, only import the active path
+		if self.filepath.lower().endswith(".mtl"):
+			filename = Path(self.filepath)
+			new_filename = filename.with_suffix(".obj")
+			self.filepath = str(new_filename) # Change it from MTL to OBJ, this will be checked with the rest of the if clauses
 		if not self.filepath:
 			self.report({"ERROR"}, "File not found, could not import obj")
 			return {'CANCELLED'}
 		if not os.path.isfile(self.filepath):
 			self.report({"ERROR"}, "File not found, could not import obj")
-			return {'CANCELLED'}
-		if self.filepath.lower().endswith(".mtl"):
-			self.report({"ERROR"}, "Select the .obj file, NOT the .mtl!")
 			return {'CANCELLED'}
 		if not self.filepath.lower().endswith(".obj"):
 			self.report({"ERROR"}, "You must select a .obj file to import")
