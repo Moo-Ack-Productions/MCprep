@@ -39,16 +39,16 @@ Disclaimer: This is not an official Google product
 # 								error = 51
 
 bl_info = {
-	"name": "MCprep",
+	"name": "MCprep Kaion",
 	"category": "Object",
-	"version": (3, 4, 1, 1),
+	"version": (3, 4, 1, 8),
 	"blender": (2, 80, 0),
 	"location": "3D window toolshelf > MCprep tab",
-	"description": "Minecraft workflow addon for rendering and animation",
+	"description": "Rolling release version of MCprep",
 	"warning": "",
 	"wiki_url": "https://TheDuckCow.com/MCprep",
-	"author": "Patrick W. Crawford <support@theduckcow.com>",
-	"tracker_url": "https://github.com/TheDuckCow/MCprep/issues"
+	"author": "StandingPad Animations",
+	"tracker_url": "https://github.com/StandingPadAnimations/MCprep-Kaion/issues"
 }
 
 import importlib

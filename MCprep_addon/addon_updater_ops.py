@@ -74,7 +74,7 @@ except Exception as e:
 # not match and have errors. Must be all lowercase and no spaces! Should also
 # be unique among any other addons that could exist (using this updater code),
 # to avoid clashes in operator registration.
-updater.addon = "mcprep"
+updater.addon = "mcprep_kaion"
 
 
 # -----------------------------------------------------------------------------
@@ -1370,9 +1370,9 @@ def register(bl_info):
 	updater.clear_state()  # Clear internal vars, avoids reloading oddities.
 
 	updater.engine = "Github"
-	updater.user = "theduckcow"
-	updater.repo = "mcprep"
-	updater.website = "https://theduckcow.com/dev/blender/mcprep-download/"
+	updater.user = "standingpadanimations"
+	updater.repo = "mcprep-kaion"
+	updater.website = "https://github.com/StandingPadAnimations/MCprep-Kaion"
 	updater.subfolder_path = "MCprep_addon/"
 	updater.current_version = bl_info["version"]
 	updater.backup_current = True
