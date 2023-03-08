@@ -154,13 +154,8 @@ def draw_mats_common(self, context):
 	col.prop(self, "combineMaterials")
 	row = self.layout.row()
 	row.prop(self, "optimizeScene")
+	row.prop(self, "useEmission")
 
-	# EEVEE won't benefit from this anyway, so best to disable it
-	if engine == 'CYCLES':
-		self.useEmission = True
-		row.prop(self, "useEmission")
-	else:
-		self.useEmission = False
 
 class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 	"""Fixes materials and textures on selected objects for Minecraft rendering"""
