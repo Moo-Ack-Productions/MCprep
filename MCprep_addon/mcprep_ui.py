@@ -1546,18 +1546,23 @@ def effects_spawner(self, context):
 	ops.location = util.get_cuser_location(context)
 	ops.frame = context.scene.frame_current
 
-	initial_sel = os.path.join(
-		context.scene.mcprep_texturepack_path,
-		"assets", "minecraft", "textures", "block", "dirt.png")
-	alt_sel = os.path.join(
-		context.scene.mcprep_texturepack_path,
-		"assets", "minecraft", "textures", "block")
-	if os.path.isfile(initial_sel):
-		ops.filepath = initial_sel
-	elif os.path.isdir(alt_sel):
-		ops.filepath = alt_sel
+	# If particle planes has not been changed yet this session,
+	# use the texture pack location in
+	if not context.scene.mcprep_particle_plane_file:
+		initial_sel = os.path.join(
+			context.scene.mcprep_texturepack_path,
+			"assets", "minecraft", "textures", "block", "dirt.png")
+		alt_sel = os.path.join(
+			context.scene.mcprep_texturepack_path,
+			"assets", "minecraft", "textures", "block")
+		if os.path.isfile(initial_sel):
+			ops.filepath = initial_sel
+		elif os.path.isdir(alt_sel):
+			ops.filepath = alt_sel
+		else:
+			ops.filepath = context.scene.mcprep_texturepack_path
 	else:
-		ops.filepath = context.scene.mcprep_texturepack_path
+		ops.filepath = context.scene.mcprep_particle_plane_file
 
 	col = layout.column()
 	if not scn_props.show_settings_effect:
@@ -1575,6 +1580,11 @@ def effects_spawner(self, context):
 		subrow = b_col.row(align=True)
 		subrow.prop(context.scene, "mcprep_effects_path", text="")
 		subrow.operator("mcprep.effects_path_reset", icon=LOAD_FACTORY, text="")
+
+		box.label(text="Texture pack folder")
+		row = box.row(align=True)
+		row.prop(context.scene, "mcprep_texturepack_path", text="")
+		row.operator("mcprep.reset_texture_path", text="", icon=LOAD_FACTORY)
 
 		base = bpy.path.abspath(context.scene.mcprep_effects_path)
 		if not os.path.isdir(base):
@@ -1953,6 +1963,11 @@ def register():
 		subtype='DIR_PATH',
 		update=effects.update_effects_path,
 		default=addon_prefs.effects_path)
+	bpy.types.Scene.mcprep_particle_plane_file = bpy.props.StringProperty(
+		name="Particle planes file set",
+		description="Has the particle planes file been changed",
+		subtype='FILE_PATH',
+		default='')
 	bpy.types.Scene.entity_path = bpy.props.StringProperty(
 		name="Entity file",
 		description="File for entity library",

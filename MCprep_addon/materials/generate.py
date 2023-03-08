@@ -35,6 +35,10 @@ def update_mcprep_texturepack_path(self, context):
 	bpy.ops.mcprep.reload_models()
 	conf.material_sync_cache = None
 
+	# Forces particle plane emitter to now use the newly set resource pack
+	# the first time, but the value gets saved again after.
+	context.scene.mcprep_particle_plane_file = ''
+
 
 def get_mc_canonical_name(name):
 	"""Convert a material name to standard MC name.

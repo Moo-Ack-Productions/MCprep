@@ -1196,6 +1196,8 @@ class MCPREP_OT_spawn_particle_planes(bpy.types.Operator, ImportHelper):
 			bpy.ops.mcprep.prompt_reset_spawners('INVOKE_DEFAULT')
 			return {'CANCELLED'}
 
+		context.scene.mcprep_particle_plane_file = self.filepath
+
 		self.track_param = name
 		return {'FINISHED'}
 
