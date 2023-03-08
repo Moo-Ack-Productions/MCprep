@@ -18,6 +18,8 @@
 
 import os
 import math
+from pathlib import Path
+import shutil
 
 import bpy
 from bpy_extras.io_utils import ExportHelper, ImportHelper
@@ -310,6 +312,35 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		obj_import_mem_msg = (
 			"Memory error during OBJ import, try exporting a smaller world")
 		try:
+			try:
+				BLENDER_STANDARD = (
+					"Standard",
+					"Filmic",
+					"Filmic Log",
+					"Raw",
+					"False Color"
+				)
+				MTL = self.filepath.rsplit(".", 1)[0] + '.mtl'
+				LINES = None
+				if bpy.context.scene.view_settings.view_transform not in BLENDER_STANDARD:
+					# This represents a new folder that'll backup the MTL file
+					original_mtl_path = Path(self.filepath).parent.absolute() / "ORIGINAL_MTLS" # Pathlib is weird when it comes to appending
+					
+					# TODO: make sure this works in 2.7x. It should since 2.8 uses 3.7 but we should confirm nonetheless
+					original_mtl_path.mkdir(parents=True, exist_ok=True)
+					shutil.copy2(MTL, original_mtl_path.absolute()) # Copy the MTL with metadata
+
+					# Open the MTL
+					with open(MTL, 'r') as mtl_file:
+						LINES = mtl_file.readlines()
+						for index, line in enumerate(LINES):
+							if line.startswith("map_d"):
+								LINES[index] = "# " + line
+					with open(MTL, 'w') as mtl_file:
+						mtl_file.writelines(LINES)
+
+			except Exception:
+				self.report({"ERROR"}, "Failed to convert MTL for compatbility")	
 			res = bpy.ops.import_scene.obj(
 				filepath=self.filepath, use_split_groups=True)
 		except MemoryError as err:
