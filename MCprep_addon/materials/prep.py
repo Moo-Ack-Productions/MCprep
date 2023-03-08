@@ -156,13 +156,8 @@ def draw_mats_common(self, context):
 	col.prop(self, "combineMaterials")
 	row = self.layout.row()
 	row.prop(self, "optimizeScene")
+	row.prop(self, "useEmission")
 
-	# EEVEE won't benefit from this anyway, so best to disable it
-	if engine == 'CYCLES':
-		self.useEmission = True
-		row.prop(self, "useEmission")
-	else:
-		self.useEmission = False
 
 class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 	"""Fixes materials and textures on selected objects for Minecraft rendering"""
@@ -251,8 +246,13 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 					count += 1
 			elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 				res = generate.matprep_cycles(
-					mat, passes, self.useReflections,
-					self.usePrincipledShader, self.makeSolid, self.packFormat, self.useEmission)
+					mat=mat,
+					passes=passes,
+					use_reflections=self.useReflections,
+					use_principled=self.usePrincipledShader,
+					only_solid=self.makeSolid,
+					pack_format=self.packFormat,
+					use_emission_nodes=self.useEmission)
 				if res == 0:
 					count += 1
 			else:
@@ -635,8 +635,13 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 				mat, passes, self.useReflections, self.makeSolid)
 		elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 			res = generate.matprep_cycles(
-				mat, passes, self.useReflections,
-				self.usePrincipledShader, self.makeSolid, self.packFormat)
+				mat=mat,
+				passes=passes,
+				use_reflections=self.useReflections,
+				use_principled=self.usePrincipledShader,
+				only_solid=self.makeSolid,
+				pack_format=self.packFormat,
+				use_emission_nodes=self.useEmission)
 		else:
 			return False, "Only Blender Internal, Cycles, or Eevee supported"
 

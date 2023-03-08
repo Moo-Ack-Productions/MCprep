@@ -954,7 +954,9 @@ def set_saturation_material(mat):
 			return  # requires regenerating material to add back
 		if len(desat_color) == 3:
 			desat_color += [1]  # add in alpha
-		sat_node.inputs[2].default_value = desat_color
+
+		sat_node_in = get_node_socket(node, is_input=True) # Get the node sockets in a version agnostic way	
+		sat_node.inputs[sat_node_in[2]].default_value = desat_color
 		sat_node.mute = not bool(saturate)
 		sat_node.hide = not bool(saturate)
 
@@ -1199,7 +1201,7 @@ def texgen_specular(mat, passes, nodeInputs, use_reflections):
 	nodeTexDiff.image = image_diff
 
 
-def texgen_seus(mat, passes, nodeInputs, use_reflections):
+def texgen_seus(mat, passes, nodeInputs, use_reflections, use_emission):
 
 	matGen = util.nameGeneralize(mat.name)
 	canon, form = get_mc_canonical_name(matGen)
@@ -1276,12 +1278,15 @@ def texgen_seus(mat, passes, nodeInputs, use_reflections):
 	links.new(nodeSeperate.outputs["R"], nodeSpecInv.inputs["Color"])
 
 	for i in nodeInputs[0]:
+		if i == nodeSaturateMix.outputs[saturateMixOut[0]]:
+			continue
 		links.new(nodeSaturateMix.outputs[saturateMixOut[0]], i)
 	for i in nodeInputs[1]:
 		links.new(nodeTexDiff.outputs["Alpha"], i)
 	if image_spec and use_reflections:
-		for i in nodeInputs[2]:
-			links.new(nodeSeperate.outputs["B"], i)
+		if use_emission:
+			for i in nodeInputs[2]:
+				links.new(nodeSeperate.outputs["B"], i)
 		for i in nodeInputs[4]:
 			links.new(nodeSeperate.outputs["G"], i)
 		for i in nodeInputs[3]:
@@ -1575,7 +1580,7 @@ def matgen_cycles_principled(
 	if pack_format == "specular":
 		texgen_specular(mat, passes, nodeInputs, use_reflections)
 	elif pack_format == "seus":
-		texgen_seus(mat, passes, nodeInputs, use_reflections)
+		texgen_seus(mat, passes, nodeInputs, use_reflections, use_emission_nodes)
 
 	if only_solid is True or checklist(canon, "solid"):
 		nodes.remove(nodeTrans)
@@ -1805,7 +1810,7 @@ def matgen_cycles_original(
 	if pack_format == "specular":
 		texgen_specular(mat, passes, nodeInputs, use_reflections)
 	elif pack_format == "seus":
-		texgen_seus(mat, passes, nodeInputs, use_reflections)
+		texgen_seus(mat, passes, nodeInputs, use_reflections, use_emission_nodes)
 
 	if only_solid is True or checklist(canon, "solid"):
 		nodes.remove(nodeTrans)
