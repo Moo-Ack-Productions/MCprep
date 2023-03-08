@@ -192,7 +192,7 @@ The first line is a summary of the changes, and should be less then 50 character
 
 Git won't automatically wrap messages either, so each line should have a limit of 72 characters.
 
-Here's a template I found that can help (modified for simplicity) by using # to define which is the limit Git can display for each line:
+Here's a template some MCprep developers found that can help (modified for simplicity) by using # to define which is the limit Git can display for each line:
 ```
 # Title: Summary, imperative, start upper case, don't end with a period
 # No more than 50 chars. #### 50 chars is here:  #
