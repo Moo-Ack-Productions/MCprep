@@ -127,6 +127,11 @@ if "util" in locals():
 else:
 	from . import util
 
+if "tracking" in locals():
+	importlib.reload(tracking)
+else:
+	from . import tracking
+
 if "addon_updater" in locals():
 	importlib.reload(addon_updater)
 else:
@@ -168,6 +173,7 @@ module_list = (
 
 def register(bl_info):
 	conf.register()
+	tracking.register(bl_info)
 	for mod in module_list:
 		mod.register()
 
@@ -185,6 +191,7 @@ def unregister(bl_info):
 	for mod in reversed(module_list):
 		mod.unregister()
 
+	tracking.unregister()
 	conf.unregister()
 
 	# addon updater code and configurations

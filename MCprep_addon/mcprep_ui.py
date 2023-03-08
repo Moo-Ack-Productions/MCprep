@@ -44,6 +44,7 @@ LOAD_FACTORY = 'LOOP_BACK' if util.bv28() else 'LOAD_FACTORY'
 HAND_ICON = 'FILE_REFRESH' if util.bv28() else 'HAND'
 OPT_IN = 'URL' if util.bv28() else 'HAND'
 
+
 # -----------------------------------------------------------------------------
 # Above for class functions/operators
 # Below for UI
@@ -234,13 +235,6 @@ class MCPREP_MT_3dview_add(bpy.types.Menu):
 	bl_label = "MCprep"
 	bl_idname = "MCPREP_MT_3dview_add"
 
-	@classmethod
-	def poll(self, context):
-		addon_prefs = util.get_user_preferences()
-		if addon_prefs.simple_prep:
-			return not addon_prefs.simple_prep_remove_mcprep_add
-		return True
-
 	def draw(self, context):
 		layout = self.layout
 		props = context.scene.mcprep_props
@@ -320,26 +314,6 @@ def feature_set_update(self, context):
 	tracking.Tracker.feature_set = self.feature_set
 	tracking.trackUsage("feature_set", param=self.feature_set)
 
-def get_unsimple_list(mcprep_add, skins, world_tools, spawner):
-	classes = []
-	if mcprep_add:
-		classes.append(MCPREP_MT_3dview_add)
-	if skins:
-		classes.append(MCPREP_PT_skins)
-	if world_tools:
-		classes.append(MCPREP_PT_world_tools)
-	if spawner:
-		spawn_classes = (
-			MCPREP_PT_spawn, 
-			MCPREP_PT_mob_spawner, 
-			MCPREP_PT_item_spawner,
-			MCPREP_PT_model_spawner,
-			MCPREP_PT_entity_spawner,
-			MCPREP_PT_effects_spawner,
-			MCPREP_PT_meshswap_spawner,
-		)
-		classes = classes + [cls for cls in spawn_classes]
-	return classes
 
 class McprepPreference(bpy.types.AddonPreferences):
 	bl_idname = __package__
@@ -347,39 +321,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 
 	def change_verbose(self, context):
 		conf.v = self.verbose
-	
-	"""
-		SimplePrep Options
-	"""
-	simple_prep = bpy.props.BoolProperty(
-		name="SimplePrep",
-		description="Strips the MCprep UI to the bare minimum",
-		default=False,
-	)
-	simple_prep_remove_spawner = bpy.props.BoolProperty(
-		name="Remove Spawn Panel",
-		description="Removes the spawn panel",
-		default=True,
-	)
-	simple_prep_remove_mcprep_add = bpy.props.BoolProperty(
-		name="Remove MCprep Shift+A panel",
-		description="Removes the MCprep part of the Shift+A menu",
-		default=True,
-	)
-	simple_prep_remove_skins = bpy.props.BoolProperty(
-		name="Remove Skins Panel",
-		description="Removes skin panel",
-		default=True,
-	)
-	simple_prep_remove_world_tools = bpy.props.BoolProperty(
-		name="Remove World Tools",
-		description="Removes world tools panel",
-		default=True,
-	)
-	
-	"""
-		Everything Else
-	"""
+
 	meshswap_path = bpy.props.StringProperty(
 		name="Meshswap path",
 		description=(
@@ -642,14 +584,6 @@ class McprepPreference(bpy.types.AddonPreferences):
 			row = layout.row()
 			row.prop(self, "verbose")
 			row.prop(self, "feature_set")
-			row = layout.row()
-			row.prop(self, "simple_prep")
-			if self.simple_prep:
-				box = layout.box()
-				box.prop(self, "simple_prep_remove_mcprep_add")
-				box.prop(self, "simple_prep_remove_skins")
-				box.prop(self, "simple_prep_remove_world_tools")
-				box.prop(self, "simple_prep_remove_spawner")
 
 			if self.feature_set != "supported":
 				row = layout.row()
@@ -743,7 +677,7 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
 	# bl_context = "objectmode"
-	bl_category = "MCprep Kaion"
+	bl_category = "MCprep"
 
 	def draw(self, context):
 		addon_prefs = util.get_user_preferences(context)
@@ -788,13 +722,6 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		col = split.column(align=True)
 		col.label(text="MCprep tools")
 		col.operator("mcprep.prep_materials", text="Prep Materials")
-
-		if not util.isTextureSwapCompatible(context):
-			row = col.row()
-			row.operator(
-				"mcprep.open_help", text="", icon="QUESTION", emboss=False
-			).url = "https://github.com/StandingPadAnimations/MCprep-Kaion/blob/obj-metadata/docs/common_errors.md#obj-not-exported-with-the-correct-settings-for-textureswap"
-			row.label(text="OBJ not exported with the correct settings for textureswap")
 		p = col.operator("mcprep.swap_texture_pack")
 		p.filepath = context.scene.mcprep_texturepack_path
 		if context.mode == "OBJECT":
@@ -904,7 +831,7 @@ class MCPREP_PT_bridge(bpy.types.Panel):
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
 	bl_context = "objectmode"
-	bl_category = "MCprep Kaion"
+	bl_category = "MCprep"
 
 	def draw(self, context):
 		# bridge.panel_draw(self, context)
@@ -916,14 +843,7 @@ class MCPREP_PT_world_tools(bpy.types.Panel):
 	bl_label = "World Tools"
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
-	bl_category = "MCprep Kaion"
-
-	@classmethod
-	def poll(self, context):
-		addon_prefs = util.get_user_preferences()
-		if addon_prefs.simple_prep:
-			return not addon_prefs.simple_prep_remove_world_tools
-		return True
+	bl_category = "MCprep"
 
 	def draw(self, context):
 		layout = self.layout
@@ -974,15 +894,7 @@ class MCPREP_PT_skins(bpy.types.Panel):
 	bl_label = "Skin Swapper"
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
-	bl_category = "MCprep Kaion"
-
-	@classmethod
-	def poll(self, context):
-		addon_prefs = util.get_user_preferences()
-		if addon_prefs.simple_prep:
-			return not addon_prefs.simple_prep_remove_skins
-		return True
-
+	bl_category = "MCprep"
 
 	def draw(self, context):
 		layout = self.layout
@@ -1670,14 +1582,7 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 	bl_label = "Spawner"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
-	bl_category = "MCprep Kaion"
-
-	@classmethod
-	def poll(self, context):
-		addon_prefs = util.get_user_preferences()
-		if addon_prefs.simple_prep:
-			return not addon_prefs.simple_prep_remove_spawner
-		return True
+	bl_category = "MCprep"
 
 	def draw(self, context):
 		row = self.layout.row(align=True)
@@ -1694,15 +1599,8 @@ class MCPREP_PT_mob_spawner(bpy.types.Panel):
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
-	bl_category = "MCprep Kaion"
+	bl_category = "MCprep"
 	bl_options = {'DEFAULT_CLOSED'}
-
-	@classmethod
-	def poll(self, context):
-		addon_prefs = util.get_user_preferences()
-		if addon_prefs.simple_prep:
-			return not addon_prefs.simple_prep_remove_spawner
-		return True
 
 	def draw(self, context):
 		is_obj_mode = context.mode == "OBJECT"
@@ -1726,15 +1624,8 @@ class MCPREP_PT_model_spawner(bpy.types.Panel):
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
-	bl_category = "MCprep Kaion"
+	bl_category = "MCprep"
 	bl_options = {'DEFAULT_CLOSED'}
-
-	@classmethod
-	def poll(self, context):
-		addon_prefs = util.get_user_preferences()
-		if addon_prefs.simple_prep:
-			return not addon_prefs.simple_prep_remove_spawner
-		return True
 
 	def draw(self, context):
 		is_obj_mode = context.mode == "OBJECT"
@@ -1758,15 +1649,8 @@ class MCPREP_PT_item_spawner(bpy.types.Panel):
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
-	bl_category = "MCprep Kaion"
+	bl_category = "MCprep"
 	bl_options = {'DEFAULT_CLOSED'}
-
-	@classmethod
-	def poll(self, context):
-		addon_prefs = util.get_user_preferences()
-		if addon_prefs.simple_prep:
-			return not addon_prefs.simple_prep_remove_spawner
-		return True
 
 	def draw(self, context):
 		is_obj_mode = context.mode == "OBJECT"
@@ -1791,15 +1675,8 @@ class MCPREP_PT_effects_spawner(bpy.types.Panel):
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
-	bl_category = "MCprep Kaion"
+	bl_category = "MCprep"
 	bl_options = {'DEFAULT_CLOSED'}
-
-	@classmethod
-	def poll(self, context):
-		addon_prefs = util.get_user_preferences()
-		if addon_prefs.simple_prep:
-			return not addon_prefs.simple_prep_remove_spawner
-		return True
 
 	def draw(self, context):
 		is_obj_mode = context.mode == "OBJECT"
@@ -1823,7 +1700,7 @@ class MCPREP_PT_entity_spawner(bpy.types.Panel):
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
-	bl_category = "MCprep Kaion"
+	bl_category = "MCprep"
 	bl_options = {'DEFAULT_CLOSED'}
 
 	def draw(self, context):
@@ -1832,13 +1709,6 @@ class MCPREP_PT_entity_spawner(bpy.types.Panel):
 			draw_mode_warning(self.layout)
 			return
 		entity_spawner(self, context)
-
-	@classmethod
-	def poll(self, context):
-		addon_prefs = util.get_user_preferences()
-		if addon_prefs.simple_prep:
-			return not addon_prefs.simple_prep_remove_spawner
-		return True
 
 	def draw_header(self, context):
 		if not conf.use_icons or conf.preview_collections["main"] == "":
@@ -1855,15 +1725,8 @@ class MCPREP_PT_meshswap_spawner(bpy.types.Panel):
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
-	bl_category = "MCprep Kaion"
+	bl_category = "MCprep"
 	bl_options = {'DEFAULT_CLOSED'}
-
-	@classmethod
-	def poll(self, context):
-		addon_prefs = util.get_user_preferences()
-		if addon_prefs.simple_prep:
-			return not addon_prefs.simple_prep_remove_spawner
-		return True
 
 	def draw(self, context):
 		is_obj_mode = context.mode == "OBJECT"
@@ -2017,7 +1880,7 @@ class McprepProps(bpy.types.PropertyGroup):
 # -----------------------------------------------------------------------------
 
 
-classes = [
+classes = (
 	McprepPreference,
 	McprepProps,
 	MCPREP_MT_mob_spawner,
@@ -2040,7 +1903,7 @@ classes = [
 	MCPREP_PT_meshswap_spawner,
 	MCPREP_PT_materials,
 	MCPREP_PT_materials_subsettings,
-]
+)
 
 
 def register():
@@ -2052,6 +1915,7 @@ def register():
 
 	# scene settings (later re-attempt to put into props group)
 	addon_prefs = util.get_user_preferences()
+
 	bpy.types.Scene.mcprep_mob_path = bpy.props.StringProperty(
 		name="Mob folder",
 		description="Folder for rigs to spawn in, saved with this blend file data",
