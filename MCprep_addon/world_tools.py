@@ -18,6 +18,7 @@
 
 import os
 import math
+from pathlib import Path
 
 import bpy
 from bpy_extras.io_utils import ExportHelper, ImportHelper
@@ -34,7 +35,6 @@ from .materials import generate
 
 
 time_obj_cache = None
-
 
 def get_time_object():
 	"""Returns the time object if present in the file"""
@@ -62,28 +62,74 @@ def get_time_object():
 
 	return time_obj_cache
 
+class ObjHeaderOptions:
+	def __init__(self):
+		self._exporter = None
+		self._file_type = None
+	
+	"""
+	Wrapper functions to avoid typos causing issues
+	"""
+	def set_mineways(self):
+		self._exporter = "Mineways"
+	def set_jmc2obj(self):
+		self._exporter = "jmc2obj"
 
+	def set_atlas(self):
+		self._file_type = "ATLAS"
+	def set_seperated(self):
+		self._file_type = "INDIVIDUAL_TILES"
+
+	"""
+	Returns the exporter used
+	"""
+	def exporter(self):
+		return self._exporter if self._exporter is not None else "(choose)"
+
+	"""
+	Returns the type of textures
+	"""
+	def texture_type(self):
+		return self._file_type if self._file_type is not None else "NONE"
+
+obj_header = ObjHeaderOptions()
 def detect_world_exporter(filepath):
 	"""Detect whether Mineways or jmc2obj was used, based on prefix info.
 
 	Primary heruistic: if detect Mineways header, assert Mineways, else
 	assume jmc2obj. All Mineways exports for a long time have prefix info
 	set in the obj file as comments.
-
-	Returns:
-		A valid string value for preferences ENUM MCprep_exporter_type
 	"""
 	with open(filepath, 'r') as obj_fd:
 		try:
 			header = obj_fd.readline()
+			if 'mineways' in header.lower():
+				obj_header.set_mineways()
+				# form of: # Wavefront OBJ file made by Mineways version 5.10...
+				for line in obj_fd:
+					if line.startswith("# File type:"):
+						header = line.rstrip() # Remove trailing newline
+				
+				# The issue here is that Mineways has changed how the header is generated. As such, we're limited with only a couple of OBJs, some from 2020 and some from 2023, so we'll assume people are using an up to date version.
+				atlas = (
+					"# File type: Export all textures to three large images",
+					"# File type: Export full color texture patterns"
+				)
+				tiles = (
+					"# File type: Export tiles for textures to directory textures",
+					"# File type: Export individual textures to directory tex"
+				)
+				print(f"\"{header}\"")
+				if header in atlas: # If a texture atlas is used
+					obj_header.set_atlas()
+				elif header in tiles: # If the OBJ uses individual textures
+					obj_header.set_seperated()
+				return
 		except UnicodeDecodeError:
 			print("failed to read first line of obj: " + filepath)
-			return '(choose)'
-	if 'mineways' in header.lower():
-		# form of: # Wavefront OBJ file made by Mineways version 5.10...
-		return 'Mineways'
-	return 'jmc2obj'
-
+			return
+		obj_header.set_jmc2obj()
+		obj_header.set_seperated() # Since this is the default for Jmc2Obj, we'll assume this is what the OBJ is using
 
 # -----------------------------------------------------------------------------
 # open mineways/jmc2obj related
@@ -252,7 +298,6 @@ class MCPREP_OT_install_mineways(bpy.types.Operator):
 # Additional world tools
 # -----------------------------------------------------------------------------
 
-
 class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 	"""Imports an obj file, and auto splits it by material"""
 	bl_idname = "mcprep.import_world_split"
@@ -272,14 +317,15 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 	@tracking.report_error
 	def execute(self, context):
 		# for consistency with the built in one, only import the active path
+		if self.filepath.lower().endswith(".mtl"):
+			filename = Path(self.filepath)
+			new_filename = filename.with_suffix(".obj")
+			self.filepath = str(new_filename) # Change it from MTL to OBJ, this will be checked with the rest of the if clauses
 		if not self.filepath:
 			self.report({"ERROR"}, "File not found, could not import obj")
 			return {'CANCELLED'}
 		if not os.path.isfile(self.filepath):
 			self.report({"ERROR"}, "File not found, could not import obj")
-			return {'CANCELLED'}
-		if self.filepath.lower().endswith(".mtl"):
-			self.report({"ERROR"}, "Select the .obj file, NOT the .mtl!")
 			return {'CANCELLED'}
 		if not self.filepath.lower().endswith(".obj"):
 			self.report({"ERROR"}, "You must select a .obj file to import")
@@ -387,7 +433,12 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			return {'CANCELLED'}
 
 		prefs = util.get_user_preferences(context)
-		prefs.MCprep_exporter_type = detect_world_exporter(self.filepath)
+		detect_world_exporter(self.filepath)
+		prefs.MCprep_exporter_type = obj_header.exporter()
+		
+		for obj in context.selected_objects:
+			obj["MCPREP_OBJ_HEADER"] = True
+			obj["MCPREP_OBJ_FILE_TYPE"] = obj_header.texture_type()
 
 		if util.bv28():
 			self.split_world_by_material(context)
@@ -395,7 +446,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		addon_prefs = util.get_user_preferences(context)
 		self.track_exporter = addon_prefs.MCprep_exporter_type  # Soft detect.
 		return {'FINISHED'}
-
+	
 	def obj_name_to_material(self, obj):
 		"""Update an objects name based on its first material"""
 		if not obj:
@@ -863,34 +914,34 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 
 		# # update drivers, needed if time has changed vs import source
 		# if context.scene.world.node_tree.animation_data:
-		# 	# context.scene.world.node_tree.animation_data.drivers[0].update()
-		# 	drivers = context.scene.world.node_tree.animation_data.drivers[0]
-		# 	drivers.driver.variables[0].targets[0].id = time_obj
-		# 	# nope, still doesn't work.
+		#	# context.scene.world.node_tree.animation_data.drivers[0].update()
+		#	drivers = context.scene.world.node_tree.animation_data.drivers[0]
+		#	drivers.driver.variables[0].targets[0].id = time_obj
+		#	# nope, still doesn't work.
 
 		# if needed: create time object and setup drivers
 		# if not time_obj:
-		# 	conf.log("Creating time_obj")
-		# 	time_obj = bpy.data.objects.new('MCprep Time Control', None)
-		# 	util.obj_link_scene(time_obj, context)
-		# 	global time_obj_cache
-		# 	time_obj_cache = time_obj
-		# 	if hasattr(time_obj, "empty_draw_type"):  # 2.7
-		# 		time_obj.empty_draw_type = 'SPHERE'
-		# 	else:  # 2.8
-		# 		time_obj.empty_display_type = 'SPHERE'
+		#	conf.log("Creating time_obj")
+		#	time_obj = bpy.data.objects.new('MCprep Time Control', None)
+		#	util.obj_link_scene(time_obj, context)
+		#	global time_obj_cache
+		#	time_obj_cache = time_obj
+		#	if hasattr(time_obj, "empty_draw_type"):  # 2.7
+		#		time_obj.empty_draw_type = 'SPHERE'
+		#	else:  # 2.8
+		#		time_obj.empty_display_type = 'SPHERE'
 
 		# first, get the driver
 		# if (not world.node_tree.animation_data
-		# 		or not world.node_tree.animation_data.drivers
-		# 		or not world.node_tree.animation_data.drivers[0].driver):
-		# 	conf.log("Could not get driver from imported dynamic world")
-		# 	self.report({'WARNING'}, "Could not update driver for dynamic world")
-		# 	driver = None
+		#		or not world.node_tree.animation_data.drivers
+		#		or not world.node_tree.animation_data.drivers[0].driver):
+		#	conf.log("Could not get driver from imported dynamic world")
+		#	self.report({'WARNING'}, "Could not update driver for dynamic world")
+		#	driver = None
 		# else:
-		# 	driver = world.node_tree.animation_data.drivers[0].driver
+		#	driver = world.node_tree.animation_data.drivers[0].driver
 		# if driver and driver.variables[0].targets[0].id_type == 'OBJECT':
-		# 	driver.variables[0].targets[0].id = time_obj
+		#	driver.variables[0].targets[0].id = time_obj
 		# add driver to control obj's x rotation
 
 		return obj_list
