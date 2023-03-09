@@ -356,8 +356,13 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		obj_import_mem_msg = (
 			"Memory error during OBJ import, try exporting a smaller world")
 		try:
-			res = bpy.ops.import_scene.obj(
-				filepath=self.filepath, use_split_groups=True)
+			res = None
+			if util.min_bv((3, 5)):
+				res = bpy.ops.wm.obj_import(
+					filepath=self.filepath, use_split_groups=True) 
+			else:
+				res = bpy.ops.import_scene.obj(
+					filepath=self.filepath, use_split_groups=True)	
 		except MemoryError as err:
 			print("Memory error during import OBJ:")
 			print(err)
