@@ -87,6 +87,48 @@ def detect_world_exporter(filepath):
 	return 'jmc2obj'
 
 
+def convert_mtl(filepath):
+	"""Convert the MTL file if we're not using one of Blender's built in colorspaces
+
+	Without this, Blender's OBJ importer will attempt to set non-color data to alpha
+	maps and what not, which causes issues in ACES and whatnot where non-color data is
+	not an option
+	
+	Returns:
+		True if success, False if failed
+	"""
+	try:
+		BLENDER_STANDARD = (
+			"Standard",
+			"Filmic",
+			"Filmic Log",
+			"Raw",
+			"False Color"
+		)
+		MTL = filepath.rsplit(".", 1)[0] + '.mtl'
+		LINES = None
+		if bpy.context.scene.view_settings.view_transform not in BLENDER_STANDARD:
+			# This represents a new folder that'll backup the MTL file
+			original_mtl_path = Path(filepath).parent.absolute() / "ORIGINAL_MTLS" # Pathlib is weird when it comes to appending
+			
+			# TODO: make sure this works in 2.7x. It should since 2.8 uses 3.7 but we should confirm nonetheless
+			original_mtl_path.mkdir(parents=True, exist_ok=True)
+			shutil.copy2(MTL, original_mtl_path.absolute()) # Copy the MTL with metadata
+
+			# Open the MTL
+			with open(MTL, 'r') as mtl_file:
+				LINES = mtl_file.readlines()
+				for index, line in enumerate(LINES):
+					if line.startswith("map_d"):
+						LINES[index] = "# " + line
+			with open(MTL, 'w') as mtl_file:
+				mtl_file.writelines(LINES)
+
+	except Exception:
+		return False
+	return True
+
+
 # -----------------------------------------------------------------------------
 # open mineways/jmc2obj related
 # -----------------------------------------------------------------------------
@@ -312,35 +354,12 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		obj_import_mem_msg = (
 			"Memory error during OBJ import, try exporting a smaller world")
 		try:
-			try:
-				BLENDER_STANDARD = (
-					"Standard",
-					"Filmic",
-					"Filmic Log",
-					"Raw",
-					"False Color"
-				)
-				MTL = self.filepath.rsplit(".", 1)[0] + '.mtl'
-				LINES = None
-				if bpy.context.scene.view_settings.view_transform not in BLENDER_STANDARD:
-					# This represents a new folder that'll backup the MTL file
-					original_mtl_path = Path(self.filepath).parent.absolute() / "ORIGINAL_MTLS" # Pathlib is weird when it comes to appending
-					
-					# TODO: make sure this works in 2.7x. It should since 2.8 uses 3.7 but we should confirm nonetheless
-					original_mtl_path.mkdir(parents=True, exist_ok=True)
-					shutil.copy2(MTL, original_mtl_path.absolute()) # Copy the MTL with metadata
+			# First let's convert the MTL if needed
+			conv_res = convert_mtl(self.filepath)
+			if not conv_res:
+				self.report({"ERROR"}, "MTL conversion failed!")
 
-					# Open the MTL
-					with open(MTL, 'r') as mtl_file:
-						LINES = mtl_file.readlines()
-						for index, line in enumerate(LINES):
-							if line.startswith("map_d"):
-								LINES[index] = "# " + line
-					with open(MTL, 'w') as mtl_file:
-						mtl_file.writelines(LINES)
-
-			except Exception:
-				self.report({"ERROR"}, "Failed to convert MTL for compatbility")	
+			# Imported OBJ
 			res = bpy.ops.import_scene.obj(
 				filepath=self.filepath, use_split_groups=True)
 		except MemoryError as err:
@@ -894,34 +913,34 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 
 		# # update drivers, needed if time has changed vs import source
 		# if context.scene.world.node_tree.animation_data:
-		# 	# context.scene.world.node_tree.animation_data.drivers[0].update()
-		# 	drivers = context.scene.world.node_tree.animation_data.drivers[0]
-		# 	drivers.driver.variables[0].targets[0].id = time_obj
-		# 	# nope, still doesn't work.
+		#	# context.scene.world.node_tree.animation_data.drivers[0].update()
+		#	drivers = context.scene.world.node_tree.animation_data.drivers[0]
+		#	drivers.driver.variables[0].targets[0].id = time_obj
+		#	# nope, still doesn't work.
 
 		# if needed: create time object and setup drivers
 		# if not time_obj:
-		# 	conf.log("Creating time_obj")
-		# 	time_obj = bpy.data.objects.new('MCprep Time Control', None)
-		# 	util.obj_link_scene(time_obj, context)
-		# 	global time_obj_cache
-		# 	time_obj_cache = time_obj
-		# 	if hasattr(time_obj, "empty_draw_type"):  # 2.7
-		# 		time_obj.empty_draw_type = 'SPHERE'
-		# 	else:  # 2.8
-		# 		time_obj.empty_display_type = 'SPHERE'
+		#	conf.log("Creating time_obj")
+		#	time_obj = bpy.data.objects.new('MCprep Time Control', None)
+		#	util.obj_link_scene(time_obj, context)
+		#	global time_obj_cache
+		#	time_obj_cache = time_obj
+		#	if hasattr(time_obj, "empty_draw_type"):  # 2.7
+		#		time_obj.empty_draw_type = 'SPHERE'
+		#	else:  # 2.8
+		#		time_obj.empty_display_type = 'SPHERE'
 
 		# first, get the driver
 		# if (not world.node_tree.animation_data
-		# 		or not world.node_tree.animation_data.drivers
-		# 		or not world.node_tree.animation_data.drivers[0].driver):
-		# 	conf.log("Could not get driver from imported dynamic world")
-		# 	self.report({'WARNING'}, "Could not update driver for dynamic world")
-		# 	driver = None
+		#		or not world.node_tree.animation_data.drivers
+		#		or not world.node_tree.animation_data.drivers[0].driver):
+		#	conf.log("Could not get driver from imported dynamic world")
+		#	self.report({'WARNING'}, "Could not update driver for dynamic world")
+		#	driver = None
 		# else:
-		# 	driver = world.node_tree.animation_data.drivers[0].driver
+		#	driver = world.node_tree.animation_data.drivers[0].driver
 		# if driver and driver.variables[0].targets[0].id_type == 'OBJECT':
-		# 	driver.variables[0].targets[0].id = time_obj
+		#	driver.variables[0].targets[0].id = time_obj
 		# add driver to control obj's x rotation
 
 		return obj_list
