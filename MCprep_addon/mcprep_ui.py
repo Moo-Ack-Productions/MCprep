@@ -727,7 +727,7 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			row = col.row()
 			row.operator(
 				"mcprep.open_help", text="", icon="QUESTION", emboss=False
-			).url = "https://github.com/StandingPadAnimations/MCprep-Kaion/blob/obj-metadata/docs/common_errors.md#obj-not-exported-with-the-correct-settings-for-textureswap"
+			).url = "https://github.com/TheDuckCow/MCprep/blob/master/docs/common_errors.md#common-error-messages-and-what-they-mean"
 			row.label(text="OBJ incompatible with textureswap")
 		p = col.operator("mcprep.swap_texture_pack")
 		p.filepath = context.scene.mcprep_texturepack_path
