@@ -220,26 +220,35 @@ def bv30():
 	return min_bv((3, 00))
 
 
-def isTextureSwapCompatible(context):
-	"""Check if the selected objects are textureswap compatible"""
-	if len(context.selected_objects):
-		file_types = {
-			"ATLAS" : 0,
-			"INDIVIDUAL" : 0
-		}
-		for obj in context.selected_objects:
-			# If the header exists then we should be fine
-			if "MCPREP_OBJ_HEADER" in obj:
-				if obj["MCPREP_OBJ_FILE_TYPE"] == "ATLAS":
-					file_types["ATLAS"] += 1
-				else:
-					file_types["INDIVIDUAL"] += 1
+def is_atlas_export(context):
+	"""Check if the selected objects are textureswap/animate tex compatible.
+
+	Atlas textures are ones where all textures are combined into a single file,
+	while individual textures is where there is one image file per block type.
+
+	Returns a bool. If false, the UI will show a warning and link to doc
+	about using the right settings.
+	"""
+	if not context.selected_objects:
+		# Don't trigger the UI warning just because nothing is selected
+		return True
+
+	file_types = {
+		"ATLAS": 0,
+		"INDIVIDUAL": 0
+	}
+	for obj in context.selected_objects:
+		# If the header exists then we should be fine
+		if "MCPREP_OBJ_HEADER" in obj:
+			if obj["MCPREP_OBJ_FILE_TYPE"] == "ATLAS":
+				file_types["ATLAS"] += 1
 			else:
-				# Perform early return, though this causes undefined behavior in edge cases where one object may have the header property and another may not
-				return True
-		if file_types["ATLAS"] == 0:
-			return True
-	return False
+				file_types["INDIVIDUAL"] += 1
+		else:
+			continue
+
+	return file_types["ATLAS"] == 0
+
 
 def face_on_edge(faceLoc):
 	"""Check if a face is on the boundary between two blocks (local coordinates)."""

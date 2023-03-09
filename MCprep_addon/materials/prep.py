@@ -130,9 +130,14 @@ def draw_mats_common(self, context):
 		col.prop(self, "usePrincipledShader")
 	col.prop(self, "useReflections")
 	col.prop(self, "makeSolid")
-		
-	if util.isTextureSwapCompatible(context):
-		col.prop(self, "animateTextures")
+
+	anim_row = col.row()
+	can_swap_text = util.is_atlas_export(context)
+	anim_row.enabled = can_swap_text
+	if can_swap_text:
+		anim_row.prop(self, "animateTextures")
+	else:
+		anim_row.prop(self, "animateTextures", text="Animate textures (disabled due to import settings)")
 	col.prop(self, "autoFindMissingTextures")
 
 	row = self.layout.row()
@@ -394,7 +399,7 @@ class MCPREP_OT_swap_texture_pack(
 	def poll(cls, context):
 		addon_prefs = util.get_user_preferences(context)
 		if addon_prefs.MCprep_exporter_type != "(choose)":
-			return util.isTextureSwapCompatible(context)
+			return util.is_atlas_export(context)
 		return False
 
 	def draw(self, context):
