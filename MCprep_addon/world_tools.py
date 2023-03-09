@@ -317,7 +317,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 				res = bpy.ops.wm.obj_import(
 					filepath=self.filepath, use_split_groups=True) 
 			else:
-				res = bpy.ops.wm.obj_import(
+				res = bpy.ops.import_scene.obj(
 					filepath=self.filepath, use_split_groups=True)	
 		except MemoryError as err:
 			print("Memory error during import OBJ:")
