@@ -123,12 +123,16 @@ def convert_mtl(filepath):
 			"# Thanks c:\n"
 		)
 
-		# Check if MTL has already been converted. If so, return True
-		if not all(line in LINES for line in MCPREP_HEADER):
-			# Copy the MTL with metadata
-			shutil.copy2(MTL, original_mtl_path.absolute())
-		else:
-			return True
+		try:
+			# Check if MTL has already been converted. If so, return True
+			if not all(line in LINES for line in MCPREP_HEADER):
+				# Copy the MTL with metadata
+				shutil.copy2(MTL, original_mtl_path.absolute())
+			else:
+				return True
+		except Exception as e:
+			print(e)
+			return False
 
 		try:
 			# Otherwise let's continue
