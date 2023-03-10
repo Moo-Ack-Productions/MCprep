@@ -1026,24 +1026,6 @@ class MCPREP_OT_time_set(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-def world_time_update(self, context):
-	"""Handler which updates the current world time on a frame change.
-
-	Maybe don't need this in favor of using a driver for simplicity
-	"""
-
-	time = context.scene.mcprep_props.world_time
-
-	# translate time into rotation of sun/moon rig
-	# see: http://minecraft.gamepedia.com/Day-night_cycle
-	# set to the armature.... would be even better if it was somehow driver-set.
-
-	# if real python code requried to set this up, generate and auto-run python
-	# script, though more ideally just set drivers based on the time param
-
-	return
-
-
 class MCPREP_OT_render_helper():
 	render_queue = []
 	render_queue_cleanup = []
