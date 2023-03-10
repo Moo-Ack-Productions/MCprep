@@ -137,6 +137,10 @@ def add_area_particle_effect(context, effect, location):
 	post_systems = list(bpy.data.particles)
 	imported_particles = list(set(post_systems) - set(pre_systems))[0]
 
+	# Assign particles as fake, to avoid being purged after file reload.
+	if imported_particles.instance_object:
+		imported_particles.instance_object.use_fake_user = True
+
 	# Assign the active object and selection state.
 	for sel_obj in bpy.context.selected_objects:
 		util.select_set(sel_obj, False)
@@ -163,9 +167,6 @@ def add_area_particle_effect(context, effect, location):
 	psystem.settings.frame_end = context.scene.frame_end
 	scene_frames = psystem.settings.frame_end - psystem.settings.frame_start
 	psystem.settings.count = int(density * scene_frames)
-
-	# TODO: Attempt to account for a target size.
-	# TODO: Potentially parent to camera.
 
 	return obj
 
