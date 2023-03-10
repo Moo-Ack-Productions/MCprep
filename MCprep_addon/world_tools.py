@@ -98,41 +98,39 @@ def convert_mtl(filepath):
 	Returns:
 		True if success, False if failed
 	"""
-	try:
-		blender_standard = (
-			"Standard",
-			"Filmic",
-			"Filmic Log",
-			"Raw",
-			"False Color"
+	blender_standard = (
+		"Standard",
+		"Filmic",
+		"Filmic Log",
+		"Raw",
+		"False Color"
+	)
+	MTL = filepath.rsplit(".", 1)[0] + '.mtl'
+	LINES = None
+	with open(MTL, 'r') as mtl_file:
+		LINES = mtl_file.readlines()
+
+	if bpy.context.scene.view_settings.view_transform not in blender_standard:
+		# This represents a new folder that'll backup the MTL filepath
+		original_mtl_path = Path(filepath).parent.absolute() / "ORIGINAL_MTLS"
+		# TODO: make sure this works in 2.7x. It should since 2.8 uses 3.7 but
+		# we should confirm nonetheless
+		original_mtl_path.mkdir(parents=True, exist_ok=True)
+
+		MCPREP_HEADER = (
+			"# This section was created by MCprep's MTL conversion script\n",
+			"# Please do not remove\n",
+			"# Thanks c:\n"
 		)
-		MTL = filepath.rsplit(".", 1)[0] + '.mtl'
-		LINES = None
-		with open(MTL, 'r') as mtl_file:
-			LINES = mtl_file.readlines()
 
-		if bpy.context.scene.view_settings.view_transform not in blender_standard:
-			# This represents a new folder that'll backup the MTL filepath
+		# Check if MTL has already been converted. If so, return True
+		if not all(line in LINES for line in MCPREP_HEADER):
+			# Copy the MTL with metadata
+			shutil.copy2(MTL, original_mtl_path.absolute())
+		else:
+			return True
 
-			# Pathlib is weird when it comes to appending
-			original_mtl_path = Path(filepath).parent.absolute() / "ORIGINAL_MTLS"
-			# TODO: make sure this works in 2.7x. It should since 2.8 uses 3.7 but
-			# we should confirm nonetheless
-			original_mtl_path.mkdir(parents=True, exist_ok=True)
-
-			MCPREP_HEADER = (
-				"# This section was created by MCprep's MTL conversion script\n",
-				"# Please do not remove\n",
-				"# Thanks c:\n"
-			)
-
-			# Check if MTL has already been converted. If so, return True
-			if not all(line in LINES for line in MCPREP_HEADER):
-				# Copy the MTL with metadata
-				shutil.copy2(MTL, original_mtl_path.absolute())
-			else:
-				return True
-
+		try:
 			# Otherwise let's continue
 			with open(MTL, 'r') as mtl_file:
 				for index, line in enumerate(LINES):
@@ -143,9 +141,9 @@ def convert_mtl(filepath):
 				mtl_file.writelines(LINES)
 				mtl_file.writelines(MCPREP_HEADER)
 
-	except Exception:
-		return False
-
+		except Exception as e:
+			print(e)
+			return False
 	return True
 
 
