@@ -375,11 +375,12 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			"import again.")
 		obj_import_mem_msg = (
 			"Memory error during OBJ import, try exporting a smaller world")
+
+		# First let's convert the MTL if needed
+		conv_res = convert_mtl(self.filepath)
 		try:
-			# First let's convert the MTL if needed
-			conv_res = convert_mtl(self.filepath)
 			if not conv_res:
-				self.report({"ERROR"}, "MTL conversion failed!")
+				self.report({"WARNING"}, "MTL conversion failed!")
 
 			# Imported OBJ
 			res = bpy.ops.import_scene.obj(
