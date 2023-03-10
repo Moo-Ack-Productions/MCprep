@@ -136,8 +136,11 @@ def convert_mtl(filepath):
 			print(e)
 			return False
 
+		# In this section, we go over each line
+		# and check to see if it begins with map_d. If
+		# it does, then we simply comment it out. Otherwise,
+		# we can safely ignore it.
 		try:
-			# Otherwise let's continue
 			with open(mtl, 'r') as mtl_file:
 				for index, line in enumerate(lines):
 					if line.startswith("map_d"):
