@@ -105,10 +105,10 @@ def convert_mtl(filepath):
 		"Raw",
 		"False Color"
 	)
-	MTL = filepath.rsplit(".", 1)[0] + '.mtl'
-	LINES = None
-	with open(MTL, 'r') as mtl_file:
-		LINES = mtl_file.readlines()
+	mtl = filepath.rsplit(".", 1)[0] + '.mtl'
+	lines = None
+	with open(mtl, 'r') as mtl_file:
+		lines = mtl_file.readlines()
 
 	if bpy.context.scene.view_settings.view_transform not in blender_standard:
 		# This represents a new folder that'll backup the MTL filepath
@@ -117,7 +117,7 @@ def convert_mtl(filepath):
 		# we should confirm nonetheless
 		original_mtl_path.mkdir(parents=True, exist_ok=True)
 
-		MCPREP_HEADER = (
+		mcprep_header = (
 			"# This section was created by MCprep's MTL conversion script\n",
 			"# Please do not remove\n",
 			"# Thanks c:\n"
@@ -125,9 +125,9 @@ def convert_mtl(filepath):
 
 		try:
 			# Check if MTL has already been converted. If so, return True
-			if not all(line in LINES for line in MCPREP_HEADER):
+			if not all(line in lines for line in mcprep_header):
 				# Copy the MTL with metadata
-				shutil.copy2(MTL, original_mtl_path.absolute())
+				shutil.copy2(mtl, original_mtl_path.absolute())
 			else:
 				return True
 		except Exception as e:
@@ -136,14 +136,14 @@ def convert_mtl(filepath):
 
 		try:
 			# Otherwise let's continue
-			with open(MTL, 'r') as mtl_file:
-				for index, line in enumerate(LINES):
+			with open(mtl, 'r') as mtl_file:
+				for index, line in enumerate(lines):
 					if line.startswith("map_d"):
-						LINES[index] = "# " + line
+						lines[index] = "# " + line
 
-			with open(MTL, 'w') as mtl_file:
-				mtl_file.writelines(LINES)
-				mtl_file.writelines(MCPREP_HEADER)
+			with open(mtl, 'w') as mtl_file:
+				mtl_file.writelines(lines)
+				mtl_file.writelines(mcprep_header)
 
 		except Exception as e:
 			print(e)
