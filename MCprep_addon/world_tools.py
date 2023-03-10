@@ -88,17 +88,18 @@ def detect_world_exporter(filepath):
 
 
 def convert_mtl(filepath):
-	"""Convert the MTL file if we're not using one of Blender's built in colorspaces
+	"""Convert the MTL file if we're not using one of Blender's built in
+	colorspaces
 
-	Without this, Blender's OBJ importer will attempt to set non-color data to alpha
-	maps and what not, which causes issues in ACES and whatnot where non-color data is
-	not an option
-	
+	Without this, Blender's OBJ importer will attempt to set non-color data to
+	alpha maps and what not, which causes issues in ACES and whatnot where
+	non-color data is not an option.
+
 	Returns:
 		True if success, False if failed
 	"""
 	try:
-		BLENDER_STANDARD = (
+		blender_standard = (
 			"Standard",
 			"Filmic",
 			"Filmic Log",
@@ -109,23 +110,26 @@ def convert_mtl(filepath):
 		LINES = None
 		with open(MTL, 'r') as mtl_file:
 			LINES = mtl_file.readlines()
-		
-		if bpy.context.scene.view_settings.view_transform not in BLENDER_STANDARD:
-			# This represents a new folder that'll backup the MTL file
-			original_mtl_path = Path(filepath).parent.absolute() / "ORIGINAL_MTLS" # Pathlib is weird when it comes to appending
-			
-			# TODO: make sure this works in 2.7x. It should since 2.8 uses 3.7 but we should confirm nonetheless
+
+		if bpy.context.scene.view_settings.view_transform not in blender_standard:
+			# This represents a new folder that'll backup the MTL filepath
+
+			# Pathlib is weird when it comes to appending
+			original_mtl_path = Path(filepath).parent.absolute() / "ORIGINAL_MTLS"
+			# TODO: make sure this works in 2.7x. It should since 2.8 uses 3.7 but
+			# we should confirm nonetheless
 			original_mtl_path.mkdir(parents=True, exist_ok=True)
-						
+
 			MCPREP_HEADER = (
 				"# This section was created by MCprep's MTL conversion script\n",
 				"# Please do not remove\n",
 				"# Thanks c:\n"
 			)
-			
+
 			# Check if MTL has already been converted. If so, return True
 			if not all(line in LINES for line in MCPREP_HEADER):
-				shutil.copy2(MTL, original_mtl_path.absolute()) # Copy the MTL with metadata
+				# Copy the MTL with metadata
+				shutil.copy2(MTL, original_mtl_path.absolute())
 			else:
 				return True
 
@@ -134,14 +138,14 @@ def convert_mtl(filepath):
 				for index, line in enumerate(LINES):
 					if line.startswith("map_d"):
 						LINES[index] = "# " + line
-			
+
 			with open(MTL, 'w') as mtl_file:
 				mtl_file.writelines(LINES)
 				mtl_file.writelines(MCPREP_HEADER)
 
-
 	except Exception:
 		return False
+
 	return True
 
 
