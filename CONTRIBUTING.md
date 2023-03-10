@@ -237,4 +237,12 @@ Next we need to install `fake-bpy`:
 
 If you use PyCharm, you should check the GitHub for [additional instructions](https://github.com/nutti/fake-bpy-module#install-via-pip-package)
 
+### Pylint
+MCprep mostly tries to follow the PEP8 guidelines, so it's also a good idea to install pylsp and flake8 for IDEs.
+
+First, install the 2:
+`python3 -m pip install python-lsp-server flake8`
+
+Then set up your IDE to use pylsp as your Python LSP. This depends on the IDE, so look at the documentation to see how to set your Python LSP for your specific editor.
+
 Now you're ready to do MCprep development
