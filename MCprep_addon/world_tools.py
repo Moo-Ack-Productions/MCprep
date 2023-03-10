@@ -124,9 +124,11 @@ def convert_mtl(filepath):
 		)
 
 		try:
+			header = tuple(lines[-3:])  # Get the last 3 lines
 			# Check if MTL has already been converted. If so, return True
-			if not all(line in lines for line in mcprep_header):
+			if header != mcprep_header:
 				# Copy the MTL with metadata
+				print("Header " + str(header))
 				shutil.copy2(mtl, original_mtl_path.absolute())
 			else:
 				return True
