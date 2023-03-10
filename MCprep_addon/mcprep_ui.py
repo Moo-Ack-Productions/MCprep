@@ -768,15 +768,16 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			col.operator(
 				"mcprep.improve_ui", text="Improve UI", icon='SETTINGS')
 
-		# Optimizer Panel.
-		row = col.row(align=True)
-		icon = "TRIA_DOWN" if scn_props.show_settings_optimizer else "TRIA_RIGHT"
-		row.prop(
-			scn_props, "show_settings_optimizer",
-			text="Cycles Optimizer", icon=icon)
-		if scn_props.show_settings_optimizer:
+		# Optimizer Panel (only for blender 2.80+)
+		if util.min_bv((2, 80)):
 			row = col.row(align=True)
-			optimize_scene.panel_draw(context, row)
+			icon = "TRIA_DOWN" if scn_props.show_settings_optimizer else "TRIA_RIGHT"
+			row.prop(
+				scn_props, "show_settings_optimizer",
+				text="Cycles Optimizer", icon=icon)
+			if scn_props.show_settings_optimizer:
+				row = col.row(align=True)
+				optimize_scene.panel_draw(context, row)
 
 		# Advanced settings.
 		row = col.row(align=True)
