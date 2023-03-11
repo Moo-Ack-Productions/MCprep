@@ -805,7 +805,10 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 
 			b_row = box.row()
 			b_col = b_row.column(align=True)
-			b_col.operator("mcprep.sync_materials")
+			sync_row = b_col.row(align=True)
+			sync_row.operator("mcprep.sync_materials")
+			sync_row.operator(
+				"mcprep.edit_sync_materials_file", text="", icon="FILE_TICK") # or TOOL_SETTINGS.
 			b_col.operator("mcprep.replace_missing_textures")
 			b_col.operator("mcprep.animate_textures")
 			# TODO: operator to make all local, all packed, or set to other location
