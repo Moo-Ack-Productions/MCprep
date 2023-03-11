@@ -107,6 +107,7 @@ def convert_mtl(filepath):
 	)
 	mtl = filepath.rsplit(".", 1)[0] + '.mtl'
 	lines = None
+	copied_file = None
 	with open(mtl, 'r') as mtl_file:
 		lines = mtl_file.readlines()
 
@@ -129,7 +130,7 @@ def convert_mtl(filepath):
 			if header != mcprep_header:
 				# Copy the MTL with metadata
 				print("Header " + str(header))
-				shutil.copy2(mtl, original_mtl_path.absolute())
+				copied_file = shutil.copy2(mtl, original_mtl_path.absolute())
 			else:
 				return True
 		except Exception as e:
@@ -145,13 +146,20 @@ def convert_mtl(filepath):
 				for index, line in enumerate(lines):
 					if line.startswith("map_d"):
 						lines[index] = "# " + line
-
+		except Exception as e:
+			print(e)
+			return False
+		
+		# This needs to be seperate since it involves writing
+		try:
 			with open(mtl, 'w') as mtl_file:
 				mtl_file.writelines(lines)
 				mtl_file.writelines(mcprep_header)
 
+		# Recover the original file
 		except Exception as e:
 			print(e)
+			shutil.copy2(copied_file, mtl)
 			return False
 	return True
 
