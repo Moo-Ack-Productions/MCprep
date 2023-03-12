@@ -19,6 +19,7 @@
 import os
 import math
 from pathlib import Path
+import shutil
 
 import bpy
 from bpy_extras.io_utils import ExportHelper, ImportHelper
@@ -141,6 +142,83 @@ def detect_world_exporter(filepath):
 		# Since this is the default for Jmc2Obj,
 		# we'll assume this is what the OBJ is using
 		obj_header.set_seperated()
+
+def convert_mtl(filepath):
+	"""Convert the MTL file if we're not using one of Blender's built in
+	colorspaces
+
+	Without this, Blender's OBJ importer will attempt to set non-color data to
+	alpha maps and what not, which causes issues in ACES and whatnot where
+	non-color data is not an option.
+
+	Returns:
+		True if success, False if failed
+	"""
+	blender_standard = (
+		"Standard",
+		"Filmic",
+		"Filmic Log",
+		"Raw",
+		"False Color"
+	)
+	mtl = filepath.rsplit(".", 1)[0] + '.mtl'
+	lines = None
+	copied_file = None
+	with open(mtl, 'r') as mtl_file:
+		lines = mtl_file.readlines()
+
+	if bpy.context.scene.view_settings.view_transform not in blender_standard:
+		# This represents a new folder that'll backup the MTL filepath
+		original_mtl_path = Path(filepath).parent.absolute() / "ORIGINAL_MTLS"
+		# TODO: make sure this works in 2.7x. It should since 2.8 uses 3.7 but
+		# we should confirm nonetheless
+		original_mtl_path.mkdir(parents=True, exist_ok=True)
+
+		mcprep_header = (
+			"# This section was created by MCprep's MTL conversion script\n",
+			"# Please do not remove\n",
+			"# Thanks c:\n"
+		)
+
+		try:
+			header = tuple(lines[-3:])  # Get the last 3 lines
+			# Check if MTL has already been converted. If so, return True
+			if header != mcprep_header:
+				# Copy the MTL with metadata
+				print("Header " + str(header))
+				copied_file = shutil.copy2(mtl, original_mtl_path.absolute())
+			else:
+				return True
+		except Exception as e:
+			print(e)
+			return False
+
+		# In this section, we go over each line
+		# and check to see if it begins with map_d. If
+		# it does, then we simply comment it out. Otherwise,
+		# we can safely ignore it.
+		try:
+			with open(mtl, 'r') as mtl_file:
+				for index, line in enumerate(lines):
+					if line.startswith("map_d"):
+						lines[index] = "# " + line
+		except Exception as e:
+			print(e)
+			return False
+		
+		# This needs to be seperate since it involves writing
+		try:
+			with open(mtl, 'w') as mtl_file:
+				mtl_file.writelines(lines)
+				mtl_file.writelines(mcprep_header)
+
+		# Recover the original file
+		except Exception as e:
+			print(e)
+			shutil.copy2(copied_file, mtl)
+			return False
+	return True
+
 
 # -----------------------------------------------------------------------------
 # open mineways/jmc2obj related
@@ -367,7 +445,13 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			"import again.")
 		obj_import_mem_msg = (
 			"Memory error during OBJ import, try exporting a smaller world")
+
+		# First let's convert the MTL if needed
+		conv_res = convert_mtl(self.filepath)
 		try:
+			if not conv_res:
+				self.report({"WARNING"}, "MTL conversion failed!")
+
 			res = None
 			if util.min_bv((3, 5)):
 				res = bpy.ops.wm.obj_import(
@@ -375,6 +459,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			else:
 				res = bpy.ops.import_scene.obj(
 					filepath=self.filepath, use_split_groups=True)
+
 		except MemoryError as err:
 			print("Memory error during import OBJ:")
 			print(err)
