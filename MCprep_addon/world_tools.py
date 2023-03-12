@@ -34,6 +34,14 @@ from .materials import generate
 # supporting functions
 # -----------------------------------------------------------------------------
 
+BUILTIN_SPACES = (
+	"Standard",
+	"Filmic",
+	"Filmic Log",
+	"Raw",
+	"False Color"
+)
+
 
 time_obj_cache = None
 
@@ -143,6 +151,7 @@ def detect_world_exporter(filepath):
 		# we'll assume this is what the OBJ is using
 		obj_header.set_seperated()
 
+
 def convert_mtl(filepath):
 	"""Convert the MTL file if we're not using one of Blender's built in
 	colorspaces
@@ -151,72 +160,70 @@ def convert_mtl(filepath):
 	alpha maps and what not, which causes issues in ACES and whatnot where
 	non-color data is not an option.
 
+	This MTL conversion simply does the following:
+	- Comment out lines that begin with map_d
+	- Add a header at the end
+
 	Returns:
-		True if success, False if failed
+		True if success or skipped, False if failed, or None if skipped
 	"""
-	blender_standard = (
-		"Standard",
-		"Filmic",
-		"Filmic Log",
-		"Raw",
-		"False Color"
-	)
 	mtl = filepath.rsplit(".", 1)[0] + '.mtl'
 	lines = None
 	copied_file = None
 	with open(mtl, 'r') as mtl_file:
 		lines = mtl_file.readlines()
 
-	if bpy.context.scene.view_settings.view_transform not in blender_standard:
-		# This represents a new folder that'll backup the MTL filepath
-		original_mtl_path = Path(filepath).parent.absolute() / "ORIGINAL_MTLS"
-		# TODO: make sure this works in 2.7x. It should since 2.8 uses 3.7 but
-		# we should confirm nonetheless
-		original_mtl_path.mkdir(parents=True, exist_ok=True)
+	if bpy.context.scene.view_settings.view_transform in BUILTIN_SPACES:
+		return None
 
-		mcprep_header = (
-			"# This section was created by MCprep's MTL conversion script\n",
-			"# Please do not remove\n",
-			"# Thanks c:\n"
-		)
+	# This represents a new folder that'll backup the MTL filepath
+	original_mtl_path = Path(filepath).parent.absolute() / "ORIGINAL_MTLS"
+	original_mtl_path.mkdir(parents=True, exist_ok=True)
 
-		try:
-			header = tuple(lines[-3:])  # Get the last 3 lines
-			# Check if MTL has already been converted. If so, return True
-			if header != mcprep_header:
-				# Copy the MTL with metadata
-				print("Header " + str(header))
-				copied_file = shutil.copy2(mtl, original_mtl_path.absolute())
-			else:
-				return True
-		except Exception as e:
-			print(e)
-			return False
+	mcprep_header = (
+		"# This section was created by MCprep's MTL conversion script\n",
+		"# Please do not remove\n",
+		"# Thanks c:\n"
+	)
 
-		# In this section, we go over each line
-		# and check to see if it begins with map_d. If
-		# it does, then we simply comment it out. Otherwise,
-		# we can safely ignore it.
-		try:
-			with open(mtl, 'r') as mtl_file:
-				for index, line in enumerate(lines):
-					if line.startswith("map_d"):
-						lines[index] = "# " + line
-		except Exception as e:
-			print(e)
-			return False
-		
-		# This needs to be seperate since it involves writing
-		try:
-			with open(mtl, 'w') as mtl_file:
-				mtl_file.writelines(lines)
-				mtl_file.writelines(mcprep_header)
+	try:
+		header = tuple(lines[-3:])  # Get the last 3 lines
+		# Check if MTL has already been converted. If so, return True
+		if header != mcprep_header:
+			# Copy the MTL with metadata
+			print("Header " + str(header))
+			copied_file = shutil.copy2(mtl, original_mtl_path.absolute())
+		else:
+			return True
+	except Exception as e:
+		print(e)
+		return False
 
-		# Recover the original file
-		except Exception as e:
-			print(e)
-			shutil.copy2(copied_file, mtl)
-			return False
+	# In this section, we go over each line
+	# and check to see if it begins with map_d. If
+	# it does, then we simply comment it out. Otherwise,
+	# we can safely ignore it.
+	try:
+		with open(mtl, 'r') as mtl_file:
+			for index, line in enumerate(lines):
+				if line.startswith("map_d "):
+					lines[index] = "# " + line
+	except Exception as e:
+		print(e)
+		return False
+
+	# This needs to be seperate since it involves writing
+	try:
+		with open(mtl, 'w') as mtl_file:
+			mtl_file.writelines(lines)
+			mtl_file.writelines(mcprep_header)
+
+	# Recover the original file
+	except Exception as e:
+		print(e)
+		shutil.copy2(copied_file, mtl)
+		return False
+
 	return True
 
 
@@ -449,7 +456,9 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		# First let's convert the MTL if needed
 		conv_res = convert_mtl(self.filepath)
 		try:
-			if not conv_res:
+			if conv_res is None:
+				pass  # skipped, no issue anyways.
+			elif conv_res is False:
 				self.report({"WARNING"}, "MTL conversion failed!")
 
 			res = None

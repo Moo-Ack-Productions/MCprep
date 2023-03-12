@@ -23,6 +23,7 @@
 
 
 from contextlib import redirect_stdout
+import filecmp
 import importlib
 import io
 import os
@@ -94,6 +95,8 @@ class mcprep_testing():
 			self.test_generate_material_sequence,
 			self.qa_effects,
 			self.qa_rigs,
+			self.convert_mtl_simple,
+			self.convert_mtl_skip,
 		]
 		self.run_only = None  # Name to give to only run this test
 
@@ -2145,6 +2148,92 @@ class mcprep_testing():
 		if issues:
 			return issues
 
+	def convert_mtl_simple(self):
+		"""Ensures that conversion of the mtl with other color space works."""
+		from MCprep import world_tools
+
+		src = "mtl_simple_original.mtl"
+		end = "mtl_simple_modified.mtl"
+		test_dir = os.path.dirname(__file__)
+		simple_mtl = os.path.join(test_dir, src)
+		modified_mtl = os.path.join(test_dir, end)
+
+		# now save the texturefile somewhere
+		tmp_dir = tempfile.gettempdir()
+		tmp_mtl = os.path.join(tmp_dir, src)
+		shutil.copyfile(simple_mtl, tmp_mtl)  # leave original intact
+
+		if not os.path.isfile(tmp_mtl):
+			return "Failed to create tmp tml at " + tmp_mtl
+
+		# Need to mock:
+		# bpy.context.scene.view_settings.view_transform
+		# to be an invalid kind of attribute, to simulate an ACES or AgX space.
+		# But we can't do that since we're not (yet) using the real unittest
+		# framework, hence we'll just clear the  world_tool's vars.
+		save_init = list(world_tools.BUILTIN_SPACES)
+		world_tools.BUILTIN_SPACES = ["NotRealSpace"]
+		print("TEST: pre", world_tools.BUILTIN_SPACES)
+
+		# Resultant file
+		res = world_tools.convert_mtl(tmp_mtl)
+
+		# Restore the property we unset.
+		world_tools.BUILTIN_SPACES = save_init
+		print("TEST: post", world_tools.BUILTIN_SPACES)
+
+		if res is None:
+			return "Failed to mock color space and thus could not test convert_mtl"
+
+		if res is False:
+			return "Convert mtl failed with false response"
+
+		# Now check that the data is the same.
+		res = filecmp.cmp(tmp_mtl, modified_mtl, shallow=False)
+		if res is not True:
+			# Not removing file, since we likely want to inspect it.
+			return "Generated MTL is different: {} vs {}".format(
+				tmp_mtl, modified_mtl)
+		else:
+			os.remove(tmp_mtl)
+
+	def convert_mtl_skip(self):
+		"""Ensures that we properly skip if a built in space active."""
+		from MCprep import world_tools
+
+		src = "mtl_simple_original.mtl"
+		test_dir = os.path.dirname(__file__)
+		simple_mtl = os.path.join(test_dir, src)
+
+		# now save the texturefile somewhere
+		tmp_dir = tempfile.gettempdir()
+		tmp_mtl = os.path.join(tmp_dir, src)
+		shutil.copyfile(simple_mtl, tmp_mtl)  # leave original intact
+
+		if not os.path.isfile(tmp_mtl):
+			return "Failed to create tmp tml at " + tmp_mtl
+
+		# Need to mock:
+		# bpy.context.scene.view_settings.view_transform
+		# to be an invalid kind of attribute, to simulate an ACES or AgX space.
+		# But we can't do that since we're not (yet) using the real unittest
+		# framework, hence we'll just clear the  world_tool's vars.
+		actual_space = str(bpy.context.scene.view_settings.view_transform)
+		save_init = list(world_tools.BUILTIN_SPACES)
+		world_tools.BUILTIN_SPACES = [actual_space]
+		print("TEST: pre", world_tools.BUILTIN_SPACES)
+
+		# Resultant file
+		res = world_tools.convert_mtl(tmp_mtl)
+
+		# Restore the property we unset.
+		world_tools.BUILTIN_SPACES = save_init
+		print("TEST: post", world_tools.BUILTIN_SPACES)
+
+		if res is not None:
+			os.remove(tmp_mtl)
+			return "Should not have converter MTL for valid space"
+
 
 class OCOL:
 	"""override class for colors, for terminals not supporting color-out"""
@@ -2206,7 +2295,7 @@ class MCPTEST_OT_test_selfdestruct(bpy.types.Operator):
 	def execute(self, context):
 		print("De-registering MCprep test")
 		unregister()
-		return{'FINISHED'}
+		return {'FINISHED'}
 
 
 class MCPTEST_PT_test_panel(bpy.types.Panel):
