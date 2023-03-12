@@ -167,7 +167,6 @@ def convert_mtl(filepath):
 	Returns:
 		True if success or skipped, False if failed, or None if skipped
 	"""
-	print("Convert MTL's spaces??", BUILTIN_SPACES)
 	mtl = filepath.rsplit(".", 1)[0] + '.mtl'
 	lines = None
 	copied_file = None
