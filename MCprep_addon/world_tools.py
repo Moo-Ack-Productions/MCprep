@@ -1206,6 +1206,19 @@ class MCPREP_OT_render_panorama(bpy.types.Operator, ExportHelper):
 # Below for register
 # -----------------------------------------------------------------------------
 
+def mcprep_sun_ease(world_time):
+    x = world_time % 24
+	f_x = (-0.073)*(x**2)+(1.762)*(x)-(5.161)
+	
+	# We want to only return this value if it's above 2, otherwise ignore it
+	return f_x if f_x >= 2 else 0
+
+def mcprep_moon_ease(world_time):
+    x = world_time % 24
+    if x >= 18 and x <= 23.999:
+        return (-0.014)*(x**2)+(0.831)*(x)-(10.166)
+    else:
+        return (-0.012)*(x**2)-(0.164)*(x)+(1.590)
 
 classes = (
 	MCPREP_OT_open_jmc2obj,
@@ -1220,13 +1233,21 @@ classes = (
 	MCPREP_OT_render_panorama,
 )
 
+# This allows the driver functions to work when registered because
+# Blender is weird at driver functions
+@bpy.app.handlers.persistent
+def load_handler(dummy):
+	bpy.app.driver_namespace["mcprep_sun_ease"] = mcprep_sun_ease
+	bpy.app.driver_namespace["mcprep_moon_ease"] = mcprep_moon_ease
 
 def register():
 	for cls in classes:
 		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
-
+	load_handler(None)
+	bpy.app.handlers.load_post.append(load_handler)
 
 def unregister():
 	for cls in reversed(classes):
 		bpy.utils.unregister_class(cls)
+	bpy.app.handlers.load_post.remove(load_handler)
