@@ -209,7 +209,7 @@ def convert_mtl(filepath):
 	try:
 		with open(mtl, 'r') as mtl_file:
 			for index, line in enumerate(lines):
-				if line.startswith("map_d"):
+				if line.startswith("map_d "):
 					lines[index] = "# " + line
 	except Exception as e:
 		print(e)
