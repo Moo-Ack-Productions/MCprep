@@ -96,6 +96,7 @@ class mcprep_testing():
 			self.qa_effects,
 			self.qa_rigs,
 			self.convert_mtl_simple,
+			self.convert_mtl_skip,
 		]
 		self.run_only = None  # Name to give to only run this test
 
@@ -2195,6 +2196,43 @@ class mcprep_testing():
 				tmp_mtl, modified_mtl)
 		else:
 			os.remove(tmp_mtl)
+
+	def convert_mtl_skip(self):
+		"""Ensures that we properly skip if a built in space active."""
+		from MCprep import world_tools
+
+		src = "mtl_simple_original.mtl"
+		test_dir = os.path.dirname(__file__)
+		simple_mtl = os.path.join(test_dir, src)
+
+		# now save the texturefile somewhere
+		tmp_dir = tempfile.gettempdir()
+		tmp_mtl = os.path.join(tmp_dir, src)
+		shutil.copyfile(simple_mtl, tmp_mtl)  # leave original intact
+
+		if not os.path.isfile(tmp_mtl):
+			return "Failed to create tmp tml at " + tmp_mtl
+
+		# Need to mock:
+		# bpy.context.scene.view_settings.view_transform
+		# to be an invalid kind of attribute, to simulate an ACES or AgX space.
+		# But we can't do that since we're not (yet) using the real unittest
+		# framework, hence we'll just clear the  world_tool's vars.
+		actual_space = str(bpy.context.scene.view_settings.view_transform)
+		save_init = list(world_tools.BUILTIN_SPACES)
+		world_tools.BUILTIN_SPACES = [actual_space]
+		print("TEST: pre", world_tools.BUILTIN_SPACES)
+
+		# Resultant file
+		res = world_tools.convert_mtl(tmp_mtl)
+
+		# Restore the property we unset.
+		world_tools.BUILTIN_SPACES = save_init
+		print("TEST: post", world_tools.BUILTIN_SPACES)
+
+		if res is not None:
+			os.remove(tmp_mtl)
+			return "Should not have converter MTL for valid space"
 
 
 class OCOL:
