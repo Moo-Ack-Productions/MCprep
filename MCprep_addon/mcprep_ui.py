@@ -722,6 +722,13 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		col = split.column(align=True)
 		col.label(text="MCprep tools")
 		col.operator("mcprep.prep_materials", text="Prep Materials")
+
+		if not util.is_atlas_export(context):
+			row = col.row()
+			row.operator(
+				"mcprep.open_help", text="", icon="QUESTION", emboss=False
+			).url = "https://github.com/TheDuckCow/MCprep/blob/master/docs/common_errors.md#common-error-messages-and-what-they-mean"
+			row.label(text="OBJ incompatible with textureswap")
 		p = col.operator("mcprep.swap_texture_pack")
 		p.filepath = context.scene.mcprep_texturepack_path
 		if context.mode == "OBJECT":
@@ -761,15 +768,16 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			col.operator(
 				"mcprep.improve_ui", text="Improve UI", icon='SETTINGS')
 
-		# Optimizer Panel.
-		row = col.row(align=True)
-		icon = "TRIA_DOWN" if scn_props.show_settings_optimizer else "TRIA_RIGHT"
-		row.prop(
-			scn_props, "show_settings_optimizer",
-			text="Cycles Optimizer", icon=icon)
-		if scn_props.show_settings_optimizer:
+		# Optimizer Panel (only for blender 2.80+)
+		if util.min_bv((2, 80)):
 			row = col.row(align=True)
-			optimize_scene.panel_draw(context, row)
+			icon = "TRIA_DOWN" if scn_props.show_settings_optimizer else "TRIA_RIGHT"
+			row.prop(
+				scn_props, "show_settings_optimizer",
+				text="Cycles Optimizer", icon=icon)
+			if scn_props.show_settings_optimizer:
+				row = col.row(align=True)
+				optimize_scene.panel_draw(context, row)
 
 		# Advanced settings.
 		row = col.row(align=True)
@@ -797,7 +805,10 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 
 			b_row = box.row()
 			b_col = b_row.column(align=True)
-			b_col.operator("mcprep.sync_materials")
+			sync_row = b_col.row(align=True)
+			sync_row.operator("mcprep.sync_materials")
+			sync_row.operator(
+				"mcprep.edit_sync_materials_file", text="", icon="FILE_TICK") # or TOOL_SETTINGS.
 			b_col.operator("mcprep.replace_missing_textures")
 			b_col.operator("mcprep.animate_textures")
 			# TODO: operator to make all local, all packed, or set to other location
@@ -1546,6 +1557,24 @@ def effects_spawner(self, context):
 	ops.location = util.get_cuser_location(context)
 	ops.frame = context.scene.frame_current
 
+	# If particle planes has not been changed yet this session,
+	# use the texture pack location in
+	if not context.scene.mcprep_particle_plane_file:
+		initial_sel = os.path.join(
+			context.scene.mcprep_texturepack_path,
+			"assets", "minecraft", "textures", "block", "dirt.png")
+		alt_sel = os.path.join(
+			context.scene.mcprep_texturepack_path,
+			"assets", "minecraft", "textures", "block")
+		if os.path.isfile(initial_sel):
+			ops.filepath = initial_sel
+		elif os.path.isdir(alt_sel):
+			ops.filepath = alt_sel
+		else:
+			ops.filepath = context.scene.mcprep_texturepack_path
+	else:
+		ops.filepath = context.scene.mcprep_particle_plane_file
+
 	col = layout.column()
 	if not scn_props.show_settings_effect:
 		col.prop(
@@ -1562,6 +1591,11 @@ def effects_spawner(self, context):
 		subrow = b_col.row(align=True)
 		subrow.prop(context.scene, "mcprep_effects_path", text="")
 		subrow.operator("mcprep.effects_path_reset", icon=LOAD_FACTORY, text="")
+
+		box.label(text="Texture pack folder")
+		row = box.row(align=True)
+		row.prop(context.scene, "mcprep_texturepack_path", text="")
+		row.operator("mcprep.reset_texture_path", text="", icon=LOAD_FACTORY)
 
 		base = bpy.path.abspath(context.scene.mcprep_effects_path)
 		if not os.path.isdir(base):
@@ -1940,6 +1974,11 @@ def register():
 		subtype='DIR_PATH',
 		update=effects.update_effects_path,
 		default=addon_prefs.effects_path)
+	bpy.types.Scene.mcprep_particle_plane_file = bpy.props.StringProperty(
+		name="Particle planes file set",
+		description="Has the particle planes file been changed",
+		subtype='FILE_PATH',
+		default='')
 	bpy.types.Scene.entity_path = bpy.props.StringProperty(
 		name="Entity file",
 		description="File for entity library",

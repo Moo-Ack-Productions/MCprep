@@ -137,6 +137,10 @@ def add_area_particle_effect(context, effect, location):
 	post_systems = list(bpy.data.particles)
 	imported_particles = list(set(post_systems) - set(pre_systems))[0]
 
+	# Assign particles as fake, to avoid being purged after file reload.
+	if imported_particles.instance_object:
+		imported_particles.instance_object.use_fake_user = True
+
 	# Assign the active object and selection state.
 	for sel_obj in bpy.context.selected_objects:
 		util.select_set(sel_obj, False)
@@ -163,9 +167,6 @@ def add_area_particle_effect(context, effect, location):
 	psystem.settings.frame_end = context.scene.frame_end
 	scene_frames = psystem.settings.frame_end - psystem.settings.frame_start
 	psystem.settings.count = int(density * scene_frames)
-
-	# TODO: Attempt to account for a target size.
-	# TODO: Potentially parent to camera.
 
 	return obj
 
@@ -371,6 +372,22 @@ def add_particle_planes_effect(context, image_path, location, frame):
 
 	pcoll = get_or_create_particle_meshes_coll(
 		context, f_name, img)
+
+	# Set the material for the emitter object. Though not actually rendered,
+	# this helps clarify which particle is being emitted from this object.
+	mat = None
+	for ob in pcoll.objects:
+		if ob.material_slots and ob.material_slots[0].material:
+			mat = ob.material_slots[0].material
+			break
+	if mat:
+		if not obj.material_slots:
+			obj.data.materials.append(mat)
+		# Must use 'OBEJCT' instead of mesh data, otherwise all particle
+		# emitters will have the same material (how it was initially working)
+		obj.material_slots[0].link = 'OBJECT'
+		obj.material_slots[0].material = mat
+		print("Linked {} with {}".format(obj.name, mat.name))
 
 	apply_particle_settings(obj, frame, base_name, pcoll)
 
@@ -600,7 +617,7 @@ def apply_particle_settings(obj, frame, base_name, pcoll):
 	psystem.settings.lifetime_random = 0.2
 	psystem.settings.emit_from = 'FACE'
 	psystem.settings.distribution = 'RAND'
-	psystem.settings.normal_factor = -1.5
+	psystem.settings.normal_factor = 1.5
 	psystem.settings.use_rotations = True
 	psystem.settings.rotation_factor_random = 1
 	psystem.settings.particle_size = 0.2
@@ -1179,6 +1196,8 @@ class MCPREP_OT_spawn_particle_planes(bpy.types.Operator, ImportHelper):
 			self.report({'WARNING'}, "File not found")
 			bpy.ops.mcprep.prompt_reset_spawners('INVOKE_DEFAULT')
 			return {'CANCELLED'}
+
+		context.scene.mcprep_particle_plane_file = self.filepath
 
 		self.track_param = name
 		return {'FINISHED'}
