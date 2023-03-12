@@ -178,8 +178,6 @@ def convert_mtl(filepath):
 
 	# This represents a new folder that'll backup the MTL filepath
 	original_mtl_path = Path(filepath).parent.absolute() / "ORIGINAL_MTLS"
-	# TODO: make sure this works in 2.7x. It should since 2.8 uses 3.7 but
-	# we should confirm nonetheless
 	original_mtl_path.mkdir(parents=True, exist_ok=True)
 
 	mcprep_header = (
