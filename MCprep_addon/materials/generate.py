@@ -78,6 +78,12 @@ def get_mc_canonical_name(name):
 	else:
 		jmc_prefix = False
 
+	# Patch naming to avoid issues.
+	if general_name == "water":
+		# Improves connection with older exports, without getting
+		# mixed up with the new "water": "painting/water" texture.
+		general_name = "water_still"
+
 	if general_name in conf.json_data["blocks"]["block_mapping_mc"]:
 		canon = conf.json_data["blocks"]["block_mapping_mc"][general_name]
 		form = "mc" if not jmc_prefix else "jmc2obj"
