@@ -339,14 +339,21 @@ def load_linked(self, context, path, name):
 	path = bpy.path.abspath(path)
 	act = None
 	if hasattr(bpy.data, "groups"):
-		util.bAppendLink(path + '/Group', name, True)
+		res = util.bAppendLink(path + '/Group', name, True)
 		act = context.object  # assumption of object after linking, 2.7 only
 	elif hasattr(bpy.data, "collections"):
-		util.bAppendLink(path + '/Collection', name, True)
+		res = util.bAppendLink(path + '/Collection', name, True)
 		if len(context.selected_objects) > 0:
 			act = context.selected_objects[0]  # better for 2.8
 		else:
 			print("Error: Should have had at least one object selected.")
+
+	if res is False:
+		# Most likely scenario, path was wrong and raised "not a library".
+		# end and automatically reload assets.
+		self.report({'WARNING'}, "Failed to load asset file")
+		bpy.ops.mcprep.prompt_reset_spawners('INVOKE_DEFAULT')
+		return
 
 	# util.bAppendLink(os.path.join(path, g_or_c), name, True)
 	# proxy any and all armatures
@@ -466,10 +473,16 @@ def load_append(self, context, path, name):
 
 	conf.log(os.path.join(path, subpath) + ', ' + name)
 	pregroups = list(util.collections())
-	util.bAppendLink(os.path.join(path, subpath), name, False)
+	res = util.bAppendLink(os.path.join(path, subpath), name, False)
 	postgroups = list(util.collections())
 
 	new_groups = list(set(postgroups) - set(pregroups))
+	if res is False:
+		# Most likely scenario, path was wrong and raised "not a library".
+		# end and automatically reload assets.
+		self.report({'WARNING'}, "Failed to load asset file")
+		bpy.ops.mcprep.prompt_reset_spawners('INVOKE_DEFAULT')
+		return
 	if not new_groups and name in util.collections():
 		# this is more likely to fail but serves as a fallback
 		conf.log("Mob spawn: Had to go to fallback group name grab")
@@ -629,6 +642,32 @@ class MCPREP_OT_spawn_path_reset(bpy.types.Operator):
 		addon_prefs = util.get_user_preferences(context)
 		context.scene.mcprep_mob_path = addon_prefs.mob_path
 		mobs.update_rig_list(context)
+		return {'FINISHED'}
+
+
+class MCPREP_OT_prompt_reset_spawners(bpy.types.Operator):
+	"""Reset the all spawner paths to the default in addon preferences"""
+	bl_idname = "mcprep.prompt_reset_spawners"
+	bl_label = "Reset spawner & texturepath paths"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	def invoke(self, context, event):
+		return context.window_manager.invoke_props_dialog(self)
+
+	def draw(self, context):
+		col = self.layout.column(align=True)
+		col.scale_y = 0.8
+		col.label(text="A spawner directory/file is missing.")
+		col.label(text="Reset all spawner paths to default?")
+
+	@tracking.report_error
+	def execute(self, context):
+		bpy.ops.mcprep.spawn_path_reset()
+		bpy.ops.mcprep.reset_texture_path()
+		bpy.ops.mcprep.effects_path_reset()
+		bpy.ops.mcprep.entity_path_reset()
+		bpy.ops.mcprep.meshswap_path_reset()
+
 		return {'FINISHED'}
 
 
@@ -864,6 +903,7 @@ classes = (
 	MCPREP_UL_effects,
 	MCPREP_OT_reload_spawners,
 	MCPREP_OT_spawn_path_reset,
+	MCPREP_OT_prompt_reset_spawners,
 )
 
 

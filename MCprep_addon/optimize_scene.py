@@ -185,8 +185,12 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 	def execute(self, context):
 		# ! Calling this twice seems to remove all unused materials
 		# TODO: find a better way of doing this
-		bpy.ops.outliner.orphans_purge()
-		bpy.ops.outliner.orphans_purge()
+		try:
+			bpy.ops.outliner.orphans_purge()
+			bpy.ops.outliner.orphans_purge()
+		except Exception as e:
+			print("Failed to purge orphans:")
+			print(e)
 		prefs = util.get_preferences(context)
 		cprefs = prefs.addons.get("cycles")
 		scn_props = context.scene.optimizer_props

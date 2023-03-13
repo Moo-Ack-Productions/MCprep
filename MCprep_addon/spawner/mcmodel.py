@@ -470,7 +470,8 @@ class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 	def execute(self, context):
 		name = os.path.basename(os.path.splitext(self.filepath)[0])
 		if not self.filepath or not os.path.isfile(self.filepath):
-			self.report({"ERROR"}, "Filepath not found")
+			self.report({"WARNING"}, "Filepath not found")
+			bpy.ops.mcprep.prompt_reset_spawners('INVOKE_DEFAULT')
 			return {'CANCELLED'}
 		if not self.filepath.lower().endswith(".json"):
 			self.report(

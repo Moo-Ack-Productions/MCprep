@@ -26,6 +26,19 @@ This is largely possible for a few reasons:
 1. Abstracting API changes vs directly implementing changes. Instead of swapping "group" for "collection" in the change to blender 2.8, we create if/else statements and wrapper functions that fetch the attribute that exists based on the version of blender. Want more info about this? See [the article here](https://theduckcow.com/2019/update-addons-both-blender-28-and-27-support/).
 1. No python annotations. This syntax wasn't supported in old versions of python that came with blender (namely, in Blender 2.7) and so we don't use annotations in this repository. Some workarounds are in place to avoid excessive printouts as a result.
 
+## Internal Rewrites
+MCprep has a separate branch for internal rewrites based on the dev branch. Sometimes, internal tools are deprecated, and requires features to be changed to reflect those deprecations.
+
+Developers should not worry about this. If a features uses depracated features, it will be fixed in the next internal rewrite. 
+
+It may be tempting to try and use the `internal-rewrites` branch to write new features. Don't, as pull requests for `internal-rewrites` will only be accepted if they deal with rewriting parts of MCprep itself. Pull requests for new features that only use `internal-rewrites` for the sake of avoiding the use of deprecated features will not be accepted.
+
+Also, when something is deprecated, it will still remain in MCprep for one full version and be removed by the next release. For instance, if during the development of MCprep X a feature is deprecated, then that feature will only be removed officially starting with the development of MCprep Y. Thus, any new features in MCprep X that use a deprecated feature will be fixed in the `internal-rewrites` branch for the development cycle of MCprep Y.
+
+There will also be a pull request for `internal-rewrites` for each devlopment cycle of MCprep. This pull request will contain all newly deprecated and removed features, as well as their replacements. This exists as a heads up to developers so that they know what to expect.
+
+New features go into the `dev` branch, rewriting of old features to account for deprecations go into the `internal-rewrites` branch. When in doubt, simply ask.
+
 ## Compiling and running tests
 
 As above, a critical component of maintaining support and ensuring the wide number of MCprep features are stable, is running automated tests.
@@ -157,3 +170,79 @@ One other detail: MCprep uses git lfs or Large File Storage, to avoid saving bin
 - Alternatively, try using Git for Windows and its console.
 
 Run into other gotchas? Please open a [new issue](https://github.com/TheDuckCow/MCprep/issues)!
+
+
+## Commit Messages
+Git commits should explain why a change was made, because the diff will show the changes made. For example, instead of writing:
+```
+Added ability to "import" MTL files
+```
+
+Instead do:
+```
+Added the ability to "import" MTL files
+
+MCprep's file explorer shows both OBJs and MTLs, and sometimes users end up clicking
+MTL files. This brings a quality of life improvement to change the extension
+if the file selected is an MTL, since MTLs share the same name as their corresponding
+OBJ files
+```
+
+The first line is a summary of the changes, and should be less then 50 characters. The rest should justify the changes. Convince us why these changes are important and why they've been made this way.
+
+Git won't automatically wrap messages either, so each line should have a limit of 72 characters.
+
+Here's a template some MCprep developers found that can help (modified for simplicity) by using # to define which is the limit Git can display for each line:
+```
+# Title: Summary, imperative, start upper case, don't end with a period
+# No more than 50 chars. #### 50 chars is here:  #
+
+# Body: Explain *what* and *why* (not *how*). Include task ID (Jira issue).
+# Wrap at 72 chars. ################################## which is here:  #
+
+```
+Add this to a file called .gitmessage, and then execute the following command:
+`git config --local commit.template /path/to/.gitmessage`
+
+To use for each commit, you can use `git config --local commit.verbose true` to tell Git to perform a verbose commit all the time for just the MCprep repo.
+
+## IDE Support
+If you're using an IDE, it's recommened to install `bpy` as a Python module. In my (StandingPad) experiance, the [fake-bpy package](https://github.com/nutti/fake-bpy-module) seems to be the best.
+
+It's also recommened to use a virtual environment (especially if you're on Linux) as to avoid issues with system wide packages and different versions of `bpy`. [See this for more details](https://realpython.com/python-virtual-environments-a-primer/)
+
+### Creating a Virtual Environment and Setting up `bpy`
+First, we need to come up with a name. For MCprep development, it's recommended to use the following convention:
+`mcprep_venv_<version>`
+
+This allows you to have multiple versions of `bpy` side by side in their own environments.
+
+For example, if I was making a virtul environment for 3.3, I would do `mcprep_venv_3.3`.
+
+To create a virtual environment, do the following:
+
+`python3 -m venv mcprep_venv_<version>`
+
+Then to enable it, then:
+
+Windows: `mcprep_venv_<version>\Scripts\activate`
+
+MacOS and Linux: `source mcprep_venv_<version>/bin/activate`
+
+This will make your terminal use the virtual environment until you close it or use `deactivate`. Each time you open your terminal after this, remember to enable the virtual environment
+
+Next we need to install `fake-bpy`:
+
+`python3 -m pip install fake-bpy-module-<version>`
+
+If you use PyCharm, you should check the GitHub for [additional instructions](https://github.com/nutti/fake-bpy-module#install-via-pip-package)
+
+### Pylint
+MCprep mostly tries to follow the PEP8 guidelines, so it's also a good idea to install pylsp and flake8 for IDEs.
+
+First, install the 2:
+`python3 -m pip install python-lsp-server flake8`
+
+Then set up your IDE to use pylsp as your Python LSP. This depends on the IDE, so look at the documentation to see how to set your Python LSP for your specific editor.
+
+Now you're ready to do MCprep development

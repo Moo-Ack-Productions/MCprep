@@ -31,7 +31,6 @@ except:
 # ADDON GLOBAL VARIABLES AND INITIAL SETTINGS
 # -----------------------------------------------------------------------------
 
-
 def init():
 
 	# -----------------------------------------------
@@ -39,7 +38,7 @@ def init():
 	# Used to print out extra information, set false with distribution
 	# -----------------------------------------------
 	global dev
-	dev = False
+	dev = True
 
 	global v
 	v = True  # $VERBOSE, UI setting

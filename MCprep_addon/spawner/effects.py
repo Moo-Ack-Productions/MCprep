@@ -137,6 +137,15 @@ def add_area_particle_effect(context, effect, location):
 	post_systems = list(bpy.data.particles)
 	imported_particles = list(set(post_systems) - set(pre_systems))[0]
 
+	# Assign particles as fake, to avoid being purged after file reload.
+	if hasattr(imported_particles, "instance_object"):
+		# 2.8+
+		if imported_particles.instance_object:
+			imported_particles.instance_object.use_fake_user = True
+	elif imported_particles.dupli_object:
+		# the 2.7x way.
+		imported_particles.dupli_object.use_fake_user = True
+
 	# Assign the active object and selection state.
 	for sel_obj in bpy.context.selected_objects:
 		util.select_set(sel_obj, False)
@@ -163,9 +172,6 @@ def add_area_particle_effect(context, effect, location):
 	psystem.settings.frame_end = context.scene.frame_end
 	scene_frames = psystem.settings.frame_end - psystem.settings.frame_start
 	psystem.settings.count = int(density * scene_frames)
-
-	# TODO: Attempt to account for a target size.
-	# TODO: Potentially parent to camera.
 
 	return obj
 
@@ -371,6 +377,22 @@ def add_particle_planes_effect(context, image_path, location, frame):
 
 	pcoll = get_or_create_particle_meshes_coll(
 		context, f_name, img)
+
+	# Set the material for the emitter object. Though not actually rendered,
+	# this helps clarify which particle is being emitted from this object.
+	mat = None
+	for ob in pcoll.objects:
+		if ob.material_slots and ob.material_slots[0].material:
+			mat = ob.material_slots[0].material
+			break
+	if mat:
+		if not obj.material_slots:
+			obj.data.materials.append(mat)
+		# Must use 'OBEJCT' instead of mesh data, otherwise all particle
+		# emitters will have the same material (how it was initially working)
+		obj.material_slots[0].link = 'OBJECT'
+		obj.material_slots[0].material = mat
+		print("Linked {} with {}".format(obj.name, mat.name))
 
 	apply_particle_settings(obj, frame, base_name, pcoll)
 
@@ -600,7 +622,7 @@ def apply_particle_settings(obj, frame, base_name, pcoll):
 	psystem.settings.lifetime_random = 0.2
 	psystem.settings.emit_from = 'FACE'
 	psystem.settings.distribution = 'RAND'
-	psystem.settings.normal_factor = -1.5
+	psystem.settings.normal_factor = 1.5
 	psystem.settings.use_rotations = True
 	psystem.settings.rotation_factor_random = 1
 	psystem.settings.particle_size = 0.2
@@ -967,6 +989,20 @@ def load_image_sequence_effects(context):
 # -----------------------------------------------------------------------------
 
 
+class MCPREP_OT_effects_path_reset(bpy.types.Operator):
+	"""Reset the effects path to the default specified in the addon preferences panel"""
+	bl_idname = "mcprep.effects_path_reset"
+	bl_label = "Reset effects path"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	@tracking.report_error
+	def execute(self, context):
+		addon_prefs = util.get_user_preferences(context)
+		context.scene.mcprep_effects_path = addon_prefs.effects_path
+		update_effects_list(context)
+		return {'FINISHED'}
+
+
 class MCPREP_OT_reload_effects(bpy.types.Operator):
 	"""Reload effects spawner, use after changes to/new effects files"""
 	bl_idname = "mcprep.reload_effects"
@@ -1019,6 +1055,12 @@ class MCPREP_OT_global_effect(bpy.types.Operator):
 	def execute(self, context):
 		mcprep_props = context.scene.mcprep_props
 		effect = mcprep_props.effects_list[int(self.effect_id)]
+
+		if not os.path.isfile(bpy.path.abspath(effect.filepath)):
+			self.report({'WARNING'}, "Target effects file not found")
+			bpy.ops.mcprep.prompt_reset_spawners('INVOKE_DEFAULT')
+			return {'CANCELLED'}
+
 		if effect.effect_type == GEO_AREA:
 			add_geonode_area_effect(context, effect)
 			self.report(
@@ -1075,12 +1117,17 @@ class MCPREP_OT_instant_effect(bpy.types.Operator):
 	effect_id = bpy.props.EnumProperty(items=effects_enum, name="Effect")
 	location = bpy.props.FloatVectorProperty(default=(0, 0, 0), name="Location")
 	frame = bpy.props.IntProperty(
-		default=0, name="Frame", description="Start frame for animation")
+		default=0,
+		name="Frame",
+		description="Start frame for animation")
 	speed = bpy.props.FloatProperty(
-		default=1.0, min=0.1, name="Speed",
+		default=1.0,
+		min=0.1,
+		name="Speed",
 		description="Make the effect run faster (skip frames) or slower (hold frames)")
 	show_image = bpy.props.BoolProperty(
-		default=True, name="Show image preview",
+		default=False,
+		name="Show image preview",
 		description="Show a middle animation frame as a viewport preview")
 	skipUsage = bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
@@ -1093,16 +1140,27 @@ class MCPREP_OT_instant_effect(bpy.types.Operator):
 	def execute(self, context):
 		mcprep_props = context.scene.mcprep_props
 		effect = mcprep_props.effects_list[int(self.effect_id)]
+
 		if effect.effect_type == "collection":
-			add_collection_effect(
-				context, effect, self.location, self.frame)
-			return {'FINISHED'}
+			if not os.path.isfile(bpy.path.abspath(effect.filepath)):
+				self.report({'WARNING'}, "Target effects file not found")
+				bpy.ops.mcprep.prompt_reset_spawners('INVOKE_DEFAULT')
+				return {'CANCELLED'}
+			add_collection_effect(context, effect, self.location, self.frame)
+
 		elif effect.effect_type == "img_seq":
+			base_path = os.path.dirname(effect.filepath)
+			if not os.path.isdir(bpy.path.abspath(base_path)):
+				self.report({'WARNING'}, "Target effects file not found: base_path")
+				print(base_path)
+				bpy.ops.mcprep.prompt_reset_spawners('INVOKE_DEFAULT')
+				return {'CANCELLED'}
+
 			inst = add_image_sequence_effect(
 				context, effect, self.location, self.frame, self.speed)
-
 			if not self.show_image:
 				inst.data = None
+
 		self.track_param = effect.name
 		return {'FINISHED'}
 
@@ -1135,8 +1193,16 @@ class MCPREP_OT_spawn_particle_planes(bpy.types.Operator, ImportHelper):
 		name = os.path.basename(path)
 		name = os.path.splitext(name)[0]
 
-		add_particle_planes_effect(
-			context, self.filepath, self.location, self.frame)
+		try:
+			add_particle_planes_effect(
+				context, self.filepath, self.location, self.frame)
+		except FileNotFoundError as e:
+			print("Particle effect file error:", e)
+			self.report({'WARNING'}, "File not found")
+			bpy.ops.mcprep.prompt_reset_spawners('INVOKE_DEFAULT')
+			return {'CANCELLED'}
+
+		context.scene.mcprep_particle_plane_file = self.filepath
 
 		self.track_param = name
 		return {'FINISHED'}
@@ -1164,6 +1230,7 @@ class MCPREP_OT_spawn_particle_planes(bpy.types.Operator, ImportHelper):
 
 
 classes = (
+	MCPREP_OT_effects_path_reset,
 	MCPREP_OT_reload_effects,
 	MCPREP_OT_global_effect,
 	MCPREP_OT_instant_effect,

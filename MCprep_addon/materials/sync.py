@@ -22,6 +22,7 @@ import os
 import bpy
 from bpy.app.handlers import persistent
 
+from . import generate
 from .. import conf
 from .. import tracking
 from .. import util
@@ -55,28 +56,35 @@ def reload_material_sync_library(context):
 	conf.log("Updated sync cache", vv_only=True)
 
 
-def material_in_sync_library(material, context):
+def material_in_sync_library(mat_name, context):
 	"""Returns true if the material is in the sync mat library blend file"""
 	if conf.material_sync_cache is None:
 		reload_material_sync_library(context)
-	if util.nameGeneralize(material.name) in conf.material_sync_cache:
+	if util.nameGeneralize(mat_name) in conf.material_sync_cache:
 		return True
-	elif material.name in conf.material_sync_cache:
+	elif mat_name in conf.material_sync_cache:
 		return True
 	return False
 
 
-def sync_material(context, material, link, replace):
+def sync_material(context, source_mat, sync_mat_name, link, replace):
 	"""If found, load and apply the material found in a library.
+
+	Args:
+		context: Current bpy context.
+		source_mat: bpy.Types.Material in the current open blend file
+		sync_mat_name: str of the mat to try to replace in.
+		link: Bool, if true then new material is linkd instead of appended.
+		replace: If true, the old material in this file is immediately rm'd.
 
 	Returns:
 		0 if nothing modified, 1 if modified
 		None if no error or string if error
 	"""
-	if material.name in conf.material_sync_cache:
-		import_name = material.name
-	elif util.nameGeneralize(material.name) in conf.material_sync_cache:
-		import_name = util.nameGeneralize(material.name)
+	if sync_mat_name in conf.material_sync_cache:
+		import_name = sync_mat_name
+	elif util.nameGeneralize(sync_mat_name) in conf.material_sync_cache:
+		import_name = util.nameGeneralize(sync_mat_name)
 
 	# if link is true, check library material not already linked
 	sync_file = get_sync_blend(context)
@@ -85,16 +93,16 @@ def sync_material(context, material, link, replace):
 
 	imported = set(bpy.data.materials[:]) - set(init_mats)
 	if not imported:
-		return 0, "Could not import " + str(material.name)
+		return 0, "Could not import {}".format(import_name)
 	new_material = list(imported)[0]
 
 	# 2.78+ only, else silent failure
-	res = util.remap_users(material, new_material)
+	res = util.remap_users(source_mat, new_material)
 	if res != 0:
 		# try a fallback where we at least go over the selected objects
 		return 0, res
 	if replace is True:
-		bpy.data.materials.remove(material)
+		bpy.data.materials.remove(source_mat)
 
 	return 1, None
 
@@ -156,22 +164,33 @@ class MCPREP_OT_sync_materials(bpy.types.Operator):
 
 			# gets the list of materials (without repetition) from selected
 			mat_list = util.materialsFromObj(obj_list)
-			if not mat_list:
-				if not self.skipUsage:
-					self.report({'ERROR'}, "No materials found on selected objects")
-				return {'CANCELLED'}
 		else:
 			mat_list = list(bpy.data.materials)
+
+		if not mat_list:
+			if not self.skipUsage:
+				self.report({'ERROR'}, "No materials to sync")
+			return {'CANCELLED'}
 
 		# consider force reloading the material library blend
 		eligible = 0
 		modified = 0
 		last_err = None
 		for mat in mat_list:
-			if not material_in_sync_library(mat, context):
+			# Match either exact name, or translated name.
+			lookup_match, _ = generate.get_mc_canonical_name(mat.name)
+			if material_in_sync_library(mat.name, context) is True:
+				sync_mat_name = mat.name
+			elif material_in_sync_library(lookup_match, context) is True:
+				sync_mat_name = lookup_match
+			else:
 				continue
 			affected, err = sync_material(
-				context, mat, self.link, self.replace_materials)
+				context,
+				source_mat=mat,
+				sync_mat_name=sync_mat_name,
+				link=self.link,
+				replace=self.replace_materials)
 			eligible += 1
 			modified += affected
 			if err:
@@ -202,6 +221,37 @@ class MCPREP_OT_sync_materials(bpy.types.Operator):
 		return {'FINISHED'}
 
 
+class MCPREP_OT_edit_sync_materials_file(bpy.types.Operator):
+	"""Open the the file used fo syncrhonization."""
+	bl_idname = "mcprep.edit_sync_materials_file"
+	bl_label = "Edit sync file"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	track_function = "edit_sync_materials"
+	track_param = None
+	@tracking.report_error
+	def execute(self, context):
+		file = get_sync_blend(context)
+		if not bpy.data.is_saved:
+			self.report({'ERROR'}, "Save your blend file first")
+			return {'CANCELLED'}
+
+		# Will open without saving or prompting!
+		# TODO: Perform action more similar to the asset browser, which opens
+		# a new instance of blender.
+		if os.path.isfile(file):
+			bpy.ops.wm.open_mainfile(filepath=file)
+		else:
+			# Open and save a new sync file instead.
+			bpy.ops.wm.read_homefile(use_empty=True)
+
+			# Set the local resource pack to match this generated file.
+			bpy.context.scene.mcprep_texturepack_path = "//"
+
+			bpy.ops.wm.save_as_mainfile(filepath=file)
+		return {'FINISHED'}
+
+
 # -----------------------------------------------------------------------------
 # Registration
 # -----------------------------------------------------------------------------
@@ -209,6 +259,7 @@ class MCPREP_OT_sync_materials(bpy.types.Operator):
 
 classes = (
 	MCPREP_OT_sync_materials,
+	MCPREP_OT_edit_sync_materials_file,
 )
 
 
@@ -224,5 +275,5 @@ def unregister():
 		bpy.utils.unregister_class(cls)
 	try:
 		bpy.app.handlers.load_post.remove(clear_sync_cache)
-	except:
-		pass
+	except Exception as e:
+		print("Unregister post handler error: ", e)

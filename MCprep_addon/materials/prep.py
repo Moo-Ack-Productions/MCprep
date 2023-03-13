@@ -51,7 +51,7 @@ class McprepMaterialProps():
 		itms.append(("specular", "Specular", "Sets the pack format to Specular."))
 		itms.append(("seus", "SEUS", "Sets the pack format to SEUS."))
 		return itms
-
+	
 	animateTextures = bpy.props.BoolProperty(
 		name="Animate textures (may be slow first time)",
 		description=(
@@ -111,13 +111,18 @@ class McprepMaterialProps():
 			"pack's materials.blend file"),
 		default=True)
 	# newDefault = bpy.props.BoolProperty(
-	# 	name="Use custom default material",
-	# 	description="Use a custom default material if you have one set up",
-	# 	default=False)
+	#	name="Use custom default material",
+	#	description="Use a custom default material if you have one set up",
+	#	default=False)
 	packFormat = bpy.props.EnumProperty(
 		name="Pack Format",
 		description="Change the pack format when using a PBR resource pack.",
 		items=pack_formats
+	)
+	useEmission = bpy.props.BoolProperty(
+		name="Use Emission",
+		description="Make emmisive materials emit light",
+		default=True
 	)
 
 
@@ -130,7 +135,14 @@ def draw_mats_common(self, context):
 		col.prop(self, "usePrincipledShader")
 	col.prop(self, "useReflections")
 	col.prop(self, "makeSolid")
-	col.prop(self, "animateTextures")
+
+	anim_row = col.row()
+	can_swap_text = util.is_atlas_export(context)
+	anim_row.enabled = can_swap_text
+	if can_swap_text:
+		anim_row.prop(self, "animateTextures")
+	else:
+		anim_row.prop(self, "animateTextures", text="Animate textures (disabled due to import settings)")
 	col.prop(self, "autoFindMissingTextures")
 
 	row = self.layout.row()
@@ -149,6 +161,7 @@ def draw_mats_common(self, context):
 	col.prop(self, "combineMaterials")
 	row = self.layout.row()
 	row.prop(self, "optimizeScene")
+	row.prop(self, "useEmission")
 
 
 class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
@@ -238,8 +251,13 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 					count += 1
 			elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 				res = generate.matprep_cycles(
-					mat, passes, self.useReflections,
-					self.usePrincipledShader, self.makeSolid, self.packFormat)
+					mat=mat,
+					passes=passes,
+					use_reflections=self.useReflections,
+					use_principled=self.usePrincipledShader,
+					only_solid=self.makeSolid,
+					pack_format=self.packFormat,
+					use_emission_nodes=self.useEmission)
 				if res == 0:
 					count += 1
 			else:
@@ -391,7 +409,9 @@ class MCPREP_OT_swap_texture_pack(
 	@classmethod
 	def poll(cls, context):
 		addon_prefs = util.get_user_preferences(context)
-		return addon_prefs.MCprep_exporter_type != "(choose)"
+		if addon_prefs.MCprep_exporter_type != "(choose)":
+			return util.is_atlas_export(context)
+		return False
 
 	def draw(self, context):
 		row = self.layout.row()
@@ -574,14 +594,14 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 		elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 			# need to create at least one texture node first, then the rest works
 			mat.use_nodes = True
-			node_diff = mat.node_tree.nodes.new('ShaderNodeTexImage')
-			node_diff.image = image
+			nodes = mat.node_tree.nodes
+			node_diff = generate.create_node(nodes, 'ShaderNodeTexImage', image = image)
 			node_diff["MCPREP_diffuse"] = True
 
 			# Initialize extra passes as well
-			node_spec = mat.node_tree.nodes.new('ShaderNodeTexImage')
+			node_spec = generate.create_node(nodes, 'ShaderNodeTexImage')
 			node_spec["MCPREP_specular"] = True
-			node_nrm = mat.node_tree.nodes.new('ShaderNodeTexImage')
+			node_nrm = generate.create_node(nodes, 'ShaderNodeTexImage')
 			node_nrm["MCPREP_normal"] = True
 
 			conf.log("Added blank texture node")
@@ -620,8 +640,13 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 				mat, passes, self.useReflections, self.makeSolid)
 		elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 			res = generate.matprep_cycles(
-				mat, passes, self.useReflections,
-				self.usePrincipledShader, self.makeSolid, self.packFormat)
+				mat=mat,
+				passes=passes,
+				use_reflections=self.useReflections,
+				use_principled=self.usePrincipledShader,
+				only_solid=self.makeSolid,
+				pack_format=self.packFormat,
+				use_emission_nodes=self.useEmission)
 		else:
 			return False, "Only Blender Internal, Cycles, or Eevee supported"
 

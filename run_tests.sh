@@ -13,6 +13,8 @@
 #
 # Run only a single unit test, but across all blender versions
 # ./run_tests.sh -all -run change_skin
+#
+# Add -v to any argument above to allow print statements within tests.
 
 # File containing 1 line per blender executable complete path. The first
 # line is the blender executable that will be used in 'quick' (-single) tests.
