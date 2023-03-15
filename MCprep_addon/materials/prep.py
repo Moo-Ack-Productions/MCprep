@@ -595,7 +595,7 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 			# need to create at least one texture node first, then the rest works
 			mat.use_nodes = True
 			nodes = mat.node_tree.nodes
-			node_diff = generate.create_node(nodes, 'ShaderNodeTexImage', image = image)
+			node_diff = generate.create_node(nodes, 'ShaderNodeTexImage', image=image)
 			node_diff["MCPREP_diffuse"] = True
 
 			# Initialize extra passes as well

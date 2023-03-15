@@ -28,6 +28,7 @@ from bpy_extras.io_utils import ImportHelper
 from .. import conf
 from .. import util
 from .. import tracking
+from ..materials import generate
 
 
 # -----------------------------------------------------------------------------
@@ -102,22 +103,18 @@ def add_element(
 
 def add_material(name="material", path=""):
 	"""Creates a simple material with an image texture from path."""
-	conf.log(name + ": " + path, vv_only=True)
-	mat = bpy.data.materials.new(name=name)
-	mat.blend_method = 'CLIP'
-	mat.shadow_method = 'CLIP'
-	mat.use_nodes = True
-	matnodes = mat.node_tree.nodes
+	cur_mats = list(bpy.data.materials)
+	res = bpy.ops.mcprep.load_material(filepath=path, skipUsage=True)
+	if res != {'FINISHED'}:
+		conf.log("Failed to generate material as specified")
+	post_mats = list(bpy.data.materials)
 
-	tex = matnodes.new('ShaderNodeTexImage')
-	if os.path.isfile(path):
-		img = bpy.data.images.load(path, check_existing=True)
-		tex.image = img
-	tex.interpolation = 'Closest'
+	new_mats = list(set(post_mats) - set(cur_mats))
+	if not new_mats:
+		conf.log("Failed to fetch any generated material")
+		return None
 
-	shader = matnodes['Principled BSDF']
-	mat.node_tree.links.new(shader.inputs['Base Color'], tex.outputs['Color'])
-	mat.node_tree.links.new(shader.inputs['Alpha'], tex.outputs['Alpha'])
+	mat = new_mats[0]
 	return mat
 
 
