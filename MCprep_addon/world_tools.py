@@ -170,8 +170,13 @@ def convert_mtl(filepath):
 	mtl = filepath.rsplit(".", 1)[0] + '.mtl'
 	lines = None
 	copied_file = None
-	with open(mtl, 'r') as mtl_file:
-		lines = mtl_file.readlines()
+
+	try:
+		with open(mtl, 'r') as mtl_file:
+			lines = mtl_file.readlines()
+	except Exception as e:
+		print(e)
+		return False
 
 	if bpy.context.scene.view_settings.view_transform in BUILTIN_SPACES:
 		return None
