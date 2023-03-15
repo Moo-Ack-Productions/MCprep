@@ -1567,15 +1567,23 @@ class mcprep_testing():
 			return "Too few models loaded, missing texturepack?"
 
 		# spawn with whatever default index
-		pre_objs = len(bpy.data.objects)
+		pre_objs = list(bpy.data.objects)
 		bpy.ops.mcprep.spawn_model(
 			filepath=scn_props.model_list[scn_props.model_list_index].filepath)
-		post_objs = len(bpy.data.objects)
+		post_objs = bpy.data.objects
 
-		if post_objs == pre_objs:
+		if len(post_objs) == len(pre_objs):
 			return "No models spawned"
-		elif post_objs > pre_objs + 1:
+		elif len(post_objs) > len(pre_objs) + 1:
 			return "More than one model spawned"
+
+		# Test that materials were properly added.
+		new_objs = list(set(post_objs) - set(pre_objs))
+		model = new_objs[0]
+		if not model.active_material:
+			return "No material on model"
+
+		# TODO: fetch/check there being a texture.
 
 		# Test collection/group added
 		# Test loading from file.
