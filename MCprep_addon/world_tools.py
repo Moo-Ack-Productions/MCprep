@@ -167,7 +167,16 @@ def convert_mtl(filepath):
 	Returns:
 		True if success or skipped, False if failed, or None if skipped
 	"""
-	mtl = filepath.rsplit(".", 1)[0] + '.mtl'
+	# Check if the MTL exists. If not, then check if it
+	# uses underscores. If still not, then return False
+	mtl = Path(filepath.rsplit(".", 1)[0] + '.mtl')
+	if not mtl.exists():
+		mtl_underscores = Path(mtl.parent.absolute()) / mtl.name.replace(" ", "_")
+		if mtl_underscores.exists():
+			mtl = mtl_underscores
+		else:
+			return False
+
 	lines = None
 	copied_file = None
 
@@ -213,7 +222,7 @@ def convert_mtl(filepath):
 			for index, line in enumerate(lines):
 				if line.startswith("map_d "):
 					lines[index] = "# " + line
-	except FileNotFoundError as e:
+	except Exception as e:
 		print(e)
 		return False
 
