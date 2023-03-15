@@ -213,7 +213,7 @@ def convert_mtl(filepath):
 			for index, line in enumerate(lines):
 				if line.startswith("map_d "):
 					lines[index] = "# " + line
-	except Exception as e:
+	except FileNotFoundError as e:
 		print(e)
 		return False
 
