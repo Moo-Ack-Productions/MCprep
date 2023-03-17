@@ -31,7 +31,6 @@ except:
 # ADDON GLOBAL VARIABLES AND INITIAL SETTINGS
 # -----------------------------------------------------------------------------
 
-
 class MCprepEnv:
 	def __init__(self, dev_build=False, verbose=False):
 		self.dev_build = dev_build

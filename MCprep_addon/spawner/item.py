@@ -24,9 +24,8 @@ import mathutils
 
 from .. import util
 from .. import tracking
-
 from ..conf import env
-
+from ..materials import generate 
 try:
 	import bpy.utils.previews
 except ImportError:
@@ -257,35 +256,21 @@ def spawn_item_from_filepath(
 		for node in nodes:
 			nodes.remove(node)
 
-		diffuse_node = nodes.new(type="ShaderNodeBsdfDiffuse")
-		tex_node = nodes.new(type='ShaderNodeTexImage')
-		output_node = nodes.new(type='ShaderNodeOutputMaterial')
-		tex_node.image = image
-		tex_node.interpolation = 'Closest'
+		tex_node = generate.create_node(nodes, 'ShaderNodeTexImage', image = image, interpolation = 'Closest', location = (-400,0))
+		diffuse_node = generate.create_node(nodes, "ShaderNodeBsdfDiffuse", location = (-200,-100))
+		output_node = generate.create_node(nodes, 'ShaderNodeOutputMaterial', location = (200,0))
 
 		if transparency == 0:
 			links.new(tex_node.outputs[0], diffuse_node.inputs[0])
 			links.new(diffuse_node.outputs[0], output_node.inputs[0])
-
-			diffuse_node.location[0] -= 200
-			diffuse_node.location[1] -= 100
-			tex_node.location[0] -= 400
-			output_node.location[0] += 200
 		else:
-			transp_node = nodes.new(type='ShaderNodeBsdfTransparent')
-			mix_node = nodes.new(type='ShaderNodeMixShader')
+			transp_node = generate.create_node(nodes, 'ShaderNodeBsdfTransparent', location = (-200,100))
+			mix_node = generate.create_node(nodes, 'ShaderNodeMixShader')
 			links.new(tex_node.outputs[0], diffuse_node.inputs[0])
 			links.new(diffuse_node.outputs[0], mix_node.inputs[2])
 			links.new(transp_node.outputs[0], mix_node.inputs[1])
 			links.new(tex_node.outputs[1], mix_node.inputs[0])
 			links.new(mix_node.outputs[0], output_node.inputs[0])
-
-			transp_node.location[0] -= 200
-			transp_node.location[1] += 100
-			diffuse_node.location[0] -= 200
-			diffuse_node.location[1] -= 100
-			tex_node.location[0] -= 400
-			output_node.location[0] += 200
 
 	# Final object updated
 	if thickness > 0:

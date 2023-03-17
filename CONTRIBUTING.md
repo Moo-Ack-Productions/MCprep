@@ -171,7 +171,78 @@ One other detail: MCprep uses git lfs or Large File Storage, to avoid saving bin
 
 Run into other gotchas? Please open a [new issue](https://github.com/TheDuckCow/MCprep/issues)!
 
-## Installing `bpy` for IDEs
+
+## Commit Messages
+Git commits should explain why a change was made, because the diff will show the changes made. For example, instead of writing:
+```
+Added ability to "import" MTL files
+```
+
+Instead do:
+```
+Added the ability to "import" MTL files
+
+MCprep's file explorer shows both OBJs and MTLs, and sometimes users end up clicking
+MTL files. This brings a quality of life improvement to change the extension
+if the file selected is an MTL, since MTLs share the same name as their corresponding
+OBJ files
+```
+
+The first line is a summary of the changes, and should be less then 50 characters. The rest should justify the changes. Convince us why these changes are important and why they've been made this way.
+
+Git won't automatically wrap messages either, so each line should have a limit of 72 characters.
+
+Here's a template some MCprep developers found that can help (modified for simplicity) by using # to define which is the limit Git can display for each line:
+```
+# Title: Summary, imperative, start upper case, don't end with a period
+# No more than 50 chars. #### 50 chars is here:  #
+
+# Body: Explain *what* and *why* (not *how*). Include task ID (Jira issue).
+# Wrap at 72 chars. ################################## which is here:  #
+
+```
+Add this to a file called .gitmessage, and then execute the following command:
+`git config --local commit.template /path/to/.gitmessage`
+
+To use for each commit, you can use `git config --local commit.verbose true` to tell Git to perform a verbose commit all the time for just the MCprep repo.
+
+## IDE Support
 If you're using an IDE, it's recommened to install `bpy` as a Python module. In my (StandingPad) experiance, the [fake-bpy package](https://github.com/nutti/fake-bpy-module) seems to be the best.
 
-It's also recommened to use a virtual environment (especially if you're on Linux) as to avoid issues with system wide packages. [See this for more details](https://realpython.com/python-virtual-environments-a-primer/)
+It's also recommened to use a virtual environment (especially if you're on Linux) as to avoid issues with system wide packages and different versions of `bpy`. [See this for more details](https://realpython.com/python-virtual-environments-a-primer/)
+
+### Creating a Virtual Environment and Setting up `bpy`
+First, we need to come up with a name. For MCprep development, it's recommended to use the following convention:
+`mcprep_venv_<version>`
+
+This allows you to have multiple versions of `bpy` side by side in their own environments.
+
+For example, if I was making a virtul environment for 3.3, I would do `mcprep_venv_3.3`.
+
+To create a virtual environment, do the following:
+
+`python3 -m venv mcprep_venv_<version>`
+
+Then to enable it, then:
+
+Windows: `mcprep_venv_<version>\Scripts\activate`
+
+MacOS and Linux: `source mcprep_venv_<version>/bin/activate`
+
+This will make your terminal use the virtual environment until you close it or use `deactivate`. Each time you open your terminal after this, remember to enable the virtual environment
+
+Next we need to install `fake-bpy`:
+
+`python3 -m pip install fake-bpy-module-<version>`
+
+If you use PyCharm, you should check the GitHub for [additional instructions](https://github.com/nutti/fake-bpy-module#install-via-pip-package)
+
+### Pylint
+MCprep mostly tries to follow the PEP8 guidelines, so it's also a good idea to install pylsp and flake8 for IDEs.
+
+First, install the 2:
+`python3 -m pip install python-lsp-server flake8`
+
+Then set up your IDE to use pylsp as your Python LSP. This depends on the IDE, so look at the documentation to see how to set your Python LSP for your specific editor.
+
+Now you're ready to do MCprep development
