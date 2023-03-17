@@ -32,7 +32,7 @@ except:
 # -----------------------------------------------------------------------------
 
 class MCprepEnv:
-	def __init__(self, dev_build=False, verbose=False):
+	def __init__(self, dev_build: bool=False, verbose: bool=False):
 		self.dev_build: bool = dev_build
 		self.verbose: bool = verbose
 		self.very_verbose: bool = dev_build
@@ -133,7 +133,7 @@ class MCprepEnv:
 			for iconset in collection_sets:
 				self.preview_collections[iconset] = ""
     
-	def log(self, statement, vv_only=False):
+	def log(self, statement: str, vv_only: bool=False):
 		if self.verbose and vv_only and self.very_verbose:
 			print(statement)
 		elif self.verbose:
