@@ -558,6 +558,10 @@ def natural_sort(elements):
 
 	return sorted(elements, key=alphanum_key)
 
+def deprecation_warning():
+	print("DEPRECATION WARNING: THIS FUNCTION WILL BE DEPRECATED")
+	import traceback
+	traceback.print_stack()
 
 # -----------------------------------------------------------------------------
 # Cross blender 2.7 and 2.8 functions
@@ -566,6 +570,7 @@ def natural_sort(elements):
 
 def make_annotations(cls):
 	"""Add annotation attribute to class fields to avoid Blender 2.8 warnings"""
+	deprecation_warning()
 	if not hasattr(bpy.app, "version") or bpy.app.version < (2, 80):
 		return cls
 	if bpy.app.version < (2, 93, 0):
