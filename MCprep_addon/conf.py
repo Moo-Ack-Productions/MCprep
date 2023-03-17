@@ -17,7 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import os
-
+from pathlib import Path
 import bpy
 
 # check if custom preview icons available
@@ -33,27 +33,18 @@ except:
 
 class MCprepEnv:
 	def __init__(self, dev_build=False, verbose=False):
-		self.dev_build = dev_build
-		self.verbose = verbose
-		self.very_verbose = dev_build
+		self.dev_build: bool = dev_build
+		self.verbose: bool = verbose
+		self.very_verbose: bool = dev_build
 
 		self.data = None
 		self.json_data = None
-		self.json_path = os.path.join(
-						os.path.dirname(__file__),
-						"MCprep_resources",
-						"mcprep_data.json")
-
-		self.json_path_update = os.path.join(
-							os.path.dirname(__file__),
-							"MCprep_resources",
-							"mcprep_data_update.json")
+		self.json_path: Path = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data.json")
+		self.json_path_update: Path = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data_update.json")
 
 		# if new update file found from install, replace old one with new
-		if os.path.isfile(self.json_path_update):
-			if os.path.isfile(self.json_path) is True:
-				os.remove(self.json_path)
-			os.rename(self.json_path_update, self.json_path)
+		if self.json_path_update.exists():
+			self.json_path_update.replace(self.json_path)
 
 		# lazy load json, ie only load it when needed (util function defined)
 
@@ -61,8 +52,8 @@ class MCprepEnv:
 		# For preview icons
 		# -----------------------------------------------
 
-		self.use_icons = True
-		self.preview_collections = {}
+		self.use_icons: bool = True
+		self.preview_collections: dict = {}
 
 		# -----------------------------------------------
 		# For initializing the custom icons
@@ -76,11 +67,11 @@ class MCprepEnv:
 		# To ensure shift-A starts drawing sub menus after pressing load all spawns
 		# as without this, if any one of the spawners loads nothing (invalid folder,
 		# no blend files etc), then it would continue to ask to reload spanwers.
-		self.loaded_all_spawners = False
+		self.loaded_all_spawners: bool = False
 
-		self.skin_list = []  # each is: [ basename, path ]
-		self.rig_categories = []  # simple list of directory names
-		self.entity_list = []
+		self.skin_list: list = []  # each is: [ basename, path ]
+		self.rig_categories: list = []  # simple list of directory names
+		self.entity_list: list = []
 
 		# -----------------------------------------------
 		# Matieral sync cahce, to avoid repeat lib reads
@@ -97,16 +88,12 @@ class MCprepEnv:
 
 
 	def icons_init(self):
-		# start with custom icons
-		# put into a try statement in case older blender version!
-		global preview_collections
-
 		collection_sets = [
 			"main", "skins", "mobs", "entities", "blocks", "items", "effects", "materials"]
 
 		try:
 			for iconset in collection_sets:
-				preview_collections[iconset] = bpy.utils.previews.new()
+				self.preview_collections[iconset] = bpy.utils.previews.new()
 
 			script_path = bpy.path.abspath(os.path.dirname(__file__))
 			icons_dir = os.path.join(script_path, 'icons')
@@ -156,7 +143,6 @@ env = MCprepEnv(dev_build=True, verbose=True)
 
 # ! Deprecated as of MCprep 3.4.2
 def init():
-
 	# -----------------------------------------------
 	# Verbose, use as env.verbose
 	# Used to print out extra information, set false with distribution
@@ -349,7 +335,7 @@ def unregister():
 			try:
 				bpy.utils.previews.remove(pcoll)
 			except:
-				log('Issue clearing preview set ' + str(pcoll))
+				env.log('Issue clearing preview set ' + str(pcoll))
 	env.preview_collections.clear()
 
 	env.json_data = None  # actively clearing out json data for next open
