@@ -213,6 +213,7 @@ def min_bv(version, *, inclusive=True):
 
 def bv28():
 	"""Check if blender 2.8, for layouts, UI, and properties. """
+	deprecation_warning()
 	return min_bv((2, 80))
 
 
