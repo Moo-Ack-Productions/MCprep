@@ -167,11 +167,25 @@ def convert_mtl(filepath):
 	Returns:
 		True if success or skipped, False if failed, or None if skipped
 	"""
-	mtl = filepath.rsplit(".", 1)[0] + '.mtl'
+	# Check if the MTL exists. If not, then check if it
+	# uses underscores. If still not, then return False
+	mtl = Path(filepath.rsplit(".", 1)[0] + '.mtl')
+	if not mtl.exists():
+		mtl_underscores = Path(mtl.parent.absolute()) / mtl.name.replace(" ", "_")
+		if mtl_underscores.exists():
+			mtl = mtl_underscores
+		else:
+			return False
+
 	lines = None
 	copied_file = None
-	with open(mtl, 'r') as mtl_file:
-		lines = mtl_file.readlines()
+
+	try:
+		with open(mtl, 'r') as mtl_file:
+			lines = mtl_file.readlines()
+	except Exception as e:
+		print(e)
+		return False
 
 	if bpy.context.scene.view_settings.view_transform in BUILTIN_SPACES:
 		return None
