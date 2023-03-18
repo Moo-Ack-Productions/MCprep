@@ -245,12 +245,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 					if res > 0:
 						mat["texture_swapped"] = True  # used to apply saturation
 
-			if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
-				res = generate.matprep_internal(
-					mat, passes, self.useReflections, self.makeSolid)
-				if res == 0:
-					count += 1
-			elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+			if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 				res = generate.matprep_cycles(
 					mat=mat,
 					passes=passes,
@@ -264,7 +259,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 			else:
 				self.report(
 					{'ERROR'},
-					"Only Blender Internal, Cycles, and Eevee are supported")
+					"Only Cycles and Eevee are supported")
 				return {'CANCELLED'}
 
 			if self.animateTextures:
@@ -590,9 +585,7 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 		mat = bpy.data.materials.new(name=name)
 
 		engine = context.scene.render.engine
-		if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
-			generate.set_internal_texture(image, mat, self.useExtraMaps)
-		elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 			# need to create at least one texture node first, then the rest works
 			mat.use_nodes = True
 			nodes = mat.node_tree.nodes
@@ -610,7 +603,7 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 			# now use standard method to update textures
 			generate.set_cycles_texture(image, mat, self.useExtraMaps)
 		else:
-			return None, "Only Blender Internal, Cycles, or Eevee supported"
+			return None, "Only Cycles and Eevee supported"
 
 		return mat, None
 
@@ -636,10 +629,7 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 				if res > 0:
 					mat["texture_swapped"] = True  # used to apply saturation
 
-		if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
-			res = generate.matprep_internal(
-				mat, passes, self.useReflections, self.makeSolid)
-		elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 			res = generate.matprep_cycles(
 				mat=mat,
 				passes=passes,
@@ -649,7 +639,7 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 				pack_format=self.packFormat,
 				use_emission_nodes=self.useEmission)
 		else:
-			return False, "Only Blender Internal, Cycles, or Eevee supported"
+			return False, "Only Cycles and Eevee supported"
 
 		success = res == 0
 

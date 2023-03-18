@@ -241,126 +241,6 @@ def checklist(matName, listName):
 	return False
 
 
-def matprep_internal(mat, passes, use_reflections, only_solid):
-	"""Update existing internal materials with improved settings.
-	Will not necessarily properly convert cycles materials into internal."""
-
-	if not env.json_data:
-		_ = util.load_mcprep_json()
-
-	newName = mat.name + '_tex'
-	texList = mat.texture_slots.values()
-	try:
-		bpy.data.textures[texList[0].name].name = newName
-	except:
-		env.log(
-			'\twarning: material ' + mat.name + ' has no texture slot. skipping...')
-		return
-
-	# disable all but first slot, ensure first slot enabled
-	mat.use_textures[0] = True
-	diff_layer = 0
-	spec_layer = None
-	norm_layer = None
-	disp_layer = None
-	saturate_layer = None
-	first_unused = None
-	for index in range(1, len(texList)):
-		if not mat.texture_slots[index] or not mat.texture_slots[index].texture:
-			mat.use_textures[index] = False
-			if not first_unused:
-				first_unused = index
-		elif "MCPREP_diffuse" in mat.texture_slots[index].texture:
-			diff_layer = index
-			mat.use_textures[index] = True
-		elif "MCPREP_specular" in mat.texture_slots[index].texture:
-			spec_layer = index
-			mat.use_textures[index] = True
-		elif "MCPREP_normal" in mat.texture_slots[index].texture:
-			norm_layer = index
-			mat.use_textures[index] = True
-		elif "SATURATE" in mat.texture_slots[index].texture:
-			saturate_layer = index
-			mat.use_textures[index] = True
-		else:
-			mat.use_textures[index] = False
-
-	if mat.texture_slots[diff_layer].texture.type != "IMAGE":
-		env.log("No diffuse-detected texture, skipping material: " + mat.name)
-		return 1
-
-	# strip out the .00#
-	canon, _ = get_mc_canonical_name(util.nameGeneralize(mat.name))
-	mat.use_nodes = False
-
-	mat.use_transparent_shadows = True  # all materials receive trans
-	mat.specular_intensity = 0
-	mat.texture_slots[diff_layer].texture.use_interpolation = False
-	mat.texture_slots[diff_layer].texture.filter_type = 'BOX'
-	mat.texture_slots[diff_layer].texture.filter_size = 0
-	mat.texture_slots[diff_layer].use_map_color_diffuse = True
-	mat.texture_slots[diff_layer].diffuse_color_factor = 1
-
-	if only_solid is False and not checklist(canon, "solid"):  # alpha default on
-		bpy.data.textures[newName].use_alpha = True
-		mat.texture_slots[diff_layer].use_map_alpha = True
-		mat.use_transparency = True
-		mat.alpha = 0
-		mat.texture_slots[diff_layer].alpha_factor = 1
-		for index in [spec_layer, norm_layer, disp_layer]:
-			if index:
-				mat.texture_slots[index].use_map_alpha = False
-
-	if use_reflections and checklist(canon, "reflective"):
-		mat.alpha = 0
-		mat.raytrace_mirror.use = True
-		mat.raytrace_mirror.reflect_factor = 0.15
-	else:
-		mat.raytrace_mirror.use = False
-		mat.alpha = 0
-
-	if checklist(canon, "emit") or "emit" in mat.name.lower():
-		mat.emit = 1
-	else:
-		mat.emit = 0
-
-	# cycle through and see if the layer exists to enable/disable blend
-	if not checklist(canon, "desaturated"):
-		pass
-	else:
-		diff_img = mat.texture_slots[diff_layer].texture.image
-		is_grayscale = is_image_grayscale(diff_img)
-
-		# TODO: code is duplicative to below, consolidate later
-		if mat.name + "_saturate" in bpy.data.textures:
-			new_tex = bpy.data.textures[mat.name + "_saturate"]
-		else:
-			new_tex = bpy.data.textures.new(name=mat.name + "_saturate", type="BLEND")
-		if not saturate_layer:
-			if not first_unused:
-				first_unused = len(mat.texture_slots) - 1  # force reuse last at worst
-			sl = mat.texture_slots.create(first_unused)
-		else:
-			sl = mat.texture_slots[saturate_layer]
-		sl.texture = new_tex
-		sl.texture["SATURATE"] = True
-		sl.use_map_normal = False
-		sl.use_map_color_diffuse = True
-		sl.use_map_specular = False
-		sl.use_map_alpha = False
-		sl.blend_type = 'MULTIPLY'  # changed from OVERLAY
-		sl.use = bool(is_grayscale)  # turns off if not grayscale (or None)
-		new_tex.use_color_ramp = True
-		for _ in range(len(new_tex.color_ramp.elements) - 1):
-			new_tex.color_ramp.elements.remove(new_tex.color_ramp.elements[0])
-		desat_color = env.json_data['blocks']['desaturated'][canon]
-		if len(desat_color) < len(new_tex.color_ramp.elements[0].color):
-			desat_color.append(1.0)
-		new_tex.color_ramp.elements[0].color = desat_color
-
-	return 0
-
-
 def matprep_cycles(
 	mat, passes, use_reflections, use_principled, only_solid, pack_format, use_emission_nodes):
 	"""Determine how to prep or generate the cycles materials.
@@ -414,11 +294,7 @@ def set_texture_pack(material, folder, use_extra_passes):
 
 	image_data = util.loadTexture(image)
 	engine = bpy.context.scene.render.engine
-
-	if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
-		_ = set_cycles_texture(image_data, material, True)
-	elif engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
-		_ = set_internal_texture(image_data, material, use_extra_passes)
+	_ = set_cycles_texture(image_data, material, True)
 	return 1
 
 
@@ -426,19 +302,11 @@ def assert_textures_on_materials(image, materials):
 	"""Called for any texture changing, e.g. skin, input a list of material and
 	an already loaded image datablock."""
 	# TODO: Add option to search for or ignore/remove extra maps (normal, etc)
-	engine = bpy.context.scene.render.engine
 	count = 0
-
-	if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
-		for mat in materials:
-			status = set_internal_texture(image, mat)
-			if status:
-				count += 1
-	elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
-		for mat in materials:
-			status = set_cycles_texture(image, mat)
-			if status:
-				count += 1
+	for mat in materials:
+		status = set_cycles_texture(image, mat)
+		if status:
+			count += 1
 	return count
 
 
@@ -518,135 +386,6 @@ def set_cycles_texture(image, material, extra_passes=False):
 		changed = True
 
 	return changed
-
-
-def set_internal_texture(image, material, extra_passes=False):
-	"""Set texture for internal engine. Input is image datablock."""
-	# TODO: when going through layers, see if enabled already for normal /
-	# spec or not and enabled/disable accordingly (e.g. if was resource
-	# with normal, now is not)
-
-	# check if there is more data to see pass types
-	canon, _ = get_mc_canonical_name(util.nameGeneralize(material.name))
-
-	is_grayscale = False
-	if checklist(canon, "desaturated"):
-		is_grayscale = is_image_grayscale(image)
-
-	img_sets = {}
-	if extra_passes:
-		img_sets = find_additional_passes(image.filepath)
-	if is_grayscale is True:
-		img_sets["saturate"] = True
-
-	base = None
-	tex = None
-
-	# set primary diffuse color as the first image found
-	for i, sl in enumerate(material.texture_slots):
-		if sl is None or sl.texture is None or sl.texture.type != 'IMAGE':
-			continue
-		sl.texture.image = image
-		sl.use = True
-		tex = sl.texture
-		base = i
-		sl.use_map_normal = False
-		sl.use_map_color_diffuse = True
-		sl.use_map_specular = False
-		sl.blend_type = 'MIX'
-		break
-
-	# if no textures found, assert adding this one as the first
-	if tex is None:
-		env.log("Found no textures, asserting texture onto material")
-		name = material.name + "_tex"
-		if name not in bpy.data.textures:
-			tex = bpy.data.textures.new(name=name, type="IMAGE")
-		else:
-			tex = bpy.data.textures[name]
-		tex.image = image
-		if material.texture_slots[0] is None:
-			material.texture_slots.create(0)
-		material.texture_slots[0].texture = tex
-		material.texture_slots[0].texture["MCPREP_diffuse"] = True
-		material.texture_slots[0].use = True
-		base = 0
-
-	# go through and turn off any previous passes not in img_sets
-	for i, sl in enumerate(material.texture_slots):
-		if i == base:
-			continue  # skip primary texture set
-		if "normal" in img_sets and img_sets["normal"]:  # pop item each time
-			if tex and tex.name + "_n" in bpy.data.textures:
-				new_tex = bpy.data.textures[tex.name + "_n"]
-			else:
-				new_tex = bpy.data.textures.new(
-					name=tex.name + "_n", type="IMAGE")
-			print(sl)
-			if not sl:
-				sl = material.texture_slots.create(i)
-			f = img_sets.pop("normal")
-			new_img = util.loadTexture(f)
-			new_tex.image = new_img
-			sl.texture = new_tex
-			sl.texture["MCPREP_normal"] = True
-			sl.use_map_normal = True
-			sl.normal_factor = 0.1
-			sl.use_map_color_diffuse = False
-			sl.use_map_specular = False
-			sl.use_map_alpha = False
-			sl.blend_type = 'MIX'
-			sl.use = True
-		elif "spec" in img_sets and img_sets["spec"]:
-			if tex and tex.name + "_s" in bpy.data.textures:
-				new_tex = bpy.data.textures[tex.name + "_s"]
-			else:
-				new_tex = bpy.data.textures.new(
-					name=tex.name + "_s", type="IMAGE")
-			if not sl:
-				sl = material.texture_slots.create(i)
-			f = img_sets.pop("specular")
-			new_img = util.loadTexture(f)
-			new_img.use_alpha = False  # would mess up material
-			new_tex.image = new_img
-			sl.texture = new_tex
-			sl.texture["MCPREP_specular"] = True
-			sl.use_map_normal = False
-			sl.use_map_color_diffuse = False
-			sl.use_map_specular = True
-			sl.use_map_alpha = False
-			sl.blend_type = 'MIX'
-			sl.use = True
-		elif "saturate" in img_sets:
-			img_sets.pop("saturate")
-			print("Running saturate")
-			if not checklist(canon, "desaturated"):
-				continue
-			if tex and tex.name + "_saturate" in bpy.data.textures:
-				new_tex = bpy.data.textures[tex.name + "_saturate"]
-			else:
-				new_tex = bpy.data.textures.new(
-					name=tex.name + "_saturate", type="BLEND")
-			if not sl:
-				sl = material.texture_slots.create(i)
-			sl.texture = new_tex
-			sl.texture["SATURATE"] = True
-			sl.use_map_normal = False
-			sl.use_map_color_diffuse = True
-			sl.use_map_specular = False
-			sl.use_map_alpha = False
-			sl.blend_type = 'OVERLAY'
-			sl.use = True
-			new_tex.use_color_ramp = True
-			for _ in range(len(new_tex.color_ramp.elements) - 1):
-				new_tex.color_ramp.elements.remove(new_tex.color_ramp.elements[0])
-			desat_color = env.json_data['blocks']['desaturated'][canon]
-			if len(desat_color) < len(new_tex.color_ramp.elements[0].color):
-				desat_color.append(1.0)
-			new_tex.color_ramp.elements[0].color = desat_color
-
-	return True
-
 
 def get_node_for_pass(material, pass_name):
 	"""Assumes cycles material, returns texture node for given pass in mat."""
@@ -927,43 +666,22 @@ def set_saturation_material(mat):
 	saturate = is_image_grayscale(diff_img)
 
 	desat_color = env.json_data['blocks']['desaturated'][canon]
-	engine = bpy.context.scene.render.engine
+	sat_node = None
+	for node in mat.node_tree.nodes:
+		if "SATURATE" not in node:
+			continue
+		sat_node = node
+		break
 
-	if engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
-		# get the saturation textureslot, or create
-		sat_slot_ind = None
-		first_unused = None
-		for index in range(len(mat.texture_slots)):
-			slot = mat.texture_slots[index]
-			if not slot or not slot.texture:
-				if not first_unused:
-					first_unused = index
-				continue
-			elif "SATURATE" not in slot.texture:
-				continue
-			sat_slot_ind = index
-			break
-		if not sat_slot_ind:
-			return
-		mat.use_textures[sat_slot_ind] = bool(saturate)
+	if not sat_node:
+		return  # requires regenerating material to add back
+	if len(desat_color) == 3:
+		desat_color += [1]  # add in alpha
 
-	elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
-		sat_node = None
-		for node in mat.node_tree.nodes:
-			if "SATURATE" not in node:
-				continue
-			sat_node = node
-			break
-
-		if not sat_node:
-			return  # requires regenerating material to add back
-		if len(desat_color) == 3:
-			desat_color += [1]  # add in alpha
-
-		sat_node_in = get_node_socket(node, is_input=True) # Get the node sockets in a version agnostic way	
-		sat_node.inputs[sat_node_in[2]].default_value = desat_color
-		sat_node.mute = not bool(saturate)
-		sat_node.hide = not bool(saturate)
+	sat_node_in = get_node_socket(node, is_input=True) # Get the node sockets in a version agnostic way	
+	sat_node.inputs[sat_node_in[2]].default_value = desat_color
+	sat_node.mute = not bool(saturate)
+	sat_node.hide = not bool(saturate)
 
 
 def create_node(tree_nodes, node_type, **attrs):
