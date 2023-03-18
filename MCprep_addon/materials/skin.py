@@ -351,8 +351,8 @@ class MCPREP_UL_skins(bpy.types.UIList):
 
 class ListColl(bpy.types.PropertyGroup):
 	"""For asset listing"""
-	label = bpy.props.StringProperty()
-	description = bpy.props.StringProperty()
+	label: bpy.props.StringProperty()
+	description: bpy.props.StringProperty()
 
 
 class MCPREP_OT_swap_skin_from_file(bpy.types.Operator, ImportHelper):

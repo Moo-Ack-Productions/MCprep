@@ -416,17 +416,17 @@ def draw_import_mcmodel(self, context):
 
 class ModelSpawnBase():
 	"""Class to inheret reused MCprep item spawning settings and functions."""
-	location = bpy.props.FloatVectorProperty(
+	location: bpy.props.FloatVectorProperty(
 		default=(0, 0, 0),
 		name="Location")
-	snapping = bpy.props.EnumProperty(
+	snapping: bpy.props.EnumProperty(
 		name="Snapping",
 		items=[
 			("none", "No snap", "Keep exact location"),
 			("center", "Snap center", "Snap to block center"),
 			("offset", "Snap offset", "Snap to block center with 0.5 offset")],
 		description="Automatically snap to whole block locations")
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 
@@ -546,9 +546,7 @@ classes = (
 
 
 def register():
-	util.make_annotations(ModelSpawnBase)  # Don't register, only annotate.
 	for cls in classes:
-		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 
 	if util.bv28():

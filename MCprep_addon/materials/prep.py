@@ -53,47 +53,47 @@ class McprepMaterialProps():
 		itms.append(("seus", "SEUS", "Sets the pack format to SEUS."))
 		return itms
 	
-	animateTextures = bpy.props.BoolProperty(
+	animateTextures: bpy.props.BoolProperty(
 		name="Animate textures (may be slow first time)",
 		description=(
 			"Swap still images for the animated sequenced found in "
 			"the active or default texture pack."),
 		default=False)
-	autoFindMissingTextures = bpy.props.BoolProperty(
+	autoFindMissingTextures: bpy.props.BoolProperty(
 		name="Find missing images",
 		description=(
 			"If the texture for an existing material is missing, try "
 			"to load from the default texture pack instead"),
 		default=True)
-	combineMaterials = bpy.props.BoolProperty(
+	combineMaterials: bpy.props.BoolProperty(
 		name="Combine materials",
 		description="Consolidate duplciate materials & textures",
 		default=False)
-	improveUiSettings = bpy.props.BoolProperty(
+	improveUiSettings: bpy.props.BoolProperty(
 		name="Improve UI",
 		description="Automatically improve relevant UI settings",
 		default=True)
-	optimizeScene = bpy.props.BoolProperty(
+	optimizeScene: bpy.props.BoolProperty(
 		name="Optimize scene (cycles)",
 		description="Optimize the scene for faster cycles rendering",
 		default=False)
-	usePrincipledShader = bpy.props.BoolProperty(
+	usePrincipledShader: bpy.props.BoolProperty(
 		name="Use Principled Shader (if available)",
 		description=(
 			"If available and using cycles, build materials using the "
 			"principled shader"),
 		default=True)
-	useReflections = bpy.props.BoolProperty(
+	useReflections: bpy.props.BoolProperty(
 		name="Use reflections",
 		description="Allow appropriate materials to be rendered reflective",
 		default=True)
-	useExtraMaps = bpy.props.BoolProperty(
+	useExtraMaps: bpy.props.BoolProperty(
 		name="Use extra maps",
 		description=(
 			"load other image passes like normal and "
 			"spec maps if available"),
 		default=True)
-	normalIntensity = bpy.props.FloatProperty(
+	normalIntensity: bpy.props.FloatProperty(
 		name="Normal map intensity",
 		description=(
 			"Set normal map intensity, if normal maps are found in "
@@ -101,11 +101,11 @@ class McprepMaterialProps():
 		default=1.0,
 		max=1,
 		min=0)
-	makeSolid = bpy.props.BoolProperty(
+	makeSolid: bpy.props.BoolProperty(
 		name="Make all materials solid",
 		description="Make all materials solid only, for shadows and rendering",
 		default=False)
-	syncMaterials = bpy.props.BoolProperty(
+	syncMaterials: bpy.props.BoolProperty(
 		name="Sync materials",
 		description=(
 			"Synchronize materials with those in the active "
@@ -115,12 +115,12 @@ class McprepMaterialProps():
 	#	name="Use custom default material",
 	#	description="Use a custom default material if you have one set up",
 	#	default=False)
-	packFormat = bpy.props.EnumProperty(
+	packFormat: bpy.props.EnumProperty(
 		name="Pack Format",
 		description="Change the pack format when using a PBR resource pack.",
 		items=pack_formats
 	)
-	useEmission = bpy.props.BoolProperty(
+	useEmission: bpy.props.BoolProperty(
 		name="Use Emission",
 		description="Make emmisive materials emit light",
 		default=True
@@ -674,9 +674,7 @@ classes = (
 
 
 def register():
-	util.make_annotations(McprepMaterialProps)
 	for cls in classes:
-		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 
 

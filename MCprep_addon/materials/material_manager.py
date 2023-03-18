@@ -41,7 +41,7 @@ def reload_materials(context):
 	extensions = [".png", ".jpg", ".jpeg"]
 
 	mcprep_props.material_list.clear()
-	if env.use_icons and ENV.preview_collections["materials"]:
+	if env.use_icons and env.preview_collections["materials"]:
 		try:
 			bpy.utils.previews.remove(env.preview_collections["materials"])
 		except:
@@ -89,7 +89,7 @@ def reload_materials(context):
 		asset.index = i
 
 		# if available, load the custom icon too
-		if not env.use_icons or ENV.preview_collections["materials"] == "":
+		if not env.use_icons or env.preview_collections["materials"] == "":
 			continue
 		env.preview_collections["materials"].load(
 			"material-{}".format(i), image_file, 'IMAGE')
@@ -101,9 +101,9 @@ def reload_materials(context):
 class ListMaterials(bpy.types.PropertyGroup):
 	"""For UI drawing of item assets and holding data"""
 	# inherited: name
-	description = bpy.props.StringProperty()
-	path = bpy.props.StringProperty(subtype='FILE_PATH')
-	index = bpy.props.IntProperty(min=0, default=0)  # for icon drawing
+	description: bpy.props.StringProperty()
+	path: bpy.props.StringProperty(subtype='FILE_PATH')
+	index: bpy.props.IntProperty(min=0, default=0)  # for icon drawing
 
 
 # -----------------------------------------------------------------------------
@@ -484,7 +484,6 @@ classes = (
 
 def register():
 	for cls in classes:
-		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 
 

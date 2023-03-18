@@ -297,44 +297,44 @@ class ItemSpawnBase():
 	"""Class to inheret reused MCprep item spawning settings and functions."""
 
 	# TODO: add options like spawning attached to rig hand or other,
-	size = bpy.props.FloatProperty(
+	size: bpy.props.FloatProperty(
 		name="Size",
 		default=1.0,
 		min=0.001,
 		description="Size in blender units of the item")
-	thickness = bpy.props.FloatProperty(
+	thickness: bpy.props.FloatProperty(
 		name="Thickness",
 		default=1.0,
 		min=0.0,
 		description=(
 			"The thickness of the item (this can later be changed in "
 			"modifiers)"))
-	transparency = bpy.props.BoolProperty(
+	transparency: bpy.props.BoolProperty(
 		name="Remove transparent faces",
 		description="Transparent pixels will be transparent once rendered",
 		default=True)
-	threshold = bpy.props.FloatProperty(
+	threshold: bpy.props.FloatProperty(
 		name="Transparent threshold",
 		description="1.0 = zero tolerance, no transparent pixels will be generated",
 		default=0.5,
 		min=0.0,
 		max=1.0)
-	max_pixels = bpy.props.IntProperty(
+	max_pixels: bpy.props.IntProperty(
 		name="Max pixels",
 		default=50000,
 		min=1,
 		description=(
 			"If needed, scale down image to generate less than this maximum "
 			"pixel count"))
-	scale_uvs = bpy.props.FloatProperty(
+	scale_uvs: bpy.props.FloatProperty(
 		name="Scale UVs",
 		default=0.75,
 		description="Scale individual UV faces of the generated item")
-	filepath = bpy.props.StringProperty(
+	filepath: bpy.props.StringProperty(
 		default="",
 		subtype="FILE_PATH",
 		options={'HIDDEN', 'SKIP_SAVE'})
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 
@@ -466,9 +466,7 @@ classes = (
 
 
 def register():
-	util.make_annotations(ItemSpawnBase)  # Don't register, only annotate.
 	for cls in classes:
-		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 
 

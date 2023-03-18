@@ -1841,35 +1841,35 @@ class McprepProps(bpy.types.PropertyGroup):
 	addon_prefs = util.get_user_preferences()
 
 	# depreciated, keeping to prevent re-registration errors
-	show_settings_material = bpy.props.BoolProperty(
+	show_settings_material: bpy.props.BoolProperty(
 		name="show material settings",
 		description="Show extra MCprep panel settings",
 		default=False)
-	show_settings_skin = bpy.props.BoolProperty(
+	show_settings_skin: bpy.props.BoolProperty(
 		name="show skin settings",
 		description="Show extra MCprep panel settings",
 		default=False)
-	show_settings_optimizer = bpy.props.BoolProperty(
+	show_settings_optimizer: bpy.props.BoolProperty(
 		name="show optimizer settings",
 		description="Show extra MCprep panel settings",
 		default=False)
-	show_settings_spawner = bpy.props.BoolProperty(
+	show_settings_spawner: bpy.props.BoolProperty(
 		name="show spawner settings",
 		description="Show extra MCprep panel settings",
 		default=False)
-	show_settings_effect = bpy.props.BoolProperty(
+	show_settings_effect: bpy.props.BoolProperty(
 		name="show effect settings",
 		description="Show extra MCprep panel settings",
 		default=False)
 
 	# Rig settings
-	spawn_rig_category = bpy.props.EnumProperty(
+	spawn_rig_category: bpy.props.EnumProperty(
 		name="Mob category",
 		description="Category of mobs & character rigs to spawn",
 		update=mobs.spawn_rigs_category_load,
 		items=mobs.spawn_rigs_categories
 	)
-	spawn_mode = bpy.props.EnumProperty(
+	spawn_mode: bpy.props.EnumProperty(
 		name="Spawn Mode",
 		description="Set mode for rig/object spawner",
 		items=[
@@ -1881,28 +1881,28 @@ class McprepProps(bpy.types.PropertyGroup):
 	)
 
 	# spawn lists
-	mob_list = bpy.props.CollectionProperty(type=spawn_util.ListMobAssets)
-	mob_list_index = bpy.props.IntProperty(default=0)
-	mob_list_all = bpy.props.CollectionProperty(
+	mob_list: bpy.props.CollectionProperty(type=spawn_util.ListMobAssets)
+	mob_list_index: bpy.props.IntProperty(default=0)
+	mob_list_all: bpy.props.CollectionProperty(
 		type=spawn_util.ListMobAssetsAll)
-	meshswap_list = bpy.props.CollectionProperty(
+	meshswap_list: bpy.props.CollectionProperty(
 		type=spawn_util.ListMeshswapAssets)
-	meshswap_list_index = bpy.props.IntProperty(default=0)
-	item_list = bpy.props.CollectionProperty(type=spawn_util.ListItemAssets)
-	item_list_index = bpy.props.IntProperty(default=0)
-	material_list = bpy.props.CollectionProperty(
+	meshswap_list_index: bpy.props.IntProperty(default=0)
+	item_list: bpy.props.CollectionProperty(type=spawn_util.ListItemAssets)
+	item_list_index: bpy.props.IntProperty(default=0)
+	material_list: bpy.props.CollectionProperty(
 		type=material_manager.ListMaterials)
-	material_list_index = bpy.props.IntProperty(default=0)
-	entity_list = bpy.props.CollectionProperty(type=spawn_util.ListEntityAssets)
-	entity_list_index = bpy.props.IntProperty(default=0)
-	model_list = bpy.props.CollectionProperty(type=spawn_util.ListModelAssets)
-	model_list_index = bpy.props.IntProperty(default=0)
+	material_list_index: bpy.props.IntProperty(default=0)
+	entity_list: bpy.props.CollectionProperty(type=spawn_util.ListEntityAssets)
+	entity_list_index: bpy.props.IntProperty(default=0)
+	model_list: bpy.props.CollectionProperty(type=spawn_util.ListModelAssets)
+	model_list_index: bpy.props.IntProperty(default=0)
 
 	# Effects are uniqune in that they are loaded into a list structure,
 	# but the UI list itself is not directly displayed. Rather, dropdowns
 	# will iterate over this to populate based on type.
-	effects_list = bpy.props.CollectionProperty(type=spawn_util.ListEffectsAssets)
-	effects_list_index = bpy.props.IntProperty(default=0)
+	effects_list: bpy.props.CollectionProperty(type=spawn_util.ListEffectsAssets)
+	effects_list_index: bpy.props.IntProperty(default=0)
 
 
 # -----------------------------------------------------------------------------
@@ -1938,7 +1938,6 @@ classes = (
 
 def register():
 	for cls in classes:
-		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 
 	bpy.types.Scene.mcprep_props = bpy.props.PointerProperty(type=McprepProps)

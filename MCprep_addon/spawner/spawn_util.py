@@ -813,24 +813,24 @@ class MCPREP_UL_material(bpy.types.UIList):
 
 class ListMobAssetsAll(bpy.types.PropertyGroup):
 	"""For listing hidden group of all mobs, regardless of category"""
-	description = bpy.props.StringProperty()
-	category = bpy.props.StringProperty()
-	mcmob_type = bpy.props.StringProperty()
-	index = bpy.props.IntProperty(min=0, default=0)  # for icon drawing
+	description: bpy.props.StringProperty()
+	category: bpy.props.StringProperty()
+	mcmob_type: bpy.props.StringProperty()
+	index: bpy.props.IntProperty(min=0, default=0)  # for icon drawing
 
 
 class ListMobAssets(bpy.types.PropertyGroup):
 	"""For UI drawing of mob assets and holding data"""
-	description = bpy.props.StringProperty()
-	category = bpy.props.StringProperty()  # category it belongs to
-	mcmob_type = bpy.props.StringProperty()
-	index = bpy.props.IntProperty(min=0, default=0)  # for icon drawing
+	description: bpy.props.StringProperty()
+	category: bpy.props.StringProperty()  # category it belongs to
+	mcmob_type: bpy.props.StringProperty()
+	index: bpy.props.IntProperty(min=0, default=0)  # for icon drawing
 
 
 class ListMeshswapAssets(bpy.types.PropertyGroup):
 	"""For UI drawing of meshswap assets and holding data"""
-	block = bpy.props.StringProperty()  # block name only like "fire"
-	method = bpy.props.EnumProperty(
+	block: bpy.props.StringProperty()  # block name only like "fire"
+	method: bpy.props.EnumProperty(
 		name="Import method",
 		# Collection intentionally first to be default for operator calls.
 		items=[
@@ -838,39 +838,39 @@ class ListMeshswapAssets(bpy.types.PropertyGroup):
 			("object", "Object asset", "Object asset"),
 		]
 	)
-	description = bpy.props.StringProperty()
+	description: bpy.props.StringProperty()
 
 
 class ListEntityAssets(bpy.types.PropertyGroup):
 	"""For UI drawing of meshswap assets and holding data"""
-	entity = bpy.props.StringProperty()  # virtual enum, Group/name
-	description = bpy.props.StringProperty()
+	entity: bpy.props.StringProperty()  # virtual enum, Group/name
+	description: bpy.props.StringProperty()
 
 
 class ListItemAssets(bpy.types.PropertyGroup):
 	"""For UI drawing of item assets and holding data"""
 	# inherited: name
-	description = bpy.props.StringProperty()
-	path = bpy.props.StringProperty(subtype='FILE_PATH')
-	index = bpy.props.IntProperty(min=0, default=0)  # for icon drawing
+	description: bpy.props.StringProperty()
+	path: bpy.props.StringProperty(subtype='FILE_PATH')
+	index: bpy.props.IntProperty(min=0, default=0)  # for icon drawing
 
 
 class ListModelAssets(bpy.types.PropertyGroup):
 	"""For UI drawing of mc model assets and holding data"""
-	filepath = bpy.props.StringProperty(subtype="FILE_PATH")
-	description = bpy.props.StringProperty()
+	filepath: bpy.props.StringProperty(subtype="FILE_PATH")
+	description: bpy.props.StringProperty()
 	# index = bpy.props.IntProperty(min=0, default=0)  # icon pulled by name.
 
 
 class ListEffectsAssets(bpy.types.PropertyGroup):
 	"""For UI drawing for different kinds of effects"""
 	# inherited: name
-	filepath = bpy.props.StringProperty(subtype="FILE_PATH")
-	subpath = bpy.props.StringProperty(
+	filepath: bpy.props.StringProperty(subtype="FILE_PATH")
+	subpath: bpy.props.StringProperty(
 		description="Collection/particle/nodegroup within this file",
 		default="")
-	description = bpy.props.StringProperty()
-	effect_type = bpy.props.EnumProperty(
+	description: bpy.props.StringProperty()
+	effect_type: bpy.props.EnumProperty(
 		name="Effect type",
 		items=(
 			(effects.GEO_AREA, 'Geonode area', 'Instance wide-area geonodes effect'),
@@ -878,7 +878,7 @@ class ListEffectsAssets(bpy.types.PropertyGroup):
 			(effects.COLLECTION, 'Collection effect', 'Instance pre-animated collection'),
 			(effects.IMG_SEQ, 'Image sequence', 'Instance an animated image sequence effect'),
 		))
-	index = bpy.props.IntProperty(min=0, default=0)  # for icon drawing
+	index: bpy.props.IntProperty(min=0, default=0)  # for icon drawing
 
 
 # -----------------------------------------------------------------------------
@@ -909,7 +909,6 @@ classes = (
 
 def register():
 	for cls in classes:
-		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 
 

@@ -211,7 +211,6 @@ classes = (
 
 def register():
 	for cls in classes:
-		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 	bpy.app.handlers.load_post.append(sync.clear_sync_cache)
 
