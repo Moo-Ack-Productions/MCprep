@@ -246,14 +246,19 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 						mat["texture_swapped"] = True  # used to apply saturation
 
 			if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+				options = generate.PrepOptions(
+					passes, 
+					self.useReflections, 
+					self.usePrincipledShader, 
+					self.makeSolid, 
+					self.packFormat, 
+					self.useEmission, 
+					False # This is for an option set in matprep_cycles
+				)
 				res = generate.matprep_cycles(
 					mat=mat,
-					passes=passes,
-					use_reflections=self.useReflections,
-					use_principled=self.usePrincipledShader,
-					only_solid=self.makeSolid,
-					pack_format=self.packFormat,
-					use_emission_nodes=self.useEmission)
+					options=options
+				)
 				if res == 0:
 					count += 1
 			else:
@@ -630,14 +635,19 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 					mat["texture_swapped"] = True  # used to apply saturation
 
 		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+			options = generate.PrepOptions(
+				passes, 
+				self.useReflections, 
+				self.usePrincipledShader, 
+				self.makeSolid, 
+				self.packFormat, 
+				self.useEmission, 
+				False # This is for an option set in matprep_cycles
+			)
 			res = generate.matprep_cycles(
 				mat=mat,
-				passes=passes,
-				use_reflections=self.useReflections,
-				use_principled=self.usePrincipledShader,
-				only_solid=self.makeSolid,
-				pack_format=self.packFormat,
-				use_emission_nodes=self.useEmission)
+				options=options
+			)
 		else:
 			return False, "Only Cycles and Eevee supported"
 

@@ -18,11 +18,11 @@
 
 import os
 import bpy
+from dataclasses import dataclass
 
 from .. import util
 
 from ..conf import env
-
 
 # -----------------------------------------------------------------------------
 # Material prep and generation functions (no registration)
@@ -224,7 +224,7 @@ def checklist(matName, listName):
 	"""Helper to expand single wildcard within generalized material names"""
 	if not env.json_data:
 		env.log("No json_data for checklist to call from!")
-	if "blocks" not in env.json_data or listName not in ENV.json_data["blocks"]:
+	if "blocks" not in env.json_data or listName not in env.json_data["blocks"]:
 		env.log(
 			"env.json_data is missing blocks or listName " + str(listName))
 		return False
@@ -240,9 +240,17 @@ def checklist(matName, listName):
 			return True
 	return False
 
+@dataclass
+class PrepOptions:
+	passes: dict[str]
+	use_reflections: bool
+	use_principled: bool
+	only_solid: bool
+	pack_format: str
+	use_emission_nodes: bool
+	use_emission: bool
 
-def matprep_cycles(
-	mat, passes, use_reflections, use_principled, only_solid, pack_format, use_emission_nodes):
+def matprep_cycles(mat, options: PrepOptions):
 	"""Determine how to prep or generate the cycles materials.
 
 	Args:
@@ -261,23 +269,20 @@ def matprep_cycles(
 		mat.use_nodes = True
 
 	matGen = util.nameGeneralize(mat.name)
-	canon, form = get_mc_canonical_name(matGen)
-	use_emission = checklist(canon, "emit") or "emit" in mat.name.lower()
+	canon, _ = get_mc_canonical_name(matGen)
+	options.use_emission = checklist(canon, "emit") or "emit" in mat.name.lower()
 
 	# TODO: Update different options for water before enabling this
 	# if use_reflections and checklist(canon, "water"):
 	#	res = matgen_special_water(mat, passes)
 	# if use_reflections and checklist(canon, "glass"):
 	#	res = matgen_special_glass(mat, passes)
-	if pack_format == "simple" and util.bv28():
-		res = matgen_cycles_simple(
-			mat, passes, use_reflections, use_emission, only_solid, use_principled, use_emission_nodes)
-	elif use_principled and hasattr(bpy.types, 'ShaderNodeBsdfPrincipled'):
-		res = matgen_cycles_principled(
-			mat, passes, use_reflections, use_emission, only_solid, pack_format, use_emission_nodes)
+	if options.pack_format == "simple" and util.bv28():
+		res = matgen_cycles_simple(mat, options)
+	elif options.use_principled and hasattr(bpy.types, 'ShaderNodeBsdfPrincipled'):
+		res = matgen_cycles_principled(mat, options) 	
 	else:
-		res = matgen_cycles_original(
-			mat, passes, use_reflections, use_emission, only_solid, pack_format, use_emission_nodes)
+		res = matgen_cycles_original(mat, options) 
 	return res
 
 
@@ -293,7 +298,6 @@ def set_texture_pack(material, folder, use_extra_passes):
 		return 0
 
 	image_data = util.loadTexture(image)
-	engine = bpy.context.scene.render.engine
 	_ = set_cycles_texture(image_data, material, True)
 	return 1
 
@@ -800,7 +804,6 @@ def apply_texture_animation_pass_settings(mat, animated_data):
 
 
 def texgen_specular(mat, passes, nodeInputs, use_reflections):
-
 	matGen = util.nameGeneralize(mat.name)
 	canon, form = get_mc_canonical_name(matGen)
 
@@ -1067,14 +1070,13 @@ def texgen_seus(mat, passes, nodeInputs, use_reflections, use_emission):
 	nodeTexDiff.image = image_diff
 
 
-def matgen_cycles_simple(
-	mat, passes, use_reflections, use_emission, only_solid, use_principled, use_emission_nodes):
+def matgen_cycles_simple(mat, options: PrepOptions):
 	"""Generate principled cycles material."""
 
 	matGen = util.nameGeneralize(mat.name)
 	canon, form = get_mc_canonical_name(matGen)
 
-	image_diff = passes["diffuse"]
+	image_diff = options.passes["diffuse"]
 
 	if not image_diff:
 		print("Could not find diffuse image, halting generation: " + mat.name)
@@ -1115,13 +1117,13 @@ def matgen_cycles_simple(
 	node_out = create_node(nodes, "ShaderNodeOutputMaterial", location=(900, 0))
 
 	# Sets default reflective values
-	if use_reflections and checklist(canon, "reflective"):
+	if options.use_reflections and checklist(canon, "reflective"):
 		principled.inputs["Roughness"].default_value = 0
 	else:
 		principled.inputs["Roughness"].default_value = 0.7
 
 	# Sets default metallic values
-	if use_reflections and checklist(canon, "metallic"):
+	if options.use_reflections and checklist(canon, "metallic"):
 		principled.inputs["Metallic"].default_value = 1
 		if principled.inputs["Roughness"].default_value < 0.2:
 			principled.inputs["Roughness"].default_value = 0.2
@@ -1142,7 +1144,7 @@ def matgen_cycles_simple(
 	links.new(nodeSaturateMix.outputs[saturateMixOut[0]], principled.inputs[0])
 	links.new(principled.outputs["BSDF"], node_out.inputs[0])
 
-	if only_solid is True or checklist(canon, "solid"):
+	if options.only_solid is True or checklist(canon, "solid"):
 		# faster, and appropriate for non-transparent (and refelctive?) materials
 		principled.distribution = 'GGX'
 		if hasattr(mat, "blend_method"):
@@ -1156,7 +1158,7 @@ def matgen_cycles_simple(
 			if hasattr(mat, "shadow_method"):
 				mat.shadow_method = 'HASHED'
 	
-	if use_emission_nodes and use_emission:
+	if options.use_emission_nodes and options.use_emission:
 		inputs = [inp.name for inp in principled.inputs]
 		if 'Emission Strength' in inputs:  # Later 2.9 versions only.
 			principled.inputs['Emission Strength'].default_value = 1
@@ -1188,14 +1190,13 @@ def matgen_cycles_simple(
 	return 0
 
 
-def matgen_cycles_principled(
-	mat, passes, use_reflections, use_emission, only_solid, pack_format, use_emission_nodes):
+def matgen_cycles_principled(mat, options: PrepOptions):
 	"""Generate principled cycles material"""
 
 	matGen = util.nameGeneralize(mat.name)
 	canon, form = get_mc_canonical_name(matGen)
 
-	image_diff = passes["diffuse"]
+	image_diff = options.passes["diffuse"]
 
 	if not image_diff:
 		print("Could not find diffuse image, halting generation: " + mat.name)
@@ -1229,13 +1230,13 @@ def matgen_cycles_principled(
 	nodeMixTrans.inputs[0].default_value = 1
 	
 	# Sets default reflective values
-	if use_reflections and checklist(canon, "reflective"):
+	if options.use_reflections and checklist(canon, "reflective"):
 		principled.inputs["Roughness"].default_value = 0
 	else:
 		principled.inputs["Roughness"].default_value = 0.7
 
 	# Sets default metallic values
-	if use_reflections and checklist(canon, "metallic"):
+	if options.use_reflections and checklist(canon, "metallic"):
 		principled.inputs["Metallic"].default_value = 1
 		if principled.inputs["Roughness"].default_value < 0.2:
 			principled.inputs["Roughness"].default_value = 0.2
@@ -1252,7 +1253,7 @@ def matgen_cycles_principled(
 			nodes, "ShaderNodeEmission", location=(120, 260))
 	nodeMixEmit = create_node(
 			nodes, "ShaderNodeMixShader", location=(420, 0))
-	if use_emission_nodes:
+	if options.use_emission_nodes:
 		# Create emission nodes
 		nodeMixCam = create_node(
 			nodes, "ShaderNodeMixShader", location=(320, 260))
@@ -1274,7 +1275,7 @@ def matgen_cycles_principled(
 		links.new(nodeMixCam.outputs["Shader"], nodeMixEmit.inputs[2])
 		links.new(nodeMixEmit.outputs["Shader"], nodeMixTrans.inputs[2])
 
-		if use_emission:
+		if options.use_emission:
 			nodeMixEmit.inputs[0].default_value = 1
 		else:
 			nodeMixEmit.inputs[0].default_value = 0
@@ -1294,22 +1295,22 @@ def matgen_cycles_principled(
 		[principled.inputs["Specular"]],
 		[principled.inputs["Normal"]]]
 	
-	if not use_emission_nodes:
+	if not options.use_emission_nodes:
 		nodes.remove(nodeEmit)
 		nodes.remove(nodeEmitCam)
 		nodes.remove(nodeMixEmit)
 	# generate texture format and connect
-	if pack_format == "specular":
-		texgen_specular(mat, passes, nodeInputs, use_reflections)
-	elif pack_format == "seus":
-		texgen_seus(mat, passes, nodeInputs, use_reflections, use_emission_nodes)
+	if options.pack_format == "specular":
+		texgen_specular(mat, options.passes, nodeInputs, options.use_reflections)
+	elif options.pack_format == "seus":
+		texgen_seus(mat, options.passes, nodeInputs, options.use_reflections, options.use_emission_nodes)
 
-	if only_solid is True or checklist(canon, "solid"):
+	if options.only_solid is True or checklist(canon, "solid"):
 		nodes.remove(nodeTrans)
 		nodes.remove(nodeMixTrans)
 		nodeOut.location = (620, 0)
 
-		if use_emission_nodes:
+		if options.use_emission_nodes:
 			links.new(nodeMixEmit.outputs[0], nodeOut.inputs[0])
 
 		# faster, and appropriate for non-transparent (and refelctive?) materials
@@ -1345,14 +1346,13 @@ def matgen_cycles_principled(
 	return 0
 
 
-def matgen_cycles_original(
-	mat, passes, use_reflections, use_emission, only_solid, pack_format, use_emission_nodes):
+def matgen_cycles_original(mat, options: PrepOptions):
 	"""Generate principled cycles material"""
 
 	matGen = util.nameGeneralize(mat.name)
 	canon, form = get_mc_canonical_name(matGen)
 
-	image_diff = passes["diffuse"]
+	image_diff = options.passes["diffuse"]
 
 	if not image_diff:
 		print("Could not find diffuse image, halting generation: " + mat.name)
@@ -1446,7 +1446,7 @@ def matgen_cycles_original(
 	nodeMixRGBDiff.inputs[mixDiffIn[2]].default_value = [1, 1, 1, 1]
 
 	# Sets default reflective values
-	if use_reflections and checklist(canon, "reflective"):
+	if options.use_reflections and checklist(canon, "reflective"):
 		nodeGlossMetallic.inputs["Roughness"].default_value = 0
 		nodeMathPower.inputs[0].default_value = 0
 		nodeGlossDiff.inputs["Roughness"].default_value = 0
@@ -1456,7 +1456,7 @@ def matgen_cycles_original(
 		nodeGlossDiff.inputs["Roughness"].default_value = 0.7
 
 	# Sets default metallic values
-	if use_reflections and checklist(canon, "metallic"):
+	if options.use_reflections and checklist(canon, "metallic"):
 		nodeMixMetallic.inputs["Fac"].default_value = 1
 
 		if nodeGlossMetallic.inputs["Roughness"].default_value < 0.2:
@@ -1529,12 +1529,12 @@ def matgen_cycles_original(
 			nodeBump.inputs["Normal"]]]
 
 	# generate texture format and connect
-	if pack_format == "specular":
-		texgen_specular(mat, passes, nodeInputs, use_reflections)
-	elif pack_format == "seus":
-		texgen_seus(mat, passes, nodeInputs, use_reflections, use_emission_nodes)
+	if options.pack_format == "specular":
+		texgen_specular(mat, options.passes, nodeInputs, options.use_reflections)
+	elif options.pack_format == "seus":
+		texgen_seus(mat, options.passes, nodeInputs, options.use_reflections, options.use_emission_nodes)
 
-	if only_solid is True or checklist(canon, "solid"):
+	if options.only_solid is True or checklist(canon, "solid"):
 		nodes.remove(nodeTrans)
 		nodes.remove(nodeMixTrans)
 		nodeOut.location = (1540, 0)
@@ -1565,7 +1565,7 @@ def matgen_cycles_original(
 
 			# but, BLEND does NOT work well with Depth of Field or layering
 
-	if use_emission:
+	if options.use_emission:
 		nodeMixEmit.inputs[0].default_value = 1
 	else:
 		nodeMixEmit.inputs[0].default_value = 0
