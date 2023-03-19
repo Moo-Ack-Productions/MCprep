@@ -152,11 +152,16 @@ class MCprepEnv:
 		elif self.verbose:
 			print(statement)
 
+	def deprecation_warning(self):
+		import traceback
+		self.log("Deprecation Warning: This will be removed in MCprep 3.5!")
+		traceback.print_stack()
+
 env = MCprepEnv(dev_build=True, verbose=True)
 
 # ! Deprecated as of MCprep 3.4.2
 def init():
-
+	env.deprecation_warning()
 	# -----------------------------------------------
 	# Verbose, use as env.verbose
 	# Used to print out extra information, set false with distribution
@@ -264,6 +269,7 @@ def init():
 # -----------------------------------------------------------------------------
 
 def icons_init():
+	env.deprecation_warning()
 	# start with custom icons
 	# put into a try statement in case older blender version!
 	global preview_collections
@@ -316,10 +322,11 @@ def icons_init():
 
 # ! Deprecated as of MCprep 3.4.2
 def log(statement, vv_only=False):
-    if env.verbose and vv_only and env.very_verbose:
-        print(statement)
-    elif env.verbose:
-        print(statement)
+	env.deprecation_warning()
+	if env.verbose and vv_only and env.very_verbose:
+		print(statement)
+	elif env.verbose:
+		print(statement)
 
 def updater_select_link_function(self, tag):
 	"""Indicates what zip file to use for updating from a tag structure.
@@ -340,6 +347,7 @@ def updater_select_link_function(self, tag):
 
 # ! Deprecated as of MCprep 3.4.2
 def register():
+	env.deprecation_warning()
 	init()
 
 
