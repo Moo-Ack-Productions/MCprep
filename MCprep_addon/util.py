@@ -213,7 +213,7 @@ def min_bv(version, *, inclusive=True):
 
 def bv28():
 	"""Check if blender 2.8, for layouts, UI, and properties. """
-	deprecation_warning()
+	env.deprecation_warning()
 	return min_bv((2, 80))
 
 
@@ -559,11 +559,6 @@ def natural_sort(elements):
 
 	return sorted(elements, key=alphanum_key)
 
-def deprecation_warning():
-	print("DEPRECATION WARNING: THIS FUNCTION WILL BE DEPRECATED")
-	import traceback
-	traceback.print_stack()
-
 # -----------------------------------------------------------------------------
 # Cross blender 2.7 and 2.8 functions
 # -----------------------------------------------------------------------------
@@ -571,7 +566,7 @@ def deprecation_warning():
 
 def make_annotations(cls):
 	"""Add annotation attribute to class fields to avoid Blender 2.8 warnings"""
-	deprecation_warning()
+	env.deprecation_warning()
 	if not hasattr(bpy.app, "version") or bpy.app.version < (2, 80):
 		return cls
 	if bpy.app.version < (2, 93, 0):
