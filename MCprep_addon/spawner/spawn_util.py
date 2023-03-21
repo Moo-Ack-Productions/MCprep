@@ -151,7 +151,7 @@ def check_blend_eligible(this_file, all_files):
 			# If the suffix = 3.0 in `afile` file, and current blender is
 			# below 3, then `afile` is the file that should be loaded, and the
 			# current file `this_file` is to be skipped.
-			return res
+			return not res
 
 	# If no matches (the most common case), then this file is eligible.
 	return True
