@@ -146,12 +146,24 @@ def check_blend_eligible(this_file, all_files):
 		base_afile = os.path.splitext(afile)[0]
 		matches = find_suffix.search(base_afile)
 		if matches:
-			tuple_ver = tuple_from_match(matches)
-			res = util.min_bv(tuple_ver)
-			# If the suffix = 3.0 in `afile` file, and current blender is
-			# below 3, then `afile` is the file that should be loaded, and the
-			# current file `this_file` is to be skipped.
-			return not res
+			# afile is guaranteed to have the same basename, not be the same file, and has a suffix
+			# because it has a suffix, the recursively called function will not reach the containing for loop
+			if not check_blend_eligible(afile, all_files):
+				# if afile is not eligible, we can continue to the next iteration to see if there is another
+				# file with a suffix that is eligible
+				# previously this only allowed for 1 other file with a suffix to be checked
+				continue
+			else:
+				# if a file with a suffix is eligible here, we should not use the current file, but should use afile
+				# instead, so return False for the current file
+				return False
+
+			# tuple_ver = tuple_from_match(matches)
+			# res = util.min_bv(tuple_ver)
+			# # If the suffix = 3.0 in `afile` file, and current blender is
+			# # below 3, then `afile` is the file that should be loaded, and the
+			# # current file `this_file` is to be skipped.
+			# return not res
 
 	# If no matches (the most common case), then this file is eligible.
 	return True
