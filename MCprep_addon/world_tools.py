@@ -187,7 +187,7 @@ def convert_mtl(filepath):
 		print(e)
 		return False
 
-	if bpy.context.scene.view_settings.view_transform in BUILTIN_SPACES:
+	if bpy.context.scene.view_settings.view_transform in BUILTIN_SPACES or any("map_d" in s for s in lines):
 		return None
 
 	# This represents a new folder that'll backup the MTL filepath
