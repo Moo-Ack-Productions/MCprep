@@ -58,6 +58,7 @@ class mcprep_testing():
 			self.spawn_mob,
 			self.spawn_mob_linked,
 			self.check_blend_eligible,
+			self.check_blend_eligible_middle,
 			self.change_skin,
 			self.import_world_split,
 			self.import_world_fail,
@@ -732,6 +733,49 @@ class mcprep_testing():
 		res = spawn_util.check_blend_eligible(p_old, [p_none, p_old])
 		if res is not False:
 			return "Should have been false since we are above this min blender"
+
+	def check_blend_eligible_middle(self):
+		# Warden-like example, where we have equiv of pre2.80, pre3.0, and
+		# live blender 3.0+ (presuming we want to test a 2.93-like user)
+		from MCprep.spawner import spawn_util
+		fake_base = "WardenExample"
+
+		# Assume the "current" version of blender is like 9.1
+		# To make test not be flakey, actual version of blender can be anything
+		# in range of 2.7.0 upwards to 8.999.
+		suffix_old = " pre2.7.0"  # Force active blender instance as older.
+		suffix_mid = " pre9.0.0"  # Force active blender instance as older.
+		suffix_new = ""  # presume "latest" version
+
+		p_old = fake_base + suffix_old + ".blend"
+		p_mid = fake_base + suffix_mid + ".blend"
+		p_new = fake_base + suffix_new + ".blend"
+
+		# Test in order
+		filelist = [p_old, p_mid, p_new]
+
+		res = spawn_util.check_blend_eligible(p_old, filelist)
+		if res is True:
+			return "Older file should not match (in order)"
+		res = spawn_util.check_blend_eligible(p_mid, filelist)
+		if res is not True:
+			return "Mid file SHOULD match (in order)"
+		res = spawn_util.check_blend_eligible(p_new, filelist)
+		if res is True:
+			return "Newer file should not match (in order)"
+
+		# Test out of order
+		filelist = [p_mid, p_new, p_old]
+
+		res = spawn_util.check_blend_eligible(p_old, filelist)
+		if res is True:
+			return "Older file should not match (out of order)"
+		res = spawn_util.check_blend_eligible(p_mid, filelist)
+		if res is not True:
+			return "Mid file SHOULD match (out of order)"
+		res = spawn_util.check_blend_eligible(p_new, filelist)
+		if res is True:
+			return "Newer file should not match (out of order)"
 
 	def change_skin(self):
 		"""Test scenarios for changing skin after adding a character."""
