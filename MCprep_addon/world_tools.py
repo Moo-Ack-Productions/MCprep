@@ -186,8 +186,10 @@ def convert_mtl(filepath):
 	except Exception as e:
 		print(e)
 		return False
-
-	if bpy.context.scene.view_settings.view_transform in BUILTIN_SPACES or any("map_d" in s for s in lines):
+	
+	# This checks to see if the user is using a built-in colorspace or if none of the lines have map_d. If so
+	# then ignore this file and return None
+	if bpy.context.scene.view_settings.view_transform in BUILTIN_SPACES or not any("map_d" in s for s in lines):
 		return None
 
 	# This represents a new folder that'll backup the MTL filepath
