@@ -65,6 +65,7 @@ def init():
 		os.path.dirname(__file__),
 		"MCprep_resources",
 		"mcprep_data.json")
+	global json_path_update
 	json_path_update = os.path.join(
 		os.path.dirname(__file__),
 		"MCprep_resources",
