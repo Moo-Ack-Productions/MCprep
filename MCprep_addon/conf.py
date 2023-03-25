@@ -65,10 +65,15 @@ def init():
 		os.path.dirname(__file__),
 		"MCprep_resources",
 		"mcprep_data.json")
+	global json_path_update
 	json_path_update = os.path.join(
 		os.path.dirname(__file__),
 		"MCprep_resources",
 		"mcprep_data_update.json")
+
+	# Used to avoid checking for update file on disk too frequently.
+	global last_check_for_updated
+	last_check_for_updated = 0
 
 	# if new update file found from install, replace old one with new
 	if os.path.isfile(json_path_update):
