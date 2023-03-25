@@ -62,11 +62,10 @@ def addon_just_updated():
 	# thorough check by seeing if the mcprep_data_update.json exists (ie it
 	# hasn't been renamed yet to mcprep_data.json, which happens on init after
 	# an install/update)
-	global last_check_for_updated
 	check_interval = 5  # Time in seconds
-	if time.time() - check_interval > last_check_for_updated:
+	if time.time() - check_interval > conf.last_check_for_updated:
 		check_for_updated_files()
-		last_check_for_updated = time.time()
+		conf.last_check_for_updated = time.time()
 	return
 
 
@@ -2105,10 +2104,6 @@ def register():
 		# this is a dropdown menu for UVs, not a panel
 		bpy.types.IMAGE_MT_uvs.append(mcprep_uv_tools)
 	# bpy.types.IMAGE_MT_image.append(mcprep_image_tools) # crashes, re-do ops
-
-	# Used to avoid checking for update file on disk too frequently.
-	global last_check_for_updated
-	last_check_for_updated = 0
 
 
 def unregister():
