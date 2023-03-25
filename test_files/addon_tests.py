@@ -802,14 +802,14 @@ class mcprep_testing():
 			"stray - thefunnypie2.blend",
 			"Warden - DigDanAnimates pre2.80.0.blend",
 			"Warden - DigDanAnimates pre3.0.0.blend",
-			"Warden - DiaDanAnimates.blend",
+			"Warden - DigDanAnimates.blend",
 			"Zombie - Hissing Creeper.blend",
 			"Zombie Villager - Hissing Creeper-thefunnypie2.blend"
 		]
 		target_list = [
 			"Warden - DigDanAnimates pre2.80.0.blend",
 			"Warden - DigDanAnimates pre3.0.0.blend",
-			"Warden - DiaDanAnimates.blend",
+			"Warden - DigDanAnimates.blend",
 		]
 
 		from MCprep.spawner import spawn_util
@@ -818,7 +818,7 @@ class mcprep_testing():
 		elif bpy.app.version < (3, 0):
 			correct = "Warden - DigDanAnimates pre3.0.0.blend"
 		else:
-			correct = "Warden - DiaDanAnimates.blend"
+			correct = "Warden - DigDanAnimates.blend"
 
 		for rig in target_list:
 			res = spawn_util.check_blend_eligible(rig, riglist)
@@ -827,7 +827,7 @@ class mcprep_testing():
 					return "Did not pick {} as correct rig".format(rig)
 			else:
 				if res is True:
-					return "Should not have returned correct for {}".format(rig)
+					return "Should have said {} was correct - not {}".format(correct, rig)
 
 	def change_skin(self):
 		"""Test scenarios for changing skin after adding a character."""
