@@ -59,6 +59,7 @@ class mcprep_testing():
 			self.spawn_mob_linked,
 			self.check_blend_eligible,
 			self.check_blend_eligible_middle,
+			self.check_blend_eligible_real,
 			self.change_skin,
 			self.import_world_split,
 			self.import_world_fail,
@@ -776,6 +777,57 @@ class mcprep_testing():
 		res = spawn_util.check_blend_eligible(p_new, filelist)
 		if res is True:
 			return "Newer file should not match (out of order)"
+
+	def check_blend_eligible_real(self):
+		# This order below matches a user's who was encountering an error
+		# (the actual in-memory python list order)
+		riglist = [
+			"bee - Boxscape.blend",
+			"Blaze - Trainguy.blend",
+			"Cave Spider - Austin Prescott.blend",
+			"creeper - TheDuckCow.blend",
+			"drowned - HissingCreeper-thefunnypie2.blend",
+			"enderman - Trainguy.blend",
+			"Ghast - Trainguy.blend",
+			"guardian - Trainguy.blend",
+			"hostile - boxscape.blend",
+			"illagers - Boxscape.blend",
+			"mobs - Rymdnisse.blend",
+			"nether hostile - Boxscape.blend",
+			"piglin zombified piglin - Boxscape.blend",
+			"PolarBear - PixelFrosty.blend",
+			"ravager - Boxscape.blend",
+			"Shulker - trainguy.blend",
+			"Skeleton - Trainguy.blend",
+			"stray - thefunnypie2.blend",
+			"Warden - DigDanAnimates pre2.80.0.blend",
+			"Warden - DigDanAnimates pre3.0.0.blend",
+			"Warden - DiaDanAnimates.blend",
+			"Zombie - Hissing Creeper.blend",
+			"Zombie Villager - Hissing Creeper-thefunnypie2.blend"
+		]
+		target_list = [
+			"Warden - DigDanAnimates pre2.80.0.blend",
+			"Warden - DigDanAnimates pre3.0.0.blend",
+			"Warden - DiaDanAnimates.blend",
+		]
+
+		from MCprep.spawner import spawn_util
+		if bpy.app.version < (2, 80):
+			correct = "Warden - DigDanAnimates pre2.80.0.blend"
+		elif bpy.app.version < (3, 0):
+			correct = "Warden - DigDanAnimates pre3.0.0.blend"
+		else:
+			correct = "Warden - DiaDanAnimates.blend"
+
+		for rig in target_list:
+			res = spawn_util.check_blend_eligible(rig, riglist)
+			if rig == correct:
+				if res is not True:
+					return "Did not pick {} as correct rig".format(rig)
+			else:
+				if res is True:
+					return "Should not have returned correct for {}".format(rig)
 
 	def change_skin(self):
 		"""Test scenarios for changing skin after adding a character."""
