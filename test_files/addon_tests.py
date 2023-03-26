@@ -1785,6 +1785,8 @@ class mcprep_testing():
 
 	def img_sequence_effect_spawner(self):
 		"""Test the image sequence variant of effect spawning works."""
+		if bpy.app.version < (2, 81):
+			return "Disabled due to consistent crashing"
 		self._clear_scene()
 		scn_props = bpy.context.scene.mcprep_props
 		etype = "img_seq"
@@ -2252,10 +2254,9 @@ class mcprep_testing():
 				issues.append([blend, resp])
 			checked += 1
 
-		return "Checked {} rigs, issues: {}".format(
-			checked, issues)
 		if issues:
-			return issues
+			return "Checked {} rigs, issues: {}".format(
+				checked, issues)
 
 	def convert_mtl_simple(self):
 		"""Ensures that conversion of the mtl with other color space works."""
