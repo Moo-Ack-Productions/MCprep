@@ -58,6 +58,8 @@ class mcprep_testing():
 			self.spawn_mob,
 			self.spawn_mob_linked,
 			self.check_blend_eligible,
+			self.check_blend_eligible_middle,
+			self.check_blend_eligible_real,
 			self.change_skin,
 			self.import_world_split,
 			self.import_world_fail,
@@ -732,6 +734,100 @@ class mcprep_testing():
 		res = spawn_util.check_blend_eligible(p_old, [p_none, p_old])
 		if res is not False:
 			return "Should have been false since we are above this min blender"
+
+	def check_blend_eligible_middle(self):
+		# Warden-like example, where we have equiv of pre2.80, pre3.0, and
+		# live blender 3.0+ (presuming we want to test a 2.93-like user)
+		from MCprep.spawner import spawn_util
+		fake_base = "WardenExample"
+
+		# Assume the "current" version of blender is like 9.1
+		# To make test not be flakey, actual version of blender can be anything
+		# in range of 2.7.0 upwards to 8.999.
+		suffix_old = " pre2.7.0"  # Force active blender instance as older.
+		suffix_mid = " pre9.0.0"  # Force active blender instance as older.
+		suffix_new = ""  # presume "latest" version
+
+		p_old = fake_base + suffix_old + ".blend"
+		p_mid = fake_base + suffix_mid + ".blend"
+		p_new = fake_base + suffix_new + ".blend"
+
+		# Test in order
+		filelist = [p_old, p_mid, p_new]
+
+		res = spawn_util.check_blend_eligible(p_old, filelist)
+		if res is True:
+			return "Older file should not match (in order)"
+		res = spawn_util.check_blend_eligible(p_mid, filelist)
+		if res is not True:
+			return "Mid file SHOULD match (in order)"
+		res = spawn_util.check_blend_eligible(p_new, filelist)
+		if res is True:
+			return "Newer file should not match (in order)"
+
+		# Test out of order
+		filelist = [p_mid, p_new, p_old]
+
+		res = spawn_util.check_blend_eligible(p_old, filelist)
+		if res is True:
+			return "Older file should not match (out of order)"
+		res = spawn_util.check_blend_eligible(p_mid, filelist)
+		if res is not True:
+			return "Mid file SHOULD match (out of order)"
+		res = spawn_util.check_blend_eligible(p_new, filelist)
+		if res is True:
+			return "Newer file should not match (out of order)"
+
+	def check_blend_eligible_real(self):
+		# This order below matches a user's who was encountering an error
+		# (the actual in-memory python list order)
+		riglist = [
+			"bee - Boxscape.blend",
+			"Blaze - Trainguy.blend",
+			"Cave Spider - Austin Prescott.blend",
+			"creeper - TheDuckCow.blend",
+			"drowned - HissingCreeper-thefunnypie2.blend",
+			"enderman - Trainguy.blend",
+			"Ghast - Trainguy.blend",
+			"guardian - Trainguy.blend",
+			"hostile - boxscape.blend",
+			"illagers - Boxscape.blend",
+			"mobs - Rymdnisse.blend",
+			"nether hostile - Boxscape.blend",
+			"piglin zombified piglin - Boxscape.blend",
+			"PolarBear - PixelFrosty.blend",
+			"ravager - Boxscape.blend",
+			"Shulker - trainguy.blend",
+			"Skeleton - Trainguy.blend",
+			"stray - thefunnypie2.blend",
+			"Warden - DigDanAnimates pre2.80.0.blend",
+			"Warden - DigDanAnimates pre3.0.0.blend",
+			"Warden - DigDanAnimates.blend",
+			"Zombie - Hissing Creeper.blend",
+			"Zombie Villager - Hissing Creeper-thefunnypie2.blend"
+		]
+		target_list = [
+			"Warden - DigDanAnimates pre2.80.0.blend",
+			"Warden - DigDanAnimates pre3.0.0.blend",
+			"Warden - DigDanAnimates.blend",
+		]
+
+		from MCprep.spawner import spawn_util
+		if bpy.app.version < (2, 80):
+			correct = "Warden - DigDanAnimates pre2.80.0.blend"
+		elif bpy.app.version < (3, 0):
+			correct = "Warden - DigDanAnimates pre3.0.0.blend"
+		else:
+			correct = "Warden - DigDanAnimates.blend"
+
+		for rig in target_list:
+			res = spawn_util.check_blend_eligible(rig, riglist)
+			if rig == correct:
+				if res is not True:
+					return "Did not pick {} as correct rig".format(rig)
+			else:
+				if res is True:
+					return "Should have said {} was correct - not {}".format(correct, rig)
 
 	def change_skin(self):
 		"""Test scenarios for changing skin after adding a character."""
@@ -1567,15 +1663,23 @@ class mcprep_testing():
 			return "Too few models loaded, missing texturepack?"
 
 		# spawn with whatever default index
-		pre_objs = len(bpy.data.objects)
+		pre_objs = list(bpy.data.objects)
 		bpy.ops.mcprep.spawn_model(
 			filepath=scn_props.model_list[scn_props.model_list_index].filepath)
-		post_objs = len(bpy.data.objects)
+		post_objs = bpy.data.objects
 
-		if post_objs == pre_objs:
+		if len(post_objs) == len(pre_objs):
 			return "No models spawned"
-		elif post_objs > pre_objs + 1:
+		elif len(post_objs) > len(pre_objs) + 1:
 			return "More than one model spawned"
+
+		# Test that materials were properly added.
+		new_objs = list(set(post_objs) - set(pre_objs))
+		model = new_objs[0]
+		if not model.active_material:
+			return "No material on model"
+
+		# TODO: fetch/check there being a texture.
 
 		# Test collection/group added
 		# Test loading from file.
@@ -1681,6 +1785,8 @@ class mcprep_testing():
 
 	def img_sequence_effect_spawner(self):
 		"""Test the image sequence variant of effect spawning works."""
+		if bpy.app.version < (2, 81):
+			return "Disabled due to consistent crashing"
 		self._clear_scene()
 		scn_props = bpy.context.scene.mcprep_props
 		etype = "img_seq"
@@ -2148,10 +2254,9 @@ class mcprep_testing():
 				issues.append([blend, resp])
 			checked += 1
 
-		return "Checked {} rigs, issues: {}".format(
-			checked, issues)
 		if issues:
-			return issues
+			return "Checked {} rigs, issues: {}".format(
+				checked, issues)
 
 	def convert_mtl_simple(self):
 		"""Ensures that conversion of the mtl with other color space works."""
