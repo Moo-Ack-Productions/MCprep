@@ -155,7 +155,7 @@ class MCprepEnv:
 	def deprecation_warning(self):
 		if self.dev_build:
 			import traceback
-			self.log("Deprecation Warning: This will be removed in MCprep 3.5!")
+			self.log("Deprecation Warning: This will be removed in MCprep 3.5.1!")
 			traceback.print_stack()
 
 env = MCprepEnv(dev_build=True, verbose=True)
