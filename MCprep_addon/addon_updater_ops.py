@@ -1357,8 +1357,7 @@ classes = (
 def register(bl_info):
 	"""Registering the operators in this module"""
 	from . import conf
-	from .conf import ENV
-	updater.verbose = ENV.verbose
+	updater.verbose = conf.env.verbose
 
 	# safer failure in case of issue loading module
 	if updater.error != None:

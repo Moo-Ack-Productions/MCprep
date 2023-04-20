@@ -224,7 +224,7 @@ def checklist(matName, listName):
 	"""Helper to expand single wildcard within generalized material names"""
 	if not env.json_data:
 		env.log("No json_data for checklist to call from!")
-	if "blocks" not in env.json_data or listName not in ENV.json_data["blocks"]:
+	if "blocks" not in env.json_data or listName not in env.json_data["blocks"]:
 		env.log(
 			"env.json_data is missing blocks or listName " + str(listName))
 		return False

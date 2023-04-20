@@ -41,7 +41,7 @@ def reload_materials(context):
 	extensions = [".png", ".jpg", ".jpeg"]
 
 	mcprep_props.material_list.clear()
-	if env.use_icons and ENV.preview_collections["materials"]:
+	if env.use_icons and env.preview_collections["materials"]:
 		try:
 			bpy.utils.previews.remove(env.preview_collections["materials"])
 		except:
@@ -89,7 +89,7 @@ def reload_materials(context):
 		asset.index = i
 
 		# if available, load the custom icon too
-		if not env.use_icons or ENV.preview_collections["materials"] == "":
+		if not env.use_icons or env.preview_collections["materials"] == "":
 			continue
 		env.preview_collections["materials"].load(
 			"material-{}".format(i), image_file, 'IMAGE')
