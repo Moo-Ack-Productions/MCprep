@@ -68,7 +68,7 @@ def update_rig_list(context):
 			extensions = [".png", ".jpg", ".jpeg"]
 			icon_folder = os.path.join(os.path.dirname(path), "icons")
 			run_icons = os.path.isdir(icon_folder)
-			if not conf.use_icons or conf.preview_collections["mobs"] == "":
+			if not env.use_icons or env.preview_collections["mobs"] == "":
 				run_icons = False
 
 			mob_names = spawn_util.filter_collections(data_from)
@@ -105,7 +105,7 @@ def update_rig_list(context):
 					and os.path.splitext(f.lower())[-1] in extensions]
 				if not icons:
 					continue
-				conf.preview_collections["mobs"].load(
+				env.preview_collections["mobs"].load(
 					"mob-{}".format(mob.index),
 					os.path.join(icon_folder, icons[0]),
 					'IMAGE')
@@ -114,10 +114,10 @@ def update_rig_list(context):
 	context.scene.mcprep_props.mob_list.clear()
 	context.scene.mcprep_props.mob_list_all.clear()
 
-	if conf.use_icons and conf.preview_collections["mobs"]:
+	if env.use_icons and env.preview_collections["mobs"]:
 		print("Removing mobs preview collection")
 		try:
-			bpy.utils.previews.remove(conf.preview_collections["mobs"])
+			bpy.utils.previews.remove(env.preview_collections["mobs"])
 		except:
 			env.log("MCPREP: Failed to remove icon set, mobs")
 
@@ -431,7 +431,7 @@ class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
 
 		# copy all relevant icons, based on groups installed
 		# ## matching same folde or subfolder icons to append
-		if conf.use_icons:
+		if env.use_icons:
 			basedir = os.path.dirname(newrig)
 			icon_files = self.identify_icons(install_groups, basedir)
 			icondir = os.path.join(basedir, "icons")
@@ -649,12 +649,12 @@ class MCPREP_OT_install_mob_icon(bpy.types.Operator, ImportHelper):
 
 		# if successful, load or reload icon id
 		icon_id = "mob-{}".format(mob.index)
-		if icon_id in conf.preview_collections["mobs"]:
+		if icon_id in env.preview_collections["mobs"]:
 			print("Deloading old icon for this mob")
-			print(dir(conf.preview_collections["mobs"][icon_id]))
-			conf.preview_collections["mobs"][icon_id].reload()
+			print(dir(env.preview_collections["mobs"][icon_id]))
+			env.preview_collections["mobs"][icon_id].reload()
 		else:
-			conf.preview_collections["mobs"].load(icon_id, new_file, 'IMAGE')
+			env.preview_collections["mobs"].load(icon_id, new_file, 'IMAGE')
 			print("Icon reloaded")
 
 		return {'FINISHED'}

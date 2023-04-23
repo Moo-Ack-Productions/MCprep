@@ -172,7 +172,6 @@ module_list = (
 
 
 def register(bl_info):
-	conf.register()
 	tracking.register(bl_info)
 	for mod in module_list:
 		mod.register()

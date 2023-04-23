@@ -32,19 +32,29 @@ except:
 # -----------------------------------------------------------------------------
 
 class MCprepEnv:
-	def __init__(self, dev_build: bool=False, verbose: bool=False):
-		self.dev_build: bool = dev_build
-		self.verbose: bool = verbose
-		self.very_verbose: bool = dev_build
-
+	def __init__(self):
 		self.data = None
 		self.json_data = None
 		self.json_path: Path = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data.json")
 		self.json_path_update: Path = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data_update.json")
 
+		self.dev_file: Path = Path(os.path.dirname(__file__), "mcprep_dev.txt")
+
 		# if new update file found from install, replace old one with new
 		if self.json_path_update.exists():
 			self.json_path_update.replace(self.json_path)
+		
+		# Check to see if there's a text file for a dev build. If so,
+		if self.dev_file.exists():
+			self.dev_build = True
+			self.verbose = True
+			self.very_verbose = True
+			self.log("Dev Build!")
+
+		else:
+			self.dev_build = False
+			self.verbose = False
+			self.very_verbose = False
 
 		# lazy load json, ie only load it when needed (util function defined)
 
@@ -80,7 +90,7 @@ class MCprepEnv:
 		# list of material names, each is a string. None by default to indicate
 		# that no reading has occurred. If lib not found, will update to [].
 		# If ever changing the resource pack, should also reset to None.
-		self.material_sync_cache = None
+		self.material_sync_cache = []
 
 	# -----------------------------------------------------------------------------
 	# ICONS INIT
@@ -145,7 +155,7 @@ class MCprepEnv:
 			self.log("Deprecation Warning: This will be removed in MCprep 3.5.1!")
 			traceback.print_stack()
 
-env = MCprepEnv(dev_build=True, verbose=True)
+env = MCprepEnv()
 
 # ! Deprecated as of MCprep 3.4.2
 def init():
