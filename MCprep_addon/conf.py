@@ -57,6 +57,7 @@ class MCprepEnv:
 		
 		# Check to see if there's a text file for a dev build. If so,
 		if os.path.isfile(self.dev_file):
+			self.log("Dev Build!")
 			self.dev_build = True
 			self.verbose = True
 			self.very_verbose = True
