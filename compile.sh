@@ -15,9 +15,21 @@ else
 	FAST_RELOAD=true
 fi
 
+
+while getopts 'f:d' flag
+do
+	case "${flag}" in 
+		f) echo "Running a fast compile..." 
+		   FAST_RELOAD=true
+			;;
+		d) DEV_BUILD=true;;
+		*) echo "Invalid flag!" && exit;;
+	esac
+
+done
+
 NAME=MCprep_addon
 BLENDER_INSTALLS=blender_installs.txt
-
 
 # Remove left over files in the build folder, but leaves the zip.
 function clean(){
@@ -51,6 +63,13 @@ function build() {
 	cp -r $NAME/materials build/$NAME/
 	cp -r $NAME/spawner build/$NAME/
 
+	if [ "$DEV_BUILD" = true ]
+	then
+		echo "Creating dev build..."
+		touch build/$NAME/mcprep_dev.txt
+	else
+		rm -f build/$NAME/mcprep_dev.txt # Make sure this is removed
+	fi
 
 	if [ "$FAST_RELOAD" = false ]
 	then
@@ -64,7 +83,6 @@ function build() {
 		zip $NAME.zip -rq $NAME
 		cd ../
 	fi
-
 }
 
 
