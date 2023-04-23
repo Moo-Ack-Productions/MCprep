@@ -21,6 +21,7 @@ import os
 import bpy
 
 from .. import conf
+from ..conf import env
 from .. import util
 from .. import tracking
 
