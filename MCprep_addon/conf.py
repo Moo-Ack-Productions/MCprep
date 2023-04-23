@@ -32,17 +32,17 @@ except:
 # -----------------------------------------------------------------------------
 
 class MCprepEnv:
-	def __init__(self, dev_build=False, verbose=False):
-		self.dev_build = dev_build
-		self.verbose = verbose
-		self.very_verbose = dev_build
-
+	def __init__(self):	
 		self.data = None
 		self.json_data = None
 		self.json_path = os.path.join(
 						os.path.dirname(__file__),
 						"MCprep_resources",
 						"mcprep_data.json")
+
+		self.dev_file = os.path.join(
+						os.path.dirname(__file__),
+						"mcprep_dev.txt")
 
 		self.json_path_update = os.path.join(
 							os.path.dirname(__file__),
@@ -54,6 +54,17 @@ class MCprepEnv:
 			if os.path.isfile(self.json_path) is True:
 				os.remove(self.json_path)
 			os.rename(self.json_path_update, self.json_path)
+		
+		# Check to see if there's a text file for a dev build. If so,
+		if os.path.isfile(self.dev_file):
+			self.dev_build = True
+			self.verbose = True
+			self.very_verbose = True
+
+		else:
+			self.dev_build = False
+			self.verbose = False
+			self.very_verbose = False
 
 		# lazy load json, ie only load it when needed (util function defined)
 
@@ -158,7 +169,7 @@ class MCprepEnv:
 			self.log("Deprecation Warning: This will be removed in MCprep 3.5.1!")
 			traceback.print_stack()
 
-env = MCprepEnv(dev_build=True, verbose=True)
+env = MCprepEnv()
 
 # ! Deprecated as of MCprep 3.4.2
 def init():
