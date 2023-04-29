@@ -24,9 +24,16 @@ import platform
 import random
 import re
 import subprocess
+from typing import List, Optional, Union
 
 import bpy
+from bpy.types import (
+  Preferences, # 2.7 UserPreferences
+  Context, Object, Collection,
+  Material, Image, Node,
 
+  )
+from mathutils import Vector, Matrix
 from . import conf
 from .conf import env
 
@@ -39,13 +46,13 @@ SPAWNER_EXCLUDE = "Spawner Exclude"
 # -----------------------------------------------------------------------------
 
 
-def apply_colorspace(node, color_enum):
+def apply_colorspace(node: Node, color_enum: tuple) -> None:
 	"""Apply color space in a cross compatible way, for version and language.
 
 	Use enum nomeclature matching Blender 2.8x Default, not 2.7 or other lang
 	"""
 	global noncolor_override
-	noncolor_override = None
+	noncolor_override:Optional[str] = None
 
 	if not node.image:
 		env.log("Node has no image applied yet, cannot change colorspace")
@@ -65,7 +72,7 @@ def apply_colorspace(node, color_enum):
 				noncolor_override = 'Non-Colour Data'
 
 
-def nameGeneralize(name):
+def nameGeneralize(name: str) -> str:
 	"""Get base name from datablock, accounts for duplicates and animated tex."""
 	if duplicatedDatablock(name) is True:
 		name = name[:-4]  # removes .001
@@ -88,12 +95,12 @@ def nameGeneralize(name):
 	return name
 
 
-def materialsFromObj(obj_list):
+def materialsFromObj(obj_list: List[Object]) -> List[Material]:
 	"""Gets all materials on input list of objects.
 
 	Loop over every object, adding each material if not already added
 	"""
-	mat_list = []
+	mat_list:list = []
 	for obj in obj_list:
 		# also capture obj materials from dupliverts/instances on e.g. empties
 		if hasattr(obj, "dupli_group") and obj.dupli_group:  # 2.7
@@ -112,7 +119,7 @@ def materialsFromObj(obj_list):
 	return mat_list
 
 
-def bAppendLink(directory, name, toLink, active_layer=True):
+def bAppendLink(directory: str, name: str, toLink: bool, active_layer: bool=True) -> bool:
 	"""For multiple version compatibility, this function generalized
 	appending/linking blender post 2.71 changed to new append/link methods
 
@@ -168,7 +175,7 @@ def bAppendLink(directory, name, toLink, active_layer=True):
 				return False
 
 
-def obj_copy(base, context=None, vertex_groups=True, modifiers=True):
+def obj_copy(base: Object, context: Context=None, vertex_groups: bool=True, modifiers: bool=True) -> Object:
 	"""Copy an object's data, vertex groups, and modifiers without operators.
 
 	Input must be a valid object in bpy.data.objects
@@ -204,25 +211,25 @@ def obj_copy(base, context=None, vertex_groups=True, modifiers=True):
 				setattr(dest, prop, getattr(mod_src, prop))
 	return new_ob
 
-def min_bv(version, *, inclusive=True):
+def min_bv(version: tuple, *, inclusive: bool=True) -> bool:
 	if hasattr(bpy.app, "version"):
 		if inclusive is False:
 			return bpy.app.version > version
 		return bpy.app.version >= version
 
 
-def bv28():
+def bv28() -> bool:
 	"""Check if blender 2.8, for layouts, UI, and properties. """
 	env.deprecation_warning()
 	return min_bv((2, 80))
 
 
-def bv30():
+def bv30() -> bool:
 	"""Check if we're dealing with Blender 3.0"""
 	return min_bv((3, 00))
 
 
-def is_atlas_export(context):
+def is_atlas_export(context: Context) -> bool:
 	"""Check if the selected objects are textureswap/animate tex compatible.
 
 	Atlas textures are ones where all textures are combined into a single file,
@@ -252,7 +259,7 @@ def is_atlas_export(context):
 	return file_types["ATLAS"] == 0
 
 
-def face_on_edge(faceLoc):
+def face_on_edge(faceLoc: Union[tuple, Vector]) -> bool:
 	"""Check if a face is on the boundary between two blocks (local coordinates)."""
 	face_decimals = [loc - loc // 1 for loc in faceLoc]
 	if face_decimals[0] > 0.4999 and face_decimals[0] < 0.501:
@@ -264,9 +271,9 @@ def face_on_edge(faceLoc):
 	return False
 
 
-def randomizeMeshSawp(swap, variations):
+def randomizeMeshSawp(swap: str, variations: int) -> str:
 	"""Randomization for model imports, add extra statements for exta cases."""
-	randi = ''
+	randi:str = ''
 	if swap == 'torch':
 		randomized = random.randint(0, variations - 1)
 		if randomized != 0:
@@ -278,7 +285,7 @@ def randomizeMeshSawp(swap, variations):
 	return swap + randi
 
 
-def duplicatedDatablock(name):
+def duplicatedDatablock(name: str) ->  bool:
 	"""Check if datablock is a duplicate or not, e.g. ending in .00# """
 	try:
 		if name[-4] != ".":
@@ -291,7 +298,7 @@ def duplicatedDatablock(name):
 		return False
 
 
-def loadTexture(texture):
+def loadTexture(texture: str) -> Image:
 	"""Load texture once, reusing existing texture if present."""
 	base = nameGeneralize(bpy.path.basename(texture))
 	if base in bpy.data.images:
@@ -309,7 +316,7 @@ def loadTexture(texture):
 	return data_img
 
 
-def remap_users(old, new):
+def remap_users(old, new) -> Union[int, str]:
 	"""Consistent, general way to remap datablock users."""
 	# Todo: write equivalent function of user_remap for older blender versions
 	try:
@@ -319,14 +326,14 @@ def remap_users(old, new):
 		return "not available prior to blender 2.78"
 
 
-def get_objects_conext(context):
+def get_objects_conext(context: Context) -> List[Object]:
 	"""Returns list of objects, either from view layer if 2.8 or scene if 2.8"""
 	if bv28():
 		return context.view_layer.objects
 	return context.scene.objects
 
 
-def link_selected_objects_to_scene():
+def link_selected_objects_to_scene() -> None:
 	"""Quick script for linking all objects back into a scene.
 
 	Not used by addon, but shortcut useful in one-off cases to copy/run code
@@ -336,7 +343,7 @@ def link_selected_objects_to_scene():
 			obj_link_scene(ob)
 
 
-def open_program(executable):
+def open_program(executable: str) -> Union[int ,str]:
 	# Open an external program from filepath/executbale
 	executable = bpy.path.abspath(executable)
 	env.log("Open program request: " + executable)
@@ -393,7 +400,7 @@ def open_program(executable):
 	return "Failed to open executable"
 
 
-def open_folder_crossplatform(folder):
+def open_folder_crossplatform(folder: str) -> bool:
 	"""Cross platform way to open folder in host operating system."""
 	folder = bpy.path.abspath(folder)
 	if not os.path.isdir(folder):
@@ -426,7 +433,7 @@ def open_folder_crossplatform(folder):
 		return False
 
 
-def addGroupInstance(group_name, loc, select=True):
+def addGroupInstance(group_name: str, loc: tuple, select: bool=True) -> Object:
 	"""Add object instance not working, so workaround function."""
 	# The built in method fails, bpy.ops.object.group_instance_add(...)
 	# UPDATE: I reported the bug, and they fixed it nearly instantly =D
@@ -447,7 +454,7 @@ def addGroupInstance(group_name, loc, select=True):
 	return ob
 
 
-def load_mcprep_json():
+def load_mcprep_json() -> bool:
 	"""Load in the json file, defered so not at addon enable time."""
 	path = env.json_path
 	default = {
@@ -481,7 +488,7 @@ def load_mcprep_json():
 			env.json_data = default
 
 
-def ui_scale():
+def ui_scale() -> float:
 	"""Returns scale of UI, for width drawing. Compatible down to blender 2.72"""
 	prefs = get_preferences()
 	if not hasattr(prefs, "view"):
@@ -494,7 +501,7 @@ def ui_scale():
 		return 1
 
 
-def uv_select(obj, action='TOGGLE'):
+def uv_select(obj: Object, action: Optional[str]='TOGGLE') -> None:
 	"""Direct way to select all UV verts of an object, assumings 1 uv layer.
 
 	Actions are: SELECT, DESELECT, TOGGLE.
@@ -516,14 +523,14 @@ def uv_select(obj, action='TOGGLE'):
 			face.select = False
 
 
-def move_to_collection(obj, collection):
+def move_to_collection(obj: Object, collection: Collection) -> None:
 	"""Move out of all collections and into this specified one. 2.8 only"""
 	for col in obj.users_collection:
 		col.objects.unlink(obj)
 	collection.objects.link(obj)
 
 
-def get_or_create_viewlayer(context, collection_name):
+def get_or_create_viewlayer(context: Context, collection_name: str) -> Collection:
 	"""Returns or creates the view layer for a given name. 2.8 only.
 
 	Only searches within same viewlayer; not exact match but a non-case
@@ -548,7 +555,7 @@ def get_or_create_viewlayer(context, collection_name):
 	return response_vl
 
 
-def natural_sort(elements):
+def natural_sort(elements: list) -> list:
 	"""Use human or natural sorting for subnumbers within string list."""
 	def convert(text):
 		return int(text) if text.isdigit() else text.lower()
@@ -586,15 +593,17 @@ def make_annotations(cls):
 	return cls
 
 
-def layout_split(layout, factor=0.0, align=False):
-	"""Intermediate method for pre and post blender 2.8 split UI function"""
+def layout_split(layout: UILayout, factor:float =0.0, align: bool=False) -> UILayout:
+	""" TODO remove 2.7
+	Intermediate method for pre and post blender 2.8 split UI function"""
 	if not hasattr(bpy.app, "version") or bpy.app.version < (2, 80):
 		return layout.split(percentage=factor, align=align)
 	return layout.split(factor=factor, align=align)
 
 
-def get_user_preferences(context=None):
-	"""Intermediate method for pre and post blender 2.8 grabbing preferences"""
+def get_user_preferences(context: Optional[Context]=None) -> Optional[Preferences]:
+	""" TODO remove 2.7 user_preferences
+	Intermediate method for pre and post blender 2.8 grabbing preferences"""
 	if not context:
 		context = bpy.context
 	prefs = None
@@ -609,8 +618,9 @@ def get_user_preferences(context=None):
 	return None
 
 
-def get_preferences(context=None):
-	"""Function to easily get general user prefs in 2.7 and 2.8 friendly way"""
+def get_preferences(context: Optional[Context]=None) -> Optional[Preferences]:
+	""" TODO remove 2.7
+	Function to easily get general user prefs in 2.7 and 2.8 friendly way"""
 	if hasattr(context, "user_preferences"):
 		return context.user_preferences
 	elif hasattr(context, "preferences"):
@@ -618,15 +628,16 @@ def get_preferences(context=None):
 	return None
 
 
-def set_active_object(context, obj):
-	"""Get the active object in a 2.7 and 2.8 compatible way"""
+def set_active_object(context: Context, obj: Object) -> None:
+	""" TODO remove 2.7
+	Get the active object in a 2.7 and 2.8 compatible way"""
 	if hasattr(context, "view_layer"):
 		context.view_layer.objects.active = obj  # the 2.8 way
 	else:
 		context.scene.objects.active = obj  # the 2.7 way
 
 
-def select_get(obj):
+def select_get(obj: Object) -> bool:
 	"""Multi version compatibility for getting object selection"""
 	if hasattr(obj, "select_get"):
 		return obj.select_get()
@@ -634,7 +645,7 @@ def select_get(obj):
 		return obj.select
 
 
-def select_set(obj, state):
+def select_set(obj: Object, state: bool) -> None:
 	"""Multi version compatibility for setting object selection"""
 	if hasattr(obj, "select_set"):
 		obj.select_set(state)
@@ -642,7 +653,7 @@ def select_set(obj, state):
 		obj.select = state
 
 
-def hide_viewport(obj, state):
+def hide_viewport(obj: Object, state: bool) -> None:
 	"""Multi version compatibility for setting the viewport hide state"""
 	if hasattr(obj, "hide_viewport"):
 		obj.hide_viewport = state  # where state is a boolean True or False
@@ -650,16 +661,18 @@ def hide_viewport(obj, state):
 		obj.hide = state
 
 
-def collections():
-	"""Returns group or collection object for 2.7 and 2.8"""
+def collections() -> List[Collection]:
+	""" TODO remove 2.7
+	Returns group or collection object for 2.7 and 2.8"""
 	if hasattr(bpy.data, "collections"):
 		return bpy.data.collections
 	else:
 		return bpy.data.groups
 
 
-def viewport_textured(context=None):
-	"""Returns state of viewport solid being textured or not"""
+def viewport_textured(context: Optional[Context]=None) -> Optional[bool]:
+	""" TODO remove 2.7
+	Returns state of viewport solid being textured or not"""
 	if not context:
 		context = bpy.context
 
@@ -671,7 +684,7 @@ def viewport_textured(context=None):
 	return None  # unsure
 
 
-def get_cuser_location(context=None):
+def get_cuser_location(context: Optional[Context]=None) -> tuple:
 	"""Returns the location vector of the 3D cursor"""
 	if not context:
 		context = bpy.context
@@ -687,7 +700,7 @@ def get_cuser_location(context=None):
 	return (0, 0, 0)
 
 
-def set_cuser_location(loc, context=None):
+def set_cuser_location(loc: tuple, context: Optional[Context]=None) -> None:
 	"""Returns the location vector of the 3D cursor"""
 	if not context:
 		context = bpy.context
@@ -697,16 +710,18 @@ def set_cuser_location(loc, context=None):
 		context.scene.cursor.location = loc
 
 
-def instance_collection(obj):
-	"""Cross compatible way to get an objects dupligroup or collection"""
+def instance_collection(obj: Object) -> Collection:
+	""" TODO 2.7
+	Cross compatible way to get an objects dupligroup or collection"""
 	if hasattr(obj, "dupli_group"):
 		return obj.dupli_group
 	elif hasattr(obj, "instance_collection"):
 		return obj.instance_collection
 
 
-def obj_link_scene(obj, context=None):
-	"""Links object to scene, or for 2.8, the scene master collection"""
+def obj_link_scene(obj: Object, context: Optional[Context]=None):
+	""" TODO 2.7
+	Links object to scene, or for 2.8, the scene master collection"""
 	if not context:
 		context = bpy.context
 	if hasattr(context.scene.objects, "link"):
@@ -716,7 +731,7 @@ def obj_link_scene(obj, context=None):
 	# context.scene.update() # needed?
 
 
-def obj_unlink_remove(obj, remove, context=None):
+def obj_unlink_remove(obj: Object, remove: bool, context: Optional[Context]=None) -> None:
 	"""Unlink an object from the scene, and remove from data if specified"""
 	if not context:
 		context = bpy.context
@@ -735,15 +750,16 @@ def obj_unlink_remove(obj, remove, context=None):
 		bpy.data.objects.remove(obj)
 
 
-def users_collection(obj):
-	"""Returns the collections/group of an object"""
+def users_collection(obj: Object) -> List[Collection]:
+	""" TODO 2.7
+	Returns the collections/group of an object"""
 	if hasattr(obj, "users_collection"):
 		return obj.users_collection
 	elif hasattr(obj, "users_group"):
 		return obj.users_group
 
 
-def matmul(v1, v2, v3=None):
+def matmul(v1: Union[Vector, Matrix], v2: Union[Vector, Matrix], v3: Optional[Union[Vector, Matrix]]=None):
 	"""Multiplciation of matrix and/or vectors in cross compatible way.
 
 	This is a workaround for the syntax that otherwise could be used a @ b.
@@ -759,7 +775,7 @@ def matmul(v1, v2, v3=None):
 	return v1 * v2
 
 
-def scene_update(context=None):
+def scene_update(context: Optional[Context]=None) -> None:
 	"""Update scene in cross compatible way, to update desp graph"""
 	if not context:
 		context = bpy.context
@@ -769,12 +785,12 @@ def scene_update(context=None):
 		context.view_layer.update()
 
 
-def move_assets_to_excluded_layer(context, collections):
+def move_assets_to_excluded_layer(context: Context, collections: List[Collection]) -> None:
 	"""Utility to move source collections to excluded layer to not be rendered"""
-	initial_view_coll = context.view_layer.active_layer_collection
+	initial_view_coll:Collection = context.view_layer.active_layer_collection
 
 	# Then, setup the exclude view layer
-	spawner_exclude_vl = get_or_create_viewlayer(
+	spawner_exclude_vl:Collection = get_or_create_viewlayer(
 		context, SPAWNER_EXCLUDE)
 	spawner_exclude_vl.exclude = True
 
