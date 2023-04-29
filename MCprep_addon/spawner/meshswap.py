@@ -1201,7 +1201,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			# loc = swap.matrix_world*mathutils.Vector(set) #local to global
 			if grouped:
 				# definition for randimization, defined at top!
-				randGroup = util.randomizeMeshSawp(swapProps['importName'], 3)
+				randGroup = util.randomizeMeshSwap(swapProps['importName'], 3)
 				env.log("Rand group: {}".format(randGroup))
 				new_ob = util.addGroupInstance(randGroup, loc)
 				if hasattr(new_ob, "empty_draw_size"):
@@ -1314,14 +1314,14 @@ class MCPREP_OT_fix_mineways_scale(bpy.types.Operator):
 		env.log("Attempting to fix Mineways scaling for meshswap")
 
 		# get cursor loc first? shouldn't matter which mode/location though
-		tmp_loc = util.get_cuser_location(context)
+		tmp_loc = util.get_cursor_location(context)
 		if hasattr(context.space_data, "pivot_point"):
 			tmp = context.space_data.pivot_point
 			bpy.context.space_data.pivot_point = 'CURSOR'
 		else:
 			tmp = context.scene.tool_settings.transform_pivot_point
 			context.scene.tool_settings.transform_pivot_point = 'CURSOR'
-		util.set_cuser_location((0, 0, 0), context)
+		util.set_cursor_location((0, 0, 0), context)
 
 		bpy.ops.transform.resize(value=(10, 10, 10))
 		bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
@@ -1330,7 +1330,7 @@ class MCPREP_OT_fix_mineways_scale(bpy.types.Operator):
 			bpy.context.space_data.pivot_point = tmp
 		else:
 			context.scene.tool_settings.transform_pivot_point = tmp
-		util.set_cuser_location(tmp_loc, context)
+		util.set_cursor_location(tmp_loc, context)
 		return {'FINISHED'}
 
 

@@ -175,7 +175,7 @@ def bAppendLink(directory: str, name: str, toLink: bool, active_layer: bool=True
 				return False
 
 
-def obj_copy(base: Object, context: Context=None, vertex_groups: bool=True, modifiers: bool=True) -> Object:
+def obj_copy(base: Object, context: Optional[Context]=None, vertex_groups: bool=True, modifiers: bool=True) -> Object:
 	"""Copy an object's data, vertex groups, and modifiers without operators.
 
 	Input must be a valid object in bpy.data.objects
@@ -271,7 +271,7 @@ def face_on_edge(faceLoc: Union[tuple, Vector]) -> bool:
 	return False
 
 
-def randomizeMeshSawp(swap: str, variations: int) -> str:
+def randomizeMeshSwap(swap: str, variations: int) -> str:
 	"""Randomization for model imports, add extra statements for exta cases."""
 	randi:str = ''
 	if swap == 'torch':
@@ -684,7 +684,7 @@ def viewport_textured(context: Optional[Context]=None) -> Optional[bool]:
 	return None  # unsure
 
 
-def get_cuser_location(context: Optional[Context]=None) -> tuple:
+def get_cursor_location(context: Optional[Context]=None) -> tuple:
 	"""Returns the location vector of the 3D cursor"""
 	if not context:
 		context = bpy.context
@@ -700,7 +700,7 @@ def get_cuser_location(context: Optional[Context]=None) -> tuple:
 	return (0, 0, 0)
 
 
-def set_cuser_location(loc: tuple, context: Optional[Context]=None) -> None:
+def set_cursor_location(loc: tuple, context: Optional[Context]=None) -> None:
 	"""Returns the location vector of the 3D cursor"""
 	if not context:
 		context = bpy.context

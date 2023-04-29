@@ -225,7 +225,7 @@ def spawn_item_from_filepath(
 		bpy.ops.mesh.delete(type='FACE')
 		bpy.ops.object.mode_set(mode='OBJECT')
 
-	itm_obj.location = util.get_cuser_location(context)
+	itm_obj.location = util.get_cursor_location(context)
 
 	# Material and Textures.
 	# TODO: use the generate functions here instead

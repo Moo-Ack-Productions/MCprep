@@ -114,7 +114,7 @@ class MCPREP_MT_meshswap_place(bpy.types.Menu):
 				icon=icn
 			)
 			opr.block = blockset[0]
-			opr.location = util.get_cuser_location(context)
+			opr.location = util.get_cursor_location(context)
 
 			# Ensure meshswap with rigs is made real, so the rigs can be used.
 			if env.json_data and blockset[1] in env.json_data.get("make_real", []):
@@ -151,7 +151,7 @@ class MCPREP_MT_effect_spawn(bpy.types.Menu):
 
 	def draw(self, context):
 		col = self.layout.column()
-		loc = util.get_cuser_location(context)
+		loc = util.get_cursor_location(context)
 		for effect in context.scene.mcprep_props.effects_list:
 			if effect.effect_type in (effects.GEO_AREA, effects.PARTICLE_AREA):
 				if effect.effect_type == effects.GEO_AREA:
@@ -227,7 +227,7 @@ class MCPREP_MT_model_spawn(bpy.types.Menu):
 				mcmodel.MCPREP_OT_spawn_minecraft_model.bl_idname,
 				text=model.name)
 			opr.filepath = model.filepath
-			opr.location = util.get_cuser_location(context)
+			opr.location = util.get_cursor_location(context)
 
 
 class MCPREP_MT_3dview_add(bpy.types.Menu):
@@ -1238,7 +1238,7 @@ def meshswap_spawner(self, context):
 		p = row.operator("mcprep.meshswap_spawner", text="Place: " + name)
 		p.block = block
 		p.method = method
-		p.location = util.get_cuser_location(context)
+		p.location = util.get_cursor_location(context)
 		# Ensure meshswap with rigs is made real, so the rigs can be used.
 		if env.json_data and block in env.json_data.get("make_real", []):
 			p.make_real = True
@@ -1450,7 +1450,7 @@ def model_spawner(self, context):
 		row.scale_y = 1.5
 		model = scn_props.model_list[scn_props.model_list_index]
 		ops = row.operator("mcprep.spawn_model", text="Place: " + model.name)
-		ops.location = util.get_cuser_location(context)
+		ops.location = util.get_cursor_location(context)
 		ops.filepath = model.filepath
 		if addon_prefs.MCprep_exporter_type == "Mineways":
 			ops.snapping = "offset"
@@ -1473,7 +1473,7 @@ def model_spawner(self, context):
 		row.operator(mcmodel.MCPREP_OT_spawn_minecraft_model.bl_idname)
 
 	ops = col.operator("mcprep.import_model_file")
-	ops.location = util.get_cuser_location(context)
+	ops.location = util.get_cursor_location(context)
 	if addon_prefs.MCprep_exporter_type == "Mineways":
 		ops.snapping = "center"
 	elif addon_prefs.MCprep_exporter_type == "jmc2obj":
@@ -1531,7 +1531,7 @@ def effects_spawner(self, context):
 			ops = row.operator(
 				"mcprep.spawn_instant_effect", text="Add: " + effect.name)
 			ops.effect_id = str(effect.index)
-			ops.location = util.get_cuser_location(context)
+			ops.location = util.get_cursor_location(context)
 			ops.frame = context.scene.frame_current
 	else:
 		box = col.box()
@@ -1550,7 +1550,7 @@ def effects_spawner(self, context):
 		row.operator("mcprep.spawn_item", text="Add effect")
 	row = col.row(align=True)
 	ops = row.operator("mcprep.spawn_particle_planes")
-	ops.location = util.get_cuser_location(context)
+	ops.location = util.get_cursor_location(context)
 	ops.frame = context.scene.frame_current
 
 	# If particle planes has not been changed yet this session,

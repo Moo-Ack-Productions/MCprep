@@ -433,7 +433,7 @@ def geo_update_params(context, effect, geo_mod):
 			center_empty.parent = camera
 			center_empty.location = (0, 0, -10)
 		else:
-			center_empty.location = util.get_cuser_location()
+			center_empty.location = util.get_cursor_location()
 
 	# Cache mapping of names like "Weather Type" to "Input_1" internals.
 	geo_inp_id = {}
@@ -1071,7 +1071,7 @@ class MCPREP_OT_global_effect(bpy.types.Operator):
 				location = context.scene.camera.location + vartical_offset
 				use_camera = True
 			else:
-				location = util.get_cuser_location(context)
+				location = util.get_cursor_location(context)
 
 			obj = add_area_particle_effect(context, effect, location)
 			if use_camera:

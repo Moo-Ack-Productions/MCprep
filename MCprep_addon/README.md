@@ -70,7 +70,7 @@ Returns a bool. If false, the UI will show a warning and link to doc
 
   Returns a bool.
 
-**ramdomizeMeshsawp(swap, variations)**
+**ramdomizeMeshSwap(swap, variations)**
 
 Randomization for model imports, add extra statements for exta cases (eg: torch -> torch.1)
 
@@ -258,13 +258,13 @@ Returns if viewport solid is textured else None
 
 	
 
-**get_cuser_location(context=None)**
+**get_cursor_location(context=None)**
 
 Returns the location vector of the 3D cursor else `(0,0,0)``
 
 	
 
-**set_cuser_location(loc, context=None)**
+**set_cursor_location(loc, context=None)**
 
 	
 

@@ -321,7 +321,7 @@ def offset_root_bone(context, armature):
 			continue
 		bone.location = util.matmul(
 			bone.bone.matrix.inverted(),
-			util.get_cuser_location(context),
+			util.get_cursor_location(context),
 			armature.matrix_world.inverted()
 		)
 
@@ -416,7 +416,7 @@ def load_linked(self, context, path, name):
 		# but not clear how this happens
 		print("WARNING: Assigned fallback gl of (0,0,0)")
 		gl = (0, 0, 0)
-	# cl = util.get_cuser_location(context)
+	# cl = util.get_cursor_location(context)
 
 	if self.relocation == "Offset":
 		# do the offset stuff, set active etc
@@ -510,7 +510,7 @@ def load_append(self, context, path, name):
 	else:
 		env.log("Warning, could not set offset for group; null type?")
 		gl = (0, 0, 0)
-	cl = util.get_cuser_location(context)
+	cl = util.get_cursor_location(context)
 
 	# For some reason, adding group objects on its own doesn't work
 	all_objects = context.selected_objects
