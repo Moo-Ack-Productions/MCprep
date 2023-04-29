@@ -28,7 +28,7 @@ from typing import List, Optional, Union
 
 import bpy
 from bpy.types import (
-  Preferences, # 2.7 UserPreferences
+  Preferences,
   Context, Object, Collection,
   Material, Image, Node,
 
@@ -602,14 +602,14 @@ def layout_split(layout: UILayout, factor:float =0.0, align: bool=False) -> UILa
 
 
 def get_user_preferences(context: Optional[Context]=None) -> Optional[Preferences]:
-	""" TODO remove 2.7 user_preferences
-	Intermediate method for pre and post blender 2.8 grabbing preferences"""
+	""" 
+	Intermediate method for grabbing preferences
+	"""
 	if not context:
 		context = bpy.context
 	prefs = None
-	if hasattr(context, "user_preferences"):
-		prefs = context.user_preferences.addons.get(__package__, None)
-	elif hasattr(context, "preferences"):
+	
+	if hasattr(context, "preferences"):
 		prefs = context.preferences.addons.get(__package__, None)
 	if prefs:
 		return prefs.preferences
@@ -619,11 +619,10 @@ def get_user_preferences(context: Optional[Context]=None) -> Optional[Preference
 
 
 def get_preferences(context: Optional[Context]=None) -> Optional[Preferences]:
-	""" TODO remove 2.7
-	Function to easily get general user prefs in 2.7 and 2.8 friendly way"""
-	if hasattr(context, "user_preferences"):
-		return context.user_preferences
-	elif hasattr(context, "preferences"):
+	"""
+	Function to easily get general user prefs friendly way"""
+	
+	if hasattr(context, "preferences"):
 		return context.preferences
 	return None
 

@@ -313,9 +313,7 @@ class mcprep_testing():
 		if name not in ['(choose)', 'jmc2obj', 'Mineways']:
 			raise Exception('Invalid exporter set tyep')
 		context = bpy.context
-		if hasattr(context, "user_preferences"):
-			prefs = context.user_preferences.addons.get("MCprep_addon", None)
-		elif hasattr(context, "preferences"):
+		if hasattr(context, "preferences"):
 			prefs = context.preferences.addons.get("MCprep_addon", None)
 		prefs.preferences.MCprep_exporter_type = name
 
