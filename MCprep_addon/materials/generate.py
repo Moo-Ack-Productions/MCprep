@@ -21,7 +21,6 @@ import bpy
 from bpy.types import (
   Context, Material, Image
   NodeTree, Nodes, Links, Node
-  NodeInput, NodeOuput
 )
 from dataclasses import dataclass
 from typing import Union, Dict, Optional, List, Any
@@ -725,7 +724,7 @@ def create_node(tree_nodes: Nodes, node_type: str, **attrs: Dict[str, Any]) -> N
 	return node
 
 
-def get_node_socket(node: Node, is_input: bool=True) -> Union[NodeInput, NodeOuput]:
+def get_node_socket(node: Node, is_input: bool=True) -> list:
 	"""Gets the input or output sockets indicies for node"""
 	n_type = node.bl_idname
 	if n_type == 'ShaderNodeMix' or n_type == 'ShaderNodeMixRGB':
