@@ -18,7 +18,13 @@
 
 import os
 import bpy
+from bpy.types import (
+  Context, Material, Image
+  NodeTree, Nodes, Links, Node
+  NodeInput, NodeOuput
+)
 from dataclasses import dataclass
+from typing import Union, Dict, Optional, List, Any
 
 from .. import util
 
@@ -29,7 +35,7 @@ from ..conf import env
 # -----------------------------------------------------------------------------
 
 
-def update_mcprep_texturepack_path(self, context):
+def update_mcprep_texturepack_path(self, context: Context) -> None:
 	"""Triggered if the scene-level resource pack path is updated."""
 	bpy.ops.mcprep.reload_items()
 	bpy.ops.mcprep.reload_materials()
@@ -41,7 +47,7 @@ def update_mcprep_texturepack_path(self, context):
 	context.scene.mcprep_particle_plane_file = ''
 
 
-def get_mc_canonical_name(name):
+def get_mc_canonical_name(name: str) -> List[str, Optional[str]]:
 	"""Convert a material name to standard MC name.
 
 	Returns:
@@ -108,7 +114,7 @@ def get_mc_canonical_name(name):
 	return canon, form
 
 
-def find_from_texturepack(blockname, resource_folder=None):
+def find_from_texturepack(blockname: str, resource_folder: Optional[str]=None) -> str:
 	"""Given a blockname (and resource folder), find image filepath.
 
 	Finds textures following any pack which should have this structure, and
@@ -182,7 +188,7 @@ def find_from_texturepack(blockname, resource_folder=None):
 	return res
 
 
-def detect_form(materials):
+def detect_form(materials: List[Material]) -> str:
 	"""Function which, given the input materials, guesses the exporter form.
 
 	Useful for pre-determining elibibility of a function and also for tracking
@@ -220,7 +226,7 @@ def detect_form(materials):
 	return res  # one of jmc2obj, mineways, or None
 
 
-def checklist(matName, listName):
+def checklist(matName: str, listName: list) -> bool:
 	"""Helper to expand single wildcard within generalized material names"""
 	if not env.json_data:
 		env.log("No json_data for checklist to call from!")
@@ -242,7 +248,7 @@ def checklist(matName, listName):
 
 @dataclass
 class PrepOptions:
-	passes: dict[str]
+	passes: Dict[str, Image]
 	use_reflections: bool
 	use_principled: bool
 	only_solid: bool
@@ -250,7 +256,7 @@ class PrepOptions:
 	use_emission_nodes: bool
 	use_emission: bool
 
-def matprep_cycles(mat, options: PrepOptions):
+def matprep_cycles(mat: Material, options: PrepOptions) -> Optional[bool]:
 	"""Determine how to prep or generate the cycles materials.
 
 	Args:
@@ -286,7 +292,7 @@ def matprep_cycles(mat, options: PrepOptions):
 	return res
 
 
-def set_texture_pack(material, folder, use_extra_passes):
+def set_texture_pack(material: Material, folder: str, use_extra_passes: bool) -> bool:
 	"""Replace existing material's image with texture pack's.
 
 	Run through and check for each if counterpart material exists, then
@@ -302,7 +308,7 @@ def set_texture_pack(material, folder, use_extra_passes):
 	return 1
 
 
-def assert_textures_on_materials(image, materials):
+def assert_textures_on_materials(image: Image, materials: List[Material]) -> int:
 	"""Called for any texture changing, e.g. skin, input a list of material and
 	an already loaded image datablock."""
 	# TODO: Add option to search for or ignore/remove extra maps (normal, etc)
@@ -314,7 +320,7 @@ def assert_textures_on_materials(image, materials):
 	return count
 
 
-def set_cycles_texture(image, material, extra_passes=False):
+def set_cycles_texture(image: Image, material: Material, extra_passes: bool=False) -> bool:
 	"""
 	Used by skin swap and assiging missing textures or tex swapping.
 	Args:
@@ -391,7 +397,7 @@ def set_cycles_texture(image, material, extra_passes=False):
 
 	return changed
 
-def get_node_for_pass(material, pass_name):
+def get_node_for_pass(material: Material, pass_name: str) -> Optional[Node]:
 	"""Assumes cycles material, returns texture node for given pass in mat."""
 	if pass_name not in ["diffuse", "specular", "normal", "displace"]:
 		return None
@@ -415,7 +421,7 @@ def get_node_for_pass(material, pass_name):
 	return return_node
 
 
-def get_texlayer_for_pass(material, pass_name):
+def get_texlayer_for_pass(material: Material, pass_name:str) -> Optional[Texture]:
 	"""Assumes BI material, returns texture layer for given pass in mat."""
 	if pass_name not in ["diffuse", "specular", "normal", "displace"]:
 		return None
@@ -438,7 +444,7 @@ def get_texlayer_for_pass(material, pass_name):
 			return sl.texture
 
 
-def get_textures(material):
+def get_textures(material: Material) -> Dict[str, Image]:
 	"""Extract the image datablocks for a given material (prefer cycles).
 
 	Returns {"diffuse":texture.image, "normal":node.image "spec":None, ...}
@@ -484,7 +490,7 @@ def get_textures(material):
 	return passes
 
 
-def find_additional_passes(image_file):
+def find_additional_passes(image_file: str) -> Dict[str, Image]:
 	"""Find relevant passes like normal and spec in same folder as image."""
 	abs_img_file = bpy.path.abspath(image_file)
 	env.log("\tFind additional passes for: " + image_file, vv_only=True)
@@ -529,7 +535,7 @@ def find_additional_passes(image_file):
 	return res
 
 
-def replace_missing_texture(image):
+def replace_missing_texture(image: Image) -> bool:
 	"""If image missing from image datablock, replace from texture pack.
 
 	Image block name could be the diffuse or any other pass of material, and
@@ -570,10 +576,10 @@ def replace_missing_texture(image):
 	return True  # updated image block
 
 
-def is_image_grayscale(image):
+def is_image_grayscale(image: Image) -> bool:
 	"""Returns true if image data is all grayscale, false otherwise"""
 
-	def rgb_to_saturation(r, g, b):
+	def rgb_to_saturation(r, g, b) -> float:
 		"""Converter 0-1 rgb values back to 0-1 saturation value"""
 		mx = max(r, g, b)
 		if mx == 0:
@@ -647,7 +653,7 @@ def is_image_grayscale(image):
 	return is_grayscale
 
 
-def set_saturation_material(mat):
+def set_saturation_material(mat: Material) -> None:
 	"""Update material to be saturated or not"""
 	if not mat:
 		return
@@ -688,7 +694,7 @@ def set_saturation_material(mat):
 	sat_node.hide = not bool(saturate)
 
 
-def create_node(tree_nodes, node_type, **attrs):
+def create_node(tree_nodes: Nodes, node_type: str, **attrs: Dict[str, Any]) -> Node:
 	"""Create node with default attributes
 
 	Args:
@@ -719,7 +725,7 @@ def create_node(tree_nodes, node_type, **attrs):
 	return node
 
 
-def get_node_socket(node, is_input=True):
+def get_node_socket(node: Node, is_input: bool=True) -> Union[NodeInput, NodeOuput]:
 	"""Gets the input or output sockets indicies for node"""
 	n_type = node.bl_idname
 	if n_type == 'ShaderNodeMix' or n_type == 'ShaderNodeMixRGB':
@@ -741,7 +747,7 @@ def get_node_socket(node, is_input=True):
 # -----------------------------------------------------------------------------
 
 
-def copy_texture_animation_pass_settings(mat):
+def copy_texture_animation_pass_settings(mat: Material) -> Dict[str, int]:
 	"""Get any animation settings for passes."""
 	# Pre-copy any animated node settings before clearing nodes
 	animated_data = {}
@@ -773,7 +779,7 @@ def copy_texture_animation_pass_settings(mat):
 	return animated_data
 
 
-def apply_texture_animation_pass_settings(mat, animated_data):
+def apply_texture_animation_pass_settings(mat: Material, animated_data: dict) -> Optional[dict]:
 	"""Apply animated texture settings for all given passes of dict."""
 
 	if not mat.use_nodes:
@@ -803,18 +809,18 @@ def apply_texture_animation_pass_settings(mat, animated_data):
 		anim_node.image_user.use_cyclic = True
 
 
-def texgen_specular(mat, passes, nodeInputs, use_reflections):
-	matGen = util.nameGeneralize(mat.name)
+def texgen_specular(mat: Material, passes: Dict[str, Image], nodeInputs: list, use_reflections: bool) -> None:
+	matGen: str = util.nameGeneralize(mat.name)
 	canon, form = get_mc_canonical_name(matGen)
 
 	# Define links and nodes
-	nodes = mat.node_tree.nodes
-	links = mat.node_tree.links
+	nodes: Nodes = mat.node_tree.nodes
+	links: Links = mat.node_tree.links
 
 	# Define the diffuse, normal, and specular nodes
-	image_diff = passes["diffuse"]
-	image_norm = passes["normal"]
-	image_spec = passes["specular"]
+	image_diff: Image = passes["diffuse"]
+	image_norm: Image = passes["normal"]
+	image_spec: Image = passes["specular"]
 
 	# Creates the necessary nodes
 	nodeTexDiff = create_node(
@@ -927,19 +933,19 @@ def texgen_specular(mat, passes, nodeInputs, use_reflections):
 	nodeTexDiff.image = image_diff
 
 
-def texgen_seus(mat, passes, nodeInputs, use_reflections, use_emission):
+def texgen_seus(mat: Material, passes: Dict[str, Image], nodeInputs: list, use_reflections: bool, use_emission: bool) -> None:
 
 	matGen = util.nameGeneralize(mat.name)
 	canon, form = get_mc_canonical_name(matGen)
 
 	# Define links and nodes
-	nodes = mat.node_tree.nodes
-	links = mat.node_tree.links
+	nodes: Nodes = mat.node_tree.nodes
+	links: Links = mat.node_tree.links
 
 	# Define the diffuse, normal, and specular nodes
-	image_diff = passes["diffuse"]
-	image_norm = passes["normal"]
-	image_spec = passes["specular"]
+	image_diff: Image = passes["diffuse"]
+	image_norm: Image = passes["normal"]
+	image_spec: Image = passes["specular"]
 
 	# Creates the necessary nodes
 	nodeTexDiff = create_node(
@@ -1070,7 +1076,7 @@ def texgen_seus(mat, passes, nodeInputs, use_reflections, use_emission):
 	nodeTexDiff.image = image_diff
 
 
-def matgen_cycles_simple(mat, options: PrepOptions):
+def matgen_cycles_simple(mat: Material, options: PrepOptions) -> Optional[bool]:
 	"""Generate principled cycles material."""
 
 	matGen = util.nameGeneralize(mat.name)
@@ -1190,7 +1196,7 @@ def matgen_cycles_simple(mat, options: PrepOptions):
 	return 0
 
 
-def matgen_cycles_principled(mat, options: PrepOptions):
+def matgen_cycles_principled(mat: Material, options: PrepOptions) -> Optional[bool]:
 	"""Generate principled cycles material"""
 
 	matGen = util.nameGeneralize(mat.name)
@@ -1346,7 +1352,7 @@ def matgen_cycles_principled(mat, options: PrepOptions):
 	return 0
 
 
-def matgen_cycles_original(mat, options: PrepOptions):
+def matgen_cycles_original(mat: Material, options: PrepOptions):
 	"""Generate principled cycles material"""
 
 	matGen = util.nameGeneralize(mat.name)
@@ -1576,7 +1582,7 @@ def matgen_cycles_original(mat, options: PrepOptions):
 	return 0
 
 
-def matgen_special_water(mat, passes):
+def matgen_special_water(mat: Material, passes: dict[str]) -> Optional[bool]:
 	"""Generate special water material"""
 
 	matGen = util.nameGeneralize(mat.name)
@@ -1730,7 +1736,7 @@ def matgen_special_water(mat, passes):
 	return 0
 
 
-def matgen_special_glass(mat, passes):
+def matgen_special_glass(mat: Material, passes: dict[str]) -> Optional[bool]:
 	"""Generate special glass material"""
 
 	matGen = util.nameGeneralize(mat.name)
