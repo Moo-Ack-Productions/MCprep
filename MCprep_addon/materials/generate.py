@@ -103,12 +103,12 @@ def get_mc_canonical_name(name: str) -> List[str, Optional[str]]:
 			general_name.lower()]
 		form = "mineways"
 	else:
-		env.log("Canonical name not matched: " + general_name, vv_only=True)
+		env.log(f"Canonical name not matched: {general_name}", vv_only=True)
 		canon = general_name
 		form = None
 
 	if canon is None or canon == '':
-		env.log("Error: Encountered None canon value with " + str(general_name))
+		env.log(f"Error: Encountered None canon value with {general_name}")
 		canon = general_name
 
 	return canon, form
@@ -181,7 +181,7 @@ def find_from_texturepack(blockname: str, resource_folder: Optional[PathLike]=No
 	for suffix in ["-Alpha", "-RGB", "-RGBA"]:
 		if blockname.endswith(suffix):
 			res = os.path.join(
-				resource_folder, "mineways_assets", "mineways" + suffix + ".png")
+				resource_folder, "mineways_assets", f"mineways{suffix}.png")
 			if os.path.isfile(res):
 				return res
 
@@ -232,7 +232,7 @@ def checklist(matName: str, listName: list) -> bool:
 		env.log("No json_data for checklist to call from!")
 	if "blocks" not in env.json_data or listName not in env.json_data["blocks"]:
 		env.log(
-			"env.json_data is missing blocks or listName " + str(listName))
+			f"env.json_data is missing blocks or listName {listName}")
 		return False
 	if matName in env.json_data["blocks"][listName]:
 		return True
@@ -328,8 +328,7 @@ def set_cycles_texture(image: Image, material: Material, extra_passes: bool=Fals
 		material: existing material datablock
 		extra_passes: whether to include or hard exclude non diffuse passes
 	"""
-	env.log("Setting cycles texture for img: {} mat: {}".format(
-		image.name, material.name))
+	env.log(f"Setting cycles texture for img: {image.name} mat: {material.name}")
 	if material.node_tree is None:
 		return False
 	# check if there is more data to see pass types
@@ -493,7 +492,7 @@ def get_textures(material: Material) -> Dict[str, Image]:
 def find_additional_passes(image_file: PathLike) -> Dict[str, Image]:
 	"""Find relevant passes like normal and spec in same folder as image."""
 	abs_img_file = bpy.path.abspath(image_file)
-	env.log("\tFind additional passes for: " + image_file, vv_only=True)
+	env.log(f"\tFind additional passes for: {image_file}", vv_only=True)
 	if not os.path.isfile(abs_img_file):
 		return {}
 
@@ -557,7 +556,7 @@ def replace_missing_texture(image: Image) -> bool:
 		elif os.path.isfile(bpy.path.abspath(image.filepath)):
 			# ... or the filepath is present.
 			return False
-	env.log("Missing datablock detected: " + image.name)
+	env.log(f"Missing datablock detected: {image.name}")
 
 	name = image.name
 	if len(name) > 4 and name[-4] == ".":
@@ -590,7 +589,7 @@ def is_image_grayscale(image: Image) -> bool:
 
 	if not image:
 		return None
-	env.log("Checking image for grayscale " + image.name, vv_only=True)
+	env.log(f"Checking image for grayscale {image.name}", vv_only=True)
 	if 'grayscale' in image:  # cache
 		return image['grayscale']
 	if not image.pixels:
@@ -642,14 +641,14 @@ def is_image_grayscale(image: Image) -> bool:
 			pixels_saturated += 1
 		if pixels_saturated >= max_thresh:
 			is_grayscale = False
-			env.log("Image not grayscale: " + image.name, vv_only=True)
+			, vv_only=True)
 			break
 
 	if datablock_copied:  # Cleanup if image was copied to scale down size.
 		bpy.data.images.remove(imgcp)
 
 	image['grayscale'] = is_grayscale  # set cache
-	env.log("Image is grayscale: " + image.name, vv_only=True)
+	env.log(f"Image not grayscale: {image.name}", vv_only=True)
 	return is_grayscale
 
 
@@ -660,10 +659,10 @@ def set_saturation_material(mat: Material) -> None:
 
 	canon, _ = get_mc_canonical_name(mat.name)
 	if not checklist(canon, "desaturated"):
-		env.log("debug: not eligible for saturation", vv_only=True)
+		env.log("Debug: not eligible for saturation", vv_only=True)
 		return
 
-	env.log("Running set_saturation on " + mat.name, vv_only=True)
+	env.log(f"Running set_saturation on {mat.name}", vv_only=True)
 	diff_pass = get_node_for_pass(mat, "diffuse")
 	if not diff_pass:
 		return
@@ -914,7 +913,7 @@ def texgen_specular(mat: Material, passes: Dict[str, Image], nodeInputs: list, u
 	elif not is_image_grayscale(image_diff):
 		pass
 	else:
-		env.log("Texture desaturated: " + canon, vv_only=True)
+		env.log(f"Texture desaturated: {canon}", vv_only=True)
 		desat_color = env.json_data['blocks']['desaturated'][canon]
 		if len(desat_color) < len(nodeSaturateMix.inputs[saturateMixIn[2]].default_value):
 			desat_color.append(1.0)
@@ -1056,7 +1055,7 @@ def texgen_seus(mat: Material, passes: Dict[str, Image], nodeInputs: list, use_r
 	elif not is_image_grayscale(image_diff):
 		pass
 	else:
-		env.log("Texture desaturated: " + canon, vv_only=True)
+		env.log(f"Texture desaturated: {canon}", vv_only=True)
 		desat_color = env.json_data['blocks']['desaturated'][canon]
 		desat_cmpr = len(nodeSaturateMix.inputs[saturateMixIn[2]].default_value)
 		if len(desat_color) < desat_cmpr:
@@ -1085,7 +1084,7 @@ def matgen_cycles_simple(mat: Material, options: PrepOptions) -> Optional[bool]:
 	image_diff = options.passes["diffuse"]
 
 	if not image_diff:
-		print("Could not find diffuse image, halting generation: " + mat.name)
+		print(f"Could not find diffuse image, halting generation: {mat.name}")
 		return
 	elif image_diff.size[0] == 0 or image_diff.size[1] == 0:
 		if image_diff.source != 'SEQUENCE':
@@ -1181,7 +1180,7 @@ def matgen_cycles_simple(mat: Material, options: PrepOptions) -> Optional[bool]:
 	elif not is_image_grayscale(image_diff):
 		pass
 	else:
-		env.log("Texture desaturated: " + canon, vv_only=True)
+		env.log(f"Texture desaturated: {canon}", vv_only=True)
 		desat_color = env.json_data['blocks']['desaturated'][canon]
 		if len(desat_color) < len(nodeSaturateMix.inputs[2].default_value):
 				desat_color.append(1.0)
@@ -1205,7 +1204,7 @@ def matgen_cycles_principled(mat: Material, options: PrepOptions) -> Optional[bo
 	image_diff = options.passes["diffuse"]
 
 	if not image_diff:
-		print("Could not find diffuse image, halting generation: " + mat.name)
+		print(f"Could not find diffuse image, halting generation: {mat.name}")
 		return
 	elif image_diff.size[0] == 0 or image_diff.size[1] == 0:
 		if image_diff.source != 'SEQUENCE':
@@ -1361,7 +1360,7 @@ def matgen_cycles_original(mat: Material, options: PrepOptions):
 	image_diff = options.passes["diffuse"]
 
 	if not image_diff:
-		print("Could not find diffuse image, halting generation: " + mat.name)
+		print(f"Could not find diffuse image, halting generation: {mat.name}")
 		return
 	elif image_diff.size[0] == 0 or image_diff.size[1] == 0:
 		if image_diff.source != 'SEQUENCE':
@@ -1593,7 +1592,7 @@ def matgen_special_water(mat: Material, passes: dict[str]) -> Optional[bool]:
 	image_norm = passes["normal"]
 
 	if not image_diff:
-		print("Could not find diffuse image, halting generation: " + mat.name)
+		print(f"Could not find diffuse image, halting generation: {mat.name}")
 		return
 	elif image_diff.size[0] == 0 or image_diff.size[1] == 0:
 		if image_diff.source != 'SEQUENCE':
@@ -1719,7 +1718,7 @@ def matgen_special_water(mat: Material, passes: dict[str]) -> Optional[bool]:
 	elif not is_image_grayscale(image_diff):
 		pass
 	else:
-		env.log("Texture desaturated: " + canon, vv_only=True)
+		env.log(f"Texture desaturated: {canon}", vv_only=True)
 		desat_color = env.json_data['blocks']['desaturated'][canon]
 		if len(desat_color) < len(nodeSaturateMix.inputs[saturateMixIn[2]].default_value):
 			desat_color.append(1.0)
@@ -1747,7 +1746,7 @@ def matgen_special_glass(mat: Material, passes: dict[str]) -> Optional[bool]:
 	image_norm = passes["normal"]
 
 	if not image_diff:
-		print("Could not find diffuse image, halting generation: " + mat.name)
+		print(f"Could not find diffuse image, halting generation: {mat.name}")
 		return
 	elif image_diff.size[0] == 0 or image_diff.size[1] == 0:
 		if image_diff.source != 'SEQUENCE':

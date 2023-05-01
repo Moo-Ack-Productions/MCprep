@@ -89,10 +89,10 @@ def update_rig_list(context: Context) -> None:
 				mob.category = category
 				mob.index = len(context.scene.mcprep_props.mob_list_all)
 				if category:
-					mob.mcmob_type = os.path.join(
-						category, blend_name) + ":/:" + name
+					mob.mcmob_type = f"{os.path.join(
+						category, blend_name)}:/:{name}"
 				else:
-					mob.mcmob_type = blend_name + ":/:" + name
+					mob.mcmob_type = f"{blend_name}:/:{name}"
 
 				# if available, load the custom icon too
 				if not run_icons:
@@ -445,19 +445,17 @@ class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
 						os.mkdir(dst)
 					except OSError as exc:
 						if exc.errno == errno.EACCES:
-							print("Permission denied, try running blender as admin")
-							print(dst)
 							print(exc)
 						elif exc.errno != errno.EEXIST:
-							print("Path does not exist: " + dst)
+							print(f"Path does not exist: {dst}")
 							print(exc)
 				for icn in icon_files:
 					icn_base = os.path.basename(icn)
 					try:
 						shutil.copy2(icn, os.path.join(dst, icn_base))
 					except IOError as err:
-						print("Failed to copy over icon file " + icn)
-						print("to " + os.path.join(icondir, icn_base))
+						print(f"Failed to copy over icon file {icn}")
+						print(f"to {os.path.join(icondir, icn_base)}")
 						print(err)
 
 		# reload the cache
@@ -562,22 +560,22 @@ class MCPREP_OT_uninstall_mob(bpy.types.Operator):
 			path = os.path.join(context.scene.mcprep_mob_path, path)
 		except Exception as e:
 			self.report({'ERROR'}, "Could not resolve file to delete")
-			print("Error trying to remove mob file: " + str(e))
+			print(f"Error trying to remove mob file: {e}")
 			return {'CANCELLED'}
 
 		if os.path.isfile(path) is False:
-			env.log("Error: Source filepath not found, didn't delete: " + path)
+			env.log(f"Error: Source filepath not found, didn't delete: {path}")
 			self.report({'ERROR'}, "Source filepath not found, didn't delete")
 			return {'CANCELLED'}
 		else:
 			try:
 				os.remove(path)
 			except Exception as err:
-				env.log("Error: could not delete file: " + str(err))
+				env.log(f"Error: could not delete file: {err}")
 				self.report({'ERROR'}, "Could not delete file")
 				return {'CANCELLED'}
-		self.report({'INFO'}, "Removed: " + str(path))
-		env.log("Removed file: " + str(path))
+		self.report({'INFO'}, f"Removed: {path}")
+		env.log(f"Removed file: {path}")
 		bpy.ops.mcprep.reload_mobs()
 		return {'FINISHED'}
 
@@ -626,7 +624,7 @@ class MCPREP_OT_install_mob_icon(bpy.types.Operator, ImportHelper):
 				if exc.errno == errno.EACCES:
 					print("Permission denied, try running blender as admin")
 				elif exc.errno != errno.EEXIST:
-					print("Path does not exist: " + icon_dir)
+					print(f"Path does not exist: {icon_dir}")
 
 		# if the file exists already, remove it.
 		if os.path.isfile(new_file):
@@ -683,7 +681,7 @@ def spawn_rigs_categories(self, context: Context) -> List[tuple]:
 		ui_name = item + " mobs"
 		items.append((
 			item, ui_name.title(),
-			"Show all mobs in the '" + item + "' category"))
+			f"Show all mobs in the '{item}' category"))
 
 	items.append(("no_category", "Uncategorized", "Show all uncategorized mobs"))
 	return items

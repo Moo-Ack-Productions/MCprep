@@ -92,7 +92,7 @@ def add_geonode_area_effect(context: Context, effect: spawn_util.ListEffectsAsse
 	else:
 		this_nodegroup = existing_geonodes[0]
 
-	mesh = bpy.data.meshes.new(effect.name + " empty mesh")
+	mesh = bpy.data.meshes.new(f"{effect.name} empty mesh")
 	new_obj = bpy.data.objects.new(effect.name, mesh)
 
 	# TODO: consider trying to pick up the current collection setting,
@@ -192,12 +192,12 @@ def add_collection_effect(context: Context, effect: spawn_util.ListEffectsAssets
 	any particles the collection may be using.
 	"""
 
-	keyname = "{}_frame_{}".format(effect.name, frame)
+	keyname = f"{effect.name}_frame_{frame}"
 	if keyname in util.collections():
 		coll = util.collections()[keyname]
 	else:
 		coll = import_animated_coll(context, effect, keyname)
-		coll.name = effect.name + "_" + str(frame)
+		coll.name = f"{effect.name}_{frame}
 
 		# Update the animation per intended frame.
 		offset_animation_to_frame(coll, frame)
@@ -233,13 +233,13 @@ def add_image_sequence_effect(context: Context, effect: spawn_util.ListEffectsAs
 	]
 
 	if not images:
-		raise Exception("Failed to load images in question: " + root)
+		raise Exception(f"Failed to load images in question: {root}")
 
 	# Implement human sorting, such that img_2.png is before img_11.png
 	human_sorted = util.natural_sort(images)
 
 	# Create the collection to add objects into.
-	keyname = "{}_frame_{}@{:.2f}".format(effect.name, frame, speed)
+	keyname = f"{effect.name}_frame_{frame}@{speed:.2f}"
 
 	if util.bv28():
 		# Move the source collection (world center) into excluded coll
@@ -348,7 +348,7 @@ def add_particle_planes_effect(context: Context, image_path: util.PathLike, loca
 
 	# Add object, use lower level functions to make it run faster.
 	f_name = os.path.splitext(os.path.basename(image_path))[0]
-	base_name = "{}_frame_{}".format(f_name, frame)
+	base_name = f"{f_name}_frame_{frame}"
 
 	mesh = get_or_create_plane_mesh("particle_plane")
 	obj = bpy.data.objects.new(base_name, mesh)
@@ -393,7 +393,7 @@ def add_particle_planes_effect(context: Context, image_path: util.PathLike, loca
 		# emitters will have the same material (how it was initially working)
 		obj.material_slots[0].link = 'OBJECT'
 		obj.material_slots[0].material = mat
-		print("Linked {} with {}".format(obj.name, mat.name))
+		print(f"Linked {obj.name} with {mat.name}")
 
 	apply_particle_settings(obj, frame, base_name, pcoll)
 
@@ -410,7 +410,7 @@ def geo_update_params(context: Context, effect: spawn_util.ListEffectsAssets, ge
 
 	base_file = os.path.splitext(os.path.basename(effect.filepath))[0]
 	base_dir = os.path.dirname(effect.filepath)
-	jpath = os.path.join(base_dir, base_file + ".json")
+	jpath = os.path.join(base_dir, f"{base_file}.json")
 	geo_fields = {}
 	if os.path.isfile(jpath):
 		geo_fields = geo_fields_from_json(effect, jpath)
@@ -423,14 +423,14 @@ def geo_update_params(context: Context, effect: spawn_util.ListEffectsAssets, ge
 	for input_name in geo_fields.keys():
 		if geo_fields[input_name] == "FOLLOW_OBJ":
 			has_followkey = True
-	env.log("geonode has_followkey field? " + str(has_followkey), vv_only=True)
+	env.log(f"geonode has_followkey field? {has_followkey}", vv_only=True)
 
 	# Create follow empty if required by the group.
 	camera = context.scene.camera
 	center_empty = None
 	if has_followkey:
 		center_empty = bpy.data.objects.new(
-			name="{} origin".format(effect.name),
+			name=f"{effect.name} origin",
 			object_data=None)
 		util.obj_link_scene(center_empty)
 		if camera:
@@ -477,7 +477,7 @@ def geo_fields_from_json(effect: spawn_util.ListEffectsAssets, jpath: util.PathL
 		CAMERA_OBJ: Tells MCprep to assign the active camera object to slot.
 		FOLLOW_OBJ: Tells MCprep to assign a generated empty to this slot.
 	"""
-	env.log("Loading geo fields form json: " + jpath)
+	env.log(f"Loading geo fields form json: {jpath}")
 	with open(jpath) as fopen:
 		jdata = json.load(fopen)
 
@@ -524,7 +524,7 @@ def get_or_create_plane_mesh(mesh_name: str, uvs: list=[]) -> Mesh:
 	if not uvs:
 		uvs = [[0, 0], [1, 0], [1, 1], [0, 1]]
 	if len(uvs) != 4:
-		raise Exception("Wrong number of coords for UVs: " + str(len(uvs)))
+		raise Exception(f"Wrong number of coords for UVs: {len(uvs)}")
 
 	face = bm.faces.new(bm.verts)
 	face.normal_update()
@@ -549,7 +549,7 @@ def get_or_create_particle_meshes_coll(context: Context, particle_name: str, img
 	"""
 	# Check if it exists already, and if it has at least one object,
 	# assume we'll just use those.
-	particle_key = particle_name + "_particles"
+	particle_key = f"{particle_name}_particles"
 	particle_coll = util.collections().get(particle_key)
 	if particle_coll:
 		# Check if any objects.
@@ -592,7 +592,7 @@ def get_or_create_particle_meshes_coll(context: Context, particle_name: str, img
 		del uv_variants[keys[del_index]]
 
 	for key in uv_variants:
-		name = particle_name + "_particle_" + key
+		name = f"{particle_name}_particle_{key}"
 		mesh = get_or_create_plane_mesh(name, uvs=uv_variants[key])
 		obj = bpy.data.objects.new(name, mesh)
 		obj.data.materials.append(mat)
@@ -811,17 +811,17 @@ def load_geonode_effect_list(context: Context) -> None:
 	for bfile in blends:
 		row_items = []
 		using_json = False
-		js_equiv = os.path.splitext(bfile)[0] + ".json"
+		js_equiv = f"{os.path.splitext(bfile)[0]}.json"
 		if js_equiv in json_files:
-			env.log("Loading json preset for geonode for " + bfile)
+			env.log(f"Loading json preset for geonode for {bfile}")
 			# Read nodegroups to include from json presets file.
-			jpath = os.path.splitext(bfile)[0] + ".json"
+			jpath = f"{os.path.splitext(bfile)[0]}.json"
 			with open(jpath) as jopen:
 				jdata = json.load(jopen)
 			row_items = jdata.keys()
 			using_json = True
 		else:
-			env.log("Loading nodegroups from blend for geonode effects: " + bfile)
+			env.log(f"Loading nodegroups from blend for geonode effects: {bfile}")
 			# Read nodegroup names from blend file directly.
 			with bpy.data.libraries.load(bfile) as (data_from, _):
 				row_items = list(data_from.node_groups)
@@ -834,7 +834,7 @@ def load_geonode_effect_list(context: Context) -> None:
 				# First key in index is nodegroup, save to subpath, but then
 				# the present name (list of keys within) are the actual names.
 				for preset in jdata[itm]:
-					env.log("\tgeonode preset: " + preset, vv_only=True)
+					env.log(f"\tgeonode preset: {preset}", vv_only=True)
 					effect = mcprep_props.effects_list.add()
 					effect.name = preset  # This is the assign json preset name.
 					effect.subpath = itm  # This is the node group name.
@@ -1038,10 +1038,7 @@ class MCPREP_OT_global_effect(bpy.types.Operator):
 			elist.append((
 				str(effect.index),
 				effect.name + short_type,
-				"Add {} {} from {}".format(
-					effect.name,
-					display_type,
-					os.path.basename(effect.filepath))
+				f"Add {effect.name} {display_type} from {os.path.basename(effect.filepath)}"
 			))
 		return elist
 

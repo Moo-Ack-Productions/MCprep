@@ -75,7 +75,7 @@ def getEntityList(context: Context) -> List[tuple]:
 	if not context.scene.mcprep_props.entity_list:
 		updateEntityList(context)
 	return [
-		(itm.entity, itm.name.title(), "Place {}".format(itm.name))
+		(itm.entity, itm.name.title(), f"Place {itm.name}")
 		for itm in context.scene.mcprep_props.entity_list]
 
 
@@ -107,8 +107,8 @@ def updateEntityList(context: Context) -> None:
 			continue
 		if util.nameGeneralize(name).lower() in temp_entity_list:
 			continue
-		description = "Place {x} entity".format(x=name)
-		entity_list.append((prefix + name, name.title(), description))
+		description = f"Place {name} entity"
+		entity_list.append((f"{prefix}{name}", name.title(), description))
 		temp_entity_list.append(util.nameGeneralize(name).lower())
 
 	# sort the list alphabetically by name

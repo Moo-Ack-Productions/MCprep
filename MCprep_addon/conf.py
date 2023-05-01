@@ -138,7 +138,7 @@ class MCprepEnv:
 				'IMAGE')
 		except Exception as e:
 			self.log("Old verison of blender, no custom icons available")
-			self.log("\t" + str(e))
+			self.log(f"\t {e}")
 			global use_icons
 			self.use_icons = False
 			for iconset in collection_sets:

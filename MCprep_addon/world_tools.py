@@ -132,7 +132,7 @@ def detect_world_exporter(filepath: PathLike) -> None:
 					obj_header.set_seperated()
 				return
 		except UnicodeDecodeError:
-			print("failed to read first line of obj: " + filepath)
+			print(f"Failed to read first line of obj: {filepath}")
 			return
 		obj_header.set_jmc2obj()
 		obj_header.set_seperated() # Since this is the default for Jmc2Obj, we'll assume this is what the OBJ is using
@@ -479,11 +479,9 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		# Create the new world collection
 		prefs = util.get_user_preferences(context)
 		if prefs is not None and prefs.MCprep_exporter_type != '(choose)':
-			name = "{} world: {}".format(
-				prefs.MCprep_exporter_type,
-				world_name)
+			name = f"{prefs.MCprep_exporter_type} world: {world_name}"
 		else:
-			name = "minecraft_world: " + world_name
+			name = f"minecraft_world: {world_name}"
 		worldg = util.collections().new(name=name)
 		context.scene.collection.children.link(worldg)  # Add to outliner.
 
@@ -766,9 +764,9 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			if not os.path.isfile(blendfile):
 				self.report(
 					{'ERROR'},
-					"Source MCprep world blend file does not exist: " + blendfile)
+					f"Source MCprep world blend file does not exist: {blendfile}")
 				env.log(
-					"Source MCprep world blend file does not exist: " + blendfile)
+					f"Source MCprep world blend file does not exist: {blendfile}")
 				return {'CANCELLED'}
 			if wname in bpy.data.worlds:
 				prev_world = bpy.data.worlds[wname]
@@ -807,11 +805,11 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			if not os.path.isfile(blendfile):
 				self.report(
 					{'ERROR'},
-					"Source MCprep world blend file does not exist: " + blendfile)
+					f"Source MCprep world blend file does not exist: {blendfile}")
 				env.log(
-					"Source MCprep world blend file does not exist: " + blendfile)
+					f"Source MCprep world blend file does not exist: {blendfile}")
 				return {'CANCELLED'}
-			resource = blendfile + "/Object"
+			resource = f"{blendfile}/Object"
 
 			util.bAppendLink(resource, "MoonMesh", False)
 			non_empties = [
@@ -897,7 +895,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			try:
 				util.obj_unlink_remove(time_obj_cache, True, context)
 			except:
-				print("Error, could not unlink time_obj_cache " + str(time_obj_cache))
+				print(f"Error, could not unlink time_obj_cache {time_obj_cache}")
 
 		time_obj_cache = None  # force reset to use newer cache object
 
@@ -1105,8 +1103,7 @@ class MCPREP_OT_render_helper():
 			return
 
 		if self.rendering:
-			header_text = "Pano render in progress: {}/6 done".format(
-				self.rendered_count)
+			header_text = f"Pano render in progress: {self.rendered_count}/6 done"
 		else:
 			header_text = "Pano render finished"
 
@@ -1151,7 +1148,7 @@ class MCPREP_OT_render_helper():
 		bpy.context.scene.render.filepath = os.path.join(
 			self.filepath, self.current_render["filename"])
 
-		env.log("Starting pano render {}".format(self.current_render["filename"]))
+		env.log(f"Starting pano render {self.current_render["filename"]}"
 		self.display_current()
 
 		bpy.app.timers.register(

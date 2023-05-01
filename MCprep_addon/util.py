@@ -138,7 +138,7 @@ def bAppendLink(directory: str, name: str, toLink: bool, active_layer: bool=True
 	Returns: true if successful, false if not.
 	"""
 
-	env.log("Appending " + directory + " : " + name, vv_only=True)
+	env.log(f"Appending {directory} : {name}", vv_only=True)
 
 	# for compatibility, add ending character
 	if directory[-1] != "/" and directory[-1] != os.path.sep:
@@ -167,7 +167,7 @@ def bAppendLink(directory: str, name: str, toLink: bool, active_layer: bool=True
 				print("bAppendLink", e)
 				return False
 		else:
-			env.log("{} {} {}".format(directory, name, active_layer))
+			env.log(f"{directory} {name} {active_layer}")
 			try:
 				bpy.ops.wm.append(
 					directory=directory,
@@ -281,11 +281,11 @@ def randomizeMeshSwap(swap: str, variations: int) -> str:
 	if swap == 'torch':
 		randomized = random.randint(0, variations - 1)
 		if randomized != 0:
-			randi = ".{x}".format(x=randomized)
+			randi = f".{randomized}"
 	elif swap == 'Torch':
 		randomized = random.randint(0, variations - 1)
 		if randomized != 0:
-			randi = ".{x}".format(x=randomized)
+			randi = f".{randomized}"
 	return swap + randi
 
 
@@ -350,7 +350,7 @@ def link_selected_objects_to_scene() -> None:
 def open_program(executable: str) -> Union[int ,str]:
 	# Open an external program from filepath/executbale
 	executable = bpy.path.abspath(executable)
-	env.log("Open program request: " + executable)
+	env.log(f"Open program request: {executable}")
 
 	# input could be .app file, which appears as if a folder
 	if not os.path.isfile(executable):
@@ -400,7 +400,7 @@ def open_program(executable: str) -> Union[int ,str]:
 		p = Popen(['open', executable], stdin=PIPE, stdout=PIPE, stderr=PIPE)
 		stdout, err = p.communicate(b"")
 		if err != b"":
-			return "Error occured while trying to open executable: " + str(err)
+			return f"Error occured while trying to open executable: {err}" 
 	return "Failed to open executable"
 
 
@@ -419,7 +419,7 @@ def open_folder_crossplatform(folder: str) -> bool:
 
 	try:
 		# windows... untested
-		subprocess.Popen('explorer "{x}"'.format(x=folder))
+		subprocess.Popen(f'explorer "{folder}"')
 		return True
 	except:
 		pass
@@ -478,7 +478,7 @@ def load_mcprep_json() -> bool:
 		"make_real": []
 	}
 	if not os.path.isfile(path):
-		env.log("Error, json file does not exist: " + path)
+		env.log(f"Error, json file does not exist: {path}")
 		env.json_data = default
 		return False
 	with open(path) as data_file:

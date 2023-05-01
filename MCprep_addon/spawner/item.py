@@ -89,7 +89,7 @@ def reload_items(context: Context) -> None:
 		basename = os.path.splitext(os.path.basename(item_file))[0]
 		asset = mcprep_props.item_list.add()
 		asset.name = basename.replace("_", " ")
-		asset.description = "Spawn one " + basename
+		asset.description = f"Spawn one {basename}"
 		asset.path = item_file
 		asset.index = i
 
@@ -97,7 +97,7 @@ def reload_items(context: Context) -> None:
 		if not env.use_icons or env.preview_collections["items"] == "":
 			continue
 		env.preview_collections["items"].load(
-			"item-{}".format(i), item_file, 'IMAGE')
+			f"item-{i}", item_file, 'IMAGE')
 
 	if mcprep_props.item_list_index >= len(mcprep_props.item_list):
 		mcprep_props.item_list_index = len(mcprep_props.item_list) - 1

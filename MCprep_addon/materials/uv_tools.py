@@ -122,7 +122,7 @@ def detect_invalid_uvs_from_objs(obj_list: List[Object]) -> List[bool, List[Obje
 			invalid_objects.append(obj)
 	t1 = time.time()
 	t_diff = t1 - t0  # round to .1s
-	env.log("UV check took {}s".format(t_diff), vv_only=True)
+	env.log(f"UV check took {t_diff}s", vv_only=True)
 	return invalid, invalid_objects
 
 
@@ -187,7 +187,7 @@ class MCPREP_OT_scale_uv(bpy.types.Operator):
 
 		if ret is not None:
 			self.report({'ERROR'}, ret)
-			env.log("Error, " + ret)
+			env.log(f"Error, {ret}")
 			return {'CANCELLED'}
 
 		return {'FINISHED'}
@@ -309,7 +309,7 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 				continue
 			elif image.channels != 4:
 				textures.append(None)  # no alpha channel anyways
-				env.log("No alpha channel for: " + image.name)
+				env.log(f"No alpha channel for: {image.name}")
 				continue
 			textures.append(image)
 		data = [None for tex in textures]
@@ -362,17 +362,16 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 							asum += data[fnd][image.size[1] * row + col]
 							acount += 1
 						except IndexError as err:
-							print("Index error while parsing col {}, row {}: {}".format(
-								col, row, err))
+							print(f"Index error while parsing col {col}, row {row}: {err}")
 
 			if acount == 0:
 				acount = 1
 			ratio = float(asum) / float(acount)
 			if ratio < float(threshold):
-				print("\t{} - Below threshold, select".format(ratio))
+				print(f"\t{ratio} - Below threshold, select")
 				f.select = True
 			else:
-				print("\t{} - above thresh, NO select".format(ratio))
+				print("\t{ratio} - above thresh, NO select")
 				f.select = False
 		return
 

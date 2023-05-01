@@ -86,10 +86,10 @@ def filter_collections(data_from: BlendDataLibraries) -> List[str]:
 
 		short = name.replace(" ", "").replace("-", "").replace("_", "")
 		if SKIP_COLL in short.lower():
-			env.log("Skipping collection: " + name)
+			env.log(f"Skipping collection: {name}")
 			continue
 		if SKIP_COLL_LEGACY in short.lower():
-			env.log("Skipping legacy collection: " + name)
+			env.log(f"Skipping legacy collection: {name}")
 			continue
 		elif INCLUDE_COLL in name.lower():
 			any_mcprep = True
@@ -97,8 +97,7 @@ def filter_collections(data_from: BlendDataLibraries) -> List[str]:
 		all_names.append(name)
 
 	if any_mcprep:
-		env.log("Filtered from {} down to {} MCprep collections".format(
-			len(all_names), len(mcprep_names)))
+		env.log(f"Filtered from {len(all_names)} down to {len(mcprep_names)} MCprep collections")
 		all_names = mcprep_names
 	return all_names
 
@@ -173,8 +172,7 @@ def attemptScriptLoad(path: str) -> None:
 	path = path[:-5] + "py"
 
 	if os.path.basename(path) in [txt.name for txt in bpy.data.texts]:
-		env.log("Script {} already imported, not importing a new one".format(
-			os.path.basename(path)))
+		env.log(f"Script {os.path.basename(path)} already imported, not importing a new one")
 		return
 
 	if not os.path.isfile(path):
@@ -233,13 +231,13 @@ def fix_armature_target(self, context: Context, new_objs: List[Object], src_coll
 				new_target.animation_data_create()
 				new_target.animation_data.action = old_target.animation_data.action
 				env.log(
-					"Updated animation of armature for instance of " + src_coll.name)
+					f"Updated animation of armature for instance of {src_coll.name}")
 
 			if mod.object in new_objs:
 				continue  # Was already the new object target for modifier.
 			mod.object = new_target
 			env.log(
-				"Updated target of armature for instance of " + src_coll.name)
+				f"Updated target of armature for instance of {src_coll.name}")
 
 
 def prep_collection(self, context: Context, name: str, pre_groups: List[Collection]) -> Optional[Collection]:
@@ -345,10 +343,10 @@ def load_linked(self, context: Context, path: str, name: str) -> None:
 	path = bpy.path.abspath(path)
 	act = None
 	if hasattr(bpy.data, "groups"):
-		res = util.bAppendLink(path + '/Group', name, True)
+		res = util.bAppendLink(f"{path}/Group", name, True)
 		act = context.object  # assumption of object after linking, 2.7 only
 	elif hasattr(bpy.data, "collections"):
-		res = util.bAppendLink(path + '/Collection', name, True)
+		res = util.bAppendLink(f"{path}/Collection", name, True)
 		if len(context.selected_objects) > 0:
 			act = context.selected_objects[0]  # better for 2.8
 		else:
@@ -370,8 +368,7 @@ def load_linked(self, context: Context, path: str, name: str) -> None:
 	# 	act = context.selected_objects[0] # better for 2.8
 	# elif context.object:
 	# 	act = context.object  # assumption of object after linking
-	env.log("Identified new obj as: {}".format(
-		act), vv_only=True)
+	env.log(f"Identified new obj as: {act}", vv_only=True)
 
 	if not act:
 		self.report({'ERROR'}, "Could not grab linked in object if any.")
@@ -477,7 +474,7 @@ def load_append(self, context: Context, path: str, name: str) -> None:
 	else:
 		raise Exception("No Group or Collection bpy API endpoint")
 
-	env.log(os.path.join(path, subpath) + ', ' + name)
+	env.log(f"{os.path.join(path, subpath)}, {name}")
 	pregroups = list(util.collections())
 	res = util.bAppendLink(os.path.join(path, subpath), name, False)
 	postgroups = list(util.collections())
@@ -505,8 +502,7 @@ def load_append(self, context: Context, path: str, name: str) -> None:
 				# group is a subcollection of another name.
 				grp_added = grp
 
-	env.log("Identified collection/group {} as the primary imported".format(
-		grp_added), vv_only=True)
+	env.log(f"Identified collection/group {grp_added} as the primary imported", vv_only=True)
 
 	# if rig not centered in original file, assume its group is
 	if hasattr(grp_added, "dupli_offset"):  # 2.7
@@ -523,8 +519,7 @@ def load_append(self, context: Context, path: str, name: str) -> None:
 	addedObjs = [ob for ob in grp_added.objects]
 	for ob in all_objects:
 		if ob not in addedObjs:
-			env.log("This obj not in group {}: {}".format(
-				grp_added.name, ob.name))
+			env.log(f"This obj not in group {grp_added.name}: {ob.name}")
 			# removes things like random bone shapes pulled in,
 			# without deleting them, just unlinking them from the scene
 			util.obj_unlink_remove(ob, False, context)
@@ -551,11 +546,11 @@ def load_append(self, context: Context, path: str, name: str) -> None:
 		env.log("Could not get rig object")
 		self.report({'WARNING'}, "No armatures found!")
 	else:
-		env.log("Using object as primary rig: " + rig_obj.name)
+		env.log(f"Using object as primary rig: {rig_obj.name}")
 		try:
 			util.set_active_object(context, rig_obj)
 		except RuntimeError:
-			env.log("Failed to set {} as active".format(rig_obj))
+			env.log(f"Failed to set {rig_obj} as active")
 			rig_obj = None
 
 	if rig_obj and self.clearPose or rig_obj and self.relocation == "Offset":
@@ -564,7 +559,7 @@ def load_append(self, context: Context, path: str, name: str) -> None:
 		try:
 			bpy.ops.object.mode_set(mode='POSE')
 		except Exception as e:
-			self.report({'ERROR'}, "Failed to enter pose mode: " + str(e))
+			self.report({'ERROR'}, f"Failed to enter pose mode: {e}")
 			print("Failed to enter pose mode, see logs")
 			print("Exception: ", str(e))
 			print(bpy.context.object)
@@ -685,7 +680,7 @@ class MCPREP_OT_prompt_reset_spawners(bpy.types.Operator):
 class MCPREP_UL_mob(bpy.types.UIList):
 	"""For mob asset listing UIList drawing"""
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
-		icon = "mob-{}".format(set.index)
+		icon = f"mob-{set.index}"
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
 			if not conf.use_icons:
 				layout.label(text=set.name)
@@ -739,7 +734,7 @@ class MCPREP_UL_model(bpy.types.UIList):
 class MCPREP_UL_item(bpy.types.UIList):
 	"""For item asset listing UIList drawing"""
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
-		icon = "item-{}".format(set.index)
+		icon = f"item-{set.index}"
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
 			if not conf.use_icons:
 				layout.label(text=set.name)
@@ -763,7 +758,7 @@ class MCPREP_UL_item(bpy.types.UIList):
 class MCPREP_UL_effects(bpy.types.UIList):
 	"""For effects asset listing UIList drawing"""
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
-		icon = "effects-{}".format(set.index)
+		icon = f"effects-{set.index}"
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
 
 			# Add icons based on the type of effect.
@@ -796,7 +791,7 @@ class MCPREP_UL_effects(bpy.types.UIList):
 class MCPREP_UL_material(bpy.types.UIList):
 	"""For material library UIList drawing"""
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
-		icon = "material-{}".format(set.index)
+		icon = f"material-{set.index}"
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
 			if not conf.use_icons:
 				layout.label(text=set.name)

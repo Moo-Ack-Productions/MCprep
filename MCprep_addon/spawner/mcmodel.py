@@ -109,7 +109,7 @@ def add_element(
 def add_material(name: str="material", path: str="") -> Material:
 	""" TODO ???
 	Creates a simple material with an image texture from path."""
-	env.log(name + ": " + path, vv_only=True)
+	env.log(f"{name}: {path}", vv_only=True)
 	mat = bpy.data.materials.new(name=name)
 	mat.blend_method = 'CLIP'
 	mat.shadow_method = 'CLIP'
@@ -128,7 +128,7 @@ def add_material(name: str="material", path: str="") -> Material:
 	return mat
 
 
-def locate_image(context: Context, textures: Dict[str, str], img,: str, model_filepath: str) -> str:
+def locate_image(context: Context, textures: Dict[str, str], img,: str, model_filepath: str) -> PathLike:
 	"""Finds and returns the filepath of the image texture."""
 	resource_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
 
@@ -206,7 +206,7 @@ def read_model(context: Context, model_filepath: PathLike) -> List[list, dict]:
 
 			# resource_folder
 			models_dir = os.path.join(
-				"assets", namespace, "models", parent_filepath + ".json")
+				"assets", namespace, "models", f"{parent_filepath}.json")
 			target_path = os.path.join(targets_folder, models_dir)
 			active_path = os.path.join(resource_folder, models_dir)
 			base_path = os.path.join(fallback_folder, models_dir)
@@ -218,7 +218,7 @@ def read_model(context: Context, model_filepath: PathLike) -> List[list, dict]:
 			elif os.path.isfile(base_path):
 				elements, textures = read_model(context, base_path)
 			else:
-				env.log("Failed to find mcmodel file " + parent_filepath)
+				env.log(f"Failed to find mcmodel file {parent_filepath}")
 
 	current_elements: list = obj_data.get("elements")
 	if current_elements is not None:
@@ -232,7 +232,7 @@ def read_model(context: Context, model_filepath: PathLike) -> List[list, dict]:
 			for img in current_textures:
 				textures[img] = current_textures[img]
 
-	env.log("\nfile:" + str(model_filepath), vv_only=True)
+	env.log(f"\nfile: {model_filepath}", vv_only=True)
 	# env.log("parent:" + str(parent))
 	# env.log("elements:" + str(elements))
 	# env.log("textures:" + str(textures))
@@ -265,9 +265,9 @@ def add_model(model_filepath: PathLike, obj_name: str="MinecraftModel") -> Objec
 		for img in textures:
 			if img != "particle":
 				tex_pth = locate_image(bpy.context, textures, img, model_filepath)
-				mat = add_material(obj_name + "_" + img, tex_pth)
+				mat = add_material(f"{obj_name}_{img}", tex_pth)
 				obj.data.materials.append(mat)
-				materials.append("#" + img)
+				materials.append(f"#{img}")
 
 	if elements is None:
 		elements = [
@@ -369,7 +369,7 @@ def update_model_list(context: Context):
 	if not os.path.isdir(active_pack):
 		scn_props.model_list.clear()
 		scn_props.model_list_index = 0
-		env.log("No models found for active path " + active_pack)
+		env.log(f"No models found for active path {active_pack}")
 		return
 	base_has_models = os.path.isdir(base_pack)
 
@@ -384,7 +384,7 @@ def update_model_list(context: Context):
 			if os.path.isfile(os.path.join(active_pack, model))
 			and model.lower().endswith(".json")]
 	else:
-		env.log("Base resource pack has no models folder: " + base_pack)
+		env.log(f"Base resource pack has no models folder: {base_pack}")
 		base_models = []
 
 	sorted_models = [
@@ -482,13 +482,13 @@ class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 			return {'CANCELLED'}
 		if not self.filepath.lower().endswith(".json"):
 			self.report(
-				{"ERROR"}, "File is not json: " + self.filepath)
+				{"ERROR"}, f"File is not json: {self.filepath}")
 			return {'CANCELLED'}
 
 		try:
 			obj = add_model(os.path.normpath(self.filepath), name)
 		except ModelException as e:
-			self.report({"ERROR"}, "Encountered error: " + str(e))
+			self.report({"ERROR"}, f"Encountered error: {e}"))
 			return {'CANCELLED'}
 
 		self.place_model(obj)
@@ -520,13 +520,13 @@ class MCPREP_OT_import_minecraft_model_file(
 			return {'CANCELLED'}
 		if not self.filepath.lower().endswith(".json"):
 			self.report(
-				{"ERROR"}, "File is not json: " + self.filepath)
+				{"ERROR"}, f"File is not json: {self.filepath}")
 			return {'CANCELLED'}
 
 		try:
 			obj = add_model(os.path.normpath(self.filepath), filename)
 		except ModelException as e:
-			self.report({"ERROR"}, "Encountered error: " + str(e))
+			self.report({"ERROR"}, f"Encountered error: {e}"))
 			return {'CANCELLED'}
 
 		self.place_model(obj)
