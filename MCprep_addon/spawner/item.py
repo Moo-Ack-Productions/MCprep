@@ -19,10 +19,15 @@
 import os
 
 import bpy
+from bpy.types import (
+  Context, Object
+)
 from bpy_extras.io_utils import ImportHelper
 import mathutils
+from typing import List, Optional
 
 from .. import util
+from ..util import PathLike
 from .. import tracking
 from ..conf import env
 from ..materials import generate 

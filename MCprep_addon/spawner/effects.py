@@ -23,6 +23,10 @@ import random
 import bmesh
 from bpy_extras.io_utils import ImportHelper
 import bpy
+from bpy.types import (
+  Context, Object, Collection, 
+  NodesModifier, Image, Mesh
+)
 from mathutils import Vector
 
 from .. import conf
@@ -38,7 +42,7 @@ from ..conf import env
 # -----------------------------------------------------------------------------
 
 # Enum values for effect_type for safe string comparisons.
-GEO_AREA = "geo_area"
+GEO_AREA = "geo_area"""
 PARTICLE_AREA = "particle_area"
 COLLECTION = "collection"
 IMG_SEQ = "img_seq"

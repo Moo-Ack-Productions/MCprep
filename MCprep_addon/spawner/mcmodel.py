@@ -27,6 +27,7 @@ from bpy.types import (
   Context, Object, Material
 )
 from bpy_extras.io_utils import ImportHelper
+from typing import Dict, List, Optional
 
 from ..conf import env
 from .. import util
@@ -44,7 +45,7 @@ class ModelException(Exception):
 
 
 def rotate_around(
-	d: float, pos: VectorType, origin: VectorType, axis:str='z', offset: VectorType=[8, 0, 8], scale: Vector=[0.063, 0.063, 0.063]) -> VectorType:
+	d: float, pos: VectorType, origin: VectorType, axis:str='z', offset: VectorType=[8, 0, 8], scale: VectorType=[0.063, 0.063, 0.063]) -> VectorType:
 	r = -radians(d)
 	axis_i = ord(axis) - 120  # 'x'=0, 'y'=1, 'z'=2
 	a = pos[(1 + axis_i) % 3]

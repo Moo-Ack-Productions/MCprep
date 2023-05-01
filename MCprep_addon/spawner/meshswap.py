@@ -28,7 +28,7 @@ from bpy.types import (
 )
 import mathutils
 
-from typing import Dict, List, Union, TypeVar
+from typing import Dict, List, Union
 from . import spawn_util
 from .. import conf
 from ..conf import env
