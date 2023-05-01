@@ -20,9 +20,11 @@ import os
 
 import bpy
 
+from bpy.type import Context
 from .. import conf
 from ..conf import env
 from .. import util
+from ..util import PathLike, VectorType
 from .. import tracking
 
 from . import spawn_util
@@ -36,7 +38,7 @@ entity_cache = {}
 entity_cache_path = None
 
 
-def get_entity_cache(context, clear=False):
+def get_entity_cache(context: Context, clear: bool=False) -> Dict[str, list]:
 	"""Load collections from entity spawning lib if not cached, return key vars."""
 	global entity_cache
 	global entity_cache_path  # Used to auto-clear path if bpy prop changed.
@@ -66,7 +68,7 @@ def get_entity_cache(context, clear=False):
 	return entity_cache
 
 
-def getEntityList(context):
+def getEntityList(context: Context) -> List[tuple]:
 	"""Only used for UI drawing of enum menus, full list."""
 
 	# may redraw too many times, perhaps have flag
@@ -77,7 +79,7 @@ def getEntityList(context):
 		for itm in context.scene.mcprep_props.entity_list]
 
 
-def update_entity_path(self, context):
+def update_entity_path(self, context: Context) -> None:
 	"""for UI list path callback"""
 	env.log("Updating entity path", vv_only=True)
 	if not context.scene.entity_path.lower().endswith('.blend'):
@@ -87,7 +89,7 @@ def update_entity_path(self, context):
 	updateEntityList(context)
 
 
-def updateEntityList(context):
+def updateEntityList(context: Context) -> None:
 	"""Update the entity list"""
 	entity_file = bpy.path.abspath(context.scene.entity_path)
 	if not os.path.isfile(entity_file):
@@ -127,10 +129,10 @@ def updateEntityList(context):
 
 class face_struct():
 	"""Structure class for preprocessed faces of a mesh"""
-	def __init__(self, normal_coord, global_coord, local_coord):
-		self.n = normal_coord
-		self.g = global_coord
-		self.l = local_coord
+	def __init__(self, normal_coord: VectorType, global_coord: VectorType, local_coord: VectorType):
+		self.n: VectorType = normal_coord
+		self.g: VectorType = global_coord
+		self.l: VectorType = local_coord
 
 
 # -----------------------------------------------------------------------------
@@ -160,7 +162,7 @@ class MCPREP_OT_entity_spawner(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 
 	# properties, will appear in redo-last menu
-	def swap_enum(self, context):
+	def swap_enum(self, context: Context) -> List[tuple]:
 		return getEntityList(context)
 
 	entity = bpy.props.EnumProperty(items=swap_enum, name="Entity")

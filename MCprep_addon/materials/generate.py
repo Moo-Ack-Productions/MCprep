@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from typing import Union, Dict, Optional, List, Any
 
 from .. import util
+from ..util import PathLike
 
 from ..conf import env
 
@@ -113,7 +114,7 @@ def get_mc_canonical_name(name: str) -> List[str, Optional[str]]:
 	return canon, form
 
 
-def find_from_texturepack(blockname: str, resource_folder: Optional[str]=None) -> str:
+def find_from_texturepack(blockname: str, resource_folder: Optional[PathLike]=None) -> str:
 	"""Given a blockname (and resource folder), find image filepath.
 
 	Finds textures following any pack which should have this structure, and
@@ -291,7 +292,7 @@ def matprep_cycles(mat: Material, options: PrepOptions) -> Optional[bool]:
 	return res
 
 
-def set_texture_pack(material: Material, folder: str, use_extra_passes: bool) -> bool:
+def set_texture_pack(material: Material, folder: PathLike, use_extra_passes: bool) -> bool:
 	"""Replace existing material's image with texture pack's.
 
 	Run through and check for each if counterpart material exists, then
@@ -489,7 +490,7 @@ def get_textures(material: Material) -> Dict[str, Image]:
 	return passes
 
 
-def find_additional_passes(image_file: str) -> Dict[str, Image]:
+def find_additional_passes(image_file: PathLike) -> Dict[str, Image]:
 	"""Find relevant passes like normal and spec in same folder as image."""
 	abs_img_file = bpy.path.abspath(image_file)
 	env.log("\tFind additional passes for: " + image_file, vv_only=True)

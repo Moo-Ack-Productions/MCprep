@@ -36,7 +36,7 @@ except ImportError:
 # -----------------------------------------------------------------------------
 
 
-def reload_items(context):
+def reload_items(context: Context) -> None:
 	"""Reload the items UI list for spawning"""
 
 	mcprep_props = context.scene.mcprep_props
@@ -98,8 +98,7 @@ def reload_items(context):
 		mcprep_props.item_list_index = len(mcprep_props.item_list) - 1
 
 
-def spawn_item_from_filepath(
-	context, path, max_pixels, thickness, threshold, transparency):
+def spawn_item_from_filepath(context: Context, path: PathLike, max_pixels: int, thickness: float, threshold: float, transparency: bool) -> List[Optional[Object], Optional[str]]:
 	"""Reusable function for generating an item from an image filepath
 
 	Arguments
@@ -343,7 +342,7 @@ class ItemSpawnBase():
 		pose_active = context.mode == 'POSE' and context.active_bone
 		return context.mode == 'OBJECT' or pose_active
 
-	def spawn_item_execution(self, context):
+	def spawn_item_execution(self, context: Context):
 		"""Common execution for both spawn item from filepath and list."""
 		if context.mode == 'POSE' and context.active_bone:
 			spawn_in_pose = True

@@ -23,11 +23,16 @@ from math import sin, cos, radians
 
 import bpy
 import bmesh
+from bpy.types import (
+  Context, Object, Material
+)
 from bpy_extras.io_utils import ImportHelper
 
 from ..conf import env
 from .. import util
+from ..util import PathLike, VectorType
 from .. import tracking
+
 
 
 # -----------------------------------------------------------------------------
@@ -39,7 +44,7 @@ class ModelException(Exception):
 
 
 def rotate_around(
-	d, pos, origin, axis='z', offset=[8, 0, 8], scale=[0.063, 0.063, 0.063]):
+	d: float, pos: VectorType, origin: VectorType, axis:str='z', offset: VectorType=[8, 0, 8], scale: Vector=[0.063, 0.063, 0.063]) -> VectorType:
 	r = -radians(d)
 	axis_i = ord(axis) - 120  # 'x'=0, 'y'=1, 'z'=2
 	a = pos[(1 + axis_i) % 3]
@@ -63,11 +68,11 @@ def rotate_around(
 
 
 def add_element(
-	elm_from=[0, 0, 0],
-	elm_to=[16, 16, 16],
-	rot_origin=[8, 8, 8],
-	rot_axis='y',
-	rot_angle=0):
+	elm_from: VectorType=[0, 0, 0],
+	elm_to: VectorType=[16, 16, 16],
+	rot_origin: VectorType=[8, 8, 8],
+	rot_axis: str='y',
+	rot_angle: float=0) -> list:
 	"""Calculates and defines the verts, edge, and faces that to create."""
 	verts = [
 		rotate_around(
@@ -100,8 +105,9 @@ def add_element(
 	return [verts, edges, faces]
 
 
-def add_material(name="material", path=""):
-	"""Creates a simple material with an image texture from path."""
+def add_material(name: str="material", path: str="") -> Material:
+	""" TODO ???
+	Creates a simple material with an image texture from path."""
 	env.log(name + ": " + path, vv_only=True)
 	mat = bpy.data.materials.new(name=name)
 	mat.blend_method = 'CLIP'
@@ -121,7 +127,7 @@ def add_material(name="material", path=""):
 	return mat
 
 
-def locate_image(context, textures, img, model_filepath):
+def locate_image(context: Context, textures: Dict[str, str], img,: str, model_filepath: str) -> str:
 	"""Finds and returns the filepath of the image texture."""
 	resource_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
 
@@ -146,7 +152,7 @@ def locate_image(context, textures, img, model_filepath):
 		return os.path.realpath(os.path.join(directory, local_path) + ".png")
 
 
-def read_model(context, model_filepath):
+def read_model(context: Context, model_filepath: PathLike) -> List[list, dict]:
 	"""Reads json file to get textures and elements needed for model.
 
 	This function is recursively called to also get the elements and textures
@@ -178,8 +184,8 @@ def read_model(context, model_filepath):
 	resource_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
 	fallback_folder = bpy.path.abspath(addon_prefs.custom_texturepack_path)
 
-	elements = None
-	textures = None
+	elements: Optional[list] = None
+	textures: Optional[dict] = None
 
 	parent = obj_data.get("parent")
 	if parent is not None:
@@ -213,11 +219,11 @@ def read_model(context, model_filepath):
 			else:
 				env.log("Failed to find mcmodel file " + parent_filepath)
 
-	current_elements = obj_data.get("elements")
+	current_elements: list = obj_data.get("elements")
 	if current_elements is not None:
 		elements = current_elements  # overwrites any elements from parents
 
-	current_textures = obj_data.get("textures")
+	current_textures: dict = obj_data.get("textures")
 	if current_textures is not None:
 		if textures is None:
 			textures = current_textures
@@ -233,7 +239,7 @@ def read_model(context, model_filepath):
 	return elements, textures
 
 
-def add_model(model_filepath, obj_name="MinecraftModel"):
+def add_model(model_filepath: PathLike, obj_name: str="MinecraftModel") -> Object:
 	"""Primary function for generating a model from json file."""
 	mesh = bpy.data.meshes.new(obj_name)  # add a new mesh
 	obj = bpy.data.objects.new(obj_name, mesh)  # add a new object using the mesh
@@ -339,7 +345,7 @@ def add_model(model_filepath, obj_name="MinecraftModel"):
 # -----------------------------------------------------------------------------
 
 
-def update_model_list(context):
+def update_model_list(context: Context):
 	"""Update the model list.
 
 	Prefer loading model names from the active resource pack, but fall back
@@ -408,7 +414,7 @@ def update_model_list(context):
 		scn_props.model_list_index = len(scn_props.model_list) - 1
 
 
-def draw_import_mcmodel(self, context):
+def draw_import_mcmodel(self, context: Context):
 	"""Import bar layout definition."""
 	layout = self.layout
 	layout.operator("mcprep.import_model_file", text="Minecraft Model (.json)")

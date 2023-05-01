@@ -20,6 +20,7 @@ import os
 from pathlib import Path
 import bpy
 
+from .util import PathLike
 # check if custom preview icons available
 try:
 	import bpy.utils.previews
@@ -35,8 +36,8 @@ class MCprepEnv:
 	def __init__(self):
 		self.data = None
 		self.json_data = None
-		self.json_path: Path = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data.json")
-		self.json_path_update: Path = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data_update.json")
+		self.json_path: PathLike = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data.json")
+		self.json_path_update: PathLike = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data_update.json")
 
 		self.dev_file: Path = Path(os.path.dirname(__file__), "mcprep_dev.txt")
 

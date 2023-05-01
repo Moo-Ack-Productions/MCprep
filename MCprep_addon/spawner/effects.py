@@ -54,7 +54,7 @@ EXTENSIONS = [".png", ".jpg", ".jpeg", ".tiff"]
 # -----------------------------------------------------------------------------
 
 
-def add_geonode_area_effect(context, effect):
+def add_geonode_area_effect(context: Context, effect: spawn_util.ListEffectsAssets) -> Object:
 	"""Create a persistent effect which is meant to emulate a wide-area effect.
 
 	Effect is of type: ListEffectsAssets.
@@ -110,7 +110,7 @@ def add_geonode_area_effect(context, effect):
 	return new_obj
 
 
-def add_area_particle_effect(context, effect, location):
+def add_area_particle_effect(context: Context, effect: spawn_util.ListEffectsAssets, location: util.VectorType) -> Object:
 	"""Create a persistent effect over wide area using traditional particles.
 
 	Effect is of type: ListEffectsAssets.
@@ -173,7 +173,7 @@ def add_area_particle_effect(context, effect, location):
 	return obj
 
 
-def add_collection_effect(context, effect, location, frame):
+def add_collection_effect(context: Context, effect: spawn_util.ListEffectsAssets, location: util.VectorType, frame: int) -> Object:
 	"""Spawn a pre-animated collection effect at a specific point and time.
 
 	Import a new copy of a collection from the effects_collections.blend file.
@@ -213,7 +213,7 @@ def add_collection_effect(context, effect, location, frame):
 	util.select_set(obj, True)
 
 
-def add_image_sequence_effect(context, effect, location, frame, speed):
+def add_image_sequence_effect(context: Context, effect: spawn_util.ListEffectsAssets, location: util.VectorType, frame: int, speed: float) -> Object:
 	"""Spawn a short-term sequence of individual images at a point in time.
 
 	Effect is of type: ListEffectsAssets.
@@ -332,7 +332,7 @@ def add_image_sequence_effect(context, effect, location, frame, speed):
 	return instance
 
 
-def add_particle_planes_effect(context, image_path, location, frame):
+def add_particle_planes_effect(context: Context, image_path: util.PathLike, location: util.VectorType, frame: int) -> None:
 	"""Spawn a short-term particle system at a specific point and time.
 
 	This is the only effect type that does not get pre-loaded into a list. The
@@ -398,7 +398,7 @@ def add_particle_planes_effect(context, image_path, location, frame):
 # Core effects supportive functions
 # -----------------------------------------------------------------------------
 
-def geo_update_params(context, effect, geo_mod):
+def geo_update_params(context: Context, effect: spawn_util.ListEffectsAssets, geo_mod: NodesModifier) -> None:
 	"""Update the paramters of the applied geonode effect.
 
 	Loads fields to apply based on json file where necessary.
@@ -460,7 +460,7 @@ def geo_update_params(context, effect, geo_mod):
 		# TODO: check if any socket name in json specified not found in node.
 
 
-def geo_fields_from_json(effect, jpath):
+def geo_fields_from_json(effect: spawn_util.ListEffectsAssets, jpath: util.PathLike) -> dict:
 	"""Extract json values from a file for a given effect.
 
 	Parse for a json structure with a hierarhcy of:
@@ -491,7 +491,7 @@ def geo_fields_from_json(effect, jpath):
 	return geo_fields
 
 
-def get_or_create_plane_mesh(mesh_name, uvs=[]):
+def get_or_create_plane_mesh(mesh_name: str, uvs: list=[]) -> Mesh:
 	"""Generate a 1x1 plane with UVs stretched out to ends, cache if exists.
 
 	Arg `uvs` represents the 4 coordinate values clockwise from top left of the
@@ -534,8 +534,9 @@ def get_or_create_plane_mesh(mesh_name, uvs=[]):
 	return mesh
 
 
-def get_or_create_particle_meshes_coll(context, particle_name, img):
-	"""Generate a selection of subsets of a given image for use in partucles.
+def get_or_create_particle_meshes_coll(context: Context, particle_name: str, img: Image) -> Collection:
+	""" TODO 2.7
+	Generate a selection of subsets of a given image for use in particles.
 
 	The goal is that instead of spawning entire, complete UVs of the texture,
 	we spawn little subsets of the particles.
@@ -603,7 +604,7 @@ def get_or_create_particle_meshes_coll(context, particle_name, img):
 		return particle_group
 
 
-def apply_particle_settings(obj, frame, base_name, pcoll):
+def apply_particle_settings(obj: Object, frame: int, base_name: str, pcoll: Collection) -> None:
 	"""Update the particle settings for particle planes."""
 	obj.scale = (0.5, 0.5, 0.5)  # Tighen up the area it spawns over.
 
@@ -635,7 +636,7 @@ def apply_particle_settings(obj, frame, base_name, pcoll):
 		psystem.settings.dupli_group = pcoll
 
 
-def import_animated_coll(context, effect, keyname):
+def import_animated_coll(context: Context, effect: spawn_util.ListEffectsAssets, keyname:str) -> Collection:
 	"""Import and return a new animated collection given a specific key."""
 	init_colls = list(util.collections())
 	any_imported = False
@@ -679,7 +680,7 @@ def import_animated_coll(context, effect, keyname):
 	return coll
 
 
-def offset_animation_to_frame(collection, frame):
+def offset_animation_to_frame(collection: Collection, frame: int) -> None:
 	"""Offset all animations and particles based on the given frame."""
 	if frame == 1:
 		return
@@ -749,13 +750,13 @@ def offset_animation_to_frame(collection, frame):
 # -----------------------------------------------------------------------------
 
 
-def update_effects_path(self, context):
+def update_effects_path(self, context: Context) -> None:
 	"""List for UI effects callback ."""
 	env.log("Updating effects path", vv_only=True)
 	update_effects_list(context)
 
 
-def update_effects_list(context):
+def update_effects_list(context: Context) -> None:
 	"""Update the effects list."""
 	mcprep_props = context.scene.mcprep_props
 	mcprep_props.effects_list.clear()
@@ -773,7 +774,7 @@ def update_effects_list(context):
 	load_image_sequence_effects(context)
 
 
-def load_geonode_effect_list(context):
+def load_geonode_effect_list(context: Context) -> None:
 	"""Load effects defined by geonodes for wide area effects."""
 	if not util.bv30():
 		print("Not loading geonode effects")
@@ -847,7 +848,7 @@ def load_geonode_effect_list(context):
 				effect.index = len(mcprep_props.effects_list) - 1  # For icon index.
 
 
-def load_area_particle_effects(context):
+def load_area_particle_effects(context : Context) -> None:
 	"""Load effects defined by wide area particle effects (non geo nodes).
 
 	This is a fallback for older versions of blender which don't have geonodes,
@@ -882,7 +883,7 @@ def load_area_particle_effects(context):
 			effect.index = len(mcprep_props.effects_list) - 1  # For icon index.
 
 
-def load_collection_effects(context):
+def load_collection_effects(context: Context) -> None:
 	"""Load effects defined by collections saved to an effects blend file."""
 	if not util.bv28():
 		print("Collection spawning not supported in Blender 2.7x")
@@ -915,7 +916,7 @@ def load_collection_effects(context):
 			effect.index = len(mcprep_props.effects_list) - 1  # For icon index.
 
 
-def load_image_sequence_effects(context):
+def load_image_sequence_effects(context : Context) -> None:
 	"""Load effects from the particles folder that should be animated."""
 	mcprep_props = context.scene.mcprep_props
 
@@ -1090,7 +1091,7 @@ class MCPREP_OT_instant_effect(bpy.types.Operator):
 	bl_label = "Instant effect"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	def effects_enum(self, context):
+	def effects_enum(self, context: Context) -> List[tuple]:
 		"""Identifies eligible instant effects to include in the dropdown."""
 		mcprep_props = context.scene.mcprep_props
 		elist = []

@@ -20,11 +20,12 @@ from subprocess import Popen, PIPE
 import json
 import operator
 import os
+import pathlib
 import platform
 import random
 import re
 import subprocess
-from typing import List, Optional, Union
+from typing import List, Optional, Union, TypeVar
 
 import bpy
 from bpy.types import (
@@ -37,6 +38,9 @@ from mathutils import Vector, Matrix
 from . import conf
 from .conf import env
 
+# Typing Utilities
+PathLike = TypeVar("PathLike", str, pathlib.Path, bytes, os.PathLike, None)
+VectorType = TypeVar("VectorType", tuple, list, Vector) 
 
 # Commonly used name for an excluded collection in Blender 2.8+
 SPAWNER_EXCLUDE = "Spawner Exclude"

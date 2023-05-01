@@ -23,13 +23,18 @@ import random
 import time
 
 import bpy
+from bpy.types import (
+  Context, Object, Collection
+)
 import mathutils
 
+from typing import Dict, List, Union, TypeVar
 from . import spawn_util
 from .. import conf
 from ..conf import env
 from ..materials import generate
 from .. import util
+from ..util import VectorType
 from .. import tracking
 
 
@@ -41,7 +46,7 @@ meshswap_cache = {}
 meshswap_cache_path = None
 
 
-def get_meshswap_cache(context, clear=False):
+def get_meshswap_cache(context: Context, clear: bool=False) -> Dict[str, list]:
 	"""Load groups/objects from meshswap lib if not cached, return key vars."""
 	global meshswap_cache
 	global meshswap_cache_path  # used to auto-clear path if bpy prop changed
@@ -77,7 +82,7 @@ def get_meshswap_cache(context, clear=False):
 	return meshswap_cache
 
 
-def getMeshswapList(context):
+def getMeshswapList(context: Context) -> List[tuple]:
 	"""Only used for UI drawing of enum menus, full list."""
 
 	# may redraw too many times, perhaps have flag
@@ -88,7 +93,7 @@ def getMeshswapList(context):
 		for itm in context.scene.mcprep_props.meshswap_list]
 
 
-def move_assets_to_excluded_layer(context, collections):
+def move_assets_to_excluded_layer(context: Context, collections: List[Collection]) -> None:
 	"""Utility to move source collections to excluded layer to not be rendered"""
 	initial_view_coll = context.view_layer.active_layer_collection
 
@@ -106,7 +111,7 @@ def move_assets_to_excluded_layer(context, collections):
 			meshswap_exclude_vl.collection.children.link(grp)
 
 
-def update_meshswap_path(self, context):
+def update_meshswap_path(self, context: Context) -> None:
 	"""for UI list path callback"""
 	env.log("Updating meshswap path", vv_only=True)
 	if not context.scene.meshswap_path.lower().endswith('.blend'):
@@ -116,7 +121,7 @@ def update_meshswap_path(self, context):
 	updateMeshswapList(context)
 
 
-def updateMeshswapList(context):
+def updateMeshswapList(context: Context) -> None:
 	"""Update the meshswap list"""
 	meshswap_file = bpy.path.abspath(context.scene.meshswap_path)
 	if not os.path.isfile(meshswap_file):
@@ -159,10 +164,10 @@ def updateMeshswapList(context):
 
 class face_struct():
 	"""Structure class for preprocessed faces of a mesh"""
-	def __init__(self, normal_coord, global_coord, local_coord):
-		self.n = normal_coord
-		self.g = global_coord
-		self.l = local_coord
+	def __init__(self, normal_coord: VectorType, global_coord: VectorType , local_coord: VectorType) -> None:
+		self.n: VectorType = normal_coord
+		self.g: VectorType = global_coord
+		self.l: VectorType = local_coord
 
 
 # -----------------------------------------------------------------------------
@@ -380,7 +385,7 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 		self.track_param = "{}/{}".format(self.method, self.block)
 		return {'FINISHED'}
 
-	def prep_collection(self, context, block, pre_groups):
+	def prep_collection(self, context: Context, block: str, pre_groups: List[Collection]) -> Collection:
 		"""Prep the imported collection, ran only if newly imported (not cached)"""
 
 		# Group method first, move append to according layer
@@ -566,8 +571,8 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 
 		# Assign vars used across operator
 		self.runcount = 0  # counter; if zero by end, raise error nothing matched
-		objList = self.prep_obj_list(context)
-		selList = context.selected_objects  # re-grab having made new objects
+		objList: List[Object] = self.prep_obj_list(context)
+		selList: List[Object] = context.selected_objects  # re-grab having made new objects
 		new_groups = []  # for new imported groups
 		removeList = []  # for objects that should be removed
 		new_objects = []  # all the newly added objects
@@ -590,11 +595,11 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			t2s.append(t0s[-1])
 			t3s.append(t0s[-1])
 			bpy.context.window_manager.progress_update(iter_index / denom)
-			swapGen = util.nameGeneralize(swap.name)
+			swapGen: str = util.nameGeneralize(swap.name)
 			# swapGen = generate.get_mc_canonical_name(swap.name)
 			env.log("Simplified name: {x}".format(x=swapGen))
 			# IMPORTS, gets lists properties, etc
-			swapProps = self.checkExternal(context, swapGen)
+			swapProps: dict = self.checkExternal(context, swapGen)
 
 			# issue in swapProps, e.g. not a mesh or not in lib or some error
 			if swapProps is False:
@@ -757,7 +762,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		self.report({'INFO'}, "Swapped {} objects".format(self.runcount))
 		return {'FINISHED'}
 
-	def prep_obj_list(self, context):
+	def prep_obj_list(self, context: Context) -> List[Object]:
 		"""Initial operator prep to get list of objects to check over"""
 		try:
 			bpy.ops.object.convert(target='MESH')
@@ -780,7 +785,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				obj.name = util.nameGeneralize(obj.active_material.name)
 		return objList
 
-	def get_face_list(self, swap, offset):
+	def get_face_list(self, swap, offset: float) -> List[VectorType]:
 		"""Returns list of relevant faces and mapped coordinates.
 
 		Offset is for Mineways to virtually shift all block centers to half ints
@@ -803,7 +808,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			facebook.append(face_struct(n, g, l))  # g is global, l is local
 		return facebook
 
-	def checkExternal(self, context, name):
+	def checkExternal(self, context: Context, name: str) -> Union[bool, Dict[str, str]]:
 		"""Called for each object in the loop as soon as possible."""
 
 		groupSwap = False
@@ -1004,7 +1009,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			'edgeFloat': edgeFloat, 'torchlike': torchlike, 'removable': removable,
 			'doorlike': doorlike, 'new_groups': new_groups}
 
-	def proccess_poly_orientations(self, face, swapProps, swapGen, instance_configs):
+	def proccess_poly_orientations(self, face: face_struct, swapProps: Dict[str, str], swapGen: str, instance_configs: Dict[str, List[VectorType, int]]) -> None:
 		"""Iterate over individual face, updating instance loc/rotation
 
 		Arguments:
@@ -1170,7 +1175,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		loc_unoffset = [pos + offset for pos in loc]
 		instance_configs[instance_key] = [loc_unoffset, rot_type]
 
-	def add_instances_with_transforms(self, context, swap, swapProps, instance_configs):
+	def add_instances_with_transforms(self, context: Context, swap, swapProps: Dict[str, str], instance_configs: Dict[str, List[VectorType, int]]) -> List[bool, List[Object]]:
 		"""Creates all block instances for a single object.
 
 		Will add and apply rotations, add loc variances, and run random group
@@ -1287,7 +1292,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				util.select_set(ob, False)
 		return grouped, dupedObj
 
-	def offsetByHalf(self, obj):
+	def offsetByHalf(self, obj: Object) -> None:
 		if obj.type != 'MESH':
 			return
 		env.log("doing offset")

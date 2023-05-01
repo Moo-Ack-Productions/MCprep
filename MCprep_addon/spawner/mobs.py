@@ -33,12 +33,13 @@ from .. import tracking
 from . import spawn_util
 
 
+
 # -----------------------------------------------------------------------------
 # support functions
 # -----------------------------------------------------------------------------
 
 
-def get_rig_list(context):
+def get_rig_list(context: Context) -> List[tuple]:
 	"""Only used for operator UI Enum property in redo last / popups"""
 
 	# may redraw too many times, perhaps have flag to prevent re-runs
@@ -50,7 +51,7 @@ def get_rig_list(context):
 	return ret_list
 
 
-def update_rig_path(self, context):
+def update_rig_path(self, context: Context) -> None:
 	"""List for UI mobs callback of property spawn_rig_category."""
 	env.log("Updating rig path", vv_only=True)
 	conf.rig_categories = []
@@ -58,10 +59,10 @@ def update_rig_path(self, context):
 	spawn_rigs_categories(self, context)
 
 
-def update_rig_list(context):
+def update_rig_list(context: Context) -> None:
 	"""Update the rig list and subcategory list"""
 
-	def _add_rigs_from_blend(path, blend_name, category):
+	def _add_rigs_from_blend(path: PathLike, blend_name: str, category: str):
 		"""Block for loading blend file groups to get rigs"""
 		with bpy.data.libraries.load(path) as (data_from, data_to):
 
@@ -158,7 +159,7 @@ def update_rig_list(context):
 	update_rig_category(context)
 
 
-def update_rig_category(context):
+def update_rig_category(context: Context):
 	"""Update the list of mobs for the given category from the master list"""
 
 	scn_props = context.scene.mcprep_props
@@ -664,7 +665,7 @@ class MCPREP_OT_install_mob_icon(bpy.types.Operator, ImportHelper):
 # -----------------------------------------------------------------------------
 
 
-def spawn_rigs_categories(self, context):
+def spawn_rigs_categories(self, context: Context) -> List[tuple]:
 	"""Used as enum UI list for spawn_rig_category dropdown"""
 	items = []
 	items.append(("all", "All Mobs", "Show all mobs loaded"))
@@ -688,7 +689,7 @@ def spawn_rigs_categories(self, context):
 	return items
 
 
-def spawn_rigs_category_load(self, context):
+def spawn_rigs_category_load(self, context: Context) -> None:
 	"""Update function for UI property spawn rig category"""
 	update_rig_category(context)
 	return

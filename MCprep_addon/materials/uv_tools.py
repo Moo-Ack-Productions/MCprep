@@ -31,7 +31,7 @@ from .. import util
 # UV functions
 # -----------------------------------------------------------------------------
 
-def get_uv_bounds_per_material(obj):
+def get_uv_bounds_per_material(obj: Object) -> Dict[str, list]:
 	"""Return the maximum uv bounds per object, split per material
 
 	Returns:
@@ -83,7 +83,7 @@ def get_uv_bounds_per_material(obj):
 	return res
 
 
-def detect_invalid_uvs_from_objs(obj_list):
+def detect_invalid_uvs_from_objs(obj_list: List[Object]) -> List[bool, List[Object]]:
 	"""Detect all-in one combined images from concentrated UV layouts.
 
 	Returns:

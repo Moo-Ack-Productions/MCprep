@@ -20,6 +20,11 @@ import os
 import re
 
 import bpy
+from bpy.types import (
+  Context, Object, Collection
+  BlendDataLibraries
+)
+from typing import List, Optional
 
 from .. import conf
 from .. import util
@@ -46,8 +51,9 @@ else:
 # -----------------------------------------------------------------------------
 
 
-def filter_collections(data_from):
-	"""Generalized way to prefilter collections in a blend file.
+def filter_collections(data_from: BlendDataLibraries) -> List[str]:
+	""" TODO 2.7 groups 
+	Generalized way to prefilter collections in a blend file.
 
 	Enforces the awareness of inclusion and exlcusion collection names, and
 	some hard coded cases to always ignore.
@@ -97,7 +103,7 @@ def filter_collections(data_from):
 	return all_names
 
 
-def check_blend_eligible(this_file, all_files):
+def check_blend_eligible(this_file: str, all_files: List[str]) -> bool:
 	"""Returns true if the path blend file is ok for this blender version.
 
 	Created to better support older blender versions without having to
@@ -157,7 +163,7 @@ def check_blend_eligible(this_file, all_files):
 	return True
 
 
-def attemptScriptLoad(path):
+def attemptScriptLoad(path: str) -> None:
 	"""Search for script that matches name of the blend file"""
 
 	# TODO: should also look into the blend if appropriate
@@ -192,7 +198,7 @@ def attemptScriptLoad(path):
 	text.use_module = True
 
 
-def fix_armature_target(self, context, new_objs, src_coll):
+def fix_armature_target(self, context: Context, new_objs: List[Object], src_coll: Collection) -> None:
 	"""Addresses 2.8 bug where make real might not update armature source"""
 
 	src_armas = [
@@ -236,7 +242,7 @@ def fix_armature_target(self, context, new_objs, src_coll):
 				"Updated target of armature for instance of " + src_coll.name)
 
 
-def prep_collection(self, context, name, pre_groups):
+def prep_collection(self, context: Context, name: str, pre_groups: List[Collection]) -> Optional[Collection]:
 	"""Prep the imported collection, ran only if newly imported (not cached)"""
 
 	# Group method first, move append to according layer
@@ -287,7 +293,7 @@ def prep_collection(self, context, name, pre_groups):
 	return group
 
 
-def get_rig_from_objects(objects):
+def get_rig_from_objects(objects: List[Objects]) -> Object:
 	"""From a list of objects, return the the primary rig (best guess)"""
 	prox_obj = None
 	for obj in objects:
@@ -303,11 +309,11 @@ def get_rig_from_objects(objects):
 	return prox_obj
 
 
-def offset_root_bone(context, armature):
+def offset_root_bone(context: Context, armature: Object) -> bool:
 	"""Used to offset bone to world location (cursor)"""
 	env.log("Attempting offset root")
 	set_bone = False
-	lower_bones = [bone.name.lower() for bone in armature.pose.bones]
+	lower_bones: List[str] = [bone.name.lower() for bone in armature.pose.bones]
 	lower_name = None
 	for name in ["main", "root", "base", "master"]:
 		if name in lower_bones:
@@ -330,7 +336,7 @@ def offset_root_bone(context, armature):
 	return set_bone
 
 
-def load_linked(self, context, path, name):
+def load_linked(self, context: Context, path: str, name: str) -> None:
 	"""Process for loading mob or entity via linked library.
 
 	Used by mob spawner when chosing to link instead of append.
@@ -442,7 +448,7 @@ def load_linked(self, context, path, name):
 				{'INFO'}, "This addon works better when the root bone's name is 'MAIN'")
 
 
-def load_append(self, context, path, name):
+def load_append(self, context: Context, path: str, name: str) -> None:
 	"""Append an entire collection/group into this blend file and fix armature.
 
 	Used for both mob spawning and entity spawning with appropriate handling
