@@ -38,14 +38,14 @@ from . import spawn_util
 
 from ..conf import env, VectorType, PathLike
 
-ListEffectsAssets = TypeVar("ListEffectsAssets")
+ListEffectsAssets = TypeVar("ListEffectsAssets") # Check spawn_util.py ListEffectsAssets
 
 # -----------------------------------------------------------------------------
 # Global enum values
 # -----------------------------------------------------------------------------
 
 # Enum values for effect_type for safe string comparisons.
-GEO_AREA = "geo_area"""
+GEO_AREA = "geo_area"
 PARTICLE_AREA = "particle_area"
 COLLECTION = "collection"
 IMG_SEQ = "img_seq"

@@ -615,7 +615,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				continue
 
 			env.log(
-				"Swapping '{swap.name}', simplified name '{swapGen}")
+				f"Swapping '{swap.name}', simplified name '{swapGen}")
 
 			# loop through each face or "polygon" of mesh, throw out invalids
 			t1s[-1] = time.time()

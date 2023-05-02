@@ -375,7 +375,7 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 				print(f"\t{ratio} - Below threshold, select")
 				f.select = True
 			else:
-				print("\t{ratio} - above thresh, NO select")
+				print(f"\t{ratio} - above thresh, NO select")
 				f.select = False
 		return
 

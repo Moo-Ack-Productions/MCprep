@@ -239,7 +239,7 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 				old = bpy.data.materials[matname]
 				env.log(f"removing old? {matname}", vv_only=True)
 				if removeold is True and old.users == 0:
-					env.log(f"removing old? {matname}", vv_only=True)
+					env.log(f"removing old:{matname}", vv_only=True)
 					try:
 						data.remove(old)
 					except ReferenceError as err:
