@@ -21,12 +21,16 @@
 import errno
 import os
 import shutil
+from typing import List
 
 import bpy
 from bpy_extras.io_utils import ImportHelper
+from bpy.types import (
+  Context
+)
 
 from .. import conf
-from ..conf import env
+from ..conf import env, PathLike
 from .. import util
 from .. import tracking
 
@@ -89,8 +93,7 @@ def update_rig_list(context: Context) -> None:
 				mob.category = category
 				mob.index = len(context.scene.mcprep_props.mob_list_all)
 				if category:
-					mob.mcmob_type = f"{os.path.join(
-						category, blend_name)}:/:{name}"
+					mob.mcmob_type = f"{os.path.join(category, blend_name)}:/:{name}"
 				else:
 					mob.mcmob_type = f"{blend_name}:/:{name}"
 

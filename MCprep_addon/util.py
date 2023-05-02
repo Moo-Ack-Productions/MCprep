@@ -29,18 +29,14 @@ from typing import List, Optional, Union, TypeVar
 
 import bpy
 from bpy.types import (
-  Preferences,
-  Context, Object, Collection,
-  Material, Image, Node,
-
+	Preferences,
+  	Context, Object, Collection,
+  	Material, Image, Node,
+	UILayout
   )
 from mathutils import Vector, Matrix
 from . import conf
 from .conf import env
-
-# Typing Utilities
-PathLike = TypeVar("PathLike", str, pathlib.Path, bytes, os.PathLike, None)
-VectorType = TypeVar("VectorType", tuple, list, Vector) 
 
 # Commonly used name for an excluded collection in Blender 2.8+
 SPAWNER_EXCLUDE = "Spawner Exclude"
@@ -56,7 +52,7 @@ def apply_colorspace(node: Node, color_enum: tuple) -> None:
 	Use enum nomeclature matching Blender 2.8x Default, not 2.7 or other lang
 	"""
 	global noncolor_override
-	noncolor_override:Optional[str] = None
+	noncolor_override= None
 
 	if not node.image:
 		env.log("Node has no image applied yet, cannot change colorspace")

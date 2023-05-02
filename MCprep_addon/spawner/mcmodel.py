@@ -27,11 +27,10 @@ from bpy.types import (
   Context, Object, Material
 )
 from bpy_extras.io_utils import ImportHelper
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
-from ..conf import env
+from ..conf import env, PathLike, VectorType
 from .. import util
-from ..util import PathLike, VectorType
 from .. import tracking
 
 
@@ -128,7 +127,7 @@ def add_material(name: str="material", path: str="") -> Material:
 	return mat
 
 
-def locate_image(context: Context, textures: Dict[str, str], img,: str, model_filepath: str) -> PathLike:
+def locate_image(context: Context, textures: Dict[str, str], img: str, model_filepath: str) -> PathLike:
 	"""Finds and returns the filepath of the image texture."""
 	resource_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
 
@@ -153,7 +152,7 @@ def locate_image(context: Context, textures: Dict[str, str], img,: str, model_fi
 		return os.path.realpath(os.path.join(directory, local_path) + ".png")
 
 
-def read_model(context: Context, model_filepath: PathLike) -> List[list, dict]:
+def read_model(context: Context, model_filepath: PathLike) -> Tuple[list, dict]:
 	"""Reads json file to get textures and elements needed for model.
 
 	This function is recursively called to also get the elements and textures
@@ -488,7 +487,7 @@ class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 		try:
 			obj = add_model(os.path.normpath(self.filepath), name)
 		except ModelException as e:
-			self.report({"ERROR"}, f"Encountered error: {e}"))
+			self.report({"ERROR"}, f"Encountered error: {e}")
 			return {'CANCELLED'}
 
 		self.place_model(obj)
@@ -526,7 +525,7 @@ class MCPREP_OT_import_minecraft_model_file(
 		try:
 			obj = add_model(os.path.normpath(self.filepath), filename)
 		except ModelException as e:
-			self.report({"ERROR"}, f"Encountered error: {e}"))
+			self.report({"ERROR"}, f"Encountered error: {e}")
 			return {'CANCELLED'}
 
 		self.place_model(obj)

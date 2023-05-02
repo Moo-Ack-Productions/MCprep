@@ -28,9 +28,8 @@ from bpy.types import (
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
 from . import conf
-from .conf import env
+from .conf import env, PathLike, VectorType
 from . import util
-from .util import PathLike, VectorType
 from . import tracking
 from .materials import generate
 
@@ -1142,13 +1141,14 @@ class MCPREP_OT_render_helper():
 			return
 
 		self.current_render = self.render_queue.pop()
+		file_name = self.current_render["filename"]
 
 		bpy.context.scene.camera = self.current_render["camera"]
 
 		bpy.context.scene.render.filepath = os.path.join(
-			self.filepath, self.current_render["filename"])
+			self.filepath, file_name)
 
-		env.log(f"Starting pano render {self.current_render["filename"]}"
+		env.log(f"Starting pano render {file_name}")
 		self.display_current()
 
 		bpy.app.timers.register(

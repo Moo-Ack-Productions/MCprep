@@ -28,13 +28,12 @@ from bpy.types import (
 )
 import mathutils
 
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Tuple
 from . import spawn_util
 from .. import conf
-from ..conf import env
+from ..conf import env, VectorType
 from ..materials import generate
 from .. import util
-from ..util import VectorType
 from .. import tracking
 
 
@@ -997,14 +996,14 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				util.select_set(ob, False)
 		# #### HERE set the other properties, e.g. variance and edgefloat, now that the obj exists
 		env.log(f"groupSwap: {groupSwap}, meshSwap: {meshSwap}")
-		env.log("edgeFloat: {edgeFloat}, variance: {variance}, torchlike: {torchlike}")
+		env.log(f"edgeFloat: {edgeFloat}, variance: {variance}, torchlike: {torchlike}")
 		return {
 			'importName': name, 'object': importedObj, 'meshSwap': meshSwap,
 			'groupSwap': groupSwap, 'variance': variance, 'edgeFlush': edgeFlush,
 			'edgeFloat': edgeFloat, 'torchlike': torchlike, 'removable': removable,
 			'doorlike': doorlike, 'new_groups': new_groups}
 
-	def proccess_poly_orientations(self, face: face_struct, swapProps: Dict[str, str], swapGen: str, instance_configs: Dict[str, List[VectorType, int]]) -> None:
+	def proccess_poly_orientations(self, face: face_struct, swapProps: Dict[str, str], swapGen: str, instance_configs: Dict[str, Tuple[VectorType, int]]) -> None:
 		"""Iterate over individual face, updating instance loc/rotation
 
 		Arguments:
@@ -1170,7 +1169,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		loc_unoffset = [pos + offset for pos in loc]
 		instance_configs[instance_key] = [loc_unoffset, rot_type]
 
-	def add_instances_with_transforms(self, context: Context, swap, swapProps: Dict[str, str], instance_configs: Dict[str, List[VectorType, int]]) -> List[bool, List[Object]]:
+	def add_instances_with_transforms(self, context: Context, swap, swapProps: Dict[str, str], instance_configs: Dict[str, Tuple[VectorType, int]]) -> Tuple[bool, List[Object]]:
 		"""Creates all block instances for a single object.
 
 		Will add and apply rotations, add loc variances, and run random group

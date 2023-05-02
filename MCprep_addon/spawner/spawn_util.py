@@ -21,7 +21,7 @@ import re
 
 import bpy
 from bpy.types import (
-  Context, Object, Collection
+  Context, Object, Collection,
   BlendDataLibraries
 )
 from typing import List, Optional
@@ -31,6 +31,8 @@ from .. import util
 from .. import tracking
 from . import mobs
 from . import effects
+
+from ..conf import env
 
 # Top-level names used for inclusion or exclusions when filtering through
 # collections in blend files for spawners: mobs, meshswap, and entities.
@@ -291,7 +293,7 @@ def prep_collection(self, context: Context, name: str, pre_groups: List[Collecti
 	return group
 
 
-def get_rig_from_objects(objects: List[Objects]) -> Object:
+def get_rig_from_objects(objects: List[Object]) -> Object:
 	"""From a list of objects, return the the primary rig (best guess)"""
 	prox_obj = None
 	for obj in objects:

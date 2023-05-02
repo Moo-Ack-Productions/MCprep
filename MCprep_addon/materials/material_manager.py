@@ -225,7 +225,7 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 			name_cat[base].sort()  # in-place sorting
 			baseMat = bpy.data.materials[name_cat[base][0]]
 
-			env.log(f"{[name_cat[base], " ## ", baseMat]}", vv_only=True)
+			env.log(f"{name_cat[base]} ##  {baseMat}", vv_only=True)
 
 			for matname in name_cat[base][1:]:
 				# skip if fake user set
@@ -260,7 +260,7 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 					baseMat.name = gen_base
 			else:
 				baseMat.name = gen_base
-			env.log(f"{["Final: ", baseMat]}", vv_only=True)
+			env.log(f"Final: {baseMat}", vv_only=True)
 
 		postcount = len(["x" for x in getMaterials(self, context) if x.users > 0])
 		self.report({"INFO"}, f"Consolidated {precount} materials down to {postcount}")

@@ -20,7 +20,12 @@ import os
 from pathlib import Path
 import bpy
 
-from .util import PathLike
+from typing import TypeVar
+from mathutils import Vector
+
+PathLike = TypeVar("PathLike", str, Path, bytes, os.PathLike, None)
+VectorType = TypeVar("VectorType", tuple, list, Vector) 
+
 # check if custom preview icons available
 try:
 	import bpy.utils.previews

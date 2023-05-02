@@ -17,14 +17,14 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import os
+from typing import Dict, List
 
 import bpy
 
-from bpy.type import Context
+from bpy.types import Context
 from .. import conf
-from ..conf import env
+from ..conf import env, PathLike, VectorType
 from .. import util
-from ..util import PathLike, VectorType
 from .. import tracking
 
 from . import spawn_util

@@ -20,7 +20,7 @@
 import bpy
 import os
 from bpy_extras.io_utils import ImportHelper
-from typing import Optional, List
+from typing import Optional, List, Tuple
 import shutil
 import urllib.request
 from bpy.app.handlers import persistent
@@ -31,9 +31,8 @@ from bpy.types import (
 from . import generate
 from .. import tracking
 from .. import util
-from ..util import PathLike
 
-from ..conf import env
+from ..conf import env, PathLike
 
 # -----------------------------------------------------------------------------
 # Support functions
@@ -225,7 +224,7 @@ def convert_skin_layout(image_file: PathLike) -> bool:
 		return False
 
 
-def getMatsFromSelected(selected: List[Object], new_material: bool=False) -> List[List[Material], List[Object]]:
+def getMatsFromSelected(selected: List[Object], new_material: bool=False) -> Tuple[List[Material], List[Object]]:
 	"""Get materials; if new material provided, ensure material slot is added
 
 	Used by skin swapping, to either update existing material or create new one

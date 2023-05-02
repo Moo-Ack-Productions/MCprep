@@ -19,6 +19,7 @@
 import json
 import os
 import random
+from typing import List, TypeVar
 
 import bmesh
 from bpy_extras.io_utils import ImportHelper
@@ -35,7 +36,9 @@ from .. import tracking
 
 from . import spawn_util
 
-from ..conf import env
+from ..conf import env, VectorType, PathLike
+
+ListEffectsAssets = TypeVar("ListEffectsAssets")
 
 # -----------------------------------------------------------------------------
 # Global enum values
@@ -58,7 +61,7 @@ EXTENSIONS = [".png", ".jpg", ".jpeg", ".tiff"]
 # -----------------------------------------------------------------------------
 
 
-def add_geonode_area_effect(context: Context, effect: spawn_util.ListEffectsAssets) -> Object:
+def add_geonode_area_effect(context: Context, effect: ListEffectsAssets) -> Object:
 	"""Create a persistent effect which is meant to emulate a wide-area effect.
 
 	Effect is of type: ListEffectsAssets.
@@ -114,7 +117,7 @@ def add_geonode_area_effect(context: Context, effect: spawn_util.ListEffectsAsse
 	return new_obj
 
 
-def add_area_particle_effect(context: Context, effect: spawn_util.ListEffectsAssets, location: util.VectorType) -> Object:
+def add_area_particle_effect(context: Context, effect: ListEffectsAssets, location: VectorType) -> Object:
 	"""Create a persistent effect over wide area using traditional particles.
 
 	Effect is of type: ListEffectsAssets.
@@ -177,7 +180,7 @@ def add_area_particle_effect(context: Context, effect: spawn_util.ListEffectsAss
 	return obj
 
 
-def add_collection_effect(context: Context, effect: spawn_util.ListEffectsAssets, location: util.VectorType, frame: int) -> Object:
+def add_collection_effect(context: Context, effect: ListEffectsAssets, location: VectorType, frame: int) -> Object:
 	"""Spawn a pre-animated collection effect at a specific point and time.
 
 	Import a new copy of a collection from the effects_collections.blend file.
@@ -197,7 +200,7 @@ def add_collection_effect(context: Context, effect: spawn_util.ListEffectsAssets
 		coll = util.collections()[keyname]
 	else:
 		coll = import_animated_coll(context, effect, keyname)
-		coll.name = f"{effect.name}_{frame}
+		coll.name = f"{effect.name}_{frame}"
 
 		# Update the animation per intended frame.
 		offset_animation_to_frame(coll, frame)
@@ -217,7 +220,7 @@ def add_collection_effect(context: Context, effect: spawn_util.ListEffectsAssets
 	util.select_set(obj, True)
 
 
-def add_image_sequence_effect(context: Context, effect: spawn_util.ListEffectsAssets, location: util.VectorType, frame: int, speed: float) -> Object:
+def add_image_sequence_effect(context: Context, effect: ListEffectsAssets, location: VectorType, frame: int, speed: float) -> Object:
 	"""Spawn a short-term sequence of individual images at a point in time.
 
 	Effect is of type: ListEffectsAssets.
@@ -336,7 +339,7 @@ def add_image_sequence_effect(context: Context, effect: spawn_util.ListEffectsAs
 	return instance
 
 
-def add_particle_planes_effect(context: Context, image_path: util.PathLike, location: util.VectorType, frame: int) -> None:
+def add_particle_planes_effect(context: Context, image_path: PathLike, location: VectorType, frame: int) -> None:
 	"""Spawn a short-term particle system at a specific point and time.
 
 	This is the only effect type that does not get pre-loaded into a list. The
@@ -402,7 +405,7 @@ def add_particle_planes_effect(context: Context, image_path: util.PathLike, loca
 # Core effects supportive functions
 # -----------------------------------------------------------------------------
 
-def geo_update_params(context: Context, effect: spawn_util.ListEffectsAssets, geo_mod: NodesModifier) -> None:
+def geo_update_params(context: Context, effect: ListEffectsAssets, geo_mod: NodesModifier) -> None:
 	"""Update the paramters of the applied geonode effect.
 
 	Loads fields to apply based on json file where necessary.
@@ -464,7 +467,7 @@ def geo_update_params(context: Context, effect: spawn_util.ListEffectsAssets, ge
 		# TODO: check if any socket name in json specified not found in node.
 
 
-def geo_fields_from_json(effect: spawn_util.ListEffectsAssets, jpath: util.PathLike) -> dict:
+def geo_fields_from_json(effect: ListEffectsAssets, jpath: PathLike) -> dict:
 	"""Extract json values from a file for a given effect.
 
 	Parse for a json structure with a hierarhcy of:
@@ -640,7 +643,7 @@ def apply_particle_settings(obj: Object, frame: int, base_name: str, pcoll: Coll
 		psystem.settings.dupli_group = pcoll
 
 
-def import_animated_coll(context: Context, effect: spawn_util.ListEffectsAssets, keyname:str) -> Collection:
+def import_animated_coll(context: Context, effect: ListEffectsAssets, keyname:str) -> Collection:
 	"""Import and return a new animated collection given a specific key."""
 	init_colls = list(util.collections())
 	any_imported = False

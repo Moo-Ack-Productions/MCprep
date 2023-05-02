@@ -19,16 +19,15 @@
 import os
 import bpy
 from bpy.types import (
-  Context, Material, Image
-  NodeTree, Nodes, Links, Node
+  Context, Material, Image, Texture,
+  NodeTree, Nodes, NodeLinks, Node
 )
 from dataclasses import dataclass
-from typing import Union, Dict, Optional, List, Any
+from typing import Union, Dict, Optional, List, Any, Tuple
 
 from .. import util
-from ..util import PathLike
 
-from ..conf import env
+from ..conf import env, PathLike
 
 # -----------------------------------------------------------------------------
 # Material prep and generation functions (no registration)
@@ -47,7 +46,7 @@ def update_mcprep_texturepack_path(self, context: Context) -> None:
 	context.scene.mcprep_particle_plane_file = ''
 
 
-def get_mc_canonical_name(name: str) -> List[str, Optional[str]]:
+def get_mc_canonical_name(name: str) -> Tuple[str, Optional[str]]:
 	"""Convert a material name to standard MC name.
 
 	Returns:
@@ -641,7 +640,7 @@ def is_image_grayscale(image: Image) -> bool:
 			pixels_saturated += 1
 		if pixels_saturated >= max_thresh:
 			is_grayscale = False
-			, vv_only=True)
+			env.log("Image not grayscale: {image.name}", vv_only=True)
 			break
 
 	if datablock_copied:  # Cleanup if image was copied to scale down size.
@@ -814,7 +813,7 @@ def texgen_specular(mat: Material, passes: Dict[str, Image], nodeInputs: list, u
 
 	# Define links and nodes
 	nodes: Nodes = mat.node_tree.nodes
-	links: Links = mat.node_tree.links
+	links: NodeLinks = mat.node_tree.links
 
 	# Define the diffuse, normal, and specular nodes
 	image_diff: Image = passes["diffuse"]
@@ -939,7 +938,7 @@ def texgen_seus(mat: Material, passes: Dict[str, Image], nodeInputs: list, use_r
 
 	# Define links and nodes
 	nodes: Nodes = mat.node_tree.nodes
-	links: Links = mat.node_tree.links
+	links: NodeLinks = mat.node_tree.links
 
 	# Define the diffuse, normal, and specular nodes
 	image_diff: Image = passes["diffuse"]

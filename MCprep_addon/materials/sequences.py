@@ -21,20 +21,19 @@ import errno
 import json
 import os
 import re
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import bpy
 from bpy.types import (
-  Context, Material, Image
+  Context, Object, Material, Image, Texture
 )
 
 from . import generate
 from .. import tracking
 from .. import util
-from ..util import PathLike
 from . import uv_tools
 
-from ..conf import env
+from ..conf import env, PathLike
 
 # -----------------------------------------------------------------------------
 # Supporting functions
@@ -42,7 +41,7 @@ from ..conf import env
 
 
 def animate_single_material(
-	mat: Material, engine: str, export_location: str='original', clear_cache: bool=False) -> List[bool, bool, str]:
+	mat: Material, engine: str, export_location: str='original', clear_cache: bool=False) -> Tuple[bool, bool, str]:
 	"""Animates texture for single material, including all passes.
 
 	Args:
@@ -139,7 +138,7 @@ def is_image_tiled(image_block: Image) -> bool:
 		return True
 
 
-def generate_material_sequence(source_path: PathLike, image_path: PathLike, form: Optional[str], export_location: str, clear_cache: bool) -> List[dict, Optional[str]]:
+def generate_material_sequence(source_path: PathLike, image_path: PathLike, form: Optional[str], export_location: str, clear_cache: bool) -> Tuple[dict, Optional[str]]:
 	"""Performs frame by frame export of sequences to location based on input.
 
 	Returns Dictionary of the image paths to the first tile of each
@@ -315,7 +314,7 @@ def export_image_to_sequence(image_path: PathLike, params: dict, output_folder: 
 	first_img = None
 	for i in range(tiles):
 		env.log(f"Exporting sequence tile {i}")
-		tile_name = f"{basename}_{i + 1:04}""
+		tile_name = f"{basename}_{i + 1:04}"
 		out_path = os.path.join(output_folder, tile_name + ext)
 		if not first_img:
 			first_img = out_path
@@ -509,7 +508,7 @@ class MCPREP_OT_prep_animated_textures(bpy.types.Operator):
 			self.track_param = context.scene.render.engine
 			return {'FINISHED'}
 
-	def process_single_material(self, context, mat):
+	def process_single_material(self, context: Context, mat: Material):
 		"""Run animate textures for single material, and fix UVs and saturation"""
 		affectable, affected, err = animate_single_material(
 			mat, context.scene.render.engine,

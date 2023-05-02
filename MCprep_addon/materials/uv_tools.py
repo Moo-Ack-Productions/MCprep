@@ -18,8 +18,12 @@
 
 
 import bpy
+from bpy.types import (
+  Context, Object
+)
 
 import time
+from typing import Dict, List, Tuple
 
 from ..conf import env
 from . import generate
@@ -83,7 +87,7 @@ def get_uv_bounds_per_material(obj: Object) -> Dict[str, list]:
 	return res
 
 
-def detect_invalid_uvs_from_objs(obj_list: List[Object]) -> List[bool, List[Object]]:
+def detect_invalid_uvs_from_objs(obj_list: List[Object]) -> Tuple[bool, List[Object]]:
 	"""Detect all-in one combined images from concentrated UV layouts.
 
 	Returns:

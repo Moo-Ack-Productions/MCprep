@@ -18,17 +18,16 @@
 
 
 import os
-from typing import Union, List
+from typing import Union, List, Tuple
 
 import bpy
 from bpy.app.handlers import persistent
 from bpy.types import Context, Material
 
-from ..conf import env 
 from .. import tracking
 from .. import util
 
-from ..conf import env
+from ..conf import env, PathLike
 
 # -----------------------------------------------------------------------------
 # Utilities
@@ -69,7 +68,7 @@ def material_in_sync_library(material: Material, context: Context) -> bool:
 	return False
 
 
-def sync_material(context: Context, material: Material, link: bool, replace: bool) -> List[bool, Union[bool, str, None]]:
+def sync_material(context: Context, material: Material, link: bool, replace: bool) -> Tuple[bool, Union[bool, str, None]]:
 	"""If found, load and apply the material found in a library.
 
 	Returns:
