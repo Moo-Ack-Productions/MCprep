@@ -243,10 +243,10 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 					try:
 						data.remove(old)
 					except ReferenceError as err:
-						print('Error trying to remove material ' + matname)
+						print(f'Error trying to remove material {matname}')
 						print(str(err))
 					except ValueError as err:
-						print('Error trying to remove material ' + matname)
+						print(f'Error trying to remove material {matname}')
 						print(str(err))
 
 			# Final step.. rename to not have .001 if it does,

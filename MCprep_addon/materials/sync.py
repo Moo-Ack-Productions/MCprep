@@ -18,9 +18,11 @@
 
 
 import os
+from typing import Union, List
 
 import bpy
 from bpy.app.handlers import persistent
+from bpy.types import Context, Material
 
 from ..conf import env 
 from .. import tracking
@@ -38,13 +40,13 @@ def clear_sync_cache(scene):
 	env.material_sync_cache = None
 
 
-def get_sync_blend(context):
+def get_sync_blend(context: Context) -> PathLike:
 	"""Return the sync blend file path that might exist, based on active pack"""
 	resource_pack = bpy.path.abspath(context.scene.mcprep_texturepack_path)
 	return os.path.join(resource_pack, "materials.blend")
 
 
-def reload_material_sync_library(context):
+def reload_material_sync_library(context: Context) -> None:
 	"""Reloads the library and cache"""
 	sync_file = get_sync_blend(context)
 	if not os.path.isfile(sync_file):
@@ -56,7 +58,7 @@ def reload_material_sync_library(context):
 	env.log("Updated sync cache", vv_only=True)
 
 
-def material_in_sync_library(material, context):
+def material_in_sync_library(material: Material, context: Context) -> bool:
 	"""Returns true if the material is in the sync mat library blend file"""
 	if env.material_sync_cache is None:
 		reload_material_sync_library(context)
@@ -67,7 +69,7 @@ def material_in_sync_library(material, context):
 	return False
 
 
-def sync_material(context, material, link, replace):
+def sync_material(context: Context, material: Material, link: bool, replace: bool) -> List[bool, Union[bool, str, None]]:
 	"""If found, load and apply the material found in a library.
 
 	Returns:
@@ -86,7 +88,7 @@ def sync_material(context, material, link, replace):
 
 	imported = set(bpy.data.materials[:]) - set(init_mats)
 	if not imported:
-		return 0, "Could not import " + str(material.name)
+		return 0, f"Could not import {material.name}"
 	new_material = list(imported)[0]
 
 	# 2.78+ only, else silent failure
@@ -139,7 +141,7 @@ class MCPREP_OT_sync_materials(bpy.types.Operator):
 		sync_file = get_sync_blend(context)
 		if not os.path.isfile(sync_file):
 			if not self.skipUsage:
-				self.report({'ERROR'}, "Sync file not found: " + sync_file)
+				self.report({'ERROR'}, "Sync file not found: {sync_file}")
 			return {'CANCELLED'}
 
 		if sync_file == bpy.data.filepath:
@@ -179,7 +181,7 @@ class MCPREP_OT_sync_materials(bpy.types.Operator):
 				last_err = err
 
 		if last_err:
-			env.log("Most recent error during sync:" + str(last_err))
+			env.log(f"Most recent error during sync:{last_err}")
 
 		# Re-establish initial state, as append material clears selections
 		for obj in inital_selection:
@@ -199,7 +201,7 @@ class MCPREP_OT_sync_materials(bpy.types.Operator):
 		elif modified == 1:
 			self.report({'INFO'}, "Synced 1 material")
 		else:
-			self.report({'INFO'}, "Synced {} materials".format(modified))
+			self.report({'INFO'}, f"Synced {modified} materials")
 		return {'FINISHED'}
 
 

@@ -20,6 +20,9 @@
 import os
 
 import bpy
+from bpy.types import (
+  Context, Material
+)
 
 from .. import tracking
 from .. import util
@@ -28,7 +31,7 @@ from . import sync
 from ..conf import env
 
 
-def default_material_in_sync_library(default_material, context):
+def default_material_in_sync_library(default_material: list, context: Context) -> bool:
 	"""Returns true if the material is in the sync mat library blend file."""
 	if env.material_sync_cache is None:
 		sync.reload_material_sync_library(context)
@@ -39,7 +42,7 @@ def default_material_in_sync_library(default_material, context):
 	return False
 
 
-def sync_default_material(context, material, default_material, engine):
+def sync_default_material(context: Context, material: Material, default_material: list, engine: str) -> Union[Material, str, None]:
 	"""Normal sync material method but with duplication and name change."""
 	if default_material in env.material_sync_cache:
 		import_name = default_material
@@ -55,7 +58,7 @@ def sync_default_material(context, material, default_material, engine):
 
 	imported = set(list(bpy.data.materials)) - set(init_mats)
 	if not imported:
-		return "Could not import " + str(material.name)
+		return f"Could not import {material.name}"
 	new_default_material = list(imported)[0]
 
 	# Checking if there's a node with the label Texture.
@@ -119,7 +122,7 @@ class MCPREP_OT_default_material(bpy.types.Operator):
 		# Sync file stuff.
 		sync_file = sync.get_sync_blend(context)
 		if not os.path.isfile(sync_file):
-			self.report({'ERROR'}, "Sync file not found: " + sync_file)
+			self.report({'ERROR'}, f"Sync file not found: {sync_file}")
 			return {'CANCELLED'}
 
 		if sync_file == bpy.data.filepath:
@@ -170,10 +173,7 @@ class MCPREP_OT_create_default_material(bpy.types.Operator):
 			self.report({'ERROR'}, "Select an object to create the material")
 			return
 
-		material_name = "default_{type}_{engine}".format(
-			type=type,
-			engine=engine
-		)
+		material_name = f"default_{type}_{engine}"
 		default_material = bpy.data.materials.new(name=material_name)
 		default_material.use_nodes = True
 		nodes = default_material.node_tree.nodes

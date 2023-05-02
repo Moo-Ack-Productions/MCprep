@@ -419,7 +419,7 @@ def open_folder_crossplatform(folder: str) -> bool:
 
 	try:
 		# windows... untested
-		subprocess.Popen(f'explorer "{folder}"')
+		subprocess.Popen('explorer "{folder}"')
 		return True
 	except:
 		pass
