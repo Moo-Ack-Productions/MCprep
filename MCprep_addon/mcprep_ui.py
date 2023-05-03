@@ -16,10 +16,10 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-
-# library imports
-import bpy
 import os
+import time
+
+import bpy
 
 # addon imports
 from . import addon_updater_ops
@@ -46,9 +46,61 @@ HAND_ICON = 'FILE_REFRESH' if util.bv28() else 'HAND'
 OPT_IN = 'URL' if util.bv28() else 'HAND'
 
 
+def addon_just_updated():
+	"""Indicates an addon was updated mid session, to force a user restart.
+
+	Put into UI calls, therefore called often and should lightweight.
+	"""
+	if addon_updater_ops.updater.invalid_updater:
+		return False
+	if not addon_updater_ops.updater.json:
+		return False
+	did_update = addon_updater_ops.updater.json.get("just_updated") is True
+	if did_update:
+		return True
+
+	# If not alreaedy flipped to be recongized as an update, do a slightly more
+	# thorough check by seeing if the mcprep_data_update.json exists (ie it
+	# hasn't been renamed yet to mcprep_data.json, which happens on init after
+	# an install/update)
+	check_interval = 5  # Time in seconds
+	if time.time() - check_interval > conf.last_check_for_updated:
+		check_for_updated_files()
+		conf.last_check_for_updated = time.time()
+	return
+
+
+def check_for_updated_files():
+	"""Checks for a file which would only exist after an auto/manual update.
+
+	We check for the mcprep_data_update.json file, which would only exist after
+	an automated or manual update and before blender has been restarted. This
+	file is auto renamed to overwrite any existing mcprep_data.json file, but
+	that only runs on addon startup, so it's a good flag to use to force users
+	to restart.
+
+	This covers the scenario where someone used the native blender install
+	addon *instead* of the auto updater route to update the addon.
+	"""
+	if os.path.isfile(conf.json_path_update):
+		addon_updater_ops.updater.json["just_updated"] = True
+
+
+def restart_layout(layout):
+	"""Draws a restart button, used when addon_just_updated is true."""
+	box = layout.box()
+	col = box.column()
+	alert_row = col.row()
+	alert_row.alert = True
+	alert_row.operator(
+		"wm.quit_blender",
+		text="Restart blender",
+		icon="ERROR")
+	col.label(text="to complete update")
+
+
 # -----------------------------------------------------------------------------
-# Above for class functions/operators
-# Below for UI
+# UI class functions
 # -----------------------------------------------------------------------------
 
 class MCPREP_MT_mob_spawner(bpy.types.Menu):
@@ -236,6 +288,9 @@ class MCPREP_MT_3dview_add(bpy.types.Menu):
 	bl_idname = "MCPREP_MT_3dview_add"
 
 	def draw(self, context):
+		if addon_just_updated():
+			restart_layout(self.layout)
+			return
 		layout = self.layout
 		props = context.scene.mcprep_props
 
@@ -686,6 +741,12 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		# check for update in background thread if appropraite
 		addon_updater_ops.check_for_update_background()
 
+		# show update ready if available
+		addon_updater_ops.update_notice_box_ui(self, context)
+		if addon_just_updated():
+			# Don't draw restart_layout() here, as we already have a box
+			return
+
 		layout = self.layout
 		split = layout.split()
 		col = split.column(align=True)
@@ -768,15 +829,16 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			col.operator(
 				"mcprep.improve_ui", text="Improve UI", icon='SETTINGS')
 
-		# Optimizer Panel.
-		row = col.row(align=True)
-		icon = "TRIA_DOWN" if scn_props.show_settings_optimizer else "TRIA_RIGHT"
-		row.prop(
-			scn_props, "show_settings_optimizer",
-			text="Cycles Optimizer", icon=icon)
-		if scn_props.show_settings_optimizer:
+		# Optimizer Panel (only for blender 2.80+)
+		if util.min_bv((2, 80)):
 			row = col.row(align=True)
-			optimize_scene.panel_draw(context, row)
+			icon = "TRIA_DOWN" if scn_props.show_settings_optimizer else "TRIA_RIGHT"
+			row.prop(
+				scn_props, "show_settings_optimizer",
+				text="Cycles Optimizer", icon=icon)
+			if scn_props.show_settings_optimizer:
+				row = col.row(align=True)
+				optimize_scene.panel_draw(context, row)
 
 		# Advanced settings.
 		row = col.row(align=True)
@@ -804,7 +866,10 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 
 			b_row = box.row()
 			b_col = b_row.column(align=True)
-			b_col.operator("mcprep.sync_materials")
+			sync_row = b_col.row(align=True)
+			sync_row.operator("mcprep.sync_materials")
+			sync_row.operator(
+				"mcprep.edit_sync_materials_file", text="", icon="FILE_TICK") # or TOOL_SETTINGS.
 			b_col.operator("mcprep.replace_missing_textures")
 			b_col.operator("mcprep.animate_textures")
 			# TODO: operator to make all local, all packed, or set to other location
@@ -828,9 +893,6 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		split = layout.split()
 		row = split.row(align=True)
 
-		# show update ready if available
-		addon_updater_ops.update_notice_box_ui(self, context)
-
 
 class MCPREP_PT_bridge(bpy.types.Panel):
 	"""MCprep panel for directly importing and reloading minecraft saves"""
@@ -841,6 +903,10 @@ class MCPREP_PT_bridge(bpy.types.Panel):
 	bl_category = "MCprep"
 
 	def draw(self, context):
+		if addon_just_updated():
+			restart_layout(self.layout)
+			return
+
 		# bridge.panel_draw(self, context)
 		pass
 
@@ -854,6 +920,10 @@ class MCPREP_PT_world_tools(bpy.types.Panel):
 
 	def draw(self, context):
 		layout = self.layout
+		if addon_just_updated():
+			restart_layout(layout)
+			return
+
 		rw = layout.row()
 		col = rw.column()
 		row = col.row(align=True)
@@ -905,6 +975,10 @@ class MCPREP_PT_skins(bpy.types.Panel):
 
 	def draw(self, context):
 		layout = self.layout
+		if addon_just_updated():
+			restart_layout(layout)
+			return
+
 		scn_props = context.scene.mcprep_props
 		sind = context.scene.mcprep_skins_list_index
 		mob_ind = context.scene.mcprep_props.mob_list_index
@@ -1016,6 +1090,10 @@ class MCPREP_PT_materials(bpy.types.Panel):
 		scn_props = context.scene.mcprep_props
 
 		layout = self.layout
+		if addon_just_updated():
+			restart_layout(layout)
+			return
+
 		row = layout.row()
 		# row.operator("mcprep.create_default_material")
 		split = layout.split()
@@ -1057,6 +1135,10 @@ class MCPREP_PT_materials_subsettings(bpy.types.Panel):
 	bl_context = "material"
 
 	def draw(self, context):
+		if addon_just_updated():
+			restart_layout(self.layout)
+			return
+
 		b_row = self.layout.row()
 		b_col = b_row.column(align=False)
 		b_col.label(text="Resource pack")
@@ -1615,6 +1697,9 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 	bl_category = "MCprep"
 
 	def draw(self, context):
+		if addon_just_updated():
+			restart_layout(self.layout)
+			return
 		row = self.layout.row(align=True)
 		row.label(text="Click triangle to open")
 		ops = row.operator(
@@ -1633,6 +1718,9 @@ class MCPREP_PT_mob_spawner(bpy.types.Panel):
 	bl_options = {'DEFAULT_CLOSED'}
 
 	def draw(self, context):
+		if addon_just_updated():
+			restart_layout(self.layout)
+			return
 		is_obj_mode = context.mode == "OBJECT"
 		if not is_obj_mode:
 			draw_mode_warning(self.layout)
@@ -1658,6 +1746,9 @@ class MCPREP_PT_model_spawner(bpy.types.Panel):
 	bl_options = {'DEFAULT_CLOSED'}
 
 	def draw(self, context):
+		if addon_just_updated():
+			restart_layout(self.layout)
+			return
 		is_obj_mode = context.mode == "OBJECT"
 		if not is_obj_mode:
 			draw_mode_warning(self.layout)
@@ -1683,6 +1774,9 @@ class MCPREP_PT_item_spawner(bpy.types.Panel):
 	bl_options = {'DEFAULT_CLOSED'}
 
 	def draw(self, context):
+		if addon_just_updated():
+			restart_layout(self.layout)
+			return
 		is_obj_mode = context.mode == "OBJECT"
 		is_pose_mode = context.mode == "POSE"
 		if not is_obj_mode and not is_pose_mode:
@@ -1709,6 +1803,9 @@ class MCPREP_PT_effects_spawner(bpy.types.Panel):
 	bl_options = {'DEFAULT_CLOSED'}
 
 	def draw(self, context):
+		if addon_just_updated():
+			restart_layout(self.layout)
+			return
 		is_obj_mode = context.mode == "OBJECT"
 		if not is_obj_mode:
 			draw_mode_warning(self.layout)
@@ -1734,6 +1831,9 @@ class MCPREP_PT_entity_spawner(bpy.types.Panel):
 	bl_options = {'DEFAULT_CLOSED'}
 
 	def draw(self, context):
+		if addon_just_updated():
+			restart_layout(self.layout)
+			return
 		is_obj_mode = context.mode == "OBJECT"
 		if not is_obj_mode:
 			draw_mode_warning(self.layout)
@@ -1759,6 +1859,9 @@ class MCPREP_PT_meshswap_spawner(bpy.types.Panel):
 	bl_options = {'DEFAULT_CLOSED'}
 
 	def draw(self, context):
+		if addon_just_updated():
+			restart_layout(self.layout)
+			return
 		is_obj_mode = context.mode == "OBJECT"
 		if not is_obj_mode:
 			draw_mode_warning(self.layout)

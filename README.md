@@ -10,7 +10,7 @@ MCprep Addon
 MCprep is an addon dedicated to speeding up the workflow of Minecraft animators in Blender by automatically fixing up materials and providing other tools such as mob spawing, effects spawning, etc. 
 
 ## Installing MCprep
-### Click the link below and download the .zip file (re-zip if auto-unzipped into a folder necessary), install into blender (2.78 through 3.2 supported)
+### Click the link below and download the .zip file (re-zip if auto-unzipped into a folder necessary), install into blender (2.78 through 3.5 supported)
 
 [![Install MCprep](/visuals/mcprep_download.png)](https://theduckcow.com/dev/blender/mcprep-download/)
 

@@ -140,8 +140,13 @@ def add_area_particle_effect(context, effect, location):
 	imported_particles = list(set(post_systems) - set(pre_systems))[0]
 
 	# Assign particles as fake, to avoid being purged after file reload.
-	if imported_particles.instance_object:
-		imported_particles.instance_object.use_fake_user = True
+	if hasattr(imported_particles, "instance_object"):
+		# 2.8+
+		if imported_particles.instance_object:
+			imported_particles.instance_object.use_fake_user = True
+	elif imported_particles.dupli_object:
+		# the 2.7x way.
+		imported_particles.dupli_object.use_fake_user = True
 
 	# Assign the active object and selection state.
 	for sel_obj in bpy.context.selected_objects:

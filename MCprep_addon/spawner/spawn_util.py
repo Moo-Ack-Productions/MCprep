@@ -98,21 +98,29 @@ def filter_collections(data_from):
 
 
 def check_blend_eligible(this_file, all_files):
-	"""Returns true if the path blend file is ok for this blender version.
+	"""Returns true if this_file is the BEST blend file variant for this rig.
 
 	Created to better support older blender versions without having to
-	compeltely remake new rig contirbutions from scratch. See for more details:
+	completely remake new rig contributions from scratch. See for more details:
 	https://github.com/TheDuckCow/MCprep/issues/317
 
-	If the "pre#.#.#" suffix is found in any similar prefix named blend files,
-	evaluate whether the target file itself is eligible. If pre3.0.0 is found
-	in path, then this function returns False if the current blender version is
-	3.0 to force loading the non pre3.0.0 version instead, and if pre3.0.0 is
-	not in the path variable but pre#.#.# is found in another file, then it
-	returns true. If no pre#.#.# found in any files of the common base, would
-	always return True.
+	This function searches for "pre#.#.#" in the filename of passed in files,
+	where if found, it indicates that file should only be used if the current
+	running blender version is below that version (non inclusive). The function
+	then finds the highest versioned file and checks if this_file is that
+	the same one. If so, it returns true, otherwise returns false. Most rigs
+	do not have versioned names are are assumed to work with the latest blender
+	version, hence they are treated as a "max_ver" to never get thrown out.
+
+	Examples, presuming current blender is v2.93
+	for list ["rig pre2.8.0", "rig"]
+		-> returns true for "rig"
+	for list ["rig pre2.8.0", "rig pre3.0.0", "rig"]
+		-> returns true for "rig pre3.0.0"
+
 	"""
 	basename = os.path.splitext(this_file)[0]
+	max_ver = (99, 99, 99)  # Standin for an impossibly high blender version.
 
 	# Regex code to any matches of pre#.#.# at very end of name.
 	# (pre) for exact match,
@@ -129,32 +137,59 @@ def check_blend_eligible(this_file, all_files):
 		return tuple_ver
 
 	matches = find_suffix.search(basename)
-	if matches:
-		tuple_ver = tuple_from_match(matches)
-		res = util.min_bv(tuple_ver)
-		# If the suffix = 3.0 and we are BELOW 3.0, return True (use this file)
-		return not res
+	base_match = basename
 
-	# Remaining case: no suffix found in this target, but see if any other
-	# files have the same base and *do* have a suffix indicator.
+	# Exit early, or find the common base after splitting out " pre#.#.#.blend"
+	if matches:
+		base_match = re.split(code, basename)[0].strip()
+		this_ver = tuple_from_match(matches)
+		res = util.min_bv(this_ver, inclusive=True)
+		if res is True:
+			# E.g. rig pre3.0.0 in blender 3.0.1 or 3.0.0, so file ineligible.
+			return False
+		else:
+			# ie rig pre3.0.0 with current blender 2.9, so this is eligible -
+			# but another file might still be a better match.
+			pass
+	else:
+		this_ver = max_ver
+
+	# Iterate over all files, structure of:
+	# List of list[filepath, tuple detected]
+	other_eligible = []
 	for afile in all_files:
-		if not afile.startswith(basename):
-			continue
-		if afile == this_file:
-			continue  # Already checked above.
+		if not afile.startswith(base_match):
+			continue  # Not part of the same base name, skip it
 
 		base_afile = os.path.splitext(afile)[0]
 		matches = find_suffix.search(base_afile)
 		if matches:
 			tuple_ver = tuple_from_match(matches)
-			res = util.min_bv(tuple_ver)
-			# If the suffix = 3.0 in `afile` file, and current blender is
-			# below 3, then `afile` is the file that should be loaded, and the
-			# current file `this_file` is to be skipped.
-			return res
+			res = util.min_bv(tuple_ver, inclusive=True)
+			if res is False:
+				# E.g. rig pre3.0.0 in blender 2.9 is an eligible choice
+				other_eligible.append([tuple_ver, afile])
+		else:
+			# This would be the typical case of a "latest, non versioned" file.
+			# E.g. rig.blend with no "pre3.3.0" text, also a eligible choice.
+			# Give an artificial version to compare against for next step.
+			other_eligible.append([max_ver, afile])
 
-	# If no matches (the most common case), then this file is eligible.
-	return True
+	if len(other_eligible) == 1:
+		# Only this_file is eligible, and thus must be "the one".
+		return True
+
+	# If multiple files, then we should use the one that is the largest version
+	# without being equal to or greater than the current running blender ver.
+	sorted_eligible = sorted(other_eligible, key=lambda x: x[0])
+	latest_allowed = None
+	for tple, afile in sorted_eligible:
+		if util.min_bv(tple, inclusive=True) is False:
+			latest_allowed = afile
+		else:
+			break
+
+	return latest_allowed != this_file
 
 
 def attemptScriptLoad(path):

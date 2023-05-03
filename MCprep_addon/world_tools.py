@@ -19,6 +19,7 @@
 import os
 import math
 from pathlib import Path
+import shutil
 
 import bpy
 from bpy_extras.io_utils import ExportHelper, ImportHelper
@@ -34,8 +35,17 @@ from .materials import generate
 # supporting functions
 # -----------------------------------------------------------------------------
 
+BUILTIN_SPACES = (
+	"Standard",
+	"Filmic",
+	"Filmic Log",
+	"Raw",
+	"False Color"
+)
+
 
 time_obj_cache = None
+
 
 def get_time_object():
 	"""Returns the time object if present in the file"""
@@ -63,21 +73,23 @@ def get_time_object():
 
 	return time_obj_cache
 
+
 class ObjHeaderOptions:
+	"""Wrapper functions to avoid typos causing issues."""
+
 	def __init__(self):
 		self._exporter = None
 		self._file_type = None
-	
-	"""
-	Wrapper functions to avoid typos causing issues
-	"""
+
 	def set_mineways(self):
 		self._exporter = "Mineways"
+
 	def set_jmc2obj(self):
 		self._exporter = "jmc2obj"
 
 	def set_atlas(self):
 		self._file_type = "ATLAS"
+
 	def set_seperated(self):
 		self._file_type = "INDIVIDUAL_TILES"
 
@@ -93,7 +105,10 @@ class ObjHeaderOptions:
 	def texture_type(self):
 		return self._file_type if self._file_type is not None else "NONE"
 
+
 obj_header = ObjHeaderOptions()
+
+
 def detect_world_exporter(filepath):
 	"""Detect whether Mineways or jmc2obj was used, based on prefix info.
 
@@ -109,9 +124,12 @@ def detect_world_exporter(filepath):
 				# form of: # Wavefront OBJ file made by Mineways version 5.10...
 				for line in obj_fd:
 					if line.startswith("# File type:"):
-						header = line.rstrip() # Remove trailing newline
-				
-				# The issue here is that Mineways has changed how the header is generated. As such, we're limited with only a couple of OBJs, some from 2020 and some from 2023, so we'll assume people are using an up to date version.
+						header = line.rstrip()  # Remove trailing newline
+
+				# The issue here is that Mineways has changed how the header is generated.
+				# As such, we're limited with only a couple of OBJs, some from
+				# 2020 and some from 2023, so we'll assume people are using
+				# an up to date version.
 				atlas = (
 					"# File type: Export all textures to three large images",
 					"# File type: Export full color texture patterns"
@@ -120,17 +138,111 @@ def detect_world_exporter(filepath):
 					"# File type: Export tiles for textures to directory textures",
 					"# File type: Export individual textures to directory tex"
 				)
-				print(f"\"{header}\"")
-				if header in atlas: # If a texture atlas is used
+				print('"{}"'.format(header))
+				if header in atlas:  # If a texture atlas is used
 					obj_header.set_atlas()
-				elif header in tiles: # If the OBJ uses individual textures
+				elif header in tiles:  # If the OBJ uses individual textures
 					obj_header.set_seperated()
 				return
 		except UnicodeDecodeError:
 			print("failed to read first line of obj: " + filepath)
 			return
 		obj_header.set_jmc2obj()
-		obj_header.set_seperated() # Since this is the default for Jmc2Obj, we'll assume this is what the OBJ is using
+		# Since this is the default for Jmc2Obj,
+		# we'll assume this is what the OBJ is using
+		obj_header.set_seperated()
+
+
+def convert_mtl(filepath):
+	"""Convert the MTL file if we're not using one of Blender's built in
+	colorspaces
+
+	Without this, Blender's OBJ importer will attempt to set non-color data to
+	alpha maps and what not, which causes issues in ACES and whatnot where
+	non-color data is not an option.
+
+	This MTL conversion simply does the following:
+	- Comment out lines that begin with map_d
+	- Add a header at the end
+
+	Returns:
+		True if success or skipped, False if failed, or None if skipped
+	"""
+	# Check if the MTL exists. If not, then check if it
+	# uses underscores. If still not, then return False
+	mtl = Path(filepath.rsplit(".", 1)[0] + '.mtl')
+	if not mtl.exists():
+		mtl_underscores = Path(mtl.parent.absolute()) / mtl.name.replace(" ", "_")
+		if mtl_underscores.exists():
+			mtl = mtl_underscores
+		else:
+			return False
+
+	lines = None
+	copied_file = None
+
+	try:
+		with open(mtl, 'r') as mtl_file:
+			lines = mtl_file.readlines()
+	except Exception as e:
+		print(e)
+		return False
+	
+	# This checks to see if the user is using a built-in colorspace or if none of the lines have map_d. If so
+	# then ignore this file and return None
+	if bpy.context.scene.view_settings.view_transform in BUILTIN_SPACES or not any("map_d" in s for s in lines):
+		return None
+
+	# This represents a new folder that'll backup the MTL filepath
+	original_mtl_path = Path(filepath).parent.absolute() / "ORIGINAL_MTLS"
+	original_mtl_path.mkdir(parents=True, exist_ok=True)
+
+	mcprep_header = (
+		"# This section was created by MCprep's MTL conversion script\n",
+		"# Please do not remove\n",
+		"# Thanks c:\n"
+	)
+
+	try:
+		header = tuple(lines[-3:])  # Get the last 3 lines
+		# Check if MTL has already been converted. If so, return True
+		if header != mcprep_header:
+			# Copy the MTL with metadata
+			print("Header " + str(header))
+			copied_file = shutil.copy2(mtl, original_mtl_path.absolute())
+		else:
+			return True
+	except Exception as e:
+		print(e)
+		return False
+
+	# In this section, we go over each line
+	# and check to see if it begins with map_d. If
+	# it does, then we simply comment it out. Otherwise,
+	# we can safely ignore it.
+	try:
+		with open(mtl, 'r') as mtl_file:
+			for index, line in enumerate(lines):
+				if line.startswith("map_d "):
+					lines[index] = "# " + line
+	except Exception as e:
+		print(e)
+		return False
+
+	# This needs to be seperate since it involves writing
+	try:
+		with open(mtl, 'w') as mtl_file:
+			mtl_file.writelines(lines)
+			mtl_file.writelines(mcprep_header)
+
+	# Recover the original file
+	except Exception as e:
+		print(e)
+		shutil.copy2(copied_file, mtl)
+		return False
+
+	return True
+
 
 # -----------------------------------------------------------------------------
 # open mineways/jmc2obj related
@@ -321,7 +433,8 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		if self.filepath.lower().endswith(".mtl"):
 			filename = Path(self.filepath)
 			new_filename = filename.with_suffix(".obj")
-			self.filepath = str(new_filename) # Change it from MTL to OBJ, this will be checked with the rest of the if clauses
+			# Auto change from MTL to OBJ, latet if's will check if existing.
+			self.filepath = str(new_filename)
 		if not self.filepath:
 			self.report({"ERROR"}, "File not found, could not import obj")
 			return {'CANCELLED'}
@@ -356,14 +469,23 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			"import again.")
 		obj_import_mem_msg = (
 			"Memory error during OBJ import, try exporting a smaller world")
+
+		# First let's convert the MTL if needed
+		conv_res = convert_mtl(self.filepath)
 		try:
+			if conv_res is None:
+				pass  # skipped, no issue anyways.
+			elif conv_res is False:
+				self.report({"WARNING"}, "MTL conversion failed!")
+
 			res = None
 			if util.min_bv((3, 5)):
 				res = bpy.ops.wm.obj_import(
-					filepath=self.filepath, use_split_groups=True) 
+					filepath=self.filepath, use_split_groups=True)
 			else:
 				res = bpy.ops.import_scene.obj(
-					filepath=self.filepath, use_split_groups=True)	
+					filepath=self.filepath, use_split_groups=True)
+
 		except MemoryError as err:
 			print("Memory error during import OBJ:")
 			print(err)
@@ -441,7 +563,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		prefs = util.get_user_preferences(context)
 		detect_world_exporter(self.filepath)
 		prefs.MCprep_exporter_type = obj_header.exporter()
-		
+
 		for obj in context.selected_objects:
 			obj["MCPREP_OBJ_HEADER"] = True
 			obj["MCPREP_OBJ_FILE_TYPE"] = obj_header.texture_type()
@@ -452,7 +574,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		addon_prefs = util.get_user_preferences(context)
 		self.track_exporter = addon_prefs.MCprep_exporter_type  # Soft detect.
 		return {'FINISHED'}
-	
+
 	def obj_name_to_material(self, obj):
 		"""Update an objects name based on its first material"""
 		if not obj:
@@ -528,9 +650,12 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 
 		if "mcprep_world" not in context.scene.world:
 			world_nodes.clear()
-			skynode = generate.create_node(world_nodes, "ShaderNodeTexSky", location = (-280, 300))
-			background = generate.create_node(world_nodes, "ShaderNodeBackground", location = (10, 300))
-			output = generate.create_node(world_nodes, "ShaderNodeOutputWorld", location = (300, 300))
+			skynode = generate.create_node(
+				world_nodes, "ShaderNodeTexSky", location=(-280, 300))
+			background = generate.create_node(
+				world_nodes, "ShaderNodeBackground", location=(10, 300))
+			output = generate.create_node(
+				world_nodes, "ShaderNodeOutputWorld", location=(300, 300))
 			world_links.new(skynode.outputs["Color"], background.inputs[0])
 			world_links.new(background.outputs["Background"], output.inputs[0])
 
@@ -560,11 +685,16 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 
 		if "mcprep_world" not in context.scene.world:
 			world_nodes.clear()
-			light_paths = generate.create_node(world_nodes, "ShaderNodeLightPath", location = (-150, 400))
-			background_camera = generate.create_node(world_nodes, "ShaderNodeBackground", location = (10, 150))
-			background_others = generate.create_node(world_nodes, "ShaderNodeBackground", location = (10, 300))
-			mix_shader =generate.create_node(world_nodes, "ShaderNodeMixShader", location = (300, 300))
-			output = generate.create_node(world_nodes, "ShaderNodeOutputWorld", location = (500, 300))
+			light_paths = generate.create_node(
+				world_nodes, "ShaderNodeLightPath", location=(-150, 400))
+			background_camera = generate.create_node(
+				world_nodes, "ShaderNodeBackground", location=(10, 150))
+			background_others = generate.create_node(
+				world_nodes, "ShaderNodeBackground", location=(10, 300))
+			mix_shader = generate.create_node(
+				world_nodes, "ShaderNodeMixShader", location=(300, 300))
+			output = generate.create_node(
+				world_nodes, "ShaderNodeOutputWorld", location=(500, 300))
 			background_others.inputs["Color"].default_value = (0.14965, 0.425823, 1, 1)
 			background_others.inputs["Strength"].default_value = 0.1
 			background_camera.inputs["Color"].default_value = (0.14965, 0.425823, 1, 1)
@@ -891,8 +1021,9 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 		if time_obj_cache:
 			try:
 				util.obj_unlink_remove(time_obj_cache, True, context)
-			except:
+			except Exception as e:
 				print("Error, could not unlink time_obj_cache " + str(time_obj_cache))
+				print(e)
 
 		time_obj_cache = None  # force reset to use newer cache object
 
@@ -1003,24 +1134,6 @@ class MCPREP_OT_time_set(bpy.types.Operator):
 				"world_time")
 
 		return {'FINISHED'}
-
-
-def world_time_update(self, context):
-	"""Handler which updates the current world time on a frame change.
-
-	Maybe don't need this in favor of using a driver for simplicity
-	"""
-
-	time = context.scene.mcprep_props.world_time
-
-	# translate time into rotation of sun/moon rig
-	# see: http://minecraft.gamepedia.com/Day-night_cycle
-	# set to the armature.... would be even better if it was somehow driver-set.
-
-	# if real python code requried to set this up, generate and auto-run python
-	# script, though more ideally just set drivers based on the time param
-
-	return
 
 
 class MCPREP_OT_render_helper():
