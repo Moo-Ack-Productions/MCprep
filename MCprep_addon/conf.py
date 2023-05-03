@@ -44,7 +44,9 @@ class MCprepEnv:
 		# if new update file found from install, replace old one with new
 		if self.json_path_update.exists():
 			self.json_path_update.replace(self.json_path)
-		
+
+		self.last_check_for_updated = 0
+
 		# Check to see if there's a text file for a dev build. If so,
 		if self.dev_file.exists():
 			self.dev_build = True
@@ -156,7 +158,9 @@ class MCprepEnv:
 			self.log("Deprecation Warning: This will be removed in MCprep 3.5.1!")
 			traceback.print_stack()
 
+
 env = MCprepEnv()
+
 
 # ! Deprecated as of MCprep 3.4.2
 def init():
@@ -324,6 +328,7 @@ def icons_init():
 		for iconset in collection_sets:
 			preview_collections[iconset] = ""
 
+
 # ! Deprecated as of MCprep 3.4.2
 def log(statement, vv_only=False):
 	env.deprecation_warning()
@@ -331,6 +336,7 @@ def log(statement, vv_only=False):
 		print(statement)
 	elif env.verbose:
 		print(statement)
+
 
 def updater_select_link_function(self, tag):
 	"""Indicates what zip file to use for updating from a tag structure.
