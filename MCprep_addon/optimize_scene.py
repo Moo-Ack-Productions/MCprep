@@ -406,7 +406,7 @@ def register():
 	for cls in classes:
 		bpy.utils.register_class(cls)
 
-	bpy.types.Scene.optimizer_props: bpy.props.PointerProperty(
+	bpy.types.Scene.optimizer_props = bpy.props.PointerProperty(
 		type=MCprepOptimizerProperties)
 
 

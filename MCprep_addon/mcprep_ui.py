@@ -2043,47 +2043,47 @@ def register():
 	for cls in classes:
 		bpy.utils.register_class(cls)
 
-	bpy.types.Scene.mcprep_props: bpy.props.PointerProperty(type=McprepProps)
+	bpy.types.Scene.mcprep_props = bpy.props.PointerProperty(type=McprepProps)
 
 	# scene settings (later re-attempt to put into props group)
 	addon_prefs = util.get_user_preferences()
 
-	bpy.types.Scene.mcprep_mob_path: bpy.props.StringProperty(
+	bpy.types.Scene.mcprep_mob_path = bpy.props.StringProperty(
 		name="Mob folder",
 		description="Folder for rigs to spawn in, saved with this blend file data",
 		subtype='DIR_PATH',
 		update=mobs.update_rig_path,
 		default=addon_prefs.mob_path)
-	bpy.types.Scene.mcprep_skin_path: bpy.props.StringProperty(
+	bpy.types.Scene.mcprep_skin_path = bpy.props.StringProperty(
 		name="Skin folder",
 		description="Folder for skin textures, used in skin swapping",
 		subtype='DIR_PATH',
 		update=update_skin_path,
 		default=addon_prefs.skin_path)
-	bpy.types.Scene.meshswap_path: bpy.props.StringProperty(
+	bpy.types.Scene.meshswap_path = bpy.props.StringProperty(
 		name="Meshswap file",
 		description="File for meshswap library",
 		subtype='FILE_PATH',
 		update=meshswap.update_meshswap_path,
 		default=addon_prefs.meshswap_path)
-	bpy.types.Scene.mcprep_effects_path: bpy.props.StringProperty(
+	bpy.types.Scene.mcprep_effects_path = bpy.props.StringProperty(
 		name="Effects folder",
 		description="Folder for handcrafted effects like particles and geonodes",
 		subtype='DIR_PATH',
 		update=effects.update_effects_path,
 		default=addon_prefs.effects_path)
-	bpy.types.Scene.mcprep_particle_plane_file: bpy.props.StringProperty(
+	bpy.types.Scene.mcprep_particle_plane_file = bpy.props.StringProperty(
 		name="Particle planes file set",
 		description="Has the particle planes file been changed",
 		subtype='FILE_PATH',
 		default='')
-	bpy.types.Scene.entity_path: bpy.props.StringProperty(
+	bpy.types.Scene.entity_path = bpy.props.StringProperty(
 		name="Entity file",
 		description="File for entity library",
 		subtype='FILE_PATH',
 		update=entities.update_entity_path,
 		default=addon_prefs.entity_path)
-	bpy.types.Scene.mcprep_texturepack_path: bpy.props.StringProperty(
+	bpy.types.Scene.mcprep_texturepack_path = bpy.props.StringProperty(
 		name="Path to texture pack",
 		subtype='DIR_PATH',
 		description=(

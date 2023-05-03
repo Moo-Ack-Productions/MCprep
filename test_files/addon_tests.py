@@ -2476,13 +2476,13 @@ def register():
 	print("REGISTER MCPREP TEST")
 	maxlen = len(test_class.test_cases)
 
-	bpy.types.WindowManager.mcprep_test_index: bpy.props.IntProperty(
+	bpy.types.WindowManager.mcprep_test_index = bpy.props.IntProperty(
 		name="MCprep test index",
 		default=-1,
 		min=-1,
 		max=maxlen,
 		update=mcprep_test_index_update)
-	bpy.types.WindowManager.mcprep_test_autorun: bpy.props.BoolProperty(
+	bpy.types.WindowManager.mcprep_test_autorun = bpy.props.BoolProperty(
 		name="Autorun test",
 		default=True)
 

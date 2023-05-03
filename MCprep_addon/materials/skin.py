@@ -784,9 +784,9 @@ def register():
 	for cls in classes:
 		bpy.utils.register_class(cls)
 
-	bpy.types.Scene.mcprep_skins_list: bpy.props.CollectionProperty(
+	bpy.types.Scene.mcprep_skins_list = bpy.props.CollectionProperty(
 		type=ListColl)
-	bpy.types.Scene.mcprep_skins_list_index: bpy.props.IntProperty(default=0)
+	bpy.types.Scene.mcprep_skins_list_index = bpy.props.IntProperty(default=0)
 
 	# to auto-load the skins
 	env.log("Adding reload skin handler to scene", vv_only=True)
