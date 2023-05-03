@@ -21,7 +21,7 @@ import re
 
 import bpy
 
-from .. import conf
+from ..conf import env
 from .. import util
 from .. import tracking
 from . import mobs
@@ -661,7 +661,7 @@ class MCPREP_OT_reload_spawners(bpy.types.Operator):
 
 		# to prevent re-drawing "load spawners!" if any one of the above
 		# loaded nothing for any reason.
-		conf.loaded_all_spawners = True
+		env.loaded_all_spawners = True
 
 		return {'FINISHED'}
 
@@ -716,21 +716,21 @@ class MCPREP_UL_mob(bpy.types.UIList):
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
 		icon = "mob-{}".format(set.index)
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
-			if not conf.use_icons:
+			if not env.use_icons:
 				layout.label(text=set.name)
-			elif conf.use_icons and icon in conf.preview_collections["mobs"]:
+			elif env.use_icons and icon in env.preview_collections["mobs"]:
 				layout.label(
 					text=set.name,
-					icon_value=conf.preview_collections["mobs"][icon].icon_id)
+					icon_value=env.preview_collections["mobs"][icon].icon_id)
 			else:
 				layout.label(text=set.name, icon="BLANK1")
 
 		elif self.layout_type in {'GRID'}:
 			layout.alignment = 'CENTER'
-			if conf.use_icons and icon in conf.preview_collections["mobs"]:
+			if env.use_icons and icon in env.preview_collections["mobs"]:
 				layout.label(
 					text="",
-					icon_value=conf.preview_collections["mobs"][icon].icon_id)
+					icon_value=env.preview_collections["mobs"][icon].icon_id)
 			else:
 				layout.label(text="", icon='QUESTION')
 
@@ -770,21 +770,21 @@ class MCPREP_UL_item(bpy.types.UIList):
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
 		icon = "item-{}".format(set.index)
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
-			if not conf.use_icons:
+			if not env.use_icons:
 				layout.label(text=set.name)
-			elif conf.use_icons and icon in conf.preview_collections["items"]:
+			elif env.use_icons and icon in env.preview_collections["items"]:
 				layout.label(
 					text=set.name,
-					icon_value=conf.preview_collections["items"][icon].icon_id)
+					icon_value=env.preview_collections["items"][icon].icon_id)
 			else:
 				layout.label(text=set.name, icon="BLANK1")
 
 		elif self.layout_type in {'GRID'}:
 			layout.alignment = 'CENTER'
-			if conf.use_icons and icon in conf.preview_collections["items"]:
+			if env.use_icons and icon in env.preview_collections["items"]:
 				layout.label(
 					text="",
-					icon_value=conf.preview_collections["items"][icon].icon_id)
+					icon_value=env.preview_collections["items"][icon].icon_id)
 			else:
 				layout.label(text="", icon='QUESTION')
 
@@ -803,10 +803,10 @@ class MCPREP_UL_effects(bpy.types.UIList):
 			elif set.effect_type == effects.COLLECTION:
 				layout.label(text=set.name, icon=COLL_ICON)
 			elif set.effect_type == effects.IMG_SEQ:
-				if conf.use_icons and icon in conf.preview_collections["effects"]:
+				if env.use_icons and icon in env.preview_collections["effects"]:
 					layout.label(
 						text=set.name,
-						icon_value=conf.preview_collections["effects"][icon].icon_id)
+						icon_value=env.preview_collections["effects"][icon].icon_id)
 				else:
 					layout.label(text=set.name, icon="RENDER_RESULT")
 			else:
@@ -814,10 +814,10 @@ class MCPREP_UL_effects(bpy.types.UIList):
 
 		elif self.layout_type in {'GRID'}:
 			layout.alignment = 'CENTER'
-			if conf.use_icons and icon in conf.preview_collections["effects"]:
+			if env.use_icons and icon in env.preview_collections["effects"]:
 				layout.label(
 					text="",
-					icon_value=conf.preview_collections["effects"][icon].icon_id)
+					icon_value=env.preview_collections["effects"][icon].icon_id)
 			else:
 				layout.label(text="", icon='QUESTION')
 
@@ -827,21 +827,21 @@ class MCPREP_UL_material(bpy.types.UIList):
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
 		icon = "material-{}".format(set.index)
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
-			if not conf.use_icons:
+			if not env.use_icons:
 				layout.label(text=set.name)
-			elif conf.use_icons and icon in conf.preview_collections["materials"]:
+			elif env.use_icons and icon in env.preview_collections["materials"]:
 				layout.label(
 					text=set.name,
-					icon_value=conf.preview_collections["materials"][icon].icon_id)
+					icon_value=env.preview_collections["materials"][icon].icon_id)
 			else:
 				layout.label(text=set.name, icon="BLANK1")
 
 		elif self.layout_type in {'GRID'}:
 			layout.alignment = 'CENTER'
-			if conf.use_icons and icon in conf.preview_collections["materials"]:
+			if env.use_icons and icon in env.preview_collections["materials"]:
 				layout.label(
 					text="",
-					icon_value=conf.preview_collections["materials"][icon].icon_id)
+					icon_value=env.preview_collections["materials"][icon].icon_id)
 			else:
 				layout.label(text="", icon='QUESTION')
 

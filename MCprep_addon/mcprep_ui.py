@@ -64,9 +64,9 @@ def addon_just_updated():
 	# hasn't been renamed yet to mcprep_data.json, which happens on init after
 	# an install/update)
 	check_interval = 5  # Time in seconds
-	if time.time() - check_interval > conf.last_check_for_updated:
+	if time.time() - check_interval > env.last_check_for_updated:
 		check_for_updated_files()
-		conf.last_check_for_updated = time.time()
+		env.last_check_for_updated = time.time()
 	return
 
 
@@ -82,7 +82,7 @@ def check_for_updated_files():
 	This covers the scenario where someone used the native blender install
 	addon *instead* of the auto updater route to update the addon.
 	"""
-	if os.path.isfile(conf.json_path_update):
+	if os.path.isfile(env.json_path_update):
 		addon_updater_ops.updater.json["just_updated"] = True
 
 

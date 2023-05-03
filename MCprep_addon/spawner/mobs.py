@@ -53,7 +53,7 @@ def get_rig_list(context):
 def update_rig_path(self, context):
 	"""List for UI mobs callback of property spawn_rig_category."""
 	env.log("Updating rig path", vv_only=True)
-	conf.rig_categories = []
+	env.rig_categories = []
 	update_rig_list(context)
 	spawn_rigs_categories(self, context)
 
@@ -203,7 +203,7 @@ class MCPREP_OT_reload_mobs(bpy.types.Operator):
 
 	@tracking.report_error
 	def execute(self, context):
-		conf.rig_categories = []
+		env.rig_categories = []
 		update_rig_list(context)
 		return {'FINISHED'}
 
@@ -669,13 +669,13 @@ def spawn_rigs_categories(self, context):
 	items = []
 	items.append(("all", "All Mobs", "Show all mobs loaded"))
 
-	categories = conf.rig_categories
-	if not conf.rig_categories:
+	categories = env.rig_categories
+	if not env.rig_categories:
 		it = context.scene.mcprep_mob_path
 		try:
 			categories = [
 				f for f in os.listdir(it) if os.path.isdir(os.path.join(it, f))]
-			conf.rig_categories = categories
+			env.rig_categories = categories
 		except FileNotFoundError:
 			pass  # Directory has changed or is not found.
 	for item in categories:

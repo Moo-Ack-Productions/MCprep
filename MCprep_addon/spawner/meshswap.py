@@ -856,9 +856,9 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		# check the actual name against the library
 		name = generate.get_mc_canonical_name(name)[0]
 		cache = get_meshswap_cache(context)
-		if name in conf.json_data["blocks"]["canon_mapping_block"]:
+		if name in env.json_data["blocks"]["canon_mapping_block"]:
 			# e.g. remaps entity/chest/normal back to chest
-			name_remap = conf.json_data["blocks"]["canon_mapping_block"][name]
+			name_remap = env.json_data["blocks"]["canon_mapping_block"][name]
 		else:
 			name_remap = None
 
