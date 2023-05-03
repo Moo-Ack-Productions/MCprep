@@ -111,7 +111,7 @@ class McprepMaterialProps():
 			"Synchronize materials with those in the active "
 			"pack's materials.blend file"),
 		default=True)
-	# newDefault = bpy.props.BoolProperty(
+	# newDefault: bpy.props.BoolProperty(
 	#	name="Use custom default material",
 	#	description="Use a custom default material if you have one set up",
 	#	default=False)
@@ -171,7 +171,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 	bl_label = "MCprep Materials"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 
@@ -323,10 +323,10 @@ class MCPREP_OT_materials_help(bpy.types.Operator):
 		elif env.verbose and not self.suppress_help:
 			print("Re-enabling popup warnings")
 
-	help_num = bpy.props.IntProperty(
+	help_num: bpy.props.IntProperty(
 		default=0,
 		options={'HIDDEN'})
-	suppress_help = bpy.props.BoolProperty(
+	suppress_help: bpy.props.BoolProperty(
 		name="Don't show this again",
 		default=False,
 		options={'HIDDEN'},
@@ -387,23 +387,23 @@ class MCPREP_OT_swap_texture_pack(
 		"select a folder path for an unzipped resource pack or texture folder")
 	bl_options = {'REGISTER', 'UNDO'}
 
-	filter_glob = bpy.props.StringProperty(
+	filter_glob: bpy.props.StringProperty(
 		default="",
 		options={'HIDDEN'})
 	use_filter_folder = True
 	fileselectparams = "use_filter_blender"
-	filepath = bpy.props.StringProperty(subtype='DIR_PATH')
-	filter_image = bpy.props.BoolProperty(
+	filepath: bpy.props.StringProperty(subtype='DIR_PATH')
+	filter_image: bpy.props.BoolProperty(
 		default=True,
 		options={'HIDDEN', 'SKIP_SAVE'})
-	filter_folder = bpy.props.BoolProperty(
+	filter_folder: bpy.props.BoolProperty(
 		default=True,
 		options={'HIDDEN', 'SKIP_SAVE'})
-	prepMaterials = bpy.props.BoolProperty(
+	prepMaterials: bpy.props.BoolProperty(
 		name="Prep materials",
 		description="Runs prep materials after texture swap to regenerate materials",
 		default=False)
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 
@@ -527,8 +527,8 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 		"Generate and apply the selected material based on active resource pack")
 	bl_options = {'REGISTER', 'UNDO'}
 
-	filepath = bpy.props.StringProperty(default="")
-	skipUsage = bpy.props.BoolProperty(default=False, options={'HIDDEN'})
+	filepath: bpy.props.StringProperty(default="")
+	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	@classmethod
 	def poll(cls, context):

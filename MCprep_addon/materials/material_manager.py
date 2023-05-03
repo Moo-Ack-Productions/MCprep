@@ -144,11 +144,11 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 
 	# arg to auto-force remove old? versus just keep as 0-users
-	selection_only = bpy.props.BoolProperty(
+	selection_only: bpy.props.BoolProperty(
 		name="Selection only",
 		description="Build materials to consoldiate based on selected objects only",
 		default=True)
-	skipUsage = bpy.props.BoolProperty(default=False, options={'HIDDEN'})
+	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	track_function = "combine_materials"
 	@tracking.report_error
@@ -278,12 +278,12 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 	bl_description = "Consolidate the same images together e.g. img.001 and img.002"
 
 	# arg to auto-force remove old? versus just keep as 0-users
-	selection_only = bpy.props.BoolProperty(
+	selection_only: bpy.props.BoolProperty(
 		name="Selection only",
 		description=(
 			"Build images to consoldiate based on selected objects' materials only"),
 		default=False)
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 
@@ -387,11 +387,11 @@ class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 
 	# deleteAlpha = False
-	animateTextures = bpy.props.BoolProperty(
+	animateTextures: bpy.props.BoolProperty(
 		name="Animate textures (may be slow first time)",
 		description="Convert tiled images into image sequence for material.",
 		default=True)
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 

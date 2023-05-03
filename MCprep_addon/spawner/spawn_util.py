@@ -859,7 +859,7 @@ class ListModelAssets(bpy.types.PropertyGroup):
 	"""For UI drawing of mc model assets and holding data"""
 	filepath: bpy.props.StringProperty(subtype="FILE_PATH")
 	description: bpy.props.StringProperty()
-	# index = bpy.props.IntProperty(min=0, default=0)  # icon pulled by name.
+	# index: bpy.props.IntProperty(min=0, default=0)  # icon pulled by name.
 
 
 class ListEffectsAssets(bpy.types.PropertyGroup):

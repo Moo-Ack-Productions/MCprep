@@ -421,14 +421,14 @@ class MCPREP_OT_spawn_item_from_file(bpy.types.Operator, ImportHelper, ItemSpawn
 	bl_idname = "mcprep.spawn_item_file"
 	bl_label = "Item from file"
 
-	filter_glob = bpy.props.StringProperty(
+	filter_glob: bpy.props.StringProperty(
 		default="",
 		options={'HIDDEN'})
 	fileselectparams = "use_filter_blender"
-	files = bpy.props.CollectionProperty(
+	files: bpy.props.CollectionProperty(
 		type=bpy.types.PropertyGroup,
 		options={'HIDDEN', 'SKIP_SAVE'})
-	filter_image = bpy.props.BoolProperty(
+	filter_image: bpy.props.BoolProperty(
 		default=True,
 		options={'HIDDEN', 'SKIP_SAVE'})
 

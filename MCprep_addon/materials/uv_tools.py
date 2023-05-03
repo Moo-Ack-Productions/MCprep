@@ -137,9 +137,9 @@ class MCPREP_OT_scale_uv(bpy.types.Operator):
 	bl_description = "Scale all selected UV faces. See F6 or redo-last panel to adjust factor"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	scale = bpy.props.FloatProperty(default=0.75, name="Scale")
-	selected_only = bpy.props.BoolProperty(default=True, name="Seleced only")
-	skipUsage = bpy.props.BoolProperty(default=False, options={'HIDDEN'})
+	scale: bpy.props.FloatProperty(default=0.75, name="Scale")
+	selected_only: bpy.props.BoolProperty(default=True, name="Seleced only")
+	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	@classmethod
 	def poll(cls, context):
@@ -237,17 +237,17 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 	bl_description = "Select or delete transparent UV faces of a mesh"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	delete = bpy.props.BoolProperty(
+	delete: bpy.props.BoolProperty(
 		name="Delete faces",
 		description="Delete detected transparent mesh faces",
 		default=False)
-	threshold = bpy.props.FloatProperty(
+	threshold: bpy.props.FloatProperty(
 		name="Threshold",
 		description="How transparent pixels need to be to select",
 		default=0.2,
 		min=0.0,
 		max=1.0)
-	skipUsage = bpy.props.BoolProperty(default=False, options={'HIDDEN'})
+	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	@classmethod
 	def poll(cls, context):

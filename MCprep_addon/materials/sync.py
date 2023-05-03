@@ -111,21 +111,21 @@ class MCPREP_OT_sync_materials(bpy.types.Operator):
 	bl_label = "Sync Materials"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	selected = bpy.props.BoolProperty(
+	selected: bpy.props.BoolProperty(
 		name="Only selected",
 		description=(
 			"Affect only the materials on selected objects, otherwise "
 			"sync all materials in blend file"),
 		default=True)
-	link = bpy.props.BoolProperty(
+	link: bpy.props.BoolProperty(
 		name="Link",
 		description="Link instead of appending material",
 		default=False)
-	replace_materials = bpy.props.BoolProperty(
+	replace_materials: bpy.props.BoolProperty(
 		name="Replace",
 		description="Delete the local materials being synced, where matched",
 		default=False)
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 

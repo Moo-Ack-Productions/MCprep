@@ -144,7 +144,7 @@ class MCPREP_OT_open_jmc2obj(bpy.types.Operator):
 	bl_description = "Open the jmc2obj executbale"
 
 	# poll, and prompt to download if not present w/ tutorial link
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 
@@ -222,7 +222,7 @@ class MCPREP_OT_open_mineways(bpy.types.Operator):
 	bl_description = "Open the Mineways executbale"
 
 	# poll, and prompt to download if not present w/ tutorial link
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 
@@ -305,11 +305,11 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 	bl_label = "Import World"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	filter_glob = bpy.props.StringProperty(
+	filter_glob: bpy.props.StringProperty(
 		default="*.obj;*.mtl",
 		options={'HIDDEN'})
 	fileselectparams = "use_filter_blender"
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 
@@ -497,7 +497,7 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 	bl_description = "Prep world render settings to something generally useful"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 
@@ -673,13 +673,13 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			"Create static sky, with no sun or moon"))
 		return enums
 
-	world_type = bpy.props.EnumProperty(
+	world_type: bpy.props.EnumProperty(
 		name="Sky type",
 		description=(
 			"Decide to improt dynamic (time/hour-controlled) vs static sky "
 			"(daytime only), and the type of sun/moon (if any) to use"),
 		items=enum_options)
-	initial_time = bpy.props.EnumProperty(
+	initial_time: bpy.props.EnumProperty(
 		name="Set time (dynamic only)",
 		description="Set initial time of day, only supported for dynamic sky types",
 		items=(
@@ -689,11 +689,11 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			("0", "Midnight", "Set initial time to 12am"),
 			("6", "Sunrise", "Set initial time to 6am"))
 	)
-	add_clouds = bpy.props.BoolProperty(
+	add_clouds: bpy.props.BoolProperty(
 		name="Add clouds",
 		description="Add in a cloud mesh",
 		default=True)
-	remove_existing_suns = bpy.props.BoolProperty(
+	remove_existing_suns: bpy.props.BoolProperty(
 		name="Remove initial suns",
 		description="Remove any existing sunlamps",
 		default=True)
@@ -959,7 +959,7 @@ class MCPREP_OT_time_set(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 
 	# subject center to place lighting around
-	time_enum = bpy.props.EnumProperty(
+	time_enum: bpy.props.EnumProperty(
 		name="Time selection",
 		description="Select between the different reflections",
 		items=[
@@ -973,7 +973,7 @@ class MCPREP_OT_time_set(bpy.types.Operator):
 			("18000", "Midnight", "Time=18,000, moon at zenish"),
 			("23000", "Sunrise", "Time set day=23,000, sun first visible")
 		])
-	day_offset = bpy.props.IntProperty(
+	day_offset: bpy.props.IntProperty(
 		name="Day offset",
 		description="Offset by number of days (ie +/- 24000*n)",
 		default=0)
@@ -1175,17 +1175,17 @@ class MCPREP_OT_render_panorama(bpy.types.Operator, ExportHelper):
 	bl_description = "Render Panorama for texture Pack"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	panorama_resolution = bpy.props.IntProperty(
+	panorama_resolution: bpy.props.IntProperty(
 		name="Render resolution",
 		description="The resolution of the output images",
 		default=1024
 	)
-	open_folder = bpy.props.BoolProperty(
+	open_folder: bpy.props.BoolProperty(
 		name="Open folder when done",
 		description="Open the output folder when render completes",
 		default=False)
 
-	filepath = bpy.props.StringProperty(subtype='DIR_PATH')
+	filepath: bpy.props.StringProperty(subtype='DIR_PATH')
 	filename_ext = ""  # Not used, but required by ExportHelper.
 
 	def draw(self, context):

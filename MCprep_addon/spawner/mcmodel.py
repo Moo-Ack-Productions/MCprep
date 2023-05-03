@@ -459,7 +459,7 @@ class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 	bl_label = "Place model"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	filepath = bpy.props.StringProperty(
+	filepath: bpy.props.StringProperty(
 		default="",
 		subtype="FILE_PATH",
 		options={'HIDDEN', 'SKIP_SAVE'})
@@ -497,7 +497,7 @@ class MCPREP_OT_import_minecraft_model_file(
 	bl_options = {'REGISTER', 'UNDO'}
 
 	filename_ext = ".json"
-	filter_glob = bpy.props.StringProperty(
+	filter_glob: bpy.props.StringProperty(
 		default="*.json",
 		options={'HIDDEN'},
 		maxlen=255  # Max internal buffer length, longer would be clamped.

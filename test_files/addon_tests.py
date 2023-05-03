@@ -2190,7 +2190,7 @@ class MCPTEST_OT_test_run(bpy.types.Operator):
 	bl_idname = "mcpreptest.run_test"
 	bl_description = "Run specified test index"
 
-	index = bpy.props.IntProperty(default=0)
+	index: bpy.props.IntProperty(default=0)
 
 	def execute(self, context):
 		# ind = context.window_manager.mcprep_test_index
@@ -2277,19 +2277,18 @@ def register():
 	print("REGISTER MCPREP TEST")
 	maxlen = len(test_class.test_cases)
 
-	bpy.types.WindowManager.mcprep_test_index = bpy.props.IntProperty(
+	bpy.types.WindowManager.mcprep_test_index: bpy.props.IntProperty(
 		name="MCprep test index",
 		default=-1,
 		min=-1,
 		max=maxlen,
 		update=mcprep_test_index_update)
-	bpy.types.WindowManager.mcprep_test_autorun = bpy.props.BoolProperty(
+	bpy.types.WindowManager.mcprep_test_autorun: bpy.props.BoolProperty(
 		name="Autorun test",
 		default=True)
 
 	# context.window_manager.mcprep_test_index = -1 put into handler to reset?
 	for cls in classes:
-		# util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 
 

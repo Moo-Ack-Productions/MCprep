@@ -322,48 +322,48 @@ class McprepPreference(bpy.types.AddonPreferences):
 	def change_verbose(self, context):
 		env.verbose = self.verbose
 
-	meshswap_path = bpy.props.StringProperty(
+	meshswap_path: bpy.props.StringProperty(
 		name="Meshswap path",
 		description=(
 			"Default path to the meshswap asset file, for "
 			"meshswapable objects and groups"),
 		subtype='FILE_PATH',
 		default=scriptdir + "/MCprep_resources/mcprep_meshSwap.blend")
-	entity_path = bpy.props.StringProperty(
+	entity_path: bpy.props.StringProperty(
 		name="Entity path",
 		description="Default path to the entity asset file, for entities",
 		subtype='FILE_PATH',
 		default=os.path.join(scriptdir, "MCprep_resources", "mcprep_entities.blend"))
-	mob_path = bpy.props.StringProperty(
+	mob_path: bpy.props.StringProperty(
 		name="Mob path",
 		description="Default folder for rig loads/spawns in new blender instances",
 		subtype='DIR_PATH',
 		default=scriptdir + "/MCprep_resources/rigs/")
-	custom_texturepack_path = bpy.props.StringProperty(
+	custom_texturepack_path: bpy.props.StringProperty(
 		name="Texture pack path",
 		description=(
 			"Path to a folder containing resources and textures to use "
 			"with material prepping"),
 		subtype='DIR_PATH',
 		default=scriptdir + "/MCprep_resources/resourcepacks/mcprep_default/")
-	skin_path = bpy.props.StringProperty(
+	skin_path: bpy.props.StringProperty(
 		name="Skin path",
 		description="Folder for skin textures, used in skin swapping",
 		subtype='DIR_PATH',
 		default=scriptdir + "/MCprep_resources/skins/")
-	effects_path = bpy.props.StringProperty(
+	effects_path: bpy.props.StringProperty(
 		name="Effects path",
 		description="Folder for effects blend files and assets",
 		subtype='DIR_PATH',
 		default=scriptdir + "/MCprep_resources/effects/")
-	world_obj_path = bpy.props.StringProperty(
+	world_obj_path: bpy.props.StringProperty(
 		name="World Folder",
 		description=(
 			"Default folder for opening world objs from programs "
 			"like jmc2obj or Mineways"),
 		subtype='DIR_PATH',
 		default="//")
-	MCprep_groupAppendLayer = bpy.props.IntProperty(
+	MCprep_groupAppendLayer: bpy.props.IntProperty(
 		name="Group Append Layer",
 		description=(
 			"When groups are appended instead of linked, "
@@ -372,43 +372,43 @@ class McprepPreference(bpy.types.AddonPreferences):
 		min=0,
 		max=20,
 		default=20)
-	MCprep_exporter_type = bpy.props.EnumProperty(
+	MCprep_exporter_type: bpy.props.EnumProperty(
 		items=[
 			('(choose)', '(choose)', 'Select your exporter'),
 			('jmc2obj', 'jmc2obj', 'Select if exporter used was jmc2obj'),
 			('Mineways', 'Mineways', 'Select if exporter used was Mineways')],
 		name="Exporter")
-	preferences_tab = bpy.props.EnumProperty(
+	preferences_tab: bpy.props.EnumProperty(
 		items=[
 			('settings', 'Settings', 'Change MCprep settings'),
 			('tutorials', 'Tutorials', 'View MCprep tutorials & other help'),
 			('tracker_updater', 'Tracking/Updater',
 				'Change tracking and updating settings')],
 		name="Exporter")
-	verbose = bpy.props.BoolProperty(
+	verbose: bpy.props.BoolProperty(
 		name="Verbose logging",
 		description="Print out more information in the console",
 		default=False,
 		update=change_verbose)
-	open_jmc2obj_path = bpy.props.StringProperty(
+	open_jmc2obj_path: bpy.props.StringProperty(
 		name="jmc2obj path",
 		description="Path to the jmc2obj executable",
 		subtype='FILE_PATH',
 		default="jmc2obj.jar")
-	open_mineways_path = bpy.props.StringProperty(
+	open_mineways_path: bpy.props.StringProperty(
 		name="Mineways path",
 		description="Path to the Mineways executable",
 		subtype='FILE_PATH',
 		update=mineways_update,
 		default="Mineways")
-	save_folder = bpy.props.StringProperty(
+	save_folder: bpy.props.StringProperty(
 		name="MC saves folder",
 		description=(
 			"Folder containing Minecraft world saves directories, "
 			"for the direct import bridge"),
 		subtype='FILE_PATH',
 		default='')
-	feature_set = bpy.props.EnumProperty(
+	feature_set: bpy.props.EnumProperty(
 		items=[
 			('supported', 'Supported', 'Use only supported features'),
 			('experimental', 'Experimental', 'Enable experimental features')],
@@ -417,31 +417,31 @@ class McprepPreference(bpy.types.AddonPreferences):
 
 	# addon updater preferences
 
-	auto_check_update = bpy.props.BoolProperty(
+	auto_check_update: bpy.props.BoolProperty(
 		name="Auto-check for Update",
 		description="If enabled, auto-check for updates using an interval",
 		default=True,
 	)
-	updater_interval_months = bpy.props.IntProperty(
+	updater_interval_months: bpy.props.IntProperty(
 		name='Months',
 		description="Number of months between checking for updates",
 		default=0,
 		min=0
 	)
-	updater_interval_days = bpy.props.IntProperty(
+	updater_interval_days: bpy.props.IntProperty(
 		name='Days',
 		description="Number of days between checking for updates",
 		default=1,
 		min=0,
 	)
-	updater_interval_hours = bpy.props.IntProperty(
+	updater_interval_hours: bpy.props.IntProperty(
 		name='Hours',
 		description="Number of hours between checking for updates",
 		default=0,
 		min=0,
 		max=23
 	)
-	updater_interval_minutes = bpy.props.IntProperty(
+	updater_interval_minutes: bpy.props.IntProperty(
 		name='Minutes',
 		description="Number of minutes between checking for updates",
 		default=0,
@@ -1838,7 +1838,7 @@ class McprepProps(bpy.types.PropertyGroup):
 	"""Properties saved to an individual scene"""
 
 	# not available here
-	addon_prefs = util.get_user_preferences()
+	# addon_prefs = util.get_user_preferences()
 
 	# depreciated, keeping to prevent re-registration errors
 	show_settings_material: bpy.props.BoolProperty(
@@ -1940,47 +1940,47 @@ def register():
 	for cls in classes:
 		bpy.utils.register_class(cls)
 
-	bpy.types.Scene.mcprep_props = bpy.props.PointerProperty(type=McprepProps)
+	bpy.types.Scene.mcprep_props: bpy.props.PointerProperty(type=McprepProps)
 
 	# scene settings (later re-attempt to put into props group)
 	addon_prefs = util.get_user_preferences()
 
-	bpy.types.Scene.mcprep_mob_path = bpy.props.StringProperty(
+	bpy.types.Scene.mcprep_mob_path: bpy.props.StringProperty(
 		name="Mob folder",
 		description="Folder for rigs to spawn in, saved with this blend file data",
 		subtype='DIR_PATH',
 		update=mobs.update_rig_path,
 		default=addon_prefs.mob_path)
-	bpy.types.Scene.mcprep_skin_path = bpy.props.StringProperty(
+	bpy.types.Scene.mcprep_skin_path: bpy.props.StringProperty(
 		name="Skin folder",
 		description="Folder for skin textures, used in skin swapping",
 		subtype='DIR_PATH',
 		update=update_skin_path,
 		default=addon_prefs.skin_path)
-	bpy.types.Scene.meshswap_path = bpy.props.StringProperty(
+	bpy.types.Scene.meshswap_path: bpy.props.StringProperty(
 		name="Meshswap file",
 		description="File for meshswap library",
 		subtype='FILE_PATH',
 		update=meshswap.update_meshswap_path,
 		default=addon_prefs.meshswap_path)
-	bpy.types.Scene.mcprep_effects_path = bpy.props.StringProperty(
+	bpy.types.Scene.mcprep_effects_path: bpy.props.StringProperty(
 		name="Effects folder",
 		description="Folder for handcrafted effects like particles and geonodes",
 		subtype='DIR_PATH',
 		update=effects.update_effects_path,
 		default=addon_prefs.effects_path)
-	bpy.types.Scene.mcprep_particle_plane_file = bpy.props.StringProperty(
+	bpy.types.Scene.mcprep_particle_plane_file: bpy.props.StringProperty(
 		name="Particle planes file set",
 		description="Has the particle planes file been changed",
 		subtype='FILE_PATH',
 		default='')
-	bpy.types.Scene.entity_path = bpy.props.StringProperty(
+	bpy.types.Scene.entity_path: bpy.props.StringProperty(
 		name="Entity file",
 		description="File for entity library",
 		subtype='FILE_PATH',
 		update=entities.update_entity_path,
 		default=addon_prefs.entity_path)
-	bpy.types.Scene.mcprep_texturepack_path = bpy.props.StringProperty(
+	bpy.types.Scene.mcprep_texturepack_path: bpy.props.StringProperty(
 		name="Path to texture pack",
 		subtype='DIR_PATH',
 		description=(
