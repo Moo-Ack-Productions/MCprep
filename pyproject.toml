@@ -3,7 +3,7 @@ name = "MCprep"
 version = "3.5"
 description = "Blender python addon to increase workflow for creating minecraft renders and animations"
 authors = ["TheDuckCow"]
-license = "GPL-3.0"
+license = "GPL-3.0-only"
 readme = "README.md"
 
 [tool.poetry.dependencies]
