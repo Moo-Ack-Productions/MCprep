@@ -40,10 +40,10 @@ from .spawner import spawn_util
 from .conf import env
 # from .import_bridge import bridge
 
-# blender 2.7 vs 2.8 icon selections
-LOAD_FACTORY = 'LOOP_BACK' if util.bv28() else 'LOAD_FACTORY'
-HAND_ICON = 'FILE_REFRESH' if util.bv28() else 'HAND'
-OPT_IN = 'URL' if util.bv28() else 'HAND'
+# blender 2.8 icon selections
+LOAD_FACTORY = 'LOOP_BACK'
+HAND_ICON = 'FILE_REFRESH'
+OPT_IN = 'URL'
 
 
 def addon_just_updated():
@@ -269,9 +269,6 @@ class MCPREP_MT_model_spawn(bpy.types.Menu):
 
 	def draw(self, context):
 		layout = self.layout
-		if not util.bv28():
-			layout.label(text="Requires blender 2.8 or newer")
-			return
 		if not context.scene.mcprep_props.model_list:
 			layout.label(text="No models found!")
 		for model in context.scene.mcprep_props.model_list:
@@ -510,8 +507,6 @@ class McprepPreference(bpy.types.AddonPreferences):
 		row.prop(self, "preferences_tab", expand=True)
 
 		factor_width = 0.3
-		if util.bv28():
-			factor_width = 0.3
 
 		if self.preferences_tab == "settings":
 
@@ -722,15 +717,13 @@ class McprepPreference(bpy.types.AddonPreferences):
 
 			# updater draw function
 			addon_updater_ops.update_settings_ui(self, context)
-		if not util.bv28():
-			layout.label(text="Don't forget to save user preferences!")
 
 
 class MCPREP_PT_world_imports(bpy.types.Panel):
 	"""World importing related settings and tools"""
 	bl_label = "World Imports"
 	bl_space_type = 'VIEW_3D'
-	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
+	bl_region_type = 'UI'
 	# bl_context = "objectmode"
 	bl_category = "MCprep"
 
@@ -770,14 +763,9 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			row.operator("mcprep.open_jmc2obj")
 
 		wpath = addon_prefs.world_obj_path
-		if util.bv28():
-			# custom operator for splitting via mats after importing
-			col.operator(
-				"mcprep.import_world_split",
-				text="OBJ world import").filepath = wpath
-		else:
-			col.operator(
-				"import_scene.obj", text="OBJ world import").filepath = wpath
+		col.operator(
+			"mcprep.import_world_split",
+			text="OBJ world import").filepath = wpath
 
 		split = layout.split()
 		col = split.column(align=True)
@@ -804,22 +792,13 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		col = split.column(align=True)
 
 		# Indicate whether UI can be improved or not.
-		view27 = ['TEXTURED', 'MATEIRAL', 'RENDERED']
 		view28 = ['SOLID', 'MATERIAL', 'RENDERED']
+		
+		improved_28 = util.viewport_textured(context) is True
+		improved_28 &= context.scene.display.shading.type in view28
+		improved_28 &= context.scene.display.shading.background_type == "WORLD"
 
-		improved_27 = not util.bv28()
-		if improved_27:
-			improved_27 &= util.viewport_textured(context) is True
-			improved_27 &= context.space_data.viewport_shade in view27
-			improved_27 &= util.get_preferences(context).system.use_mipmaps is False
-
-		improved_28 = util.bv28()
 		if improved_28:
-			improved_28 &= util.viewport_textured(context) is True
-			improved_28 &= context.scene.display.shading.type in view28
-			improved_28 &= context.scene.display.shading.background_type == "WORLD"
-
-		if improved_27 or improved_28:
 			row = col.row(align=True)
 			row.enabled = False
 			row.operator(
@@ -830,15 +809,14 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 				"mcprep.improve_ui", text="Improve UI", icon='SETTINGS')
 
 		# Optimizer Panel (only for blender 2.80+)
-		if util.min_bv((2, 80)):
+		row = col.row(align=True)
+		icon = "TRIA_DOWN" if scn_props.show_settings_optimizer else "TRIA_RIGHT"
+		row.prop(
+			scn_props, "show_settings_optimizer",
+			text="Cycles Optimizer", icon=icon)
+		if scn_props.show_settings_optimizer:
 			row = col.row(align=True)
-			icon = "TRIA_DOWN" if scn_props.show_settings_optimizer else "TRIA_RIGHT"
-			row.prop(
-				scn_props, "show_settings_optimizer",
-				text="Cycles Optimizer", icon=icon)
-			if scn_props.show_settings_optimizer:
-				row = col.row(align=True)
-				optimize_scene.panel_draw(context, row)
+			optimize_scene.panel_draw(context, row)
 
 		# Advanced settings.
 		row = col.row(align=True)
@@ -898,7 +876,7 @@ class MCPREP_PT_bridge(bpy.types.Panel):
 	"""MCprep panel for directly importing and reloading minecraft saves"""
 	bl_label = "World Bridge"
 	bl_space_type = "VIEW_3D"
-	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
+	bl_region_type = 'UI'
 	bl_context = "objectmode"
 	bl_category = "MCprep"
 
@@ -915,7 +893,7 @@ class MCPREP_PT_world_tools(bpy.types.Panel):
 	"""World settings and tools"""
 	bl_label = "World Tools"
 	bl_space_type = 'VIEW_3D'
-	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
+	bl_region_type = 'UI'	
 	bl_category = "MCprep"
 
 	def draw(self, context):
@@ -970,7 +948,7 @@ class MCPREP_PT_skins(bpy.types.Panel):
 	"""MCprep panel for skin swapping"""
 	bl_label = "Skin Swapper"
 	bl_space_type = 'VIEW_3D'
-	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
+	bl_region_type = 'UI'
 	bl_category = "MCprep"
 
 	def draw(self, context):
@@ -1514,9 +1492,6 @@ def model_spawner(self, context):
 
 	layout = self.layout
 	layout.label(text="Generate models from .json files")
-	if not util.bv28():
-		layout.label(text="Requires blender 2.8 or newer")
-		return
 	split = layout.split()
 	col = split.column(align=True)
 
@@ -1693,7 +1668,7 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 	"""MCprep panel for mob spawning"""
 	bl_label = "Spawner"
 	bl_space_type = "VIEW_3D"
-	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
+	bl_region_type = 'UI'
 	bl_category = "MCprep"
 
 	def draw(self, context):
@@ -1713,7 +1688,7 @@ class MCPREP_PT_mob_spawner(bpy.types.Panel):
 	bl_label = "Mob spawner"
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
-	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
+	bl_region_type = 'UI'	
 	bl_category = "MCprep"
 	bl_options = {'DEFAULT_CLOSED'}
 
@@ -1741,7 +1716,7 @@ class MCPREP_PT_model_spawner(bpy.types.Panel):
 	bl_label = "Block (model) spawner"
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
-	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
+	bl_region_type = 'UI'
 	bl_category = "MCprep"
 	bl_options = {'DEFAULT_CLOSED'}
 
@@ -1769,7 +1744,7 @@ class MCPREP_PT_item_spawner(bpy.types.Panel):
 	bl_label = "Item spawner"
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
-	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
+	bl_region_type = 'UI'
 	bl_category = "MCprep"
 	bl_options = {'DEFAULT_CLOSED'}
 
@@ -1798,7 +1773,7 @@ class MCPREP_PT_effects_spawner(bpy.types.Panel):
 	bl_label = "Effects + weather"
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
-	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
+	bl_region_type = 'UI'
 	bl_category = "MCprep"
 	bl_options = {'DEFAULT_CLOSED'}
 
@@ -1826,7 +1801,7 @@ class MCPREP_PT_entity_spawner(bpy.types.Panel):
 	bl_label = "Entity spawner"
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
-	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
+	bl_region_type = 'UI'
 	bl_category = "MCprep"
 	bl_options = {'DEFAULT_CLOSED'}
 
@@ -1854,7 +1829,7 @@ class MCPREP_PT_meshswap_spawner(bpy.types.Panel):
 	bl_label = "Meshswap spawner"
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
-	bl_region_type = 'TOOLS' if not util.bv28() else 'UI'
+	bl_region_type = 'UI'
 	bl_category = "MCprep"
 	bl_options = {'DEFAULT_CLOSED'}
 
@@ -2093,13 +2068,9 @@ def register():
 		default=addon_prefs.custom_texturepack_path)
 
 	env.verbose = addon_prefs.verbose
-	if hasattr(bpy.types, "INFO_MT_add"):  # 2.7
-		bpy.types.INFO_MT_add.append(draw_mcprepadd)
-	elif hasattr(bpy.types, "VIEW3D_MT_add"):  # 2.8
+	if hasattr(bpy.types, "VIEW3D_MT_add"):  # 2.8
 		bpy.types.VIEW3D_MT_add.append(draw_mcprepadd)
 
-	if hasattr(bpy.types, "IMAGE_PT_tools_transform_uvs"):  # 2.7 only
-		bpy.types.IMAGE_PT_tools_transform_uvs.append(mcprep_uv_tools)
 	if hasattr(bpy.types, "IMAGE_MT_uvs"):  # 2.8 *and* 2.7
 		# this is a dropdown menu for UVs, not a panel
 		bpy.types.IMAGE_MT_uvs.append(mcprep_uv_tools)

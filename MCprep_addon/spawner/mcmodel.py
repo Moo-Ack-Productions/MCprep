@@ -429,7 +429,7 @@ class ModelSpawnBase():
 
 	@classmethod
 	def poll(cls, context):
-		return context.mode == 'OBJECT' and util.bv28()
+		return context.mode == 'OBJECT'
 
 	def place_model(self, obj):
 		if self.snapping == "center":
@@ -546,12 +546,10 @@ def register():
 	for cls in classes:
 		bpy.utils.register_class(cls)
 
-	if util.bv28():
-		bpy.types.TOPBAR_MT_file_import.append(draw_import_mcmodel)
+	bpy.types.TOPBAR_MT_file_import.append(draw_import_mcmodel)
 
 
 def unregister():
-	if util.bv28():
-		bpy.types.TOPBAR_MT_file_import.remove(draw_import_mcmodel)
+	bpy.types.TOPBAR_MT_file_import.remove(draw_import_mcmodel)
 	for cls in reversed(classes):
 		bpy.utils.unregister_class(cls)
