@@ -211,6 +211,23 @@ If you're using an IDE, it's recommened to install `bpy` as a Python module. In 
 
 It's also recommened to use a virtual environment (especially if you're on Linux) as to avoid issues with system wide packages and different versions of `bpy`. [See this for more details](https://realpython.com/python-virtual-environments-a-primer/)
 
+There are 2 methods to do this:
+- Poetry
+- Manualy
+
+Both are listed here.
+
+### With Poetry
+[Poetry](https://python-poetry.org/) is a useful tool that allows easy dependency handling. To quote the website:
+
+>  Python packaging and dependency management made easy 
+
+If you decide to use Poetry, then simply run the following command:
+
+`poetry install`
+
+To enable the virtual environment, run `poetry shell`, then type `exit` when you're done.
+
 ### Creating a Virtual Environment and Setting up `bpy`
 First, we need to come up with a name. For MCprep development, it's recommended to use the following convention:
 `mcprep_venv_<version>`
