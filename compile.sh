@@ -78,7 +78,7 @@ function build() {
 		cp -r $NAME/MCprep_resources build/$NAME/
 
 		# Making the zip with all the sub files is also slow.
-		cd build
+		cd build || exit
 		rm $NAME.zip # Compeltely remove old version (else it's append/replace)
 		zip $NAME.zip -rq $NAME
 		cd ../
@@ -99,7 +99,7 @@ function detect_installs() {
 		then
 		    # Add all
 		    ls -rd -- /Users/*/Library/Application\ Support/Blender/*/scripts/addons/ > $BLENDER_INSTALLS
-		elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]
+		elif [ "$(uname -s | cut -c 1-5)" == "Linux" ]
 		then
 			ls -rd -- ~/.config/blender/*/scripts/addons > $BLENDER_INSTALLS
 			exit
@@ -120,7 +120,7 @@ function install_path(){
 	then
 		# echo "Remove prior: $i/$NAME/"
 		# ls "$i/$NAME/"
-		rm -r "$i/$NAME/"
+		rm -rf "${i/$NAME:?}/"
 	fi
 
 	mkdir -p "$i/$NAME"
