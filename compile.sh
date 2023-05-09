@@ -101,7 +101,7 @@ function detect_installs() {
 		    ls -rd -- /Users/*/Library/Application\ Support/Blender/*/scripts/addons/ > $BLENDER_INSTALLS
 		elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]
 		then
-			echo "TODO support platform, manually populate"
+			ls -rd -- ~/.config/blender/*/scripts/addons > $BLENDER_INSTALLS
 			exit
 		else
 			echo "Unsupported platform, manually populate"
