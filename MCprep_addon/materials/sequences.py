@@ -21,8 +21,7 @@ import errno
 import json
 import os
 import re
-from typing import List, Optional, Tuple
-
+from typing import List, Optional, Tuple, Literal
 import bpy
 from bpy.types import (
   Context, Object, Material, Image, Texture
@@ -33,15 +32,16 @@ from .. import tracking
 from .. import util
 from . import uv_tools
 
-from ..conf import env, PathLike
+from ..conf import env, PathLike, Engine, Form
 
+ExportLocation = Literal["original", "local", "texturepack"]
 # -----------------------------------------------------------------------------
 # Supporting functions
 # -----------------------------------------------------------------------------
 
 
 def animate_single_material(
-	mat: Material, engine: str, export_location: str='original', clear_cache: bool=False) -> Tuple[bool, bool, str]:
+	mat: Material, engine: Engine, export_location: ExportLocation, clear_cache: bool=False) -> Tuple[bool, bool, str]:
 	"""Animates texture for single material, including all passes.
 
 	Args:
@@ -138,7 +138,7 @@ def is_image_tiled(image_block: Image) -> bool:
 		return True
 
 
-def generate_material_sequence(source_path: PathLike, image_path: PathLike, form: Optional[str], export_location: str, clear_cache: bool) -> Tuple[dict, Optional[str]]:
+def generate_material_sequence(source_path: PathLike, image_path: PathLike, form: Optional[Form], export_location: ExportLocation, clear_cache: bool) -> Tuple[dict, Optional[str]]:
 	"""Performs frame by frame export of sequences to location based on input.
 
 	Returns Dictionary of the image paths to the first tile of each
@@ -322,7 +322,7 @@ def export_image_to_sequence(image_path: PathLike, params: dict, output_folder: 
 		revi = tiles - i - 1  # To reverse index, based on MC tile order.
 
 		# new image for copying pixels over to
-		if form != "minways":
+		if form != "mineways":
 			img_tile = bpy.data.images.new(
 				f"{basename}-seq-temp",
 				image.size[0], image.size[0], alpha=(image.channels == 4))

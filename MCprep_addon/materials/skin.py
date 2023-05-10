@@ -55,7 +55,7 @@ def reloadSkinList(context: Context):
 	for path in files:
 		if path.split(".")[-1].lower() not in ["png", "jpg", "jpeg", "tiff"]:
 			continue
-		skinlist.append((path, "{x} skin".format(x=path)))
+		skinlist.append((path, f"{x} skin")
 
 	skinlist = sorted(skinlist, key=lambda x: x[0].lower())
 

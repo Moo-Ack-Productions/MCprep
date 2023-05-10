@@ -32,7 +32,7 @@ from .. import tracking
 from . import mobs
 from . import effects
 
-from ..conf import env
+from ..conf import env, PathLike
 
 # Top-level names used for inclusion or exclusions when filtering through
 # collections in blend files for spawners: mobs, meshswap, and entities.
@@ -104,7 +104,7 @@ def filter_collections(data_from: BlendDataLibraries) -> List[str]:
 	return all_names
 
 
-def check_blend_eligible(this_file: str, all_files: List[str]) -> bool:
+def check_blend_eligible(this_file: PathLike, all_files: List[PathLike]) -> bool:
 	"""Returns true if the path blend file is ok for this blender version.
 
 	Created to better support older blender versions without having to
@@ -164,7 +164,7 @@ def check_blend_eligible(this_file: str, all_files: List[str]) -> bool:
 	return True
 
 
-def attemptScriptLoad(path: str) -> None:
+def attemptScriptLoad(path: PathLike) -> None:
 	"""Search for script that matches name of the blend file"""
 
 	# TODO: should also look into the blend if appropriate
@@ -447,7 +447,7 @@ def load_linked(self, context: Context, path: str, name: str) -> None:
 				{'INFO'}, "This addon works better when the root bone's name is 'MAIN'")
 
 
-def load_append(self, context: Context, path: str, name: str) -> None:
+def load_append(self, context: Context, path: PathLike, name: str) -> None:
 	"""Append an entire collection/group into this blend file and fix armature.
 
 	Used for both mob spawning and entity spawning with appropriate handling

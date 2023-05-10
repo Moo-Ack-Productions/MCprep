@@ -20,11 +20,14 @@ import os
 from pathlib import Path
 import bpy
 
-from typing import TypeVar
+from typing import TypeVar, Literal
 from mathutils import Vector
 
 PathLike = TypeVar("PathLike", str, Path, bytes, os.PathLike, None)
-VectorType = TypeVar("VectorType", tuple, list, Vector) 
+VectorType = TypeVar("VectorType", tuple, list, Vector)
+
+Form = Literal["mc", "mineways", "jmc2obj"]
+Engine = Literal["CYCLES", "BLENDER_EEVEE"] #, "BLENDER_EEVEE_NEXT"] # For later.
 
 # check if custom preview icons available
 try:

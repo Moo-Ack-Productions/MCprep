@@ -1,4 +1,5 @@
-### Utilities (util.py)
+### Utilities 
+#### util.py
 
 **apply_colorspace(node, color_enum)**
 
@@ -129,36 +130,36 @@ Create a collection instance object. Returns that object.
 Load in the json file. Returns a bool if successful
 
 ```
+{
+  {
 
-    {
+		"blocks": {
 
-			"blocks": {
+		"reflective": [],
 
-				"reflective": [],
+		"water": [],
 
-				"water": [],
+		"solid": [],
 
-				"solid": [],
+		"emit": [],
 
-				"emit": [],
+		"desaturated": [],
 
-				"desaturated": [],
+		"animated": [],
 
-				"animated": [],
+		"block_mapping_mc": {},
 
-				"block_mapping_mc": {},
+		"block_mapping_jmc": {},
 
-				"block_mapping_jmc": {},
+		"block_mapping_mineways": {},
 
-				"block_mapping_mineways": {},
+		"canon_mapping_block": {}
 
-				"canon_mapping_block": {}
+	},
 
-			},
+	"mob_skip_prep": [],
 
-			"mob_skip_prep": [],
-
-			"make_real": []
+	"make_real": []
 }
 
 ```
@@ -319,6 +320,43 @@ Update scene, despgraph in cross compatible way
 
 **move_assets_to_excluded_layer(context, collections)**
 
-Move collections not to rendered to an excluded collection if not exist, create
+Move collections not to rendered to an excluded collection if not exist, create.
 
+#### materials/generated.py
 	
+**get_mc_canonical_name(name)**
+
+Returns the general canon name of the block material.
+
+**find_from_texturepack(blockname, resource_folder)**
+
+Returns the path of the block from the resource pack.
+
+**get_textures(material)**
+
+Get the image texture datablocks passes of the material.
+
+**create_node(tree_nodes, node_type,** ** **attrs)**
+
+Returns the created node in the specified node tree from the node type.
+
+**get_node_socket(node, is_input:=True)**
+
+Returns a list of sockets of input or output of the node.
+
+#### materials/skin.py
+
+**getMatsFromSelected(selected, new_material=False)**
+
+Returns a list of materials and objects from selected objects. This function used in skinswap.
+
+**download_user(self, context, username)**
+
+`self.download_user(context, "theduckcow")`
+
+Download skin from website.
+
+#### spawner/spawn_util.py
+**get_rig_from_objects(objects)**
+
+Returns the rig armature object from list of objects.

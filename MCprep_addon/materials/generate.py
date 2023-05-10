@@ -27,7 +27,7 @@ from typing import Union, Dict, Optional, List, Any, Tuple
 
 from .. import util
 
-from ..conf import env, PathLike
+from ..conf import env, PathLike, Form
 
 # -----------------------------------------------------------------------------
 # Material prep and generation functions (no registration)
@@ -46,7 +46,7 @@ def update_mcprep_texturepack_path(self, context: Context) -> None:
 	context.scene.mcprep_particle_plane_file = ''
 
 
-def get_mc_canonical_name(name: str) -> Tuple[str, Optional[str]]:
+def get_mc_canonical_name(name: str) -> Tuple[str, Optional[Form]]:
 	"""Convert a material name to standard MC name.
 
 	Returns:
@@ -113,7 +113,7 @@ def get_mc_canonical_name(name: str) -> Tuple[str, Optional[str]]:
 	return canon, form
 
 
-def find_from_texturepack(blockname: str, resource_folder: Optional[PathLike]=None) -> str:
+def find_from_texturepack(blockname: str, resource_folder: Optional[PathLike]=None) -> PathLike:
 	"""Given a blockname (and resource folder), find image filepath.
 
 	Finds textures following any pack which should have this structure, and
@@ -187,7 +187,7 @@ def find_from_texturepack(blockname: str, resource_folder: Optional[PathLike]=No
 	return res
 
 
-def detect_form(materials: List[Material]) -> str:
+def detect_form(materials: List[Material]) -> Optional[Form]:
 	"""Function which, given the input materials, guesses the exporter form.
 
 	Useful for pre-determining elibibility of a function and also for tracking

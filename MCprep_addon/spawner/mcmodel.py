@@ -127,7 +127,7 @@ def add_material(name: str="material", path: str="") -> Material:
 	return mat
 
 
-def locate_image(context: Context, textures: Dict[str, str], img: str, model_filepath: str) -> PathLike:
+def locate_image(context: Context, textures: Dict[str, str], img: str, model_filepath: PathLike) -> PathLike:
 	"""Finds and returns the filepath of the image texture."""
 	resource_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
 

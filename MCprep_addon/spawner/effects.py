@@ -286,7 +286,7 @@ def add_image_sequence_effect(context: Context, effect: ListEffectsAssets, locat
 			obj.location = Vector([0, 0, 0])
 
 			# Set the animation for visibility for the range of frames.
-			def keyframe_current_visibility(context, obj, state):
+			def keyframe_current_visibility(context: Context, obj: Object, state: bool):
 				frame = context.scene.frame_current
 
 				obj.hide_render = state
@@ -643,7 +643,7 @@ def apply_particle_settings(obj: Object, frame: int, base_name: str, pcoll: Coll
 		psystem.settings.dupli_group = pcoll
 
 
-def import_animated_coll(context: Context, effect: ListEffectsAssets, keyname:str) -> Collection:
+def import_animated_coll(context: Context, effect: ListEffectsAssets, keyname: str) -> Collection:
 	"""Import and return a new animated collection given a specific key."""
 	init_colls = list(util.collections())
 	any_imported = False

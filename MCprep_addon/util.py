@@ -25,7 +25,7 @@ import platform
 import random
 import re
 import subprocess
-from typing import List, Optional, Union, TypeVar
+from typing import List, Optional, Union, TypeVar, Literal
 
 import bpy
 from bpy.types import (
@@ -501,7 +501,7 @@ def ui_scale() -> float:
 		return 1
 
 
-def uv_select(obj: Object, action: Optional[str]='TOGGLE') -> None:
+def uv_select(obj: Object, action: Literal["SELECT", "DESELECT", "TOGGLE"]='TOGGLE') -> None:
 	"""Direct way to select all UV verts of an object, assumings 1 uv layer.
 
 	Actions are: SELECT, DESELECT, TOGGLE.
