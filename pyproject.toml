@@ -9,6 +9,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.7"
 fake-bpy-module-2-80 = "^20230117"
+darker = "^1.7.1"
 
 
 [build-system]
