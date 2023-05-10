@@ -2073,6 +2073,7 @@ def register():
 
 	if hasattr(bpy.types, "IMAGE_MT_uvs"):  # 2.8 *and* 2.7
 		# this is a dropdown menu for UVs, not a panel
+		env.log("IMAGE_MT_uvs registration!")
 		bpy.types.IMAGE_MT_uvs.append(mcprep_uv_tools)
 	# bpy.types.IMAGE_MT_image.append(mcprep_image_tools) # crashes, re-do ops
 
@@ -2081,13 +2082,9 @@ def unregister():
 	for cls in reversed(classes):
 		bpy.utils.unregister_class(cls)
 
-	if hasattr(bpy.types, "INFO_MT_add"):  # 2.7
-		bpy.types.INFO_MT_add.remove(draw_mcprepadd)
 	elif hasattr(bpy.types, "VIEW3D_MT_add"):  # 2.8
 		bpy.types.VIEW3D_MT_add.remove(draw_mcprepadd)
 
-	if hasattr(bpy.types, "IMAGE_PT_tools_transform_uvs"):  # 2.7
-		bpy.types.IMAGE_PT_tools_transform_uvs.remove(mcprep_uv_tools)
 	if hasattr(bpy.types, "IMAGE_MT_uvs"):  # 2.8 *and* 2.7
 		bpy.types.IMAGE_MT_uvs.remove(mcprep_uv_tools)
 	# bpy.types.IMAGE_MT_image.remove(mcprep_image_tools)
