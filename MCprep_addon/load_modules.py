@@ -172,7 +172,6 @@ module_list = (
 
 
 def register(bl_info):
-	conf.register()
 	tracking.register(bl_info)
 	for mod in module_list:
 		mod.register()
@@ -183,8 +182,8 @@ def register(bl_info):
 	# Inject the custom updater function, to use release zip instead src.
 	addon_updater_ops.updater.select_link = conf.updater_select_link_function
 
-	conf.log("MCprep: Verbose is enabled")
-	conf.log("MCprep: Very Verbose is enabled", vv_only=True)
+	conf.env.log("MCprep: Verbose is enabled")
+	conf.env.log("MCprep: Very Verbose is enabled", vv_only=True)
 
 
 def unregister(bl_info):

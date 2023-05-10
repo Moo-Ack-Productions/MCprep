@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "MCprep"
+version = "3.5"
+description = "Blender python addon to increase workflow for creating minecraft renders and animations"
+authors = ["TheDuckCow"]
+license = "GPL-3.0-only"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.7"
+fake-bpy-module-2-80 = "^20230117"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

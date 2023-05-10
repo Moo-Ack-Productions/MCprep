@@ -23,10 +23,11 @@ import bpy
 from bpy.app.handlers import persistent
 
 from . import generate
-from .. import conf
+from ..conf import env
 from .. import tracking
 from .. import util
 
+from ..conf import env
 
 # -----------------------------------------------------------------------------
 # Utilities
@@ -34,8 +35,8 @@ from .. import util
 
 @persistent
 def clear_sync_cache(scene):
-	conf.log("Resetting sync mat cache", vv_only=True)
-	conf.material_sync_cache = None
+	env.log("Resetting sync mat cache", vv_only=True)
+	env.material_sync_cache = None
 
 
 def get_sync_blend(context):
@@ -48,21 +49,21 @@ def reload_material_sync_library(context):
 	"""Reloads the library and cache"""
 	sync_file = get_sync_blend(context)
 	if not os.path.isfile(sync_file):
-		conf.material_sync_cache = []
+		env.material_sync_cache = []
 		return
 
 	with bpy.data.libraries.load(sync_file) as (data_from, _):
-		conf.material_sync_cache = list(data_from.materials)
-	conf.log("Updated sync cache", vv_only=True)
+		env.material_sync_cache = list(data_from.materials)
+	env.log("Updated sync cache", vv_only=True)
 
 
 def material_in_sync_library(mat_name, context):
 	"""Returns true if the material is in the sync mat library blend file"""
-	if conf.material_sync_cache is None:
+	if env.material_sync_cache is None:
 		reload_material_sync_library(context)
-	if util.nameGeneralize(mat_name) in conf.material_sync_cache:
+	if util.nameGeneralize(mat_name) in env.material_sync_cache:
 		return True
-	elif mat_name in conf.material_sync_cache:
+	elif mat_name in env.material_sync_cache:
 		return True
 	return False
 
@@ -81,9 +82,9 @@ def sync_material(context, source_mat, sync_mat_name, link, replace):
 		0 if nothing modified, 1 if modified
 		None if no error or string if error
 	"""
-	if sync_mat_name in conf.material_sync_cache:
+	if sync_mat_name in env.material_sync_cache:
 		import_name = sync_mat_name
-	elif util.nameGeneralize(sync_mat_name) in conf.material_sync_cache:
+	elif util.nameGeneralize(sync_mat_name) in env.material_sync_cache:
 		import_name = util.nameGeneralize(sync_mat_name)
 
 	# if link is true, check library material not already linked
@@ -118,21 +119,21 @@ class MCPREP_OT_sync_materials(bpy.types.Operator):
 	bl_label = "Sync Materials"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	selected = bpy.props.BoolProperty(
+	selected: bpy.props.BoolProperty(
 		name="Only selected",
 		description=(
 			"Affect only the materials on selected objects, otherwise "
 			"sync all materials in blend file"),
 		default=True)
-	link = bpy.props.BoolProperty(
+	link: bpy.props.BoolProperty(
 		name="Link",
 		description="Link instead of appending material",
 		default=False)
-	replace_materials = bpy.props.BoolProperty(
+	replace_materials: bpy.props.BoolProperty(
 		name="Replace",
 		description="Delete the local materials being synced, where matched",
 		default=False)
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 
@@ -197,7 +198,7 @@ class MCPREP_OT_sync_materials(bpy.types.Operator):
 				last_err = err
 
 		if last_err:
-			conf.log("Most recent error during sync:" + str(last_err))
+			env.log("Most recent error during sync:" + str(last_err))
 
 		# Re-establish initial state, as append material clears selections
 		for obj in inital_selection:
@@ -265,7 +266,6 @@ classes = (
 
 def register():
 	for cls in classes:
-		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 	bpy.app.handlers.load_post.append(clear_sync_cache)
 

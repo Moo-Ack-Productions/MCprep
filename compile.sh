@@ -15,9 +15,21 @@ else
 	FAST_RELOAD=true
 fi
 
+
+while getopts 'f:d' flag
+do
+	case "${flag}" in 
+		f) echo "Running a fast compile..." 
+		   FAST_RELOAD=true
+			;;
+		d) DEV_BUILD=true;;
+		*) echo "Invalid flag!" && exit;;
+	esac
+
+done
+
 NAME=MCprep_addon
 BLENDER_INSTALLS=blender_installs.txt
-
 
 # Remove left over files in the build folder, but leaves the zip.
 function clean(){
@@ -51,6 +63,13 @@ function build() {
 	cp -r $NAME/materials build/$NAME/
 	cp -r $NAME/spawner build/$NAME/
 
+	if [ "$DEV_BUILD" = true ]
+	then
+		echo "Creating dev build..."
+		touch build/$NAME/mcprep_dev.txt
+	else
+		rm -f build/$NAME/mcprep_dev.txt # Make sure this is removed
+	fi
 
 	if [ "$FAST_RELOAD" = false ]
 	then
@@ -59,12 +78,11 @@ function build() {
 		cp -r $NAME/MCprep_resources build/$NAME/
 
 		# Making the zip with all the sub files is also slow.
-		cd build
+		cd build || exit
 		rm $NAME.zip # Compeltely remove old version (else it's append/replace)
 		zip $NAME.zip -rq $NAME
 		cd ../
 	fi
-
 }
 
 
@@ -81,9 +99,9 @@ function detect_installs() {
 		then
 		    # Add all
 		    ls -rd -- /Users/*/Library/Application\ Support/Blender/*/scripts/addons/ > $BLENDER_INSTALLS
-		elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]
+		elif [ "$(uname -s | cut -c 1-5)" == "Linux" ]
 		then
-			echo "TODO support platform, manually populate"
+			ls -rd -- ~/.config/blender/*/scripts/addons > $BLENDER_INSTALLS
 			exit
 		else
 			echo "Unsupported platform, manually populate"
@@ -102,7 +120,7 @@ function install_path(){
 	then
 		# echo "Remove prior: $i/$NAME/"
 		# ls "$i/$NAME/"
-		rm -r "$i/$NAME/"
+		rm -rf "${i/$NAME:?}/"
 	fi
 
 	mkdir -p "$i/$NAME"

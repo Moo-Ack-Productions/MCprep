@@ -26,6 +26,7 @@ import bpy
 from bpy_extras.io_utils import ImportHelper
 
 from .. import conf
+from ..conf import env
 from .. import util
 from .. import tracking
 
@@ -51,8 +52,8 @@ def get_rig_list(context):
 
 def update_rig_path(self, context):
 	"""List for UI mobs callback of property spawn_rig_category."""
-	conf.log("Updating rig path", vv_only=True)
-	conf.rig_categories = []
+	env.log("Updating rig path", vv_only=True)
+	env.rig_categories = []
 	update_rig_list(context)
 	spawn_rigs_categories(self, context)
 
@@ -67,7 +68,7 @@ def update_rig_list(context):
 			extensions = [".png", ".jpg", ".jpeg"]
 			icon_folder = os.path.join(os.path.dirname(path), "icons")
 			run_icons = os.path.isdir(icon_folder)
-			if not conf.use_icons or conf.preview_collections["mobs"] == "":
+			if not env.use_icons or env.preview_collections["mobs"] == "":
 				run_icons = False
 
 			mob_names = spawn_util.filter_collections(data_from)
@@ -104,7 +105,7 @@ def update_rig_list(context):
 					and os.path.splitext(f.lower())[-1] in extensions]
 				if not icons:
 					continue
-				conf.preview_collections["mobs"].load(
+				env.preview_collections["mobs"].load(
 					"mob-{}".format(mob.index),
 					os.path.join(icon_folder, icons[0]),
 					'IMAGE')
@@ -113,15 +114,15 @@ def update_rig_list(context):
 	context.scene.mcprep_props.mob_list.clear()
 	context.scene.mcprep_props.mob_list_all.clear()
 
-	if conf.use_icons and conf.preview_collections["mobs"]:
+	if env.use_icons and env.preview_collections["mobs"]:
 		print("Removing mobs preview collection")
 		try:
-			bpy.utils.previews.remove(conf.preview_collections["mobs"])
+			bpy.utils.previews.remove(env.preview_collections["mobs"])
 		except:
-			conf.log("MCPREP: Failed to remove icon set, mobs")
+			env.log("MCPREP: Failed to remove icon set, mobs")
 
 	if os.path.isdir(rigpath) is False:
-		conf.log("Rigpath directory not found")
+		env.log("Rigpath directory not found")
 		return
 
 	categories = [
@@ -163,7 +164,7 @@ def update_rig_category(context):
 	scn_props = context.scene.mcprep_props
 
 	if not scn_props.mob_list_all:
-		conf.log("No rigs found, failed to update category")
+		env.log("No rigs found, failed to update category")
 		scn_props.mob_list.clear()
 		return
 
@@ -202,7 +203,7 @@ class MCPREP_OT_reload_mobs(bpy.types.Operator):
 
 	@tracking.report_error
 	def execute(self, context):
-		conf.rig_categories = []
+		env.rig_categories = []
 		update_rig_list(context)
 		return {'FINISHED'}
 
@@ -217,8 +218,8 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 	def riglist_enum(self, context):
 		return get_rig_list(context)
 
-	mcmob_type = bpy.props.EnumProperty(items=riglist_enum, name="Mob Type")
-	relocation = bpy.props.EnumProperty(
+	mcmob_type: bpy.props.EnumProperty(items=riglist_enum, name="Mob Type")
+	relocation: bpy.props.EnumProperty(
 		items=[
 			('Cursor', 'Cursor', 'Move the rig to the cursor'),
 			('Clear', 'Origin', 'Move the rig to the origin'),
@@ -226,22 +227,22 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 				'Offset the root bone to cursor while leaving the rest pose '
 				'at the origin'))],
 		name="Relocation")
-	toLink = bpy.props.BoolProperty(
+	toLink: bpy.props.BoolProperty(
 		name="Library Link",
 		description="Library link instead of append the group",
 		default=False)
-	clearPose = bpy.props.BoolProperty(
+	clearPose: bpy.props.BoolProperty(
 		name="Clear Pose",
 		description="Clear the pose to rest position",
 		default=True)
-	prep_materials = bpy.props.BoolProperty(
+	prep_materials: bpy.props.BoolProperty(
 		name="Prep materials (will reset nodes)",
 		description=(
 			"Prep materials of the added rig, will replace cycles node groups "
 			"with default"),
 		default=True)
 
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 
@@ -267,11 +268,11 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 		try:
 			[path, name] = self.mcmob_type.split(':/:')
 		except Exception as err:
-			conf.log("Error: Failed to parse mcmob_type")
+			env.log("Error: Failed to parse mcmob_type")
 			self.report({'ERROR'}, "Failed to parse mcmob_type, try reloading mobs")
 			return {'CANCELLED'}
 		path = os.path.join(context.scene.mcprep_mob_path, path)
-		conf.log("Path is now ", path)
+		env.log("Path is now ", path)
 
 		try:
 			# must be in object mode, this make similar behavior to other objs
@@ -283,7 +284,7 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 
 		if self.toLink:
 			if path == '//':
-				conf.log("This is the local file. Cancelling...")
+				env.log("This is the local file. Cancelling...")
 				return {'CANCELLED'}
 			_ = spawn_util.load_linked(self, context, path, name)
 		else:
@@ -325,7 +326,7 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 		for obj in mod_objs:
 			if obj not in list(context.scene.collection.all_objects):
 				obj.use_fake_user = True
-				conf.log("Set {} as fake user".format(obj.name))
+				env.log("Set {} as fake user".format(obj.name))
 
 
 class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
@@ -337,7 +338,7 @@ class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
 		"in selected blend file will become individually spawnable")
 
 	filename_ext = ".blend"
-	filter_glob = bpy.props.StringProperty(
+	filter_glob: bpy.props.StringProperty(
 		default="*.blend",
 		options={'HIDDEN'},
 	)
@@ -357,7 +358,7 @@ class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
 		ret.append(("no_category", "No Category", "Uncategorized mob"))  # last entry
 		return ret
 
-	mob_category = bpy.props.EnumProperty(
+	mob_category: bpy.props.EnumProperty(
 		items=getCategories,
 		name="Mob Category")
 
@@ -367,19 +368,19 @@ class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
 		newrig = bpy.path.abspath(self.filepath)
 
 		if not os.path.isfile(newrig):
-			conf.log("Error: Rig blend file not found!")
+			env.log("Error: Rig blend file not found!")
 			self.report({'ERROR'}, "Rig blend file not found!")
 			return {'CANCELLED'}
 
 		if not newrig.lower().endswith('.blend'):
-			conf.log("Error: Not a blend file! Select a .blend file with a rig")
+			env.log("Error: Not a blend file! Select a .blend file with a rig")
 			self.report({'ERROR'}, "Not a blend file! Select a .blend file with a rig")
 			return {'CANCELLED'}
 
 		# now check the rigs folder indeed exists
 		drpath = bpy.path.abspath(drpath)
 		if not os.path.isdir(drpath):
-			conf.log("Error: Rig directory is not valid!")
+			env.log("Error: Rig directory is not valid!")
 			self.report({'ERROR'}, "Rig directory is not valid!")
 			return {'CANCELLED'}
 
@@ -391,7 +392,7 @@ class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
 			install_groups.pop(install_groups.index('Collection'))
 
 		if not install_groups:
-			conf.log("Error: no groups found in blend file!")
+			env.log("Error: no groups found in blend file!")
 			self.report({'ERROR'}, "No groups found in blend file!")
 			return {'CANCELLED'}
 
@@ -430,7 +431,7 @@ class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
 
 		# copy all relevant icons, based on groups installed
 		# ## matching same folde or subfolder icons to append
-		if conf.use_icons:
+		if env.use_icons:
 			basedir = os.path.dirname(newrig)
 			icon_files = self.identify_icons(install_groups, basedir)
 			icondir = os.path.join(basedir, "icons")
@@ -564,18 +565,18 @@ class MCPREP_OT_uninstall_mob(bpy.types.Operator):
 			return {'CANCELLED'}
 
 		if os.path.isfile(path) is False:
-			conf.log("Error: Source filepath not found, didn't delete: " + path)
+			env.log("Error: Source filepath not found, didn't delete: " + path)
 			self.report({'ERROR'}, "Source filepath not found, didn't delete")
 			return {'CANCELLED'}
 		else:
 			try:
 				os.remove(path)
 			except Exception as err:
-				conf.log("Error: could not delete file: " + str(err))
+				env.log("Error: could not delete file: " + str(err))
 				self.report({'ERROR'}, "Could not delete file")
 				return {'CANCELLED'}
 		self.report({'INFO'}, "Removed: " + str(path))
-		conf.log("Removed file: " + str(path))
+		env.log("Removed file: " + str(path))
 		bpy.ops.mcprep.reload_mobs()
 		return {'FINISHED'}
 
@@ -585,11 +586,11 @@ class MCPREP_OT_install_mob_icon(bpy.types.Operator, ImportHelper):
 	bl_idname = "mcprep.mob_install_icon"
 	bl_label = "Install mob icon"
 
-	filter_glob = bpy.props.StringProperty(
+	filter_glob: bpy.props.StringProperty(
 		default="",
 		options={'HIDDEN'})
 	fileselectparams = "use_filter_blender"
-	filter_image = bpy.props.BoolProperty(
+	filter_image: bpy.props.BoolProperty(
 		default=True,
 		options={'HIDDEN', 'SKIP_SAVE'})
 
@@ -648,12 +649,12 @@ class MCPREP_OT_install_mob_icon(bpy.types.Operator, ImportHelper):
 
 		# if successful, load or reload icon id
 		icon_id = "mob-{}".format(mob.index)
-		if icon_id in conf.preview_collections["mobs"]:
+		if icon_id in env.preview_collections["mobs"]:
 			print("Deloading old icon for this mob")
-			print(dir(conf.preview_collections["mobs"][icon_id]))
-			conf.preview_collections["mobs"][icon_id].reload()
+			print(dir(env.preview_collections["mobs"][icon_id]))
+			env.preview_collections["mobs"][icon_id].reload()
 		else:
-			conf.preview_collections["mobs"].load(icon_id, new_file, 'IMAGE')
+			env.preview_collections["mobs"].load(icon_id, new_file, 'IMAGE')
 			print("Icon reloaded")
 
 		return {'FINISHED'}
@@ -668,13 +669,13 @@ def spawn_rigs_categories(self, context):
 	items = []
 	items.append(("all", "All Mobs", "Show all mobs loaded"))
 
-	categories = conf.rig_categories
-	if not conf.rig_categories:
+	categories = env.rig_categories
+	if not env.rig_categories:
 		it = context.scene.mcprep_mob_path
 		try:
 			categories = [
 				f for f in os.listdir(it) if os.path.isdir(os.path.join(it, f))]
-			conf.rig_categories = categories
+			env.rig_categories = categories
 		except FileNotFoundError:
 			pass  # Directory has changed or is not found.
 	for item in categories:
@@ -709,7 +710,6 @@ classes = (
 
 def register():
 	for cls in classes:
-		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 
 

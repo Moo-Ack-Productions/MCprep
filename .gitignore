@@ -10,3 +10,4 @@ test_results.tsv
 debug_save_state.blend1
 MCprep_addon/MCprep_resources/resourcepacks/mcprep_default/materials.blend1
 mcprep_venv_*
+.cache
