@@ -21,10 +21,13 @@ def main():
     debug_mode: bool = False
 
     # Check arguments to see what mode to run the compiler in
-    if len(sys.argv) >= 2 and sys.argv[1] == "-d" or sys.argv[1] == "--debug":
+    if len(sys.argv) <= 1:
+        pass
+    elif sys.argv[1] == "-d" or sys.argv[1] == "--debug":
         debug_mode = True
     else:
-        pass
+        print("Not a valid option!")
+        return
 
     # Check if the developer blender_installs.txt
     if not BLENDER_INSTALLS.exists():
