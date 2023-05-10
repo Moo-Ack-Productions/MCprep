@@ -228,7 +228,26 @@ If you decide to use Poetry, then simply run the following command:
 
 To enable the virtual environment, run `poetry shell`, then type `exit` when you're done. When you make a change to a file, **please please please** run `poetry run darker <changed file>` to apply PEP8 formatting to the changes (or if you've enabled the virtual environment, you can just type `darker <changed file>`)
 
-### Creating a Virtual Environment and Setting up `bpy` + `darker`
+### Manual: Requirements.txt Edition
+First create a virtual environment:
+
+`python3 -m venv mcprep_venv_2.80`
+
+We use the name `mcprep_venv_2.80` to follow MCprep convention. Check the next section if you're curious the why.
+
+To enable:
+
+Windows: `mcprep_venv_<version>\Scripts\activate`
+
+MacOS and Linux: `source mcprep_venv_<version>/bin/activate`
+
+To disable: `deactivate`
+
+Install dependencies:
+
+`python3 -m pip install -r requirements.txt`
+
+### Manual: Setting up `bpy` + `darker` Manually Edition
 First, we need to come up with a name. For MCprep development, it's recommended to use the following convention:
 `mcprep_venv_<version>`
 
