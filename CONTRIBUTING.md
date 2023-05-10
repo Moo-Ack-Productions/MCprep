@@ -18,13 +18,12 @@ When it comes to code being reviewed, expect some discussion! If you want to con
 
 ## Keeping MCprep compatible
 
-MCprep is uniquely made stable and functional across a large number of versions of blender. As of April 2022, it still even supports releases of Blender 2.79 while simultaneously supporting Blender 3.1+, and everything in between.
+MCprep is uniquely made stable and functional across a large number of versions of blender. As of April 2022, it still even supports releases of Blender 2.8 while simultaneously supporting Blender 3.5+, and everything in between.
 
 This is largely possible for a few reasons:
 
 1. Automated tests plus an automated installer makes ensures that any changes that break older versions of blender will be caught automatically.
 1. Abstracting API changes vs directly implementing changes. Instead of swapping "group" for "collection" in the change to blender 2.8, we create if/else statements and wrapper functions that fetch the attribute that exists based on the version of blender. Want more info about this? See [the article here](https://theduckcow.com/2019/update-addons-both-blender-28-and-27-support/).
-1. No python annotations. This syntax wasn't supported in old versions of python that came with blender (namely, in Blender 2.7) and so we don't use annotations in this repository. Some workarounds are in place to avoid excessive printouts as a result.
 
 ## Internal Rewrites
 MCprep has a separate branch for internal rewrites based on the dev branch. Sometimes, internal tools are deprecated, and requires features to be changed to reflect those deprecations.
@@ -45,11 +44,9 @@ As above, a critical component of maintaining support and ensuring the wide numb
 
 ### Compile MCprep using scripts
 
-Scripts have been created for Mac OSX (`compile.sh`) and Windows (`compile.bat`) which make it fast to copy the entire addon structure the addon folders for multiple versions of blender. You need to use these scripts, or at the very least validate that they work, as running the automated tests depend on them.
+Scripts have been created (`mcprep-build.py`) which make it fast to copy the entire addon structure the addon folders for multiple versions of blender. You need to use these scripts, or at the very least validate that they work, as running the automated tests depend on them.
 
 The benefit? You don't have to manually navigate and install zip files in blender for each change you make - just run this script and restart blender. It *is* important you do restart blender after changes, as there can be unintended side effects of trying to reload a plugin.
-
-Want to just quickly reload some files after only changing python code (no asset changes)? Mac only: Try running `compile.sh -fast` which will skip copying over the resources folder and skip zipping the addon.
 
 ### Run tests
 
@@ -107,7 +104,7 @@ At the moment, only the project lead (TheDuckCow) should ever mint new releases 
    - Tag is in the form `3.3.1`, no leading `v`.
    - The title however is in the form `MCprep v3.3.0 | ShortName` where version has a leading `v`.
    - Copy the body fo the description from the prior release, and then update the text and splash screen (if a major release). Edit a prior release without making changes to get the raw markdown code, e.g. [from here](https://github.com/TheDuckCow/MCprep/releases/edit/3.3.0).
-1. Run `compile.sh` or `compile.bat` with no fast flag, so it does the full build
+1. Run `mcprep-build.py` to build the addon
 1. Run all tests, ideally on two different operating systems. Use the `./run_tests.sh -all` flag to run on all versions of blender
 1. If all tests pass, again DOUBLE CHECK that "dev" = false in conf.py, then
 1. Drag and drop the generated updated zip file onto github.
@@ -122,10 +119,10 @@ At the moment, only the project lead (TheDuckCow) should ever mint new releases 
 
 
 
-## Creating your blender_installs.txt and blender_exects.txt
+## Creating your blender_installs.txt and blender_execs.txt
 
 
-Your `blender_installs.txt` defines where the `compile.sh` (Mac OSX) or `compile.bat` (Windows) script will install MCprep onto your system. It's a directly copy-paste of the folder.
+Your `blender_installs.txt` defines where the `mcprep-build.py` script will install MCprep onto your system. It's a directly copy-paste of the folder.
 
 On a mac? The text file will be generated automatically for you if you haven't already created it, based on detected blender installs. Otherwise, just create it manually. It could look like:
 
@@ -160,11 +157,9 @@ Also note that the first line indicates the only version of blender that will be
 
 Support for development and testing should work for both platforms, just be aware the primary development of MCprep is happening on a Mac OSX machine, so the mac-side utility scripts have a few more features than windows:
 
-- Only the mac `compile.sh` script has the `-fast` option to quickly reload python files (it won't copy over the blends, textures, and won't create a new zip file, all of which can be slow)
-- Only the mac `compile.sh` has the feature of auto-detecting local blender executable installs. This is because on windows, there is a lot of variability where blender executables may be placed, so it should just be manually created anyways.
-- Only the mac `run_tests.sh` script has the `-all` optional flag. By default, the mac script will only install the 
+- Only the mac `run_tests.sh` script has the `-all` optional flag. By default, the mac script will only install the first line in the file.
 
-One other detail: MCprep uses git lfs or Large File Storage, to avoid saving binary files in the git history. Some Windows users may run into trouble when first pulling.
+One other detail: MCprep uses Git LFS or Large File Storage, to avoid saving binary files in the git history. Some Windows users may run into trouble when first pulling.
 
 - If using Powershell and you cloned your repo using SSH credentials, try running `start-ssh-agent` before running the clone/pull command (per [comment here](https://github.com/git-lfs/git-lfs/issues/3216#issuecomment-1018304297))
 - Alternatively, try using Git for Windows and its console.
