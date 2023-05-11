@@ -598,7 +598,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			# swapGen = generate.get_mc_canonical_name(swap.name)
 			env.log(f"Simplified name: {swapGen}")
 			# IMPORTS, gets lists properties, etc
-			swapProps: dict = self.checkExternal(context, swapGen)
+			swapProps = self.checkExternal(context, swapGen)
 
 			# issue in swapProps, e.g. not a mesh or not in lib or some error
 			if swapProps is False:

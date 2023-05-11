@@ -19,8 +19,9 @@
 import os
 from pathlib import Path
 import bpy
+from bpy.utils.previews import ImagePreviewCollection
 
-from typing import Union, Literal, Tuple, List
+from typing import Union, Literal, Tuple, List, Dict
 from mathutils import Vector
 
 VectorType =  Union[Tuple[float, float, float], Vector]
@@ -77,7 +78,7 @@ class MCprepEnv:
 		# -----------------------------------------------
 
 		self.use_icons: bool = True
-		self.preview_collections: dict = {}
+		self.preview_collections: Dict[str, ImagePreviewCollection] = {}
 
 		# -----------------------------------------------
 		# For initializing the custom icons

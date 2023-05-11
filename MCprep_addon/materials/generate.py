@@ -31,6 +31,7 @@ from .. import util
 
 from ..conf import env, Form
 
+AnimatedTex = Dict[str, int]
 # -----------------------------------------------------------------------------
 # Material prep and generation functions (no registration)
 # -----------------------------------------------------------------------------
@@ -753,7 +754,7 @@ def get_node_socket(node: Node, is_input: bool=True) -> list:
 # -----------------------------------------------------------------------------
 
 
-def copy_texture_animation_pass_settings(mat: Material) -> Dict[str, int]:
+def copy_texture_animation_pass_settings(mat: Material) -> AnimatedTex:
 	"""Get any animation settings for passes."""
 	# Pre-copy any animated node settings before clearing nodes
 	animated_data = {}
@@ -785,7 +786,7 @@ def copy_texture_animation_pass_settings(mat: Material) -> Dict[str, int]:
 	return animated_data
 
 
-def apply_texture_animation_pass_settings(mat: Material, animated_data: dict) -> Optional[dict]:
+def apply_texture_animation_pass_settings(mat: Material, animated_data: AnimatedTex) -> Optional[Dict]:
 	"""Apply animated texture settings for all given passes of dict."""
 
 	if not mat.use_nodes:

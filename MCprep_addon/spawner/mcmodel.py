@@ -223,7 +223,7 @@ def read_model(context: Context, model_filepath: Path) -> Tuple[Element, Texture
 	if current_elements is not None:
 		elements = current_elements  # overwrites any elements from parents
 
-	current_textures: dict = obj_data.get("textures")
+	current_textures: Texture = obj_data.get("textures")
 	if current_textures is not None:
 		if textures is None:
 			textures = current_textures
