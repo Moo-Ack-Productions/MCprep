@@ -207,7 +207,7 @@ Add this to a file called .gitmessage, and then execute the following command:
 To use for each commit, you can use `git config --local commit.verbose true` to tell Git to perform a verbose commit all the time for just the MCprep repo.
 
 ## Dependencies
-If you're using an IDE, it's recommened to install `bpy` as a Python module. In our experience, the [fake-bpy package](https://github.com/nutti/fake-bpy-module) seems to be the best. In addition, we also use `darker` to perform PEP8 formatting on changed code (this is a requirement, we expect you to use `darker` on your changes)
+If you're using an IDE, it's recommened to install `bpy` as a Python module. In our experience, the [fake-bpy package](https://github.com/nutti/fake-bpy-module) seems to be the best. In addition, we also use `black` to perform PEP8 formatting on changed code (this is a requirement, we expect you to use `darker` on your changes)
 
 It's also recommened to use a virtual environment (especially if you're on Linux) as to avoid issues with system wide packages and different versions of `bpy`. [See this for more details](https://realpython.com/python-virtual-environments-a-primer/)
 
@@ -226,7 +226,7 @@ If you decide to use Poetry, then simply run the following command:
 
 `poetry install`
 
-To enable the virtual environment, run `poetry shell`, then type `exit` when you're done. When you make a change to a file, **please please please** run `poetry run darker <changed file>` to apply PEP8 formatting to the changes (or if you've enabled the virtual environment, you can just type `darker <changed file>`)
+To enable the virtual environment, run `poetry shell`, then type `exit` when you're done. When you make a change to a file, **please please please** run `poetry run black <changed file>` to apply PEP8 formatting to the changes (or if you've enabled the virtual environment, you can just type `darker <changed file>`)
 
 ### Manual: Requirements.txt Edition
 First create a virtual environment:
@@ -247,7 +247,7 @@ Install dependencies:
 
 `python3 -m pip install -r requirements.txt`
 
-### Manual: Setting up `bpy` + `darker` Manually Edition
+### Manual: Setting up `bpy` + `black` Manually Edition
 First, we need to come up with a name. For MCprep development, it's recommended to use the following convention:
 `mcprep_venv_<version>`
 
@@ -273,9 +273,9 @@ Next we need to install `fake-bpy`:
 
 If you use PyCharm, you should check the GitHub for [additional instructions](https://github.com/nutti/fake-bpy-module#install-via-pip-package)
 
-In addition, for PEP8 formatting, we need to install `darker`:
-`python3 -m pip install darker`
+In addition, for PEP8 formatting, we need to install `black`:
+`python3 -m pip install black`
 
-When you make a change to a file, **please please please** run `darker <changed file>` to apply PEP8 formatting to the changes.
+When you make a change to a file, **please please please** run `black <changed file>` to apply PEP8 formatting to the changes.
 
 Now you're ready to do MCprep development
