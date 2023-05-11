@@ -48,7 +48,7 @@ class MCprepEnv:
 		self.json_path: PathLike = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data.json")
 		self.json_path_update: PathLike = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data_update.json")
 
-		self.dev_file: Path = Path(os.path.dirname(__file__), "mcprep_dev.txt")
+		self.dev_file: PathLike = Path(os.path.dirname(__file__), "mcprep_dev.txt")
 
 		# if new update file found from install, replace old one with new
 		if self.json_path_update.exists():

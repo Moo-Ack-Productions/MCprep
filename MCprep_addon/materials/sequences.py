@@ -270,7 +270,7 @@ def generate_material_sequence(source_path: PathLike, image_path: PathLike, form
 	return image_dict, None
 
 
-def export_image_to_sequence(image_path: PathLike, params: dict, output_folder: PathLike=None, form: Optional[str]=None) -> PathLike:
+def export_image_to_sequence(image_path: PathLike, params: dict, output_folder: PathLike=None, form: Optional[Form]=None) -> PathLike:
 	"""Convert image tiles into image sequence files.
 
 	image_path: image filepath source
