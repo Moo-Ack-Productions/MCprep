@@ -43,7 +43,7 @@ def default_material_in_sync_library(default_material: str, context: Context) ->
 	return False
 
 
-def sync_default_material(context: Context, material: Material, default_material: List, engine: Engine) -> Union[Material, str, None]:
+def sync_default_material(context: Context, material: Material, default_material: str, engine: Engine) -> Union[Material, str, None]:
 	"""Normal sync material method but with duplication and name change."""
 	if default_material in env.material_sync_cache:
 		import_name = default_material
