@@ -131,14 +131,14 @@ class MCPREP_OT_import_world_from_objmeta(bpy.types.Operator, ImportHelper):
 	bl_label = "Import World from Reference"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	filter_glob = bpy.props.StringProperty(
+	filter_glob: bpy.props.StringProperty(
 		default=".obj",  # verify this works
 		options={'HIDDEN'})
 	fileselectparams = "use_filter_blender"
-	files = bpy.props.CollectionProperty(
+	files: bpy.props.CollectionProperty(
 		type=bpy.types.PropertyGroup,
 		options={'HIDDEN', 'SKIP_SAVE'})
-	# filter_image = bpy.props.BoolProperty(
+	# filter_image: bpy.props.BoolProperty(
 	# 	default=True,
 	# 	options={'HIDDEN', 'SKIP_SAVE'})
 
@@ -165,75 +165,75 @@ class MCPREP_OT_import_new_world(bpy.types.Operator):
 	bl_label = "Import World"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	world_center = bpy.props.IntVectorProperty(
+	world_center: bpy.props.IntVectorProperty(
 		name = "World center",
 		description = "Select the X-Z center of import from the Minecraft save",
 		default = (0, 0),
 		subtype = 'XZ',
 		size = 2,
 		)
-	import_center = bpy.props.IntVectorProperty(
+	import_center: bpy.props.IntVectorProperty(
 		name = "Import location",
 		description = "Move the center of the imported world to this location",
 		default = (0, 0, 0),
 		subtype = 'XYZ',
 		size = 3,
 		)
-	import_height_offset = bpy.props.IntProperty(
+	import_height_offset: bpy.props.IntProperty(
 		name = "Height offset",
 		description = "Lower or raise the imported world by this amount",
 		default = 0,
 		)
-	block_radius = bpy.props.IntProperty(
+	block_radius: bpy.props.IntProperty(
 		name = "Block radius",
 		description = "Radius of export, from World Center to all directions around",
 		default = 100,
 		min = 1
 		)
-	ceiling = bpy.props.IntProperty(
+	ceiling: bpy.props.IntProperty(
 		name = "Height/ceiling",
 		description = "The top level of the world to import",
 		default = 256,
 		min = 1,
 		max = 512
 		)
-	floor = bpy.props.IntProperty(
+	floor: bpy.props.IntProperty(
 		name = "Depth/floor",
 		description = "The bottom level of the world to import",
 		default = 0,
 		min = 1,
 		max = 512
 		)
-	use_chunks = bpy.props.BoolProperty(
+	use_chunks: bpy.props.BoolProperty(
 		name = "Use chunks",
 		description = "Export the world with separate sections per chunk. In the background, each chunk is one export from Mineways",
 		default = True
 		)
-	chunk_size = bpy.props.IntProperty(
+	chunk_size: bpy.props.IntProperty(
 		name = "Chunk size",
 		description = "Custom size of chunks to import",
 		default = 16,
 		min = 8
 		)
-	separate_blocks = bpy.props.BoolProperty(
+	separate_blocks: bpy.props.BoolProperty(
 		name = "Object per block",
 		description = "Create one object per each block in the world (warning: will be slow, make exports larger, and make Blender slower!!)",
 		default = False
 		)
-	prep_materials = bpy.props.BoolProperty(
+	prep_materials: bpy.props.BoolProperty(
 		name = "Prep materials",
 		default = True
 		)
-	animate_textures = bpy.props.BoolProperty(
+	animate_textures: bpy.props.BoolProperty(
 		name = "Animate textures",
 		default = False
 		)
-	single_texture = bpy.props.BoolProperty(
+	single_texture: bpy.props.BoolProperty(
 		name = "Single texture file",
 		description = "Export the world with a single texture. Cannot use with animate textures",
 		default = False
 		)
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default = False,
 		options={'HIDDEN'}
 		)
@@ -317,7 +317,7 @@ class MCPREP_OT_refresh_world(bpy.types.Operator):
 	bl_label = "Refresh World"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default = False,
 		options={'HIDDEN'}
 		)
@@ -334,7 +334,7 @@ class MCPREP_OT_extend_world(bpy.types.Operator):
 	bl_idname = "mcprep.bridge_world_extend"
 	bl_label = "Extend World"
 
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default = False,
 		options={'HIDDEN'}
 		)

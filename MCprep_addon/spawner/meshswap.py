@@ -199,8 +199,8 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 	def swap_enum(self, context):
 		return getMeshswapList(context)
 
-	block = bpy.props.EnumProperty(items=swap_enum, name="Meshswap block")
-	method = bpy.props.EnumProperty(
+	block: bpy.props.EnumProperty(items=swap_enum, name="Meshswap block")
+	method: bpy.props.EnumProperty(
 		name="Import method",
 		items=[
 			# Making collection first to be effective default.
@@ -208,32 +208,32 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 			("object", "Object asset", "Object asset"),
 		],
 		options={'HIDDEN'})
-	location = bpy.props.FloatVectorProperty(
+	location: bpy.props.FloatVectorProperty(
 		default=(0, 0, 0),
 		name="Location")
-	append_layer = bpy.props.IntProperty(
+	append_layer: bpy.props.IntProperty(
 		name="Append layer",
 		default=20,
 		min=0,
 		max=20,
 		description="Set the layer for appending groups, 0 means same as active layers")
-	prep_materials = bpy.props.BoolProperty(
+	prep_materials: bpy.props.BoolProperty(
 		name="Prep materials",
 		default=True,
 		description="Run prep materials on objects after appending")
-	snapping = bpy.props.EnumProperty(
+	snapping: bpy.props.EnumProperty(
 		name="Snapping",
 		items=[
 			("none", "No snap", "Keep exact location"),
 			("center", "Snap center", "Snap to block center"),
 			("offset", "Snap offset", "Snap to block center with 0.5 offset")],
 		description="Automatically snap to whole block locations")
-	make_real = bpy.props.BoolProperty(
+	make_real: bpy.props.BoolProperty(
 		name="Make real",
 		default=False,  # TODO: make True once able to retain animations like fire
 		description="Automatically make groups real after placement")
 
-	# toLink = bpy.props.BoolProperty(
+	# toLink: bpy.props.BoolProperty(
 	# 	name = "Library Link mob",
 	# 	description = "Library link instead of append the group",
 	# 	default = False
@@ -465,27 +465,27 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 	runcount = 0  # current counter status of swapped meshes
 
 	# properties for draw
-	meshswap_join = bpy.props.BoolProperty(
+	meshswap_join: bpy.props.BoolProperty(
 		name="Join same blocks",
 		default=True,
 		description=(
 			"Join together swapped blocks of the same type "
 			"(unless swapped with a group)"))
-	use_dupliverts = bpy.props.BoolProperty(
+	use_dupliverts: bpy.props.BoolProperty(
 		name="Use dupliverts (faster)",
 		default=True,
 		description="Use dupliverts to add meshes")
-	link_groups = bpy.props.BoolProperty(
+	link_groups: bpy.props.BoolProperty(
 		name="Link groups",
 		default=False,
 		description="Link groups instead of appending")
-	prep_materials = bpy.props.BoolProperty(
+	prep_materials: bpy.props.BoolProperty(
 		name="Prep materials",
 		default=False,
 		description=(
 			"Automatically apply prep materials (with default settings) "
 			"to blocks added in"))
-	append_layer = bpy.props.IntProperty(
+	append_layer: bpy.props.IntProperty(
 		name="Append layer",
 		default=20,
 		min=0,
@@ -857,9 +857,9 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		# check the actual name against the library
 		name = generate.get_mc_canonical_name(name)[0]
 		cache = get_meshswap_cache(context)
-		if name in conf.json_data["blocks"]["canon_mapping_block"]:
+		if name in env.json_data["blocks"]["canon_mapping_block"]:
 			# e.g. remaps entity/chest/normal back to chest
-			name_remap = conf.json_data["blocks"]["canon_mapping_block"][name]
+			name_remap = env.json_data["blocks"]["canon_mapping_block"][name]
 		else:
 			name_remap = None
 

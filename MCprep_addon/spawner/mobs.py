@@ -58,7 +58,7 @@ def get_rig_list(context: Context) -> List[tuple]:
 def update_rig_path(self, context: Context) -> None:
 	"""List for UI mobs callback of property spawn_rig_category."""
 	env.log("Updating rig path", vv_only=True)
-	conf.rig_categories = []
+	env.rig_categories = []
 	update_rig_list(context)
 	spawn_rigs_categories(self, context)
 
@@ -207,7 +207,7 @@ class MCPREP_OT_reload_mobs(bpy.types.Operator):
 
 	@tracking.report_error
 	def execute(self, context):
-		conf.rig_categories = []
+		env.rig_categories = []
 		update_rig_list(context)
 		return {'FINISHED'}
 
@@ -222,8 +222,8 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 	def riglist_enum(self, context):
 		return get_rig_list(context)
 
-	mcmob_type = bpy.props.EnumProperty(items=riglist_enum, name="Mob Type")
-	relocation = bpy.props.EnumProperty(
+	mcmob_type: bpy.props.EnumProperty(items=riglist_enum, name="Mob Type")
+	relocation: bpy.props.EnumProperty(
 		items=[
 			('Cursor', 'Cursor', 'Move the rig to the cursor'),
 			('Clear', 'Origin', 'Move the rig to the origin'),
@@ -231,22 +231,22 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 				'Offset the root bone to cursor while leaving the rest pose '
 				'at the origin'))],
 		name="Relocation")
-	toLink = bpy.props.BoolProperty(
+	toLink: bpy.props.BoolProperty(
 		name="Library Link",
 		description="Library link instead of append the group",
 		default=False)
-	clearPose = bpy.props.BoolProperty(
+	clearPose: bpy.props.BoolProperty(
 		name="Clear Pose",
 		description="Clear the pose to rest position",
 		default=True)
-	prep_materials = bpy.props.BoolProperty(
+	prep_materials: bpy.props.BoolProperty(
 		name="Prep materials (will reset nodes)",
 		description=(
 			"Prep materials of the added rig, will replace cycles node groups "
 			"with default"),
 		default=True)
 
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 
@@ -342,7 +342,7 @@ class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
 		"in selected blend file will become individually spawnable")
 
 	filename_ext = ".blend"
-	filter_glob = bpy.props.StringProperty(
+	filter_glob: bpy.props.StringProperty(
 		default="*.blend",
 		options={'HIDDEN'},
 	)
@@ -362,7 +362,7 @@ class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
 		ret.append(("no_category", "No Category", "Uncategorized mob"))  # last entry
 		return ret
 
-	mob_category = bpy.props.EnumProperty(
+	mob_category: bpy.props.EnumProperty(
 		items=getCategories,
 		name="Mob Category")
 
@@ -588,11 +588,11 @@ class MCPREP_OT_install_mob_icon(bpy.types.Operator, ImportHelper):
 	bl_idname = "mcprep.mob_install_icon"
 	bl_label = "Install mob icon"
 
-	filter_glob = bpy.props.StringProperty(
+	filter_glob: bpy.props.StringProperty(
 		default="",
 		options={'HIDDEN'})
 	fileselectparams = "use_filter_blender"
-	filter_image = bpy.props.BoolProperty(
+	filter_image: bpy.props.BoolProperty(
 		default=True,
 		options={'HIDDEN', 'SKIP_SAVE'})
 
@@ -671,13 +671,13 @@ def spawn_rigs_categories(self, context: Context) -> List[tuple]:
 	items = []
 	items.append(("all", "All Mobs", "Show all mobs loaded"))
 
-	categories = conf.rig_categories
-	if not conf.rig_categories:
+	categories = env.rig_categories
+	if not env.rig_categories:
 		it = context.scene.mcprep_mob_path
 		try:
 			categories = [
 				f for f in os.listdir(it) if os.path.isdir(os.path.join(it, f))]
-			conf.rig_categories = categories
+			env.rig_categories = categories
 		except FileNotFoundError:
 			pass  # Directory has changed or is not found.
 	for item in categories:

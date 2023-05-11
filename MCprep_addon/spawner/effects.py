@@ -147,8 +147,13 @@ def add_area_particle_effect(context: Context, effect: ListEffectsAssets, locati
 	imported_particles = list(set(post_systems) - set(pre_systems))[0]
 
 	# Assign particles as fake, to avoid being purged after file reload.
-	if imported_particles.instance_object:
-		imported_particles.instance_object.use_fake_user = True
+	if hasattr(imported_particles, "instance_object"):
+		# 2.8+
+		if imported_particles.instance_object:
+			imported_particles.instance_object.use_fake_user = True
+	elif imported_particles.dupli_object:
+		# the 2.7x way.
+		imported_particles.dupli_object.use_fake_user = True
 
 	# Assign the active object and selection state.
 	for sel_obj in bpy.context.selected_objects:
@@ -1045,8 +1050,8 @@ class MCPREP_OT_global_effect(bpy.types.Operator):
 			))
 		return elist
 
-	effect_id = bpy.props.EnumProperty(items=effects_enum, name="Effect")
-	skipUsage = bpy.props.BoolProperty(default=False, options={'HIDDEN'})
+	effect_id: bpy.props.EnumProperty(items=effects_enum, name="Effect")
+	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	@classmethod
 	def poll(cls, context):
@@ -1116,22 +1121,22 @@ class MCPREP_OT_instant_effect(bpy.types.Operator):
 			))
 		return elist
 
-	effect_id = bpy.props.EnumProperty(items=effects_enum, name="Effect")
-	location = bpy.props.FloatVectorProperty(default=(0, 0, 0), name="Location")
-	frame = bpy.props.IntProperty(
+	effect_id: bpy.props.EnumProperty(items=effects_enum, name="Effect")
+	location: bpy.props.FloatVectorProperty(default=(0, 0, 0), name="Location")
+	frame: bpy.props.IntProperty(
 		default=0,
 		name="Frame",
 		description="Start frame for animation")
-	speed = bpy.props.FloatProperty(
+	speed: bpy.props.FloatProperty(
 		default=1.0,
 		min=0.1,
 		name="Speed",
 		description="Make the effect run faster (skip frames) or slower (hold frames)")
-	show_image = bpy.props.BoolProperty(
+	show_image: bpy.props.BoolProperty(
 		default=False,
 		name="Show image preview",
 		description="Show a middle animation frame as a viewport preview")
-	skipUsage = bpy.props.BoolProperty(default=False, options={'HIDDEN'})
+	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	@classmethod
 	def poll(cls, context):
@@ -1173,18 +1178,18 @@ class MCPREP_OT_spawn_particle_planes(bpy.types.Operator, ImportHelper):
 	bl_label = "Spawn Particle Planes"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	location = bpy.props.FloatVectorProperty(
+	location: bpy.props.FloatVectorProperty(
 		default=(0, 0, 0), name="Location")
-	frame = bpy.props.IntProperty(default=0, name="Frame")
+	frame: bpy.props.IntProperty(default=0, name="Frame")
 
 	# Importer helper
 	exts = ";".join(["*" + ext for ext in EXTENSIONS])
-	filter_glob = bpy.props.StringProperty(
+	filter_glob: bpy.props.StringProperty(
 		default=exts,
 		options={'HIDDEN'})
 	fileselectparams = "use_filter_blender"
 
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 

@@ -94,7 +94,7 @@ class MCPREP_OT_show_preferences(bpy.types.Operator):
 	bl_idname = "mcprep.open_preferences"
 	bl_label = "Show MCprep preferences"
 
-	tab = bpy.props.EnumProperty(
+	tab: bpy.props.EnumProperty(
 		items=[
 			('settings', 'Open settings', 'Open MCprep preferences settings'),
 			('tutorials', 'Open tutorials', 'View MCprep tutorials'),
@@ -142,7 +142,7 @@ class MCPREP_OT_open_folder(bpy.types.Operator):
 	bl_idname = "mcprep.openfolder"
 	bl_label = "Open folder"
 
-	folder = bpy.props.StringProperty(
+	folder: bpy.props.StringProperty(
 		name="Folderpath",
 		default="//")
 
@@ -171,7 +171,7 @@ class MCPREP_OT_open_help(bpy.types.Operator):
 	bl_label = "Open help page"
 	bl_description = "Need help? Click to open a reference page"
 
-	url = bpy.props.StringProperty(
+	url: bpy.props.StringProperty(
 		name="Url",
 		default="")
 
@@ -190,11 +190,11 @@ class MCPREP_OT_prep_material_legacy(bpy.types.Operator):
 	bl_label = "MCprep Materials"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	useReflections = bpy.props.BoolProperty(
+	useReflections: bpy.props.BoolProperty(
 		name="Use reflections",
 		description="Allow appropriate materials to be rendered reflective",
 		default=True)
-	combineMaterials = bpy.props.BoolProperty(
+	combineMaterials: bpy.props.BoolProperty(
 		name="Combine materials",
 		description="Consolidate duplciate materials & textures",
 		default=False)
@@ -235,7 +235,6 @@ classes = (
 
 def register():
 	for cls in classes:
-		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 
 

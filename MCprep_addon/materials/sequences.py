@@ -408,12 +408,12 @@ class MCPREP_OT_prep_animated_textures(bpy.types.Operator):
 	bl_idname = "mcprep.animate_textures"
 	bl_label = "Animate textures"
 
-	clear_cache = bpy.props.BoolProperty(
+	clear_cache: bpy.props.BoolProperty(
 		default=False,
 		name="Clear cache of previous animated sequence exports",
 		description="Always regenerate tile files, even if tiles already exist"
 	)
-	export_location = bpy.props.EnumProperty(
+	export_location: bpy.props.EnumProperty(
 		name="Save location",
 		items=[
 			("original", "Next to current source image",
@@ -424,7 +424,7 @@ class MCPREP_OT_prep_animated_textures(bpy.types.Operator):
 				"Save animation tiles next to current saved blend file")],
 		description="Set where to export (or duplicate to) tile sequence images."
 	)
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'}
 	)

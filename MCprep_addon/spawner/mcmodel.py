@@ -32,7 +32,7 @@ from typing import Dict, List, Optional, Tuple
 from ..conf import env, PathLike, VectorType
 from .. import util
 from .. import tracking
-
+from ..materials import generate
 
 
 # -----------------------------------------------------------------------------
@@ -106,24 +106,19 @@ def add_element(
 
 
 def add_material(name: str="material", path: str="") -> Material:
-	""" TODO ???
-	Creates a simple material with an image texture from path."""
-	env.log(f"{name}: {path}", vv_only=True)
-	mat = bpy.data.materials.new(name=name)
-	mat.blend_method = 'CLIP'
-	mat.shadow_method = 'CLIP'
-	mat.use_nodes = True
-	matnodes = mat.node_tree.nodes
+	"""Creates a simple material with an image texture from path."""
+	cur_mats = list(bpy.data.materials)
+	res = bpy.ops.mcprep.load_material(filepath=path, skipUsage=True)
+	if res != {'FINISHED'}:
+		env.log("Failed to generate material as specified")
+	post_mats = list(bpy.data.materials)
 
-	tex = matnodes.new('ShaderNodeTexImage')
-	if os.path.isfile(path):
-		img = bpy.data.images.load(path, check_existing=True)
-		tex.image = img
-	tex.interpolation = 'Closest'
+	new_mats = list(set(post_mats) - set(cur_mats))
+	if not new_mats:
+		env.log("Failed to fetch any generated material")
+		return None
 
-	shader = matnodes['Principled BSDF']
-	mat.node_tree.links.new(shader.inputs['Base Color'], tex.outputs['Color'])
-	mat.node_tree.links.new(shader.inputs['Alpha'], tex.outputs['Alpha'])
+	mat = new_mats[0]
 	return mat
 
 
@@ -438,7 +433,7 @@ class ModelSpawnBase():
 
 	@classmethod
 	def poll(cls, context):
-		return context.mode == 'OBJECT' and util.bv28()
+		return context.mode == 'OBJECT'
 
 	def place_model(self, obj):
 		if self.snapping == "center":
@@ -465,7 +460,7 @@ class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 	bl_label = "Place model"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	filepath = bpy.props.StringProperty(
+	filepath: bpy.props.StringProperty(
 		default="",
 		subtype="FILE_PATH",
 		options={'HIDDEN', 'SKIP_SAVE'})
@@ -503,7 +498,7 @@ class MCPREP_OT_import_minecraft_model_file(
 	bl_options = {'REGISTER', 'UNDO'}
 
 	filename_ext = ".json"
-	filter_glob = bpy.props.StringProperty(
+	filter_glob: bpy.props.StringProperty(
 		default="*.json",
 		options={'HIDDEN'},
 		maxlen=255  # Max internal buffer length, longer would be clamped.
@@ -555,12 +550,10 @@ def register():
 	for cls in classes:
 		bpy.utils.register_class(cls)
 
-	if util.bv28():
-		bpy.types.TOPBAR_MT_file_import.append(draw_import_mcmodel)
+	bpy.types.TOPBAR_MT_file_import.append(draw_import_mcmodel)
 
 
 def unregister():
-	if util.bv28():
-		bpy.types.TOPBAR_MT_file_import.remove(draw_import_mcmodel)
+	bpy.types.TOPBAR_MT_file_import.remove(draw_import_mcmodel)
 	for cls in reversed(classes):
 		bpy.utils.unregister_class(cls)

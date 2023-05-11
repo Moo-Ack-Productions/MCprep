@@ -102,12 +102,12 @@ class MCPREP_OT_default_material(bpy.types.Operator):
 	bl_label = "Sync Default Materials"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	use_pbr = bpy.props.BoolProperty(
+	use_pbr: bpy.props.BoolProperty(
 		name="Use PBR",
 		description="Use PBR or not",
 		default=False)
 
-	engine = bpy.props.StringProperty(
+	engine: bpy.props.StringProperty(
 		name="engine To Use",
 		description="Defines the engine to use",
 		default="CYCLES")
