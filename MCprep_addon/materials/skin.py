@@ -17,12 +17,14 @@
 # ##### END GPL LICENSE BLOCK #####
 
 
-import bpy
 import os
-from bpy_extras.io_utils import ImportHelper
+from pathlib import Path
 from typing import Optional, List, Tuple
 import shutil
 import urllib.request
+
+import bpy
+from bpy_extras.io_utils import ImportHelper
 from bpy.app.handlers import persistent
 from bpy.types import (
   Context, Image, Object, Material
@@ -32,7 +34,7 @@ from . import generate
 from .. import tracking
 from .. import util
 
-from ..conf import env, PathLike
+from ..conf import env
 
 # -----------------------------------------------------------------------------
 # Support functions
@@ -55,7 +57,7 @@ def reloadSkinList(context: Context):
 	for path in files:
 		if path.split(".")[-1].lower() not in ["png", "jpg", "jpeg", "tiff"]:
 			continue
-		skinlist.append((path, f"{x} skin")
+		skinlist.append((path, f"{path} skin"))
 
 	skinlist = sorted(skinlist, key=lambda x: x[0].lower())
 
@@ -99,7 +101,7 @@ def handler_skins_load(scene):
 		env.log("Didn't run skin reloading callback", vv_only=True)
 
 
-def loadSkinFile(self, context: Context, filepath: PathLike, new_material: bool=False):
+def loadSkinFile(self, context: Context, filepath: Path, new_material: bool=False):
 	if not os.path.isfile(filepath):
 		self.report({'ERROR'}, "Image file not found")
 		return 1
@@ -138,7 +140,7 @@ def loadSkinFile(self, context: Context, filepath: PathLike, new_material: bool=
 	return 0
 
 
-def convert_skin_layout(image_file: PathLike) -> bool:
+def convert_skin_layout(image_file: Path) -> bool:
 	"""Convert skin to 1.8+ layout if old format detected
 
 	Could be improved using numpy, but avoiding the dependency.
@@ -296,7 +298,7 @@ def setUVimage(objs: List[Object], image: Image) -> None:
 			uv_face.image = image
 
 
-def download_user(self, context: Context, username: str) -> Optional[PathLike]:
+def download_user(self, context: Context, username: str) -> Optional[Path]:
 	"""Download user skin from online.
 
 	Reusable function from within two common operators for downloading skin.

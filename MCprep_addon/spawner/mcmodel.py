@@ -20,6 +20,7 @@ import os
 import json
 from mathutils import Vector
 from math import sin, cos, radians
+from pathlib import Path
 
 import bpy
 import bmesh
@@ -27,13 +28,17 @@ from bpy.types import (
   Context, Object, Material
 )
 from bpy_extras.io_utils import ImportHelper
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union, Sequence
 
-from ..conf import env, PathLike, VectorType
+from ..conf import env, VectorType
 from .. import util
 from .. import tracking
 from ..materials import generate
 
+TexFace = Dict[str, Dict[str, str]]
+
+Element = Sequence[Union[Dict[str, VectorType], TexFace]]
+Texture = Dict[str, str]
 
 # -----------------------------------------------------------------------------
 # Core MC model functions and implementation
@@ -122,7 +127,7 @@ def add_material(name: str="material", path: str="") -> Material:
 	return mat
 
 
-def locate_image(context: Context, textures: Dict[str, str], img: str, model_filepath: PathLike) -> PathLike:
+def locate_image(context: Context, textures: Dict[str, str], img: str, model_filepath: Path) -> Path:
 	"""Finds and returns the filepath of the image texture."""
 	resource_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
 
@@ -147,7 +152,7 @@ def locate_image(context: Context, textures: Dict[str, str], img: str, model_fil
 		return os.path.realpath(os.path.join(directory, local_path) + ".png")
 
 
-def read_model(context: Context, model_filepath: PathLike) -> Tuple[list, dict]:
+def read_model(context: Context, model_filepath: Path) -> Tuple[Element, Texture]:
 	"""Reads json file to get textures and elements needed for model.
 
 	This function is recursively called to also get the elements and textures
@@ -179,8 +184,8 @@ def read_model(context: Context, model_filepath: PathLike) -> Tuple[list, dict]:
 	resource_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
 	fallback_folder = bpy.path.abspath(addon_prefs.custom_texturepack_path)
 
-	elements: Optional[list] = None
-	textures: Optional[dict] = None
+	elements: Optional[Element] = None
+	textures: Optional[Texture] = None
 
 	parent = obj_data.get("parent")
 	if parent is not None:
@@ -214,7 +219,7 @@ def read_model(context: Context, model_filepath: PathLike) -> Tuple[list, dict]:
 			else:
 				env.log(f"Failed to find mcmodel file {parent_filepath}")
 
-	current_elements: list = obj_data.get("elements")
+	current_elements: Element = obj_data.get("elements")
 	if current_elements is not None:
 		elements = current_elements  # overwrites any elements from parents
 
@@ -234,7 +239,7 @@ def read_model(context: Context, model_filepath: PathLike) -> Tuple[list, dict]:
 	return elements, textures
 
 
-def add_model(model_filepath: PathLike, obj_name: str="MinecraftModel") -> Object:
+def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Object:
 	"""Primary function for generating a model from json file."""
 	mesh = bpy.data.meshes.new(obj_name)  # add a new mesh
 	obj = bpy.data.objects.new(obj_name, mesh)  # add a new object using the mesh

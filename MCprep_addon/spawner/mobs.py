@@ -22,6 +22,7 @@ import errno
 import os
 import shutil
 from typing import List
+from pathlib import Path
 
 import bpy
 from bpy_extras.io_utils import ImportHelper
@@ -30,7 +31,7 @@ from bpy.types import (
 )
 
 from .. import conf
-from ..conf import env, PathLike
+from ..conf import env
 from .. import util
 from .. import tracking
 
@@ -66,7 +67,7 @@ def update_rig_path(self, context: Context) -> None:
 def update_rig_list(context: Context) -> None:
 	"""Update the rig list and subcategory list"""
 
-	def _add_rigs_from_blend(path: PathLike, blend_name: str, category: str):
+	def _add_rigs_from_blend(path: Path, blend_name: str, category: str):
 		"""Block for loading blend file groups to get rigs"""
 		with bpy.data.libraries.load(path) as (data_from, data_to):
 

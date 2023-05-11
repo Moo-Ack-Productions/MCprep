@@ -29,7 +29,7 @@ from bpy.types import (
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
 from . import conf
-from .conf import env, PathLike, VectorType
+from .conf import env, Path, VectorType
 from . import util
 from . import tracking
 from .materials import generate
@@ -117,7 +117,7 @@ class ObjHeaderOptions:
 obj_header = ObjHeaderOptions()
 
 
-def detect_world_exporter(filepath: PathLike) -> None:
+def detect_world_exporter(filepath: Path) -> None:
 	"""Detect whether Mineways or jmc2obj was used, based on prefix info.
 
 	Primary heruistic: if detect Mineways header, assert Mineways, else
@@ -1018,7 +1018,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			obj.use_contact_shadow = True
 		return obj
 
-	def create_dynamic_world(self, context: Context, blendfile: PathLike, wname: str) -> List[Object]:
+	def create_dynamic_world(self, context: Context, blendfile: Path, wname: str) -> List[Object]:
 		"""Setup fpr creating a dynamic world and setting up driver targets"""
 		resource = blendfile + "/World"
 		obj_list = []

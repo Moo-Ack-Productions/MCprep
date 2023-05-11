@@ -25,7 +25,7 @@ import platform
 import random
 import re
 import subprocess
-from typing import List, Optional, Union, TypeVar, Literal
+from typing import List, Optional, Union, Literal, Tuple
 
 import bpy
 from bpy.types import (
@@ -46,7 +46,7 @@ SPAWNER_EXCLUDE = "Spawner Exclude"
 # -----------------------------------------------------------------------------
 
 
-def apply_colorspace(node: Node, color_enum: tuple) -> None:
+def apply_colorspace(node: Node, color_enum: Tuple) -> None:
 	"""Apply color space in a cross compatible way, for version and language.
 
 	Use enum nomeclature matching Blender 2.8x Default, not 2.7 or other lang
@@ -211,7 +211,7 @@ def obj_copy(base: Object, context: Optional[Context]=None, vertex_groups: bool=
 				setattr(dest, prop, getattr(mod_src, prop))
 	return new_ob
 
-def min_bv(version: tuple, *, inclusive: bool=True) -> bool:
+def min_bv(version: Tuple, *, inclusive: bool=True) -> bool:
 	if hasattr(bpy.app, "version"):
 		if inclusive is False:
 			return bpy.app.version > version
@@ -433,7 +433,7 @@ def open_folder_crossplatform(folder: str) -> bool:
 		return False
 
 
-def addGroupInstance(group_name: str, loc: tuple, select: bool=True) -> Object:
+def addGroupInstance(group_name: str, loc: Tuple, select: bool=True) -> Object:
 	"""Add object instance not working, so workaround function."""
 	# The built in method fails, bpy.ops.object.group_instance_add(...)
 	# UPDATE: I reported the bug, and they fixed it nearly instantly =D
@@ -699,7 +699,7 @@ def get_cursor_location(context: Optional[Context]=None) -> tuple:
 	return (0, 0, 0)
 
 
-def set_cursor_location(loc: tuple, context: Optional[Context]=None) -> None:
+def set_cursor_location(loc: Tuple, context: Optional[Context]=None) -> None:
 	"""Returns the location vector of the 3D cursor"""
 	if not context:
 		context = bpy.context

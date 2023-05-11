@@ -17,17 +17,19 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import os
+from typing import Dict, Optional, List, Any, Tuple
+from pathlib import Path
+from dataclasses import dataclass
+
 import bpy
 from bpy.types import (
   Context, Material, Image, Texture,
   NodeTree, Nodes, NodeLinks, Node
 )
-from dataclasses import dataclass
-from typing import Union, Dict, Optional, List, Any, Tuple
 
 from .. import util
 
-from ..conf import env, PathLike, Form
+from ..conf import env, Form
 
 # -----------------------------------------------------------------------------
 # Material prep and generation functions (no registration)
@@ -119,7 +121,7 @@ def get_mc_canonical_name(name: str) -> Tuple[str, Optional[Form]]:
 	return canon, form
 
 
-def find_from_texturepack(blockname: str, resource_folder: Optional[PathLike]=None) -> PathLike:
+def find_from_texturepack(blockname: str, resource_folder: Optional[Path]=None) -> Path:
 	"""Given a blockname (and resource folder), find image filepath.
 
 	Finds textures following any pack which should have this structure, and
@@ -231,7 +233,7 @@ def detect_form(materials: List[Material]) -> Optional[Form]:
 	return res  # one of jmc2obj, mineways, or None
 
 
-def checklist(matName: str, listName: list) -> bool:
+def checklist(matName: str, listName: str) -> bool:
 	"""Helper to expand single wildcard within generalized material names"""
 	if not env.json_data:
 		env.log("No json_data for checklist to call from!")
@@ -297,7 +299,7 @@ def matprep_cycles(mat: Material, options: PrepOptions) -> Optional[bool]:
 	return res
 
 
-def set_texture_pack(material: Material, folder: PathLike, use_extra_passes: bool) -> bool:
+def set_texture_pack(material: Material, folder: Path, use_extra_passes: bool) -> bool:
 	"""Replace existing material's image with texture pack's.
 
 	Run through and check for each if counterpart material exists, then
@@ -494,7 +496,7 @@ def get_textures(material: Material) -> Dict[str, Image]:
 	return passes
 
 
-def find_additional_passes(image_file: PathLike) -> Dict[str, Image]:
+def find_additional_passes(image_file: Path) -> Dict[str, Image]:
 	"""Find relevant passes like normal and spec in same folder as image."""
 	abs_img_file = bpy.path.abspath(image_file)
 	env.log(f"\tFind additional passes for: {image_file}", vv_only=True)
@@ -813,7 +815,7 @@ def apply_texture_animation_pass_settings(mat: Material, animated_data: dict) ->
 		anim_node.image_user.use_cyclic = True
 
 
-def texgen_specular(mat: Material, passes: Dict[str, Image], nodeInputs: list, use_reflections: bool) -> None:
+def texgen_specular(mat: Material, passes: Dict[str, Image], nodeInputs: List, use_reflections: bool) -> None:
 	matGen: str = util.nameGeneralize(mat.name)
 	canon, form = get_mc_canonical_name(matGen)
 
@@ -937,7 +939,7 @@ def texgen_specular(mat: Material, passes: Dict[str, Image], nodeInputs: list, u
 	nodeTexDiff.image = image_diff
 
 
-def texgen_seus(mat: Material, passes: Dict[str, Image], nodeInputs: list, use_reflections: bool, use_emission: bool) -> None:
+def texgen_seus(mat: Material, passes: Dict[str, Image], nodeInputs: List, use_reflections: bool, use_emission: bool) -> None:
 
 	matGen = util.nameGeneralize(mat.name)
 	canon, form = get_mc_canonical_name(matGen)

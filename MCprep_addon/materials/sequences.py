@@ -21,7 +21,9 @@ import errno
 import json
 import os
 import re
-from typing import List, Optional, Tuple, Literal
+from typing import List, Optional, Tuple, Literal, Dict
+from pathlib import Path
+
 import bpy
 from bpy.types import (
   Context, Object, Material, Image, Texture
@@ -32,7 +34,7 @@ from .. import tracking
 from .. import util
 from . import uv_tools
 
-from ..conf import env, PathLike, Engine, Form
+from ..conf import env, Engine, Form
 
 ExportLocation = Literal["original", "local", "texturepack"]
 # -----------------------------------------------------------------------------
@@ -138,7 +140,7 @@ def is_image_tiled(image_block: Image) -> bool:
 		return True
 
 
-def generate_material_sequence(source_path: PathLike, image_path: PathLike, form: Optional[Form], export_location: ExportLocation, clear_cache: bool) -> Tuple[dict, Optional[str]]:
+def generate_material_sequence(source_path: Path, image_path: Path, form: Optional[Form], export_location: ExportLocation, clear_cache: bool) -> Tuple[Dict[str, Path], Optional[str]]:
 	"""Performs frame by frame export of sequences to location based on input.
 
 	Returns Dictionary of the image paths to the first tile of each
@@ -270,7 +272,7 @@ def generate_material_sequence(source_path: PathLike, image_path: PathLike, form
 	return image_dict, None
 
 
-def export_image_to_sequence(image_path: PathLike, params: dict, output_folder: PathLike=None, form: Optional[Form]=None) -> PathLike:
+def export_image_to_sequence(image_path: Path, params: Tuple[str, int, bool], output_folder: Path=None, form: Optional[Form]=None) -> Path:
 	"""Convert image tiles into image sequence files.
 
 	image_path: image filepath source
@@ -370,7 +372,7 @@ def get_sequence_int_index(base_name: str) -> int:
 	return ind
 
 
-def set_sequence_to_texnode(node: Texture, image_path: PathLike) -> None:
+def set_sequence_to_texnode(node: Texture, image_path: Path) -> None:
 	"""Take first image of sequence and apply full sequence to a node.
 
 	Note: this also works as-is where "node" is actually a texture block

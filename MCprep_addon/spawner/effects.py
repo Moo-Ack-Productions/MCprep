@@ -19,7 +19,8 @@
 import json
 import os
 import random
-from typing import List, TypeVar
+from typing import List, TypeVar, Tuple, Sequence
+from pathlib import Path
 
 import bmesh
 from bpy_extras.io_utils import ImportHelper
@@ -36,7 +37,7 @@ from .. import tracking
 
 from . import spawn_util
 
-from ..conf import env, VectorType, PathLike
+from ..conf import env, VectorType
 
 ListEffectsAssets = TypeVar("ListEffectsAssets") # Check spawn_util.py ListEffectsAssets
 
@@ -344,7 +345,7 @@ def add_image_sequence_effect(context: Context, effect: ListEffectsAssets, locat
 	return instance
 
 
-def add_particle_planes_effect(context: Context, image_path: PathLike, location: VectorType, frame: int) -> None:
+def add_particle_planes_effect(context: Context, image_path: Path, location: VectorType, frame: int) -> None:
 	"""Spawn a short-term particle system at a specific point and time.
 
 	This is the only effect type that does not get pre-loaded into a list. The
@@ -472,7 +473,7 @@ def geo_update_params(context: Context, effect: ListEffectsAssets, geo_mod: Node
 		# TODO: check if any socket name in json specified not found in node.
 
 
-def geo_fields_from_json(effect: ListEffectsAssets, jpath: PathLike) -> dict:
+def geo_fields_from_json(effect: ListEffectsAssets, jpath: Path) -> dict:
 	"""Extract json values from a file for a given effect.
 
 	Parse for a json structure with a hierarhcy of:
@@ -503,7 +504,7 @@ def geo_fields_from_json(effect: ListEffectsAssets, jpath: PathLike) -> dict:
 	return geo_fields
 
 
-def get_or_create_plane_mesh(mesh_name: str, uvs: list=[]) -> Mesh:
+def get_or_create_plane_mesh(mesh_name: str, uvs: Sequence[Tuple[int,int]]=[]) -> Mesh:
 	"""Generate a 1x1 plane with UVs stretched out to ends, cache if exists.
 
 	Arg `uvs` represents the 4 coordinate values clockwise from top left of the

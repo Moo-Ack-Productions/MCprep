@@ -20,14 +20,16 @@ import os
 from pathlib import Path
 import bpy
 
-from typing import TypeVar, Literal
+from typing import Union, Literal, Tuple, List
 from mathutils import Vector
 
-PathLike = TypeVar("PathLike", str, Path, bytes, os.PathLike, None)
-VectorType = TypeVar("VectorType", tuple, list, Vector)
+VectorType =  Union[Tuple[float, float, float], Vector]
 
 Form = Literal["mc", "mineways", "jmc2obj"]
 Engine = Literal["CYCLES", "BLENDER_EEVEE"] #, "BLENDER_EEVEE_NEXT"] # For later.
+
+Skin = Tuple[str, Path]
+Entity = Tuple[str, str, str]
 
 # check if custom preview icons available
 try:
@@ -45,10 +47,10 @@ class MCprepEnv:
 	def __init__(self):
 		self.data = None
 		self.json_data = None
-		self.json_path: PathLike = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data.json")
-		self.json_path_update: PathLike = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data_update.json")
+		self.json_path: Path = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data.json")
+		self.json_path_update: Path = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data_update.json")
 
-		self.dev_file: PathLike = Path(os.path.dirname(__file__), "mcprep_dev.txt")
+		self.dev_file: Path = Path(os.path.dirname(__file__), "mcprep_dev.txt")
 
 		# if new update file found from install, replace old one with new
 		if self.json_path_update.exists():
@@ -91,9 +93,9 @@ class MCprepEnv:
 		# no blend files etc), then it would continue to ask to reload spanwers.
 		self.loaded_all_spawners: bool = False
 
-		self.skin_list: list = []  # each is: [ basename, path ]
-		self.rig_categories: list = []  # simple list of directory names
-		self.entity_list: list = []
+		self.skin_list: List[Skin] = []  # each is: [ basename, path ]
+		self.rig_categories: List[str] = []  # simple list of directory names
+		self.entity_list: List[Entity] = []
 
 		# -----------------------------------------------
 		# Matieral sync cahce, to avoid repeat lib reads

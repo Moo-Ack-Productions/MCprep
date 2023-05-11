@@ -17,13 +17,13 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import os
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import bpy
 
 from bpy.types import Context
 from .. import conf
-from ..conf import env, PathLike, VectorType
+from ..conf import env, VectorType, Entity
 from .. import util
 from .. import tracking
 
@@ -38,7 +38,7 @@ entity_cache = {}
 entity_cache_path = None
 
 
-def get_entity_cache(context: Context, clear: bool=False) -> Dict[str, list]:
+def get_entity_cache(context: Context, clear: bool=False) -> Dict[str, List[str]]:
 	"""Load collections from entity spawning lib if not cached, return key vars."""
 	global entity_cache
 	global entity_cache_path  # Used to auto-clear path if bpy prop changed.
@@ -68,7 +68,7 @@ def get_entity_cache(context: Context, clear: bool=False) -> Dict[str, list]:
 	return entity_cache
 
 
-def getEntityList(context: Context) -> List[tuple]:
+def getEntityList(context: Context) -> List[Entity]:
 	"""Only used for UI drawing of enum menus, full list."""
 
 	# may redraw too many times, perhaps have flag

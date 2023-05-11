@@ -18,6 +18,7 @@
 
 
 import os
+from typing import Union, List
 
 import bpy
 from bpy.types import (
@@ -31,7 +32,7 @@ from . import sync
 from ..conf import env, Engine
 
 
-def default_material_in_sync_library(default_material: list, context: Context) -> bool:
+def default_material_in_sync_library(default_material: str, context: Context) -> bool:
 	"""Returns true if the material is in the sync mat library blend file."""
 	if env.material_sync_cache is None:
 		sync.reload_material_sync_library(context)
@@ -42,7 +43,7 @@ def default_material_in_sync_library(default_material: list, context: Context) -
 	return False
 
 
-def sync_default_material(context: Context, material: Material, default_material: list, engine: Engine) -> Union[Material, str, None]:
+def sync_default_material(context: Context, material: Material, default_material: List, engine: Engine) -> Union[Material, str, None]:
 	"""Normal sync material method but with duplication and name change."""
 	if default_material in env.material_sync_cache:
 		import_name = default_material

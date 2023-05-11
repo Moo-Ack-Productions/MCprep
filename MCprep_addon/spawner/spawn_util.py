@@ -25,6 +25,7 @@ from bpy.types import (
   BlendDataLibraries
 )
 from typing import List, Optional
+from pathlib import Path
 
 from ..conf import env
 from .. import util
@@ -32,7 +33,7 @@ from .. import tracking
 from . import mobs
 from . import effects
 
-from ..conf import env, PathLike
+from ..conf import env
 
 # Top-level names used for inclusion or exclusions when filtering through
 # collections in blend files for spawners: mobs, meshswap, and entities.
@@ -104,7 +105,7 @@ def filter_collections(data_from: BlendDataLibraries) -> List[str]:
 	return all_names
 
 
-def check_blend_eligible(this_file: PathLike, all_files: List[PathLike]) -> bool:
+def check_blend_eligible(this_file: Path, all_files: List[Path]) -> bool:
 	"""Returns true if this_file is the BEST blend file variant for this rig.
 
 	Created to better support older blender versions without having to
@@ -199,7 +200,7 @@ def check_blend_eligible(this_file: PathLike, all_files: List[PathLike]) -> bool
 	return latest_allowed != this_file
 
 
-def attemptScriptLoad(path: PathLike) -> None:
+def attemptScriptLoad(path: Path) -> None:
 	"""Search for script that matches name of the blend file"""
 
 	# TODO: should also look into the blend if appropriate
@@ -482,7 +483,7 @@ def load_linked(self, context: Context, path: str, name: str) -> None:
 				{'INFO'}, "This addon works better when the root bone's name is 'MAIN'")
 
 
-def load_append(self, context: Context, path: PathLike, name: str) -> None:
+def load_append(self, context: Context, path: Path, name: str) -> None:
 	"""Append an entire collection/group into this blend file and fix armature.
 
 	Used for both mob spawning and entity spawning with appropriate handling

@@ -18,14 +18,15 @@
 
 
 import os
-from typing import Union, List, Tuple
+from typing import Union, Tuple
+from pathlib import Path
 
 import bpy
 from bpy.app.handlers import persistent
 from bpy.types import Context, Material
 
 from . import generate
-from ..conf import env, PathLike
+from ..conf import env
 from .. import tracking
 from .. import util
 
@@ -39,7 +40,7 @@ def clear_sync_cache(scene):
 	env.material_sync_cache = None
 
 
-def get_sync_blend(context: Context) -> PathLike:
+def get_sync_blend(context: Context) -> Path:
 	"""Return the sync blend file path that might exist, based on active pack"""
 	resource_pack = bpy.path.abspath(context.scene.mcprep_texturepack_path)
 	return os.path.join(resource_pack, "materials.blend")

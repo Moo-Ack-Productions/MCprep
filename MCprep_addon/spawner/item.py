@@ -25,10 +25,11 @@ from bpy.types import (
 from bpy_extras.io_utils import ImportHelper
 import mathutils
 from typing import List, Optional, Tuple
+from pathlib import Path
 
 from .. import util
 from .. import tracking
-from ..conf import env, PathLike
+from ..conf import env
 from ..materials import generate 
 try:
 	import bpy.utils.previews
@@ -102,7 +103,7 @@ def reload_items(context: Context) -> None:
 		mcprep_props.item_list_index = len(mcprep_props.item_list) - 1
 
 
-def spawn_item_from_filepath(context: Context, path: PathLike, max_pixels: int, thickness: float, threshold: float, transparency: bool) -> Tuple[Optional[Object], Optional[str]]:
+def spawn_item_from_filepath(context: Context, path: Path, max_pixels: int, thickness: float, threshold: float, transparency: bool) -> Tuple[Optional[Object], Optional[str]]:
 	"""Reusable function for generating an item from an image filepath
 
 	Arguments

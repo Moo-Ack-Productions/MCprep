@@ -45,7 +45,7 @@ meshswap_cache = {}
 meshswap_cache_path = None
 
 
-def get_meshswap_cache(context: Context, clear: bool=False) -> Dict[str, list]:
+def get_meshswap_cache(context: Context, clear: bool=False) -> Dict[str, List[str]]:
 	"""Load groups/objects from meshswap lib if not cached, return key vars."""
 	global meshswap_cache
 	global meshswap_cache_path  # used to auto-clear path if bpy prop changed
@@ -81,7 +81,7 @@ def get_meshswap_cache(context: Context, clear: bool=False) -> Dict[str, list]:
 	return meshswap_cache
 
 
-def getMeshswapList(context: Context) -> List[tuple]:
+def getMeshswapList(context: Context) -> List[Tuple[str, str, str]]:
 	"""Only used for UI drawing of enum menus, full list."""
 
 	# may redraw too many times, perhaps have flag
