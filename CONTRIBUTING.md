@@ -44,7 +44,7 @@ As above, a critical component of maintaining support and ensuring the wide numb
 
 ### Compile MCprep using scripts
 
-Scripts have been created (`mcprep-build.py`) which make it fast to copy the entire addon structure the addon folders for multiple versions of blender. You need to use these scripts, or at the very least validate that they work, as running the automated tests depend on them.
+A script has been created (`mcprep-build.py`) which make it fast to copy the entire addon structure the addon folders for multiple versions of blender. You need to use these scripts, or at the very least validate that they work, as running the automated tests depend on them.
 
 The benefit? You don't have to manually navigate and install zip files in blender for each change you make - just run this script and restart blender. It *is* important you do restart blender after changes, as there can be unintended side effects of trying to reload a plugin.
 
