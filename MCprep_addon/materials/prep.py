@@ -691,18 +691,18 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 
 
 classes = (
-	MCPREP_OT_prep_materials,
-	MCPREP_OT_materials_help,
-	MCPREP_OT_swap_texture_pack,
-	MCPREP_OT_load_material,
+    MCPREP_OT_prep_materials,
+    MCPREP_OT_materials_help,
+    MCPREP_OT_swap_texture_pack,
+    MCPREP_OT_load_material,
 )
 
 
 def register():
-	for cls in classes:
-		bpy.utils.register_class(cls)
+    for cls in classes:
+        bpy.utils.register_class(cls)
 
 
 def unregister():
-	for cls in reversed(classes):
-		bpy.utils.unregister_class(cls)
+    for cls in reversed(classes):
+        bpy.utils.unregister_class(cls)

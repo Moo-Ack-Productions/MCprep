@@ -39,34 +39,35 @@ Disclaimer: This is not an official Google product
 # 								error = 51
 
 bl_info = {
-	"name": "MCprep",
-	"category": "Object",
-	"version": (3, 4, 3),
-	"blender": (2, 80, 0),
-	"location": "3D window toolshelf > MCprep tab",
-	"description": "Minecraft workflow addon for rendering and animation",
-	"warning": "",
-	"wiki_url": "https://TheDuckCow.com/MCprep",
-	"author": "Patrick W. Crawford <support@theduckcow.com>",
-	"tracker_url": "https://github.com/TheDuckCow/MCprep/issues"
+    "name": "MCprep",
+    "category": "Object",
+    "version": (3, 4, 3),
+    "blender": (2, 80, 0),
+    "location": "3D window toolshelf > MCprep tab",
+    "description": "Minecraft workflow addon for rendering and animation",
+    "warning": "",
+    "wiki_url": "https://TheDuckCow.com/MCprep",
+    "author": "Patrick W. Crawford <support@theduckcow.com>",
+    "tracker_url": "https://github.com/TheDuckCow/MCprep/issues",
 }
 
 import importlib
 
 if "load_modules" in locals():
-	importlib.reload(load_modules)
+    importlib.reload(load_modules)
 else:
-	from . import load_modules
+    from . import load_modules
 
 import bpy
 
+
 def register():
-	load_modules.register(bl_info)
+    load_modules.register(bl_info)
 
 
 def unregister():
-	load_modules.unregister(bl_info)
+    load_modules.unregister(bl_info)
 
 
 if __name__ == "__main__":
-	register()
+    register()
