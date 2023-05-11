@@ -80,30 +80,6 @@ files = [
 ]
 
 [[package]]
-name = "darker"
-version = "1.7.1"
-description = "Apply Black formatting only in regions changed since last commit"
-category = "main"
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "darker-1.7.1-py3-none-any.whl", hash = "sha256:d72126418194871aeaf1e8aa620ad06edc5472848bef71c4d393c22b65571878"},
-    {file = "darker-1.7.1.tar.gz", hash = "sha256:cf4173be4ad2982e5b2ebab7e08bd0d27173f2459ec1b1cf66aec9290da80cce"},
-]
-
-[package.dependencies]
-black = ">=21.5b1"
-toml = ">=0.10.0"
-typing-extensions = {version = "*", markers = "python_version < \"3.8\""}
-
-[package.extras]
-color = ["Pygments (>=2.4.0)"]
-flynt = ["flynt (>=0.76,<0.78)"]
-isort = ["isort (>=5.0.1)"]
-release = ["airium (>=0.2.3)", "click (>=8.0.0)", "defusedxml (>=0.7.1)", "requests-cache (>=0.7)"]
-test = ["airium (>=0.2.3)", "black (>=21.7b1)", "cryptography (>=3.3.2)", "defusedxml (>=0.7.1)", "flynt (>=0.76,<0.78)", "isort (>=5.0.1)", "pygments", "pytest (>=6.2.0)", "pytest-darker", "pytest-kwparametrize (>=0.0.3)", "regex (>=2021.4.4)", "requests-cache (>=0.7)", "ruamel.yaml (>=0.17.21)", "twine (>=2.0.0)", "types-requests (>=2.27.9)", "types-toml (>=0.10.4)", "urllib3 (>=1.25.9)", "wheel (>=0.21.0)"]
-
-[[package]]
 name = "fake-bpy-module-2-80"
 version = "20230117"
 description = "Collection of the fake Blender Python API module for the code completion."
@@ -192,18 +168,6 @@ docs = ["furo (>=2023.3.27)", "proselint (>=0.13)", "sphinx (>=6.1.3)", "sphinx-
 test = ["appdirs (==1.4.4)", "covdefaults (>=2.3)", "pytest (>=7.3.1)", "pytest-cov (>=4)", "pytest-mock (>=3.10)"]
 
 [[package]]
-name = "toml"
-version = "0.10.2"
-description = "Python Library for Tom's Obvious, Minimal Language"
-category = "main"
-optional = false
-python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
-files = [
-    {file = "toml-0.10.2-py2.py3-none-any.whl", hash = "sha256:806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b"},
-    {file = "toml-0.10.2.tar.gz", hash = "sha256:b3bda1d108d5dd99f4a20d24d9c348e91c4db7ab1b749200bded2f839ccbe68f"},
-]
-
-[[package]]
 name = "tomli"
 version = "2.0.1"
 description = "A lil' TOML parser"
@@ -280,4 +244,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "76aa01e904c61d0de4ecea595a4555250c18c1efd92cba5425ffd34ed39fa11e"
+content-hash = "f364a37f47e1fed5d459f148956581a13e79330f144564427ff540f6a5ef9214"
