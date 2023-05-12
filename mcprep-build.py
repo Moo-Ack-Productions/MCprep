@@ -60,6 +60,9 @@ def main():
     # Remove the built zip so we don't get errors
     if BUILT_ZIP.exists():
         os.remove(BUILT_ZIP)
+    
+    # Call flake8 to perform a check on the code
+    os.system(f"flake8 --extend-ignore W191 {str(ADDON_DIRECTORY)}")
 
     # Create archive and move it to the build directory since shutil makes
     # the archive in the current working directory
