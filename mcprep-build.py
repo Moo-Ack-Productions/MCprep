@@ -60,13 +60,15 @@ def main():
     # Remove the built zip so we don't get errors
     if BUILT_ZIP.exists():
         os.remove(BUILT_ZIP)
-    
+
     # Call flake8 to perform a check on the code
     os.system(f"flake8 --extend-ignore W191 {str(ADDON_DIRECTORY)}")
 
     # Create archive and move it to the build directory since shutil makes
     # the archive in the current working directory
-    shutil.make_archive(str(BUILD_DIRECTORY / BUILD_NAME), "zip", ADDON_DIRECTORY)
+    shutil.make_archive(str(
+        BUILD_DIRECTORY / BUILD_NAME
+    ), "zip", ADDON_DIRECTORY)
 
     # Add the debug file
     # TODO: We could add file injection at this point
@@ -88,7 +90,9 @@ def main():
             f.write("This is the MCprep Dev File created by mcprep-build!")
 
         # Rebuild
-        shutil.make_archive(str(BUILD_DIRECTORY / BUILD_NAME), "zip", INTERMIDIATE_PATH)
+        shutil.make_archive(str(
+            BUILD_DIRECTORY / BUILD_NAME
+        ), "zip", INTERMIDIATE_PATH)
 
     # Install addon
     for path in blender_installs:
@@ -96,7 +100,13 @@ def main():
             print(
                 f"Path {str(path)} in blender_installs.txt doesn't exist, skipping..."
             )
-        shutil.unpack_archive(BUILT_ZIP, path)
+
+        edited_path: Path = path / Path(BUILD_NAME)
+        if not edited_path.exists():
+            edited_path.mkdir()
+        else:
+            shutil.rmtree(edited_path)
+        shutil.unpack_archive(BUILT_ZIP, edited_path)
 
 
 if __name__ == "__main__":
