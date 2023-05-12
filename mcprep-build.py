@@ -8,10 +8,11 @@ from typing import List
 BUILD_NAME: str = "MCprep_addon"
 
 # Internals
-BUILD_DIRECTORY: Path = Path("build")
+SCRIPT_PATH: Path = Path(__file__).resolve().parents[0]
+BUILD_DIRECTORY: Path = SCRIPT_PATH / Path("build")
 INTERMIDIATE_PATH: Path = BUILD_DIRECTORY / Path("inter")
-ADDON_DIRECTORY: Path = Path("MCprep_addon")
-BLENDER_INSTALLS: Path = Path("blender_installs.txt")
+ADDON_DIRECTORY: Path = SCRIPT_PATH / Path("MCprep_addon")
+BLENDER_INSTALLS: Path = SCRIPT_PATH / Path("blender_installs.txt")
 DEBUG_FILE: Path = Path("mcprep_dev.txt")
 BUILT_ZIP: Path = BUILD_DIRECTORY / Path(BUILD_NAME + ".zip")
 
@@ -62,8 +63,7 @@ def main():
 
     # Create archive and move it to the build directory since shutil makes
     # the archive in the current working directory
-    shutil.make_archive(BUILD_NAME, "zip", ADDON_DIRECTORY)
-    shutil.move(BUILD_NAME + ".zip", BUILD_DIRECTORY)
+    shutil.make_archive(str(BUILD_DIRECTORY / BUILD_NAME), "zip", ADDON_DIRECTORY)
 
     # Add the debug file
     # TODO: We could add file injection at this point
@@ -85,8 +85,7 @@ def main():
             f.write("This is the MCprep Dev File created by mcprep-build!")
 
         # Rebuild
-        shutil.make_archive(BUILD_NAME, "zip", INTERMIDIATE_PATH / ADDON_DIRECTORY)
-        shutil.move(BUILD_NAME + ".zip", BUILD_DIRECTORY)
+        shutil.make_archive(str(BUILD_DIRECTORY / BUILD_NAME), "zip", INTERMIDIATE_PATH)
 
     # Install addon
     for path in blender_installs:
