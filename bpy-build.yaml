@@ -4,3 +4,8 @@ build_name: MCprep_addon
 install_versions:
   - '3.5'
   - '3.4'
+
+during_build:
+  dev:
+    - create_file: "mcprep_dev.txt"
+  
