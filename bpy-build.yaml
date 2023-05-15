@@ -6,6 +6,8 @@ install_versions:
   - '3.4'
 
 during_build:
+  default:
+    - execute_sh("flake8 --extend-ignore W191 .")
   dev:
     - create_file("mcprep_dev.txt")
   
