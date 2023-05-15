@@ -53,14 +53,14 @@ uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
 name = "bpy-addon-build"
-version = "0.1.5"
+version = "0.1.6"
 description = "A build system to make building and testing Blender addons 10 times easier"
 category = "main"
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "bpy_addon_build-0.1.5-py3-none-any.whl", hash = "sha256:c237eb3a8a396d95422e882bfe3d8d2a8600a68880ea7603a0ce374cc8a47bd3"},
-    {file = "bpy_addon_build-0.1.5.tar.gz", hash = "sha256:69926024af324f79aa999c6e9c74f123716f240b5a9e87ca5bb06b299e5e719d"},
+    {file = "bpy_addon_build-0.1.6-py3-none-any.whl", hash = "sha256:9b0fc7d54707fff3ed3ac1d7d3444622a02c13fe865949610252208b93af1865"},
+    {file = "bpy_addon_build-0.1.6.tar.gz", hash = "sha256:5637a3c98f63538c2a73be073a219687f0e6e8cae0385ec695a9d5792de9a8dd"},
 ]
 
 [package.dependencies]
@@ -484,4 +484,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "20d49ffc3fb624cf2a629c0ce061c6e8e9488dac9e284254941eecc729bdd9a1"
+content-hash = "2b719363c3c4aa97c6eae1e2c1322169ee47c89be40b9b4b3d981a6e7bd48acf"
