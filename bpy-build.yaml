@@ -7,5 +7,5 @@ install_versions:
 
 during_build:
   dev:
-    - create_file: "mcprep_dev.txt"
+    - create_file("mcprep_dev.txt")
   

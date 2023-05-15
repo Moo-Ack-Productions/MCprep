@@ -44,9 +44,9 @@ As above, a critical component of maintaining support and ensuring the wide numb
 
 ### Compile MCprep using scripts
 
-A script has been created (`mcprep-build.py`) which make it fast to copy the entire addon structure the addon folders for multiple versions of blender. You need to use these scripts, or at the very least validate that they work, as running the automated tests depend on them.
+MCprep uses the [bpy-addon-build](https://github.com/StandingPadAnimations/bpy-build) package to build the addon, which makes it fast to copy the entire addon structure the addon folders for multiple versions of blender.
 
-The benefit? You don't have to manually navigate and install zip files in blender for each change you make - just run this script and restart blender. It *is* important you do restart blender after changes, as there can be unintended side effects of trying to reload a plugin.
+The benefit? You don't have to manually navigate and install zip files in blender for each change you make - just run the command and restart blender. It *is* important you do restart blender after changes, as there can be unintended side effects of trying to reload a plugin.
 
 ### Run tests
 
@@ -104,7 +104,7 @@ At the moment, only the project lead (TheDuckCow) should ever mint new releases 
    - Tag is in the form `3.3.1`, no leading `v`.
    - The title however is in the form `MCprep v3.3.0 | ShortName` where version has a leading `v`.
    - Copy the body fo the description from the prior release, and then update the text and splash screen (if a major release). Edit a prior release without making changes to get the raw markdown code, e.g. [from here](https://github.com/TheDuckCow/MCprep/releases/edit/3.3.0).
-1. Run `mcprep-build.py` to build the addon
+1. Run `bpy-addon-build.py` to build the addon
 1. Run all tests, ideally on two different operating systems. Use the `./run_tests.sh -all` flag to run on all versions of blender
 1. If all tests pass, again DOUBLE CHECK that "dev" = false in conf.py, then
 1. Drag and drop the generated updated zip file onto github.
@@ -119,24 +119,7 @@ At the moment, only the project lead (TheDuckCow) should ever mint new releases 
 
 
 
-## Creating your blender_installs.txt and blender_execs.txt
-
-
-Your `blender_installs.txt` defines where the `mcprep-build.py` script will install MCprep onto your system. It's a directly copy-paste of the folder.
-
-On a mac? The text file will be generated automatically for you if you haven't already created it, based on detected blender installs. Otherwise, just create it manually. It could look like:
-
-```
-/Users/your_username/Library/Application Support/Blender/3.1/scripts/addons
-/Users/your_username/Library/Application Support/Blender/3.0/scripts/addons
-/Users/your_username/Library/Application Support/Blender/2.93/scripts/addons
-/Users/your_username/Library/Application Support/Blender/2.92/scripts/addons
-/Users/your_username/Library/Application Support/Blender/2.90/scripts/addons
-/Users/your_username/Library/Application Support/Blender/2.80/scripts/addons
-/Users/your_username/Library/Application Support/Blender/2.79/scripts/addons
-/Users/your_username/Library/Application Support/Blender/2.78/scripts/addons
-/Users/your_username/Library/Application Support/Blender/2.72/scripts/addons
-```
+## Creating your blender_execs.txt
 
 Your `blender_execs.txt` defines where to find the executables used in the automated testing scripts. Only these executables will be used during automated testing, noting that the testing system only supports blender version 2.8+ (sadly, only manual testing is possible in blender 2.7 with the current setup). It could look like:
 
