@@ -2,7 +2,7 @@ This list contains all deprecations and removals in every Blender version starti
 
 _For Developers_: The use of any deprecated feature is an automatic bug. Such features should be wrapped around if statements for backwards compatibility if absolutely necesary in older versions.
 
-_For MCprep maintainers_: Any use of a deprecated feature in a pull request should be questioned. If the feature is needed in older versions, then remind developers to use `min_bv`, `bv28` [Deprecated in MCprep 3.5](https://github.com/TheDuckCow/MCprep/pull/401), or `bv30`, whichever is more appropriate.
+_For MCprep maintainers_: Any use of a deprecated feature in a pull request should be questioned. If the feature is needed in older versions, then remind developers to use `min_bv`, `bv28` ([Deprecated in MCprep 3.5](https://github.com/TheDuckCow/MCprep/pull/401)), or `bv30`, whichever is more appropriate.
 
 Note that not all deprecations are listed, just the ones that may affect MCprep or changes that developers should be aware of in general, so please refer to the wiki entries for each version for more information.
 
