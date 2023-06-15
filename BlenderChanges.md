@@ -1,10 +1,10 @@
 This list contains all deprecations and removals in every Blender version starting with Blender 3.0. Since Blender 4.0's breaking changes invoked the want for a list of all deprecations and changes, this list is public for addon developers to use.
 
+Note that not all deprecations are listed, just the ones that may affect MCprep or changes that developers should be aware of in general, so please refer to the wiki entries for each version for more information.
+
 _For Developers_: The use of any deprecated feature is an automatic bug. Such features should be wrapped around if statements for backwards compatibility if absolutely necesary in older versions.
 
 _For MCprep maintainers_: Any use of a deprecated feature in a pull request should be questioned. If the feature is needed in older versions, then remind developers to use `min_bv`, `bv28` ([Deprecated in MCprep 3.5](https://github.com/TheDuckCow/MCprep/pull/401)), or `bv30`, whichever is more appropriate.
-
-Note that not all deprecations are listed, just the ones that may affect MCprep or changes that developers should be aware of in general, so please refer to the wiki entries for each version for more information.
 
 # [Blender 3.0](https://wiki.blender.org/wiki/Reference/Release_Notes/3.0/Python_API)
 ## Deprecations
@@ -12,7 +12,7 @@ None that concern MCprep.
 
 ## Breaking Changes
 - Rigs made in Blender 3.0 are no longer compatible with older versions of Blender. 
-    - A workaround would be to convert the rigs to FBX, then import it in an older version of Blender.
+    - A workaround would be to convert the rigs to FBX, then import in an older version of Blender.
 
 # [Blender 3.1](https://wiki.blender.org/wiki/Reference/Release_Notes/3.1/Python_API)
 ## Deprecations
