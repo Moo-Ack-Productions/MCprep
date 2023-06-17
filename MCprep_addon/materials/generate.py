@@ -248,7 +248,7 @@ def checklist(matName, listName):
 
 @dataclass
 class PrepOptions:
-	passes: dict[str]
+	passes: dict[str, str]
 	use_reflections: bool
 	use_principled: bool
 	only_solid: bool
