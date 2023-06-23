@@ -449,6 +449,7 @@ class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
 						os.mkdir(dst)
 					except OSError as exc:
 						if exc.errno == errno.EACCES:
+							print("Permission denied, try running blender as admin")
 							print(exc)
 						elif exc.errno != errno.EEXIST:
 							print(f"Path does not exist: {dst}")

@@ -1047,7 +1047,11 @@ class MCPREP_OT_global_effect(bpy.types.Operator):
 			elist.append((
 				str(effect.index),
 				effect.name + short_type,
-				f"Add {effect.name} {display_type} from {os.path.basename(effect.filepath)}"
+				"Add {} {} from {}".format(
+					effect.name,
+					display_type,
+					os.path.basename(effect.filepath)
+				)
 			))
 		return elist
 
