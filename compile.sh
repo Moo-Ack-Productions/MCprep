@@ -120,7 +120,7 @@ function install_path(){
 	then
 		# echo "Remove prior: $i/$NAME/"
 		# ls "$i/$NAME/"
-		rm -rf "${i/$NAME:?}/"
+		rm -rf "${i:?}/${NAME:?}/"
 	fi
 
 	mkdir -p "$i/$NAME"
