@@ -27,7 +27,8 @@ from mathutils import Vector
 VectorType =  Union[Tuple[float, float, float], Vector]
 
 Form = Literal["mc", "mineways", "jmc2obj"]
-Engine = Literal["CYCLES", "BLENDER_EEVEE", "BLENDER_EEVEE_NEXT"] # Eevee Next now exists as an engine option in Blender code 
+# Eevee Next now exists as an engine option in Blender code
+Engine = Literal["CYCLES", "BLENDER_EEVEE", "BLENDER_EEVEE_NEXT"] 
 
 Skin = Tuple[str, Path]
 Entity = Tuple[str, str, str]
