@@ -929,7 +929,11 @@ class MCPREP_PT_world_tools(bpy.types.Panel):
 				obj,
 				'["MCprepHour"]',
 				text="")
-			col.label(text=f"{time % 24 - time % 1:02}:{time % 1 * 60:02}, day {(time - time % 24) / 24}")
+			col.label(text="{h}:{m}, day {d}".format(
+				h=str(int(time % 24 - time % 1)).zfill(2),
+				m=str(int(time % 1 * 60)).zfill(2),
+				d=int((time - time % 24) / 24)
+			))
 		else:
 			box = col.box()
 			subcol = box.column()

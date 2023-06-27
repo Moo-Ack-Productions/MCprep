@@ -132,33 +132,19 @@ Load in the json file. Returns a bool if successful
 ```
 {
   {
-
-		"blocks": {
-
+	"blocks": {
 		"reflective": [],
-
 		"water": [],
-
 		"solid": [],
-
 		"emit": [],
-
 		"desaturated": [],
-
 		"animated": [],
-
 		"block_mapping_mc": {},
-
 		"block_mapping_jmc": {},
-
 		"block_mapping_mineways": {},
-
 		"canon_mapping_block": {}
-
 	},
-
 	"mob_skip_prep": [],
-
 	"make_real": []
 }
 
