@@ -745,7 +745,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			instancing = sum(t3s) - sum(t2s)
 			cleanup = t5 - t4
 			total = tprep + loop_prep + face_process + instancing + cleanup
-			env.log(f"Total time: {}s, init: {}, prep: {}, poly process: {}, instance:{}, cleanup: {}".format(
+			env.log("Total time: {}s, init: {}, prep: {}, poly process: {}, instance:{}, cleanup: {}".format(
 					round(total, 1), round(tprep, 1), round(loop_prep, 1),
 					round(face_process, 1), round(instancing, 1), round(cleanup, 1)
 				)
