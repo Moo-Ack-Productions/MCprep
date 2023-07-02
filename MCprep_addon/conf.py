@@ -27,8 +27,9 @@ from mathutils import Vector
 VectorType =  Union[Tuple[float, float, float], Vector]
 
 Form = Literal["mc", "mineways", "jmc2obj"]
-# Eevee Next now exists as an engine option in Blender code
 Engine = Literal["CYCLES", "BLENDER_EEVEE", "BLENDER_EEVEE_NEXT"] 
+# EEVEE Next is the next generation EEVEE. So in preperation for that, 
+# we've added "BLENDER_EEVEE_NEXT" as an Engine option
 
 Skin = Tuple[str, Path]
 Entity = Tuple[str, str, str]
@@ -153,7 +154,7 @@ class MCprepEnv:
 				'IMAGE')
 		except Exception as e:
 			self.log("Old verison of blender, no custom icons available")
-			self.log(f"\t {e}")
+			self.log(e)
 			global use_icons
 			self.use_icons = False
 			for iconset in collection_sets:

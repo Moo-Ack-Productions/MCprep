@@ -24,11 +24,13 @@ import time
 
 import bpy
 from bpy.types import (
-  Context, Object, Collection
+  Context, Collection
 )
 import mathutils
 
 from typing import Dict, List, Union, Tuple
+from dataclasses import dataclass
+
 from . import spawn_util
 from .. import conf
 from ..conf import env, VectorType
@@ -161,16 +163,16 @@ def updateMeshswapList(context: Context) -> None:
 		item.description = itm[3]
 
 
-class face_struct():
+@dataclass
+class FaceStruct:
 	"""Structure class for preprocessed faces of a mesh"""
-	def __init__(self, normal_coord: VectorType, global_coord: VectorType , local_coord: VectorType) -> None:
-		self.n: VectorType = normal_coord
-		self.g: VectorType = global_coord
-		self.l: VectorType = local_coord
+	normal_coord: VectorType
+	global_coord: VectorType 
+	local_coord: VectorType
 
 
 # -----------------------------------------------------------------------------
-# Mesh swap functions
+# Mesh swap operators
 # -----------------------------------------------------------------------------
 
 
@@ -570,8 +572,8 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 
 		# Assign vars used across operator
 		self.runcount = 0  # counter; if zero by end, raise error nothing matched
-		objList: List[Object] = self.prep_obj_list(context)
-		selList: List[Object] = context.selected_objects  # re-grab having made new objects
+		objList: List[bpy.types.Object] = self.prep_obj_list(context)
+		selList: List[bpy.types.Object] = context.selected_objects  # re-grab having made new objects
 		new_groups = []  # for new imported groups
 		removeList = []  # for objects that should be removed
 		new_objects = []  # all the newly added objects
@@ -762,7 +764,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		self.report({'INFO'}, f"Swapped {self.runcount} objects")
 		return {'FINISHED'}
 
-	def prep_obj_list(self, context: Context) -> List[Object]:
+	def prep_obj_list(self, context: Context) -> List[bpy.types.Object]:
 		"""Initial operator prep to get list of objects to check over"""
 		try:
 			bpy.ops.object.convert(target='MESH')
@@ -785,7 +787,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				obj.name = util.nameGeneralize(obj.active_material.name)
 		return objList
 
-	def get_face_list(self, swap, offset: float) -> List[VectorType]:
+	def get_face_list(self, swap: bpy.types.Object, offset: float) -> List[VectorType]:
 		"""Returns list of relevant faces and mapped coordinates.
 
 		Offset is for Mineways to virtually shift all block centers to half ints
@@ -805,7 +807,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			if 0.015 < poly.area and poly.area < 0.016:
 				# hack to avoid too many torches show up, both jmc2obj and Mineways
 				continue
-			facebook.append(face_struct(n, g, l))  # g is global, l is local
+			facebook.append(FaceStruct(n, g, l))  # g is global, l is local
 		return facebook
 
 	def checkExternal(self, context: Context, name: str) -> Union[bool, Dict[str, str]]:
@@ -1007,7 +1009,10 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			'edgeFloat': edgeFloat, 'torchlike': torchlike, 'removable': removable,
 			'doorlike': doorlike, 'new_groups': new_groups}
 
-	def proccess_poly_orientations(self, face: face_struct, swapProps: Dict[str, str], swapGen: str, instance_configs: Dict[str, Tuple[VectorType, int]]) -> None:
+	def proccess_poly_orientations(
+			self, face: FaceStruct, swapProps: Dict[str, str], swapGen: str, 
+			instance_configs: Dict[str, Tuple[VectorType, int]]
+		) -> None:
 		"""Iterate over individual face, updating instance loc/rotation
 
 		Arguments:
@@ -1173,7 +1178,11 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		loc_unoffset = [pos + offset for pos in loc]
 		instance_configs[instance_key] = [loc_unoffset, rot_type]
 
-	def add_instances_with_transforms(self, context: Context, swap, swapProps: Dict[str, str], instance_configs: Dict[str, Tuple[VectorType, int]]) -> Tuple[bool, List[Object]]:
+	def add_instances_with_transforms(
+			self, context: Context, 
+			swap: bpy.types.Object, swapProps: Dict[str, str], 
+			instance_configs: Dict[str, Tuple[VectorType, int]]
+		) -> Tuple[bool, List[bpy.types.Object]]:
 		"""Creates all block instances for a single object.
 
 		Will add and apply rotations, add loc variances, and run random group
@@ -1290,7 +1299,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				util.select_set(ob, False)
 		return grouped, dupedObj
 
-	def offsetByHalf(self, obj: Object) -> None:
+	def offsetByHalf(self, obj: bpy.types.Object) -> None:
 		if obj.type != 'MESH':
 			return
 		env.log("doing offset")

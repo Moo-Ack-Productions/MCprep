@@ -26,7 +26,7 @@ import bmesh
 from bpy_extras.io_utils import ImportHelper
 import bpy
 from bpy.types import (
-  Context, Object, Collection, 
+  Context, Collection, 
   NodesModifier, Image, Mesh
 )
 from mathutils import Vector
@@ -39,7 +39,9 @@ from . import spawn_util
 
 from ..conf import env, VectorType
 
-ListEffectsAssets = TypeVar("ListEffectsAssets") # Check spawn_util.py ListEffectsAssets
+# Check spawn_util.py for the
+# definition of ListEffectsAssets
+ListEffectsAssets = TypeVar("ListEffectsAssets")
 
 # -----------------------------------------------------------------------------
 # Global enum values
@@ -62,7 +64,7 @@ EXTENSIONS = [".png", ".jpg", ".jpeg", ".tiff"]
 # -----------------------------------------------------------------------------
 
 
-def add_geonode_area_effect(context: Context, effect: ListEffectsAssets) -> Object:
+def add_geonode_area_effect(context: Context, effect: ListEffectsAssets) -> bpy.types.Object:
 	"""Create a persistent effect which is meant to emulate a wide-area effect.
 
 	Effect is of type: ListEffectsAssets.
@@ -118,7 +120,7 @@ def add_geonode_area_effect(context: Context, effect: ListEffectsAssets) -> Obje
 	return new_obj
 
 
-def add_area_particle_effect(context: Context, effect: ListEffectsAssets, location: VectorType) -> Object:
+def add_area_particle_effect(context: Context, effect: ListEffectsAssets, location: VectorType) -> bpy.types.Object:
 	"""Create a persistent effect over wide area using traditional particles.
 
 	Effect is of type: ListEffectsAssets.
@@ -186,7 +188,7 @@ def add_area_particle_effect(context: Context, effect: ListEffectsAssets, locati
 	return obj
 
 
-def add_collection_effect(context: Context, effect: ListEffectsAssets, location: VectorType, frame: int) -> Object:
+def add_collection_effect(context: Context, effect: ListEffectsAssets, location: VectorType, frame: int) -> bpy.types.Object:
 	"""Spawn a pre-animated collection effect at a specific point and time.
 
 	Import a new copy of a collection from the effects_collections.blend file.
@@ -226,7 +228,7 @@ def add_collection_effect(context: Context, effect: ListEffectsAssets, location:
 	util.select_set(obj, True)
 
 
-def add_image_sequence_effect(context: Context, effect: ListEffectsAssets, location: VectorType, frame: int, speed: float) -> Object:
+def add_image_sequence_effect(context: Context, effect: ListEffectsAssets, location: VectorType, frame: int, speed: float) -> bpy.types.Object:
 	"""Spawn a short-term sequence of individual images at a point in time.
 
 	Effect is of type: ListEffectsAssets.
@@ -292,7 +294,7 @@ def add_image_sequence_effect(context: Context, effect: ListEffectsAssets, locat
 			obj.location = Vector([0, 0, 0])
 
 			# Set the animation for visibility for the range of frames.
-			def keyframe_current_visibility(context: Context, obj: Object, state: bool):
+			def keyframe_current_visibility(context: Context, obj: bpy.types.Object, state: bool):
 				frame = context.scene.frame_current
 
 				obj.hide_render = state
@@ -617,7 +619,7 @@ def get_or_create_particle_meshes_coll(context: Context, particle_name: str, img
 		return particle_group
 
 
-def apply_particle_settings(obj: Object, frame: int, base_name: str, pcoll: Collection) -> None:
+def apply_particle_settings(obj: bpy.types.Object, frame: int, base_name: str, pcoll: Collection) -> None:
 	"""Update the particle settings for particle planes."""
 	obj.scale = (0.5, 0.5, 0.5)  # Tighen up the area it spawns over.
 

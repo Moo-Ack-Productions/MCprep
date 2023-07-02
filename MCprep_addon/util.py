@@ -30,7 +30,7 @@ from typing import List, Optional, Union, Literal, Tuple
 import bpy
 from bpy.types import (
 	Preferences,
-  	Context, Object, Collection,
+  	Context, Collection,
   	Material, Image, Node,
 	UILayout
   )
@@ -95,7 +95,7 @@ def nameGeneralize(name: str) -> str:
 	return name
 
 
-def materialsFromObj(obj_list: List[Object]) -> List[Material]:
+def materialsFromObj(obj_list: List[bpy.types.Object]) -> List[Material]:
 	"""Gets all materials on input list of objects.
 
 	Loop over every object, adding each material if not already added
@@ -175,7 +175,7 @@ def bAppendLink(directory: str, name: str, toLink: bool, active_layer: bool=True
 				return False
 
 
-def obj_copy(base: Object, context: Optional[Context]=None, vertex_groups: bool=True, modifiers: bool=True) -> Object:
+def obj_copy(base: bpy.types.Object, context: Optional[Context]=None, vertex_groups: bool=True, modifiers: bool=True) -> bpy.types.Object:
 	"""Copy an object's data, vertex groups, and modifiers without operators.
 
 	Input must be a valid object in bpy.data.objects
@@ -326,7 +326,7 @@ def remap_users(old, new) -> Union[int, str]:
 		return "not available prior to blender 2.78"
 
 
-def get_objects_conext(context: Context) -> List[Object]:
+def get_objects_conext(context: Context) -> List[bpy.types.Object]:
 	"""Returns list of objects, either from view layer if 2.8 or scene if 2.8"""
 	if bv28():
 		return context.view_layer.objects
@@ -433,7 +433,7 @@ def open_folder_crossplatform(folder: str) -> bool:
 		return False
 
 
-def addGroupInstance(group_name: str, loc: Tuple, select: bool=True) -> Object:
+def addGroupInstance(group_name: str, loc: Tuple, select: bool=True) -> bpy.types.Object:
 	"""Add object instance not working, so workaround function."""
 	# The built in method fails, bpy.ops.object.group_instance_add(...)
 	# UPDATE: I reported the bug, and they fixed it nearly instantly =D
@@ -501,7 +501,7 @@ def ui_scale() -> float:
 		return 1
 
 
-def uv_select(obj: Object, action: Literal["SELECT", "DESELECT", "TOGGLE"]='TOGGLE') -> None:
+def uv_select(obj: bpy.types.Object, action: Literal["SELECT", "DESELECT", "TOGGLE"]='TOGGLE') -> None:
 	"""Direct way to select all UV verts of an object, assumings 1 uv layer.
 
 	Actions are: SELECT, DESELECT, TOGGLE.
@@ -523,7 +523,7 @@ def uv_select(obj: Object, action: Literal["SELECT", "DESELECT", "TOGGLE"]='TOGG
 			face.select = False
 
 
-def move_to_collection(obj: Object, collection: Collection) -> None:
+def move_to_collection(obj: bpy.types.Object, collection: Collection) -> None:
 	"""Move out of all collections and into this specified one. 2.8 only"""
 	for col in obj.users_collection:
 		col.objects.unlink(obj)
@@ -627,7 +627,7 @@ def get_preferences(context: Optional[Context]=None) -> Optional[Preferences]:
 	return None
 
 
-def set_active_object(context: Context, obj: Object) -> None:
+def set_active_object(context: Context, obj: bpy.types.Object) -> None:
 	""" TODO remove 2.7
 	Get the active object in a 2.7 and 2.8 compatible way"""
 	if hasattr(context, "view_layer"):
@@ -636,7 +636,7 @@ def set_active_object(context: Context, obj: Object) -> None:
 		context.scene.objects.active = obj  # the 2.7 way
 
 
-def select_get(obj: Object) -> bool:
+def select_get(obj: bpy.types.Object) -> bool:
 	"""Multi version compatibility for getting object selection"""
 	if hasattr(obj, "select_get"):
 		return obj.select_get()
@@ -644,7 +644,7 @@ def select_get(obj: Object) -> bool:
 		return obj.select
 
 
-def select_set(obj: Object, state: bool) -> None:
+def select_set(obj: bpy.types.Object, state: bool) -> None:
 	"""Multi version compatibility for setting object selection"""
 	if hasattr(obj, "select_set"):
 		obj.select_set(state)
@@ -652,7 +652,7 @@ def select_set(obj: Object, state: bool) -> None:
 		obj.select = state
 
 
-def hide_viewport(obj: Object, state: bool) -> None:
+def hide_viewport(obj: bpy.types.Object, state: bool) -> None:
 	"""Multi version compatibility for setting the viewport hide state"""
 	if hasattr(obj, "hide_viewport"):
 		obj.hide_viewport = state  # where state is a boolean True or False
@@ -709,7 +709,7 @@ def set_cursor_location(loc: Tuple, context: Optional[Context]=None) -> None:
 		context.scene.cursor.location = loc
 
 
-def instance_collection(obj: Object) -> Collection:
+def instance_collection(obj: bpy.types.Object) -> Collection:
 	""" TODO 2.7
 	Cross compatible way to get an objects dupligroup or collection"""
 	if hasattr(obj, "dupli_group"):
@@ -718,7 +718,7 @@ def instance_collection(obj: Object) -> Collection:
 		return obj.instance_collection
 
 
-def obj_link_scene(obj: Object, context: Optional[Context]=None):
+def obj_link_scene(obj: bpy.types.Object, context: Optional[Context]=None):
 	""" TODO 2.7
 	Links object to scene, or for 2.8, the scene master collection"""
 	if not context:
@@ -730,7 +730,7 @@ def obj_link_scene(obj: Object, context: Optional[Context]=None):
 	# context.scene.update() # needed?
 
 
-def obj_unlink_remove(obj: Object, remove: bool, context: Optional[Context]=None) -> None:
+def obj_unlink_remove(obj: bpy.types.Object, remove: bool, context: Optional[Context]=None) -> None:
 	"""Unlink an object from the scene, and remove from data if specified"""
 	if not context:
 		context = bpy.context
@@ -749,7 +749,7 @@ def obj_unlink_remove(obj: Object, remove: bool, context: Optional[Context]=None
 		bpy.data.objects.remove(obj)
 
 
-def users_collection(obj: Object) -> List[Collection]:
+def users_collection(obj: bpy.types.Object) -> List[Collection]:
 	""" TODO 2.7
 	Returns the collections/group of an object"""
 	if hasattr(obj, "users_collection"):

@@ -18,6 +18,7 @@
 
 import os
 from typing import Dict, List, Tuple
+from dataclasses import dataclass
 
 import bpy
 
@@ -31,7 +32,7 @@ from . import spawn_util
 
 
 # -----------------------------------------------------------------------------
-# Mesh swap functions
+# Entity spawn functions
 # -----------------------------------------------------------------------------
 
 entity_cache = {}
@@ -127,16 +128,8 @@ def updateEntityList(context: Context) -> None:
 		item.description = itm[2]
 
 
-class face_struct():
-	"""Structure class for preprocessed faces of a mesh"""
-	def __init__(self, normal_coord: VectorType, global_coord: VectorType, local_coord: VectorType):
-		self.n: VectorType = normal_coord
-		self.g: VectorType = global_coord
-		self.l: VectorType = local_coord
-
-
 # -----------------------------------------------------------------------------
-# Mesh swap functions
+# Entity spawn operators
 # -----------------------------------------------------------------------------
 
 

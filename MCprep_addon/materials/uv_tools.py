@@ -19,7 +19,7 @@
 
 import bpy
 from bpy.types import (
-  Context, Object
+  Context
 )
 
 import time
@@ -35,7 +35,7 @@ from .. import util
 # UV functions
 # -----------------------------------------------------------------------------
 
-def get_uv_bounds_per_material(obj: Object) -> Dict[str, list]:
+def get_uv_bounds_per_material(obj: bpy.types.Object) -> Dict[str, list]:
 	"""Return the maximum uv bounds per object, split per material
 
 	Returns:
@@ -87,7 +87,7 @@ def get_uv_bounds_per_material(obj: Object) -> Dict[str, list]:
 	return res
 
 
-def detect_invalid_uvs_from_objs(obj_list: List[Object]) -> Tuple[bool, List[Object]]:
+def detect_invalid_uvs_from_objs(obj_list: List[bpy.types.Object]) -> Tuple[bool, List[bpy.types.Object]]:
 	"""Detect all-in one combined images from concentrated UV layouts.
 
 	Returns:
@@ -162,10 +162,10 @@ class MCPREP_OT_scale_uv(bpy.types.Operator):
 		uvs = ob.data.uv_layers[0].data
 		matchingVertIndex = list(chain.from_iterable(polyIndices))
 		# example, matching list of uv coord and 3dVert coord:
-		uvs_XY = [i.uv for i in Object.data.uv_layers[0].data]
-		vertXYZ= [v.co for v in Object.data.vertices]
+		uvs_XY = [i.uv for i in bpy.types.Object.data.uv_layers[0].data]
+		vertXYZ= [v.co for v in bpy.types.Object.data.vertices]
 		matchingVertIndex = list(chain.from_iterable(
-			[p.vertices for p in Object.data.polygons]))
+			[p.vertices for p in bpy.types.Object.data.polygons]))
 		# and now, the coord to pair with uv coord:
 		matchingVertsCoord = [vertsXYZ[i] for i in matchingVertIndex]
 		"""

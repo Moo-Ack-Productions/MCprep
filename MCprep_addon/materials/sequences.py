@@ -21,12 +21,12 @@ import errno
 import json
 import os
 import re
-from typing import List, Optional, Tuple, Literal, Dict
+from typing import Optional, Tuple, Literal, Dict
 from pathlib import Path
 
 import bpy
 from bpy.types import (
-  Context, Object, Material, Image, Texture
+  Context, Material, Image, Texture
 )
 
 from . import generate

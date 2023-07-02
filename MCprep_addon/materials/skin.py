@@ -27,7 +27,7 @@ import bpy
 from bpy_extras.io_utils import ImportHelper
 from bpy.app.handlers import persistent
 from bpy.types import (
-  Context, Image, Object, Material
+  Context, Image, Material
 )
 
 from . import generate
@@ -226,7 +226,7 @@ def convert_skin_layout(image_file: Path) -> bool:
 		return False
 
 
-def getMatsFromSelected(selected: List[Object], new_material: bool=False) -> Tuple[List[Material], List[Object]]:
+def getMatsFromSelected(selected: List[bpy.types.Object], new_material: bool=False) -> Tuple[List[Material], List[bpy.types.Object]]:
 	"""Get materials; if new material provided, ensure material slot is added
 
 	Used by skin swapping, to either update existing material or create new one
@@ -284,7 +284,7 @@ def getMatsFromSelected(selected: List[Object], new_material: bool=False) -> Tup
 	return mat_ret, linked_objs
 
 
-def setUVimage(objs: List[Object], image: Image) -> None:
+def setUVimage(objs: List[bpy.types.Object], image: Image) -> None:
 	"""Set image for each face for viewport displaying (2.7 only)"""
 	for obj in objs:
 		if obj.type != "MESH":

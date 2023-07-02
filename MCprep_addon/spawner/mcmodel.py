@@ -25,7 +25,7 @@ from pathlib import Path
 import bpy
 import bmesh
 from bpy.types import (
-  Context, Object, Material
+  Context, Material
 )
 from bpy_extras.io_utils import ImportHelper
 from typing import Dict, List, Optional, Tuple, Union, Sequence
@@ -239,7 +239,7 @@ def read_model(context: Context, model_filepath: Path) -> Tuple[Element, Texture
 	return elements, textures
 
 
-def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Object:
+def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> bpy.types.Object:
 	"""Primary function for generating a model from json file."""
 	mesh = bpy.data.meshes.new(obj_name)  # add a new mesh
 	obj = bpy.data.objects.new(obj_name, mesh)  # add a new object using the mesh

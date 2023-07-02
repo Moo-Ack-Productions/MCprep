@@ -24,7 +24,7 @@ import shutil
 
 import bpy
 from bpy.types import (
-  Context, Object, Camera
+  Context, Camera
 )
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
@@ -942,7 +942,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 				env.log(
 					f"Source MCprep world blend file does not exist: {blendfile}")
 				return {'CANCELLED'}
-			resource = f"{blendfile}/Object"
+			resource = f"{blendfile}/bpy.types.Object"
 
 			util.bAppendLink(resource, "MoonMesh", False)
 			non_empties = [
@@ -999,7 +999,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 		self.track_param = engine
 		return {'FINISHED'}
 
-	def create_sunlamp(self, context: Context) -> Object:
+	def create_sunlamp(self, context: Context) -> bpy.types.Object:
 		"""Create new sun lamp from primitives"""
 		if hasattr(bpy.data, "lamps"):  # 2.7
 			newlamp = bpy.data.lamps.new("Sun", "SUN")
@@ -1018,7 +1018,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			obj.use_contact_shadow = True
 		return obj
 
-	def create_dynamic_world(self, context: Context, blendfile: Path, wname: str) -> List[Object]:
+	def create_dynamic_world(self, context: Context, blendfile: Path, wname: str) -> List[bpy.types.Object]:
 		"""Setup fpr creating a dynamic world and setting up driver targets"""
 		resource = blendfile + "/World"
 		obj_list = []
@@ -1188,7 +1188,7 @@ class MCPREP_OT_render_helper():
 		if self.open_folder:
 			bpy.ops.mcprep.openfolder(folder=self.filepath)
 
-	def create_panorama_cam(self, name: str, camera_data: Camera, rot: VectorType, loc: VectorType) -> Object:
+	def create_panorama_cam(self, name: str, camera_data: Camera, rot: VectorType, loc: VectorType) -> bpy.types.Object:
 		"""Create a camera"""
 
 		camera = bpy.data.objects.new(name, camera_data)

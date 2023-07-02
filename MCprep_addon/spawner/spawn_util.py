@@ -21,8 +21,7 @@ import re
 
 import bpy
 from bpy.types import (
-  Context, Object, Collection,
-  BlendDataLibraries
+  Context, Collection, BlendDataLibraries
 )
 from typing import List, Optional
 from pathlib import Path
@@ -234,7 +233,7 @@ def attemptScriptLoad(path: Path) -> None:
 	text.use_module = True
 
 
-def fix_armature_target(self, context: Context, new_objs: List[Object], src_coll: Collection) -> None:
+def fix_armature_target(self, context: Context, new_objs: List[bpy.types.Object], src_coll: Collection) -> None:
 	"""Addresses 2.8 bug where make real might not update armature source"""
 
 	src_armas = [
@@ -329,7 +328,7 @@ def prep_collection(self, context: Context, name: str, pre_groups: List[Collecti
 	return group
 
 
-def get_rig_from_objects(objects: List[Object]) -> Object:
+def get_rig_from_objects(objects: List[bpy.types.Object]) -> bpy.types.Object:
 	"""From a list of objects, return the the primary rig (best guess)"""
 	prox_obj = None
 	for obj in objects:
@@ -345,7 +344,7 @@ def get_rig_from_objects(objects: List[Object]) -> Object:
 	return prox_obj
 
 
-def offset_root_bone(context: Context, armature: Object) -> bool:
+def offset_root_bone(context: Context, armature: bpy.types.Object) -> bool:
 	"""Used to offset bone to world location (cursor)"""
 	env.log("Attempting offset root")
 	set_bone = False
