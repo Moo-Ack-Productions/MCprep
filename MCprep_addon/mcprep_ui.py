@@ -2082,7 +2082,7 @@ def unregister():
 	for cls in reversed(classes):
 		bpy.utils.unregister_class(cls)
 
-	elif hasattr(bpy.types, "VIEW3D_MT_add"):  # 2.8
+	if hasattr(bpy.types, "VIEW3D_MT_add"):  # 2.8
 		bpy.types.VIEW3D_MT_add.remove(draw_mcprepadd)
 
 	if hasattr(bpy.types, "IMAGE_MT_uvs"):  # 2.8 *and* 2.7
