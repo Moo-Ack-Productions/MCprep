@@ -171,7 +171,7 @@ def init():
 	# -----------------------------------------------
 	# ! Deprecated as of MCprep 3.4.2
 	global dev
-	dev = True
+	dev = False
 
 	# ! Deprecated as of MCprep 3.4.2
 	global v
