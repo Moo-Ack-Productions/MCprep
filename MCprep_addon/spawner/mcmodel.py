@@ -25,7 +25,7 @@ import bpy
 import bmesh
 from bpy_extras.io_utils import ImportHelper
 
-from .. import conf
+from ..conf import env
 from .. import util
 from .. import tracking
 from ..materials import generate
@@ -106,12 +106,12 @@ def add_material(name="material", path=""):
 	cur_mats = list(bpy.data.materials)
 	res = bpy.ops.mcprep.load_material(filepath=path, skipUsage=True)
 	if res != {'FINISHED'}:
-		conf.log("Failed to generate material as specified")
+		env.log("Failed to generate material as specified")
 	post_mats = list(bpy.data.materials)
 
 	new_mats = list(set(post_mats) - set(cur_mats))
 	if not new_mats:
-		conf.log("Failed to fetch any generated material")
+		env.log("Failed to fetch any generated material")
 		return None
 
 	mat = new_mats[0]
@@ -208,7 +208,7 @@ def read_model(context, model_filepath):
 			elif os.path.isfile(base_path):
 				elements, textures = read_model(context, base_path)
 			else:
-				conf.log("Failed to find mcmodel file " + parent_filepath)
+				env.log("Failed to find mcmodel file " + parent_filepath)
 
 	current_elements = obj_data.get("elements")
 	if current_elements is not None:
@@ -222,10 +222,10 @@ def read_model(context, model_filepath):
 			for img in current_textures:
 				textures[img] = current_textures[img]
 
-	conf.log("\nfile:" + str(model_filepath), vv_only=True)
-	# conf.log("parent:" + str(parent))
-	# conf.log("elements:" + str(elements))
-	# conf.log("textures:" + str(textures))
+	env.log("\nfile:" + str(model_filepath), vv_only=True)
+	# env.log("parent:" + str(parent))
+	# env.log("elements:" + str(elements))
+	# env.log("textures:" + str(textures))
 
 	return elements, textures
 
@@ -359,7 +359,7 @@ def update_model_list(context):
 	if not os.path.isdir(active_pack):
 		scn_props.model_list.clear()
 		scn_props.model_list_index = 0
-		conf.log("No models found for active path " + active_pack)
+		env.log("No models found for active path " + active_pack)
 		return
 	base_has_models = os.path.isdir(base_pack)
 
@@ -374,7 +374,7 @@ def update_model_list(context):
 			if os.path.isfile(os.path.join(active_pack, model))
 			and model.lower().endswith(".json")]
 	else:
-		conf.log("Base resource pack has no models folder: " + base_pack)
+		env.log("Base resource pack has no models folder: " + base_pack)
 		base_models = []
 
 	sorted_models = [
@@ -413,23 +413,23 @@ def draw_import_mcmodel(self, context):
 
 class ModelSpawnBase():
 	"""Class to inheret reused MCprep item spawning settings and functions."""
-	location = bpy.props.FloatVectorProperty(
+	location: bpy.props.FloatVectorProperty(
 		default=(0, 0, 0),
 		name="Location")
-	snapping = bpy.props.EnumProperty(
+	snapping: bpy.props.EnumProperty(
 		name="Snapping",
 		items=[
 			("none", "No snap", "Keep exact location"),
 			("center", "Snap center", "Snap to block center"),
 			("offset", "Snap offset", "Snap to block center with 0.5 offset")],
 		description="Automatically snap to whole block locations")
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 
 	@classmethod
 	def poll(cls, context):
-		return context.mode == 'OBJECT' and util.bv28()
+		return context.mode == 'OBJECT'
 
 	def place_model(self, obj):
 		if self.snapping == "center":
@@ -456,7 +456,7 @@ class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 	bl_label = "Place model"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	filepath = bpy.props.StringProperty(
+	filepath: bpy.props.StringProperty(
 		default="",
 		subtype="FILE_PATH",
 		options={'HIDDEN', 'SKIP_SAVE'})
@@ -494,7 +494,7 @@ class MCPREP_OT_import_minecraft_model_file(
 	bl_options = {'REGISTER', 'UNDO'}
 
 	filename_ext = ".json"
-	filter_glob = bpy.props.StringProperty(
+	filter_glob: bpy.props.StringProperty(
 		default="*.json",
 		options={'HIDDEN'},
 		maxlen=255  # Max internal buffer length, longer would be clamped.
@@ -543,17 +543,13 @@ classes = (
 
 
 def register():
-	util.make_annotations(ModelSpawnBase)  # Don't register, only annotate.
 	for cls in classes:
-		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 
-	if util.bv28():
-		bpy.types.TOPBAR_MT_file_import.append(draw_import_mcmodel)
+	bpy.types.TOPBAR_MT_file_import.append(draw_import_mcmodel)
 
 
 def unregister():
-	if util.bv28():
-		bpy.types.TOPBAR_MT_file_import.remove(draw_import_mcmodel)
+	bpy.types.TOPBAR_MT_file_import.remove(draw_import_mcmodel)
 	for cls in reversed(classes):
 		bpy.utils.unregister_class(cls)

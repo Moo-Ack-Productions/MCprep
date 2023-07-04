@@ -209,7 +209,7 @@ class mcprep_testing():
 		spec.loader.exec_module(module)
 
 		from MCprep import conf
-		conf.init()
+		conf.env = conf.MCprepEnv()
 
 	def get_mcprep_path(self):
 		"""Returns the addon basepath installed in this blender instance"""
@@ -956,7 +956,7 @@ class mcprep_testing():
 		from MCprep import conf
 
 		util.load_mcprep_json()  # force load json cache
-		mcprep_data = conf.json_data["blocks"][mapping_set]
+		mcprep_data = conf.env.json_data["blocks"][mapping_set]
 
 		# first detect alignment to the raw underlining mappings, nothing to
 		# do with canonical yet
@@ -1117,7 +1117,7 @@ class mcprep_testing():
 		if not did_raise:
 			return "None input SHOULD raise error"
 
-		# TODO: patch conf.json_data["blocks"] used by addon if possible,
+		# TODO: patch conf.env.json_data["blocks"] used by addon if possible,
 		# if this is transformed into a true py unit test. This will help
 		# check against report (-MNGGQfGGTJRqoizVCer)
 
@@ -2389,7 +2389,7 @@ class MCPTEST_OT_test_run(bpy.types.Operator):
 	bl_idname = "mcpreptest.run_test"
 	bl_description = "Run specified test index"
 
-	index = bpy.props.IntProperty(default=0)
+	index: bpy.props.IntProperty(default=0)
 
 	def execute(self, context):
 		# ind = context.window_manager.mcprep_test_index
@@ -2488,7 +2488,6 @@ def register():
 
 	# context.window_manager.mcprep_test_index = -1 put into handler to reset?
 	for cls in classes:
-		# util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 
 

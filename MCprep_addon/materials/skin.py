@@ -24,11 +24,11 @@ import shutil
 import urllib.request
 from bpy.app.handlers import persistent
 
-from .. import conf
 from . import generate
 from .. import tracking
 from .. import util
 
+from ..conf import env
 
 # -----------------------------------------------------------------------------
 # Support functions
@@ -57,12 +57,12 @@ def reloadSkinList(context):
 
 	# clear lists
 	context.scene.mcprep_skins_list.clear()
-	conf.skin_list = []
+	env.skin_list = []
 
 	# recreate
 	for i, (skin, description) in enumerate(skinlist, 1):
 		item = context.scene.mcprep_skins_list.add()
-		conf.skin_list.append(
+		env.skin_list.append(
 			(skin, os.path.join(skinfolder, skin))
 		)
 		item.label = description
@@ -72,7 +72,7 @@ def reloadSkinList(context):
 
 def update_skin_path(self, context):
 	"""For UI list path callback"""
-	conf.log("Updating rig path", vv_only=True)
+	env.log("Updating rig path", vv_only=True)
 	reloadSkinList(context)
 
 
@@ -82,17 +82,17 @@ def handler_skins_enablehack(scene):
 		bpy.app.handlers.scene_update_pre.remove(handler_skins_enablehack)
 	except:
 		pass
-	conf.log("Triggering Handler_skins_load from first enable", vv_only=True)
+	env.log("Triggering Handler_skins_load from first enable", vv_only=True)
 	handler_skins_load(scene)
 
 
 @persistent
 def handler_skins_load(scene):
 	try:
-		conf.log("Reloading skins", vv_only=True)
+		env.log("Reloading skins", vv_only=True)
 		reloadSkinList(bpy.context)
 	except:
-		conf.log("Didn't run skin reloading callback", vv_only=True)
+		env.log("Didn't run skin reloading callback", vv_only=True)
 
 
 def loadSkinFile(self, context, filepath, new_material=False):
@@ -141,7 +141,7 @@ def convert_skin_layout(image_file):
 	"""
 
 	if not os.path.isfile(image_file):
-		conf.log("Error! Image file does not exist: " + image_file)
+		env.log("Error! Image file does not exist: " + image_file)
 		return False
 
 	img = bpy.data.images.load(image_file)
@@ -149,13 +149,13 @@ def convert_skin_layout(image_file):
 		return False
 	elif img.size[0] != img.size[1] * 2:
 		# some image that isn't the normal 64x32 of old skin formats
-		conf.log("Unknown skin image format, not converting layout")
+		env.log("Unknown skin image format, not converting layout")
 		return False
 	elif img.size[0] / 64 != int(img.size[0] / 64):
-		conf.log("Non-regular scaling of skin image, can't process")
+		env.log("Non-regular scaling of skin image, can't process")
 		return False
 
-	conf.log("Old image format detected, converting to post 1.8 layout")
+	env.log("Old image format detected, converting to post 1.8 layout")
 
 	scale = int(img.size[0] / 64)
 	has_alpha = img.channels == 4
@@ -195,7 +195,7 @@ def convert_skin_layout(image_file):
 			end = (row * block_width * 4) + block_width + (block_width * 2.5)
 			lower_half += upper_half[int(start):int(end)]
 		else:
-			conf.log("Bad math! Should never go above 4 blocks")
+			env.log("Bad math! Should never go above 4 blocks")
 			failout = True
 			break
 
@@ -206,7 +206,7 @@ def convert_skin_layout(image_file):
 		new_image.pixels = new_pixels
 		new_image.filepath_raw = image_file
 		new_image.save()
-		conf.log("Saved out post 1.8 converted skin file")
+		env.log("Saved out post 1.8 converted skin file")
 
 	# cleanup files
 	img.user_clear()
@@ -243,7 +243,7 @@ def getMatsFromSelected(selected, new_material=False):
 
 	for ob in obj_list:
 		if ob.data.library:
-			conf.log("Library object, skipping")
+			env.log("Library object, skipping")
 			linked_objs += 1
 			continue
 		elif new_material is False:
@@ -283,7 +283,7 @@ def setUVimage(objs, image):
 		if obj.type != "MESH":
 			continue
 		if not hasattr(obj.data, "uv_textures"):
-			conf.log("Called setUVimage on object with no uv_textures, 2.8?")
+			env.log("Called setUVimage on object with no uv_textures, 2.8?")
 			return
 		if obj.data.uv_textures.active is None:
 			continue
@@ -297,7 +297,7 @@ def download_user(self, context, username):
 	Reusable function from within two common operators for downloading skin.
 	Example link: http://minotar.net/skin/theduckcow
 	"""
-	conf.log("Downloading skin: " + username)
+	env.log("Downloading skin: " + username)
 
 	src_link = "http://minotar.net/skin/"
 	saveloc = os.path.join(
@@ -305,7 +305,7 @@ def download_user(self, context, username):
 		username.lower() + ".png")
 
 	try:
-		if conf.vv:
+		if env.very_verbose:
 			print("Download starting with url: " + src_link + username.lower())
 			print("to save location: " + saveloc)
 		urllib.request.urlretrieve(src_link + username.lower(), saveloc)
@@ -351,8 +351,8 @@ class MCPREP_UL_skins(bpy.types.UIList):
 
 class ListColl(bpy.types.PropertyGroup):
 	"""For asset listing"""
-	label = bpy.props.StringProperty()
-	description = bpy.props.StringProperty()
+	label: bpy.props.StringProperty()
+	description: bpy.props.StringProperty()
 
 
 class MCPREP_OT_swap_skin_from_file(bpy.types.Operator, ImportHelper):
@@ -361,21 +361,21 @@ class MCPREP_OT_swap_skin_from_file(bpy.types.Operator, ImportHelper):
 	bl_label = "Swap skin"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	filter_glob = bpy.props.StringProperty(
+	filter_glob: bpy.props.StringProperty(
 		default="",
 		options={'HIDDEN'})
 	fileselectparams = "use_filter_blender"
-	files = bpy.props.CollectionProperty(
+	files: bpy.props.CollectionProperty(
 		type=bpy.types.PropertyGroup,
 		options={'HIDDEN', 'SKIP_SAVE'})
-	filter_image = bpy.props.BoolProperty(
+	filter_image: bpy.props.BoolProperty(
 		default=True,
 		options={'HIDDEN', 'SKIP_SAVE'})
-	new_material = bpy.props.BoolProperty(
+	new_material: bpy.props.BoolProperty(
 		name="New Material",
 		description="Create a new material instead of overwriting existing one",
 		default=True)
-	skipUsage = bpy.props.BoolProperty(default=False, options={'HIDDEN'})
+	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	track_function = "skin"
 	track_param = "file import"
@@ -395,15 +395,15 @@ class MCPREP_OT_apply_skin(bpy.types.Operator):
 	bl_description = "Apply the active UV image to selected character materials"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	filepath = bpy.props.StringProperty(
+	filepath: bpy.props.StringProperty(
 		name="Skin",
 		description="selected",
 		options={'HIDDEN'})
-	new_material = bpy.props.BoolProperty(
+	new_material: bpy.props.BoolProperty(
 		name="New Material",
 		description="Create a new material instead of overwriting existing one",
 		default=True)
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 
@@ -425,25 +425,25 @@ class MCPREP_OT_apply_username_skin(bpy.types.Operator):
 	bl_description = "Download and apply skin from specific username"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	username = bpy.props.StringProperty(
+	username: bpy.props.StringProperty(
 		name="Username",
 		description="Exact name of user to get texture from",
 		default="")
-	skip_redownload = bpy.props.BoolProperty(
+	skip_redownload: bpy.props.BoolProperty(
 		name="Skip download if skin already local",
 		description="Avoid re-downloading skin and apply local file instead",
 		default=True)
-	new_material = bpy.props.BoolProperty(
+	new_material: bpy.props.BoolProperty(
 		name="New Material",
 		description="Create a new material instead of overwriting existing one",
 		default=True)
-	convert_layout = bpy.props.BoolProperty(
+	convert_layout: bpy.props.BoolProperty(
 		name="Convert pre 1.8 skins",
 		description=(
 			"If an older skin layout (pre Minecraft 1.8) is detected, convert "
 			"to new format (with clothing layers)"),
 		default=True)
-	skipUsage = bpy.props.BoolProperty(default=False, options={'HIDDEN'})
+	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	def invoke(self, context, event):
 		return context.window_manager.invoke_props_dialog(
@@ -464,8 +464,8 @@ class MCPREP_OT_apply_username_skin(bpy.types.Operator):
 			self.report({"ERROR"}, "Invalid username")
 			return {'CANCELLED'}
 
-		skins = [str(skin[0]).lower() for skin in conf.skin_list]
-		paths = [skin[1] for skin in conf.skin_list]
+		skins = [str(skin[0]).lower() for skin in env.skin_list]
+		paths = [skin[1] for skin in env.skin_list]
 		if self.username.lower() not in skins or not self.skip_redownload:
 			# Do the download
 			saveloc = download_user(self, context, self.username)
@@ -479,7 +479,7 @@ class MCPREP_OT_apply_username_skin(bpy.types.Operator):
 			bpy.ops.mcprep.reload_skins()
 			return {'FINISHED'}
 		else:
-			conf.log("Reusing downloaded skin")
+			env.log("Reusing downloaded skin")
 			ind = skins.index(self.username.lower())
 			res = loadSkinFile(self, context, paths[ind][1], self.new_material)
 			if res != 0:
@@ -510,17 +510,17 @@ class MCPREP_OT_add_skin(bpy.types.Operator, ImportHelper):
 	bl_description = "Add a new skin to the active folder"
 
 	# filename_ext = ".zip" # needs to be only tinder
-	filter_glob = bpy.props.StringProperty(default="*", options={'HIDDEN'})
+	filter_glob: bpy.props.StringProperty(default="*", options={'HIDDEN'})
 	fileselectparams = "use_filter_blender"
-	files = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
+	files: bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
 
-	convert_layout = bpy.props.BoolProperty(
+	convert_layout: bpy.props.BoolProperty(
 		name="Convert pre 1.8 skins",
 		description=(
 			"If an older skin layout (pre Minecraft 1.8) is detected, convert "
 			"to new format (with clothing layers)"),
 		default=True)
-	skipUsage = bpy.props.BoolProperty(default=False, options={'HIDDEN'})
+	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	track_function = "add_skin"
 	track_param = None
@@ -571,7 +571,7 @@ class MCPREP_OT_remove_skin(bpy.types.Operator):
 			self, width=400 * util.ui_scale())
 
 	def draw(self, context):
-		skin_path = conf.skin_list[context.scene.mcprep_skins_list_index]
+		skin_path = env.skin_list[context.scene.mcprep_skins_list_index]
 		col = self.layout.column()
 		col.scale_y = 0.7
 		col.label(text="Warning, will delete file {} from".format(
@@ -581,14 +581,14 @@ class MCPREP_OT_remove_skin(bpy.types.Operator):
 	@tracking.report_error
 	def execute(self, context):
 
-		if not conf.skin_list:
+		if not env.skin_list:
 			self.report({"ERROR"}, "No skins loaded in memory, try reloading")
 			return {'CANCELLED'}
-		if context.scene.mcprep_skins_list_index >= len(conf.skin_list):
+		if context.scene.mcprep_skins_list_index >= len(env.skin_list):
 			self.report({"ERROR"}, "Indexing error")
 			return {'CANCELLED'}
 
-		file = conf.skin_list[context.scene.mcprep_skins_list_index][-1]
+		file = env.skin_list[context.scene.mcprep_skins_list_index][-1]
 
 		if os.path.isfile(file) is False:
 			self.report({"ERROR"}, "Skin not found to delete")
@@ -597,8 +597,8 @@ class MCPREP_OT_remove_skin(bpy.types.Operator):
 
 		# refresh the folder
 		bpy.ops.mcprep.reload_skins()
-		if context.scene.mcprep_skins_list_index >= len(conf.skin_list):
-			context.scene.mcprep_skins_list_index = len(conf.skin_list) - 1
+		if context.scene.mcprep_skins_list_index >= len(env.skin_list):
+			context.scene.mcprep_skins_list_index = len(env.skin_list) - 1
 
 		# in future, select multiple
 		self.report({"INFO"}, "Removed " + bpy.path.basename(file))
@@ -639,7 +639,7 @@ class MCPREP_OT_spawn_mob_with_skin(bpy.types.Operator):
 	bl_label = "Spawn with skin"
 	bl_description = "Spawn rig and apply selected skin"
 
-	relocation = bpy.props.EnumProperty(
+	relocation: bpy.props.EnumProperty(
 		items=[
 			('Cursor', 'Cursor', 'No relocation'),
 			('Clear', 'Origin', 'Move the rig to the origin'),
@@ -647,22 +647,22 @@ class MCPREP_OT_spawn_mob_with_skin(bpy.types.Operator):
 				'Offset the root bone to curse while moving the rest pose to '
 				'the origin'))],
 		name="Relocation")
-	toLink = bpy.props.BoolProperty(
+	toLink: bpy.props.BoolProperty(
 		name="Library Link",
 		description="Library link instead of append the group",
 		default=False)
-	clearPose = bpy.props.BoolProperty(
+	clearPose: bpy.props.BoolProperty(
 		name="Clear Pose",
 		description="Clear the pose to rest position",
 		default=True)
-	skipUsage = bpy.props.BoolProperty(default=False, options={'HIDDEN'})
+	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	track_function = "spawn_with_skin"
 	track_param = None
 	@tracking.report_error
 	def execute(self, context):
 		scn_props = context.scene.mcprep_props
-		if not conf.skin_list:
+		if not env.skin_list:
 			self.report({'ERROR'}, "No skins found")
 			return {'CANCELLED'}
 
@@ -678,7 +678,7 @@ class MCPREP_OT_spawn_mob_with_skin(bpy.types.Operator):
 
 		# bpy.ops.mcprep.spawn_with_skin() spawn based on active mob
 		ind = context.scene.mcprep_skins_list_index
-		_ = loadSkinFile(self, context, conf.skin_list[ind][1])
+		_ = loadSkinFile(self, context, env.skin_list[ind][1])
 
 		return {'FINISHED'}
 
@@ -690,24 +690,24 @@ class MCPREP_OT_download_username_list(bpy.types.Operator):
 	bl_description = "Download a list of skins from comma-separated usernames"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	username_list = bpy.props.StringProperty(
+	username_list: bpy.props.StringProperty(
 		name="Username list",
 		description="Comma-separated list of usernames to download.",
 		default=""
 	)
-	skip_redownload = bpy.props.BoolProperty(
+	skip_redownload: bpy.props.BoolProperty(
 		name="Skip download if skin already local",
 		description="Avoid re-downloading skin and apply local file instead",
 		default=True
 	)
-	convert_layout = bpy.props.BoolProperty(
+	convert_layout: bpy.props.BoolProperty(
 		name="Convert pre 1.8 skins",
 		description=(
 			"If an older skin layout (pre Minecraft 1.8) is detected, convert "
 			"to new format (with clothing layers)"),
 		default=True
 	)
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'}
 	)
@@ -735,7 +735,7 @@ class MCPREP_OT_download_username_list(bpy.types.Operator):
 		user_list = list(set(user_list))  # Make list unique.
 
 		# Currently loaded
-		skins = [str(skin[0]).lower() for skin in conf.skin_list]
+		skins = [str(skin[0]).lower() for skin in env.skin_list]
 		issue_skins = []
 		for username in user_list:
 			if username.lower() not in skins or not self.skip_redownload:
@@ -782,7 +782,6 @@ classes = (
 
 def register():
 	for cls in classes:
-		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 
 	bpy.types.Scene.mcprep_skins_list = bpy.props.CollectionProperty(
@@ -790,7 +789,7 @@ def register():
 	bpy.types.Scene.mcprep_skins_list_index = bpy.props.IntProperty(default=0)
 
 	# to auto-load the skins
-	conf.log("Adding reload skin handler to scene", vv_only=True)
+	env.log("Adding reload skin handler to scene", vv_only=True)
 	try:
 		bpy.app.handlers.scene_update_pre.append(handler_skins_enablehack)
 	except:

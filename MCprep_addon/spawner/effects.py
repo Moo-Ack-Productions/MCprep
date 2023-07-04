@@ -31,6 +31,8 @@ from .. import tracking
 
 from . import spawn_util
 
+from ..conf import env
+
 # -----------------------------------------------------------------------------
 # Global enum values
 # -----------------------------------------------------------------------------
@@ -414,7 +416,7 @@ def geo_update_params(context, effect, geo_mod):
 	if os.path.isfile(jpath):
 		geo_fields = geo_fields_from_json(effect, jpath)
 	else:
-		conf.log("No json params path for geonode effects", vv_only=True)
+		env.log("No json params path for geonode effects", vv_only=True)
 		return
 
 	# Determine if these special keywords exist.
@@ -422,7 +424,7 @@ def geo_update_params(context, effect, geo_mod):
 	for input_name in geo_fields.keys():
 		if geo_fields[input_name] == "FOLLOW_OBJ":
 			has_followkey = True
-	conf.log("geonode has_followkey field? " + str(has_followkey), vv_only=True)
+	env.log("geonode has_followkey field? " + str(has_followkey), vv_only=True)
 
 	# Create follow empty if required by the group.
 	camera = context.scene.camera
@@ -449,16 +451,16 @@ def geo_update_params(context, effect, geo_mod):
 		if inp.name in list(geo_fields):
 			value = geo_fields[inp.name]
 			if value == "CAMERA_OBJ":
-				conf.log("Set cam for geonode input", vv_only=True)
+				env.log("Set cam for geonode input", vv_only=True)
 				geo_mod[geo_inp_id[inp.name]] = camera
 			elif value == "FOLLOW_OBJ":
 				if not center_empty:
 					print(">> Center empty missing, not in preset!")
 				else:
-					conf.log("Set follow for geonode input", vv_only=True)
+					env.log("Set follow for geonode input", vv_only=True)
 					geo_mod[geo_inp_id[inp.name]] = center_empty
 			else:
-				conf.log("Set {} for geonode input".format(inp.name), vv_only=True)
+				env.log("Set {} for geonode input".format(inp.name), vv_only=True)
 				geo_mod[geo_inp_id[inp.name]] = value
 		# TODO: check if any socket name in json specified not found in node.
 
@@ -476,7 +478,7 @@ def geo_fields_from_json(effect, jpath):
 		CAMERA_OBJ: Tells MCprep to assign the active camera object to slot.
 		FOLLOW_OBJ: Tells MCprep to assign a generated empty to this slot.
 	"""
-	conf.log("Loading geo fields form json: " + jpath)
+	env.log("Loading geo fields form json: " + jpath)
 	with open(jpath) as fopen:
 		jdata = json.load(fopen)
 
@@ -658,9 +660,9 @@ def import_animated_coll(context, effect, keyname):
 	new_colls = list(set(final_colls) - set(init_colls))
 	if not new_colls:
 		if any_imported:
-			conf.log("New collection loaded, but not picked up")
+			env.log("New collection loaded, but not picked up")
 		else:
-			conf.log("No colleections imported or recognized")
+			env.log("No colleections imported or recognized")
 		raise Exception("No collections imported")
 	elif len(new_colls) > 1:
 		# Pick the closest fitting one. At worst, will pick a random one.
@@ -754,7 +756,7 @@ def offset_animation_to_frame(collection, frame):
 
 def update_effects_path(self, context):
 	"""List for UI effects callback ."""
-	conf.log("Updating effects path", vv_only=True)
+	env.log("Updating effects path", vv_only=True)
 	update_effects_list(context)
 
 
@@ -763,12 +765,12 @@ def update_effects_list(context):
 	mcprep_props = context.scene.mcprep_props
 	mcprep_props.effects_list.clear()
 
-	if conf.use_icons and conf.preview_collections["effects"]:
+	if env.use_icons and env.preview_collections["effects"]:
 		try:
-			bpy.utils.previews.remove(conf.preview_collections["effects"])
+			bpy.utils.previews.remove(env.preview_collections["effects"])
 		except Exception as e:
 			print(e)
-			conf.log("MCPREP: Failed to remove icon set, effects")
+			env.log("MCPREP: Failed to remove icon set, effects")
 
 	load_geonode_effect_list(context)
 	load_area_particle_effects(context)
@@ -803,15 +805,15 @@ def load_geonode_effect_list(context):
 		and jsf.lower().endswith(".json")
 	]
 
-	conf.log("json pairs of blend files", vv_only=True)
-	conf.log(json_files, vv_only=True)
+	env.log("json pairs of blend files", vv_only=True)
+	env.log(json_files, vv_only=True)
 
 	for bfile in blends:
 		row_items = []
 		using_json = False
 		js_equiv = os.path.splitext(bfile)[0] + ".json"
 		if js_equiv in json_files:
-			conf.log("Loading json preset for geonode for " + bfile)
+			env.log("Loading json preset for geonode for " + bfile)
 			# Read nodegroups to include from json presets file.
 			jpath = os.path.splitext(bfile)[0] + ".json"
 			with open(jpath) as jopen:
@@ -819,7 +821,7 @@ def load_geonode_effect_list(context):
 			row_items = jdata.keys()
 			using_json = True
 		else:
-			conf.log("Loading nodegroups from blend for geonode effects: " + bfile)
+			env.log("Loading nodegroups from blend for geonode effects: " + bfile)
 			# Read nodegroup names from blend file directly.
 			with bpy.data.libraries.load(bfile) as (data_from, _):
 				row_items = list(data_from.node_groups)
@@ -832,7 +834,7 @@ def load_geonode_effect_list(context):
 				# First key in index is nodegroup, save to subpath, but then
 				# the present name (list of keys within) are the actual names.
 				for preset in jdata[itm]:
-					conf.log("\tgeonode preset: " + preset, vv_only=True)
+					env.log("\tgeonode preset: " + preset, vv_only=True)
 					effect = mcprep_props.effects_list.add()
 					effect.name = preset  # This is the assign json preset name.
 					effect.subpath = itm  # This is the node group name.
@@ -931,7 +933,7 @@ def load_image_sequence_effects(context):
 	lvl_3 = os.path.join(resource_folder, "assets", "minecraft", "textures", "particle")
 
 	if not os.path.isdir(resource_folder):
-		conf.log(
+		env.log(
 			"The particle resource directory is missing! Assign another resource pack")
 		return
 	elif os.path.isdir(lvl_0):
@@ -968,7 +970,7 @@ def load_image_sequence_effects(context):
 		effect.index = len(mcprep_props.effects_list) - 1  # For icon index.
 
 		# Try to load a middle frame as the icon.
-		if not conf.use_icons or conf.preview_collections["effects"] == "":
+		if not env.use_icons or env.preview_collections["effects"] == "":
 			continue
 		effect_files = [
 			os.path.join(resource_folder, fname)
@@ -980,7 +982,7 @@ def load_image_sequence_effects(context):
 		if effect_files:
 			# 0 if 1 item, otherwise greater side of median.
 			e_index = int(len(effect_files) / 2)
-			conf.preview_collections["effects"].load(
+			env.preview_collections["effects"].load(
 				"effects-{}".format(effect.index), effect_files[e_index], 'IMAGE')
 
 
@@ -1043,8 +1045,8 @@ class MCPREP_OT_global_effect(bpy.types.Operator):
 			))
 		return elist
 
-	effect_id = bpy.props.EnumProperty(items=effects_enum, name="Effect")
-	skipUsage = bpy.props.BoolProperty(default=False, options={'HIDDEN'})
+	effect_id: bpy.props.EnumProperty(items=effects_enum, name="Effect")
+	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	@classmethod
 	def poll(cls, context):
@@ -1114,22 +1116,22 @@ class MCPREP_OT_instant_effect(bpy.types.Operator):
 			))
 		return elist
 
-	effect_id = bpy.props.EnumProperty(items=effects_enum, name="Effect")
-	location = bpy.props.FloatVectorProperty(default=(0, 0, 0), name="Location")
-	frame = bpy.props.IntProperty(
+	effect_id: bpy.props.EnumProperty(items=effects_enum, name="Effect")
+	location: bpy.props.FloatVectorProperty(default=(0, 0, 0), name="Location")
+	frame: bpy.props.IntProperty(
 		default=0,
 		name="Frame",
 		description="Start frame for animation")
-	speed = bpy.props.FloatProperty(
+	speed: bpy.props.FloatProperty(
 		default=1.0,
 		min=0.1,
 		name="Speed",
 		description="Make the effect run faster (skip frames) or slower (hold frames)")
-	show_image = bpy.props.BoolProperty(
+	show_image: bpy.props.BoolProperty(
 		default=False,
 		name="Show image preview",
 		description="Show a middle animation frame as a viewport preview")
-	skipUsage = bpy.props.BoolProperty(default=False, options={'HIDDEN'})
+	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	@classmethod
 	def poll(cls, context):
@@ -1171,18 +1173,18 @@ class MCPREP_OT_spawn_particle_planes(bpy.types.Operator, ImportHelper):
 	bl_label = "Spawn Particle Planes"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	location = bpy.props.FloatVectorProperty(
+	location: bpy.props.FloatVectorProperty(
 		default=(0, 0, 0), name="Location")
-	frame = bpy.props.IntProperty(default=0, name="Frame")
+	frame: bpy.props.IntProperty(default=0, name="Frame")
 
 	# Importer helper
 	exts = ";".join(["*" + ext for ext in EXTENSIONS])
-	filter_glob = bpy.props.StringProperty(
+	filter_glob: bpy.props.StringProperty(
 		default=exts,
 		options={'HIDDEN'})
 	fileselectparams = "use_filter_blender"
 
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 
@@ -1240,7 +1242,6 @@ classes = (
 
 def register():
 	for cls in classes:
-		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 
 

@@ -21,7 +21,7 @@ import re
 
 import bpy
 
-from .. import conf
+from ..conf import env
 from .. import util
 from .. import tracking
 from . import mobs
@@ -80,10 +80,10 @@ def filter_collections(data_from):
 
 		short = name.replace(" ", "").replace("-", "").replace("_", "")
 		if SKIP_COLL in short.lower():
-			conf.log("Skipping collection: " + name)
+			env.log("Skipping collection: " + name)
 			continue
 		if SKIP_COLL_LEGACY in short.lower():
-			conf.log("Skipping legacy collection: " + name)
+			env.log("Skipping legacy collection: " + name)
 			continue
 		elif INCLUDE_COLL in name.lower():
 			any_mcprep = True
@@ -91,7 +91,7 @@ def filter_collections(data_from):
 		all_names.append(name)
 
 	if any_mcprep:
-		conf.log("Filtered from {} down to {} MCprep collections".format(
+		env.log("Filtered from {} down to {} MCprep collections".format(
 			len(all_names), len(mcprep_names)))
 		all_names = mcprep_names
 	return all_names
@@ -202,13 +202,13 @@ def attemptScriptLoad(path):
 	path = path[:-5] + "py"
 
 	if os.path.basename(path) in [txt.name for txt in bpy.data.texts]:
-		conf.log("Script {} already imported, not importing a new one".format(
+		env.log("Script {} already imported, not importing a new one".format(
 			os.path.basename(path)))
 		return
 
 	if not os.path.isfile(path):
 		return  # no script found
-	conf.log("Script found, loading and running it")
+	env.log("Script found, loading and running it")
 	text = bpy.data.texts.load(filepath=path, internal=True)
 	try:
 		ctx = bpy.context.copy()
@@ -221,9 +221,9 @@ def attemptScriptLoad(path):
 		ctx.use_fake_user = True
 		ctx.use_module = True
 	except:
-		conf.log("Failed to run the script, not registering")
+		env.log("Failed to run the script, not registering")
 		return
-	conf.log("Ran the script")
+	env.log("Ran the script")
 	text.use_module = True
 
 
@@ -261,13 +261,13 @@ def fix_armature_target(self, context, new_objs, src_coll):
 			if old_target.animation_data:
 				new_target.animation_data_create()
 				new_target.animation_data.action = old_target.animation_data.action
-				conf.log(
+				env.log(
 					"Updated animation of armature for instance of " + src_coll.name)
 
 			if mod.object in new_objs:
 				continue  # Was already the new object target for modifier.
 			mod.object = new_target
-			conf.log(
+			env.log(
 				"Updated target of armature for instance of " + src_coll.name)
 
 
@@ -340,7 +340,7 @@ def get_rig_from_objects(objects):
 
 def offset_root_bone(context, armature):
 	"""Used to offset bone to world location (cursor)"""
-	conf.log("Attempting offset root")
+	env.log("Attempting offset root")
 	set_bone = False
 	lower_bones = [bone.name.lower() for bone in armature.pose.bones]
 	lower_name = None
@@ -399,7 +399,7 @@ def load_linked(self, context, path, name):
 	# 	act = context.selected_objects[0] # better for 2.8
 	# elif context.object:
 	# 	act = context.object  # assumption of object after linking
-	conf.log("Identified new obj as: {}".format(
+	env.log("Identified new obj as: {}".format(
 		act), vv_only=True)
 
 	if not act:
@@ -488,7 +488,7 @@ def load_append(self, context, path, name):
 		# Could try to recopy thsoe elements, or try re-appending with
 		# renaming of the original group
 		self.report({'ERROR'}, "Group name already exists in local file")
-		conf.log("Group already appended/is here")
+		env.log("Group already appended/is here")
 		return
 
 	path = bpy.path.abspath(path)
@@ -506,7 +506,7 @@ def load_append(self, context, path, name):
 	else:
 		raise Exception("No Group or Collection bpy API endpoint")
 
-	conf.log(os.path.join(path, subpath) + ', ' + name)
+	env.log(os.path.join(path, subpath) + ', ' + name)
 	pregroups = list(util.collections())
 	res = util.bAppendLink(os.path.join(path, subpath), name, False)
 	postgroups = list(util.collections())
@@ -520,10 +520,10 @@ def load_append(self, context, path, name):
 		return
 	if not new_groups and name in util.collections():
 		# this is more likely to fail but serves as a fallback
-		conf.log("Mob spawn: Had to go to fallback group name grab")
+		env.log("Mob spawn: Had to go to fallback group name grab")
 		grp_added = util.collections()[name]
 	elif not new_groups:
-		conf.log("Warning, could not detect imported group")
+		env.log("Warning, could not detect imported group")
 		self.report({'WARNING'}, "Could not detect imported group")
 		return
 	else:
@@ -534,7 +534,7 @@ def load_append(self, context, path, name):
 				# group is a subcollection of another name.
 				grp_added = grp
 
-	conf.log("Identified collection/group {} as the primary imported".format(
+	env.log("Identified collection/group {} as the primary imported".format(
 		grp_added), vv_only=True)
 
 	# if rig not centered in original file, assume its group is
@@ -543,7 +543,7 @@ def load_append(self, context, path, name):
 	elif hasattr(grp_added, "instance_offset"):  # 2.8
 		gl = grp_added.instance_offset
 	else:
-		conf.log("Warning, could not set offset for group; null type?")
+		env.log("Warning, could not set offset for group; null type?")
 		gl = (0, 0, 0)
 	cl = util.get_cuser_location(context)
 
@@ -552,7 +552,7 @@ def load_append(self, context, path, name):
 	addedObjs = [ob for ob in grp_added.objects]
 	for ob in all_objects:
 		if ob not in addedObjs:
-			conf.log("This obj not in group {}: {}".format(
+			env.log("This obj not in group {}: {}".format(
 				grp_added.name, ob.name))
 			# removes things like random bone shapes pulled in,
 			# without deleting them, just unlinking them from the scene
@@ -577,14 +577,14 @@ def load_append(self, context, path, name):
 	# 	pass
 	rig_obj = get_rig_from_objects(addedObjs)
 	if not rig_obj:
-		conf.log("Could not get rig object")
+		env.log("Could not get rig object")
 		self.report({'WARNING'}, "No armatures found!")
 	else:
-		conf.log("Using object as primary rig: " + rig_obj.name)
+		env.log("Using object as primary rig: " + rig_obj.name)
 		try:
 			util.set_active_object(context, rig_obj)
 		except RuntimeError:
-			conf.log("Failed to set {} as active".format(rig_obj))
+			env.log("Failed to set {} as active".format(rig_obj))
 			rig_obj = None
 
 	if rig_obj and self.clearPose or rig_obj and self.relocation == "Offset":
@@ -618,7 +618,7 @@ def load_append(self, context, path, name):
 		if self.relocation == "Offset" and posemode:
 			set_bone = offset_root_bone(context, rig_obj)
 			if not set_bone:
-				conf.log(
+				env.log(
 					"This addon works better when the root bone's name is 'MAIN'")
 				self.report(
 					{'INFO'},
@@ -661,7 +661,7 @@ class MCPREP_OT_reload_spawners(bpy.types.Operator):
 
 		# to prevent re-drawing "load spawners!" if any one of the above
 		# loaded nothing for any reason.
-		conf.loaded_all_spawners = True
+		env.loaded_all_spawners = True
 
 		return {'FINISHED'}
 
@@ -716,21 +716,21 @@ class MCPREP_UL_mob(bpy.types.UIList):
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
 		icon = "mob-{}".format(set.index)
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
-			if not conf.use_icons:
+			if not env.use_icons:
 				layout.label(text=set.name)
-			elif conf.use_icons and icon in conf.preview_collections["mobs"]:
+			elif env.use_icons and icon in env.preview_collections["mobs"]:
 				layout.label(
 					text=set.name,
-					icon_value=conf.preview_collections["mobs"][icon].icon_id)
+					icon_value=env.preview_collections["mobs"][icon].icon_id)
 			else:
 				layout.label(text=set.name, icon="BLANK1")
 
 		elif self.layout_type in {'GRID'}:
 			layout.alignment = 'CENTER'
-			if conf.use_icons and icon in conf.preview_collections["mobs"]:
+			if env.use_icons and icon in env.preview_collections["mobs"]:
 				layout.label(
 					text="",
-					icon_value=conf.preview_collections["mobs"][icon].icon_id)
+					icon_value=env.preview_collections["mobs"][icon].icon_id)
 			else:
 				layout.label(text="", icon='QUESTION')
 
@@ -770,21 +770,21 @@ class MCPREP_UL_item(bpy.types.UIList):
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
 		icon = "item-{}".format(set.index)
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
-			if not conf.use_icons:
+			if not env.use_icons:
 				layout.label(text=set.name)
-			elif conf.use_icons and icon in conf.preview_collections["items"]:
+			elif env.use_icons and icon in env.preview_collections["items"]:
 				layout.label(
 					text=set.name,
-					icon_value=conf.preview_collections["items"][icon].icon_id)
+					icon_value=env.preview_collections["items"][icon].icon_id)
 			else:
 				layout.label(text=set.name, icon="BLANK1")
 
 		elif self.layout_type in {'GRID'}:
 			layout.alignment = 'CENTER'
-			if conf.use_icons and icon in conf.preview_collections["items"]:
+			if env.use_icons and icon in env.preview_collections["items"]:
 				layout.label(
 					text="",
-					icon_value=conf.preview_collections["items"][icon].icon_id)
+					icon_value=env.preview_collections["items"][icon].icon_id)
 			else:
 				layout.label(text="", icon='QUESTION')
 
@@ -803,10 +803,10 @@ class MCPREP_UL_effects(bpy.types.UIList):
 			elif set.effect_type == effects.COLLECTION:
 				layout.label(text=set.name, icon=COLL_ICON)
 			elif set.effect_type == effects.IMG_SEQ:
-				if conf.use_icons and icon in conf.preview_collections["effects"]:
+				if env.use_icons and icon in env.preview_collections["effects"]:
 					layout.label(
 						text=set.name,
-						icon_value=conf.preview_collections["effects"][icon].icon_id)
+						icon_value=env.preview_collections["effects"][icon].icon_id)
 				else:
 					layout.label(text=set.name, icon="RENDER_RESULT")
 			else:
@@ -814,10 +814,10 @@ class MCPREP_UL_effects(bpy.types.UIList):
 
 		elif self.layout_type in {'GRID'}:
 			layout.alignment = 'CENTER'
-			if conf.use_icons and icon in conf.preview_collections["effects"]:
+			if env.use_icons and icon in env.preview_collections["effects"]:
 				layout.label(
 					text="",
-					icon_value=conf.preview_collections["effects"][icon].icon_id)
+					icon_value=env.preview_collections["effects"][icon].icon_id)
 			else:
 				layout.label(text="", icon='QUESTION')
 
@@ -827,45 +827,45 @@ class MCPREP_UL_material(bpy.types.UIList):
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
 		icon = "material-{}".format(set.index)
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
-			if not conf.use_icons:
+			if not env.use_icons:
 				layout.label(text=set.name)
-			elif conf.use_icons and icon in conf.preview_collections["materials"]:
+			elif env.use_icons and icon in env.preview_collections["materials"]:
 				layout.label(
 					text=set.name,
-					icon_value=conf.preview_collections["materials"][icon].icon_id)
+					icon_value=env.preview_collections["materials"][icon].icon_id)
 			else:
 				layout.label(text=set.name, icon="BLANK1")
 
 		elif self.layout_type in {'GRID'}:
 			layout.alignment = 'CENTER'
-			if conf.use_icons and icon in conf.preview_collections["materials"]:
+			if env.use_icons and icon in env.preview_collections["materials"]:
 				layout.label(
 					text="",
-					icon_value=conf.preview_collections["materials"][icon].icon_id)
+					icon_value=env.preview_collections["materials"][icon].icon_id)
 			else:
 				layout.label(text="", icon='QUESTION')
 
 
 class ListMobAssetsAll(bpy.types.PropertyGroup):
 	"""For listing hidden group of all mobs, regardless of category"""
-	description = bpy.props.StringProperty()
-	category = bpy.props.StringProperty()
-	mcmob_type = bpy.props.StringProperty()
-	index = bpy.props.IntProperty(min=0, default=0)  # for icon drawing
+	description: bpy.props.StringProperty()
+	category: bpy.props.StringProperty()
+	mcmob_type: bpy.props.StringProperty()
+	index: bpy.props.IntProperty(min=0, default=0)  # for icon drawing
 
 
 class ListMobAssets(bpy.types.PropertyGroup):
 	"""For UI drawing of mob assets and holding data"""
-	description = bpy.props.StringProperty()
-	category = bpy.props.StringProperty()  # category it belongs to
-	mcmob_type = bpy.props.StringProperty()
-	index = bpy.props.IntProperty(min=0, default=0)  # for icon drawing
+	description: bpy.props.StringProperty()
+	category: bpy.props.StringProperty()  # category it belongs to
+	mcmob_type: bpy.props.StringProperty()
+	index: bpy.props.IntProperty(min=0, default=0)  # for icon drawing
 
 
 class ListMeshswapAssets(bpy.types.PropertyGroup):
 	"""For UI drawing of meshswap assets and holding data"""
-	block = bpy.props.StringProperty()  # block name only like "fire"
-	method = bpy.props.EnumProperty(
+	block: bpy.props.StringProperty()  # block name only like "fire"
+	method: bpy.props.EnumProperty(
 		name="Import method",
 		# Collection intentionally first to be default for operator calls.
 		items=[
@@ -873,39 +873,39 @@ class ListMeshswapAssets(bpy.types.PropertyGroup):
 			("object", "Object asset", "Object asset"),
 		]
 	)
-	description = bpy.props.StringProperty()
+	description: bpy.props.StringProperty()
 
 
 class ListEntityAssets(bpy.types.PropertyGroup):
 	"""For UI drawing of meshswap assets and holding data"""
-	entity = bpy.props.StringProperty()  # virtual enum, Group/name
-	description = bpy.props.StringProperty()
+	entity: bpy.props.StringProperty()  # virtual enum, Group/name
+	description: bpy.props.StringProperty()
 
 
 class ListItemAssets(bpy.types.PropertyGroup):
 	"""For UI drawing of item assets and holding data"""
 	# inherited: name
-	description = bpy.props.StringProperty()
-	path = bpy.props.StringProperty(subtype='FILE_PATH')
-	index = bpy.props.IntProperty(min=0, default=0)  # for icon drawing
+	description: bpy.props.StringProperty()
+	path: bpy.props.StringProperty(subtype='FILE_PATH')
+	index: bpy.props.IntProperty(min=0, default=0)  # for icon drawing
 
 
 class ListModelAssets(bpy.types.PropertyGroup):
 	"""For UI drawing of mc model assets and holding data"""
-	filepath = bpy.props.StringProperty(subtype="FILE_PATH")
-	description = bpy.props.StringProperty()
-	# index = bpy.props.IntProperty(min=0, default=0)  # icon pulled by name.
+	filepath: bpy.props.StringProperty(subtype="FILE_PATH")
+	description: bpy.props.StringProperty()
+	# index: bpy.props.IntProperty(min=0, default=0)  # icon pulled by name.
 
 
 class ListEffectsAssets(bpy.types.PropertyGroup):
 	"""For UI drawing for different kinds of effects"""
 	# inherited: name
-	filepath = bpy.props.StringProperty(subtype="FILE_PATH")
-	subpath = bpy.props.StringProperty(
+	filepath: bpy.props.StringProperty(subtype="FILE_PATH")
+	subpath: bpy.props.StringProperty(
 		description="Collection/particle/nodegroup within this file",
 		default="")
-	description = bpy.props.StringProperty()
-	effect_type = bpy.props.EnumProperty(
+	description: bpy.props.StringProperty()
+	effect_type: bpy.props.EnumProperty(
 		name="Effect type",
 		items=(
 			(effects.GEO_AREA, 'Geonode area', 'Instance wide-area geonodes effect'),
@@ -913,7 +913,7 @@ class ListEffectsAssets(bpy.types.PropertyGroup):
 			(effects.COLLECTION, 'Collection effect', 'Instance pre-animated collection'),
 			(effects.IMG_SEQ, 'Image sequence', 'Instance an animated image sequence effect'),
 		))
-	index = bpy.props.IntProperty(min=0, default=0)  # for icon drawing
+	index: bpy.props.IntProperty(min=0, default=0)  # for icon drawing
 
 
 # -----------------------------------------------------------------------------
@@ -944,7 +944,6 @@ classes = (
 
 def register():
 	for cls in classes:
-		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 
 

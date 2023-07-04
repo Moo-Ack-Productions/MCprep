@@ -206,12 +206,48 @@ Add this to a file called .gitmessage, and then execute the following command:
 
 To use for each commit, you can use `git config --local commit.verbose true` to tell Git to perform a verbose commit all the time for just the MCprep repo.
 
-## IDE Support
-If you're using an IDE, it's recommened to install `bpy` as a Python module. In my (StandingPad) experiance, the [fake-bpy package](https://github.com/nutti/fake-bpy-module) seems to be the best.
+## Dependencies
+If you're using an IDE, it's recommened to install `bpy` as a Python module. In our experience, the [fake-bpy package](https://github.com/nutti/fake-bpy-module) seems to be the best. In addition, we also use `darker` to perform PEP8 formatting on changed code (this is a requirement, we expect you to use `darker` on your changes)
 
 It's also recommened to use a virtual environment (especially if you're on Linux) as to avoid issues with system wide packages and different versions of `bpy`. [See this for more details](https://realpython.com/python-virtual-environments-a-primer/)
 
-### Creating a Virtual Environment and Setting up `bpy`
+There are 2 methods to do this:
+- Poetry
+- Manualy
+
+Both are listed here.
+
+### With Poetry
+[Poetry](https://python-poetry.org/) is a useful tool that allows easy dependency handling. To quote the website:
+
+>  Python packaging and dependency management made easy 
+
+If you decide to use Poetry, then simply run the following command:
+
+`poetry install`
+
+To enable the virtual environment, run `poetry shell`, then type `exit` when you're done. When you make a change to a file, **please please please** run `poetry run darker <changed file>` to apply PEP8 formatting to the changes (or if you've enabled the virtual environment, you can just type `darker <changed file>`)
+
+### Manual: Requirements.txt Edition
+First create a virtual environment:
+
+`python3 -m venv mcprep_venv_2.80`
+
+We use the name `mcprep_venv_2.80` to follow MCprep convention. Check the next section if you're curious the why.
+
+To enable:
+
+Windows: `mcprep_venv_<version>\Scripts\activate`
+
+MacOS and Linux: `source mcprep_venv_<version>/bin/activate`
+
+To disable: `deactivate`
+
+Install dependencies:
+
+`python3 -m pip install -r requirements.txt`
+
+### Manual: Setting up `bpy` + `darker` Manually Edition
 First, we need to come up with a name. For MCprep development, it's recommended to use the following convention:
 `mcprep_venv_<version>`
 
@@ -237,12 +273,9 @@ Next we need to install `fake-bpy`:
 
 If you use PyCharm, you should check the GitHub for [additional instructions](https://github.com/nutti/fake-bpy-module#install-via-pip-package)
 
-### Pylint
-MCprep mostly tries to follow the PEP8 guidelines, so it's also a good idea to install pylsp and flake8 for IDEs.
+In addition, for PEP8 formatting, we need to install `darker`:
+`python3 -m pip install darker`
 
-First, install the 2:
-`python3 -m pip install python-lsp-server flake8`
-
-Then set up your IDE to use pylsp as your Python LSP. This depends on the IDE, so look at the documentation to see how to set your Python LSP for your specific editor.
+When you make a change to a file, **please please please** run `darker <changed file>` to apply PEP8 formatting to the changes.
 
 Now you're ready to do MCprep development
