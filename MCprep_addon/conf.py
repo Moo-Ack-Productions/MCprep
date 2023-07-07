@@ -16,8 +16,10 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+import json
 import os
 from pathlib import Path
+from typing import List, Dict
 import bpy
 
 # check if custom preview icons available
@@ -42,6 +44,9 @@ class MCprepEnv:
 
 		self.dev_file: Path = Path(os.path.dirname(__file__), "mcprep_dev.txt")
 
+		self.languages_folder: Path = MCPREP_RESOURCES / Path("Languages")
+		self.languages: Dict[str, Dict[str, str]] = {}
+
 		# if new update file found from install, replace old one with new
 		if self.json_path_update.exists():
 			self.json_path_update.replace(self.json_path)
@@ -59,6 +64,27 @@ class MCprepEnv:
 			self.dev_build = False
 			self.verbose = False
 			self.very_verbose = False
+		
+		# Load all language files that are defined in the Languages folder
+		#
+		# This method also allows us to have subfolders, so we could have a 
+		# folder for a language and in that folder seperate JSON files for each
+		# dialect of that language, like Southen US English and Midwest US English
+		# under a wider "English" folder (the Pop vs Soda debate continues), or the 
+		# different dialects of Arabic and Chinese under wider Arabic and Chinese folders
+		if self.languages_folder.exists() and self.languages_folder.is_dir():
+			for language_file in self.languages_folder.iterdir():
+				if language_file.suffix is ".json":
+					with open(language_file, 'r') as jf:
+						language_data = json.load(jf)
+
+						# If "languages" does not exist in the 
+						# JSON file, then ignore and continue on
+						if "language" not in language_data or "translation" not in language_data:
+							continue 
+						
+						# Set the language data
+						self.languages[language_data["language"]] = language_data["translation"]
 
 		# lazy load json, ie only load it when needed (util function defined)
 
