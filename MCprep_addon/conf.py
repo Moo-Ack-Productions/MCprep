@@ -31,13 +31,14 @@ except:
 # ADDON GLOBAL VARIABLES AND INITIAL SETTINGS
 # -----------------------------------------------------------------------------
 
+MCPREP_RESOURCES: Path = Path(os.path.dirname(__file__), "MCprep_resources")
 
 class MCprepEnv:
 	def __init__(self):
 		self.data = None
 		self.json_data = None
-		self.json_path: Path = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data.json")
-		self.json_path_update: Path = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data_update.json")
+		self.json_path: Path = MCPREP_RESOURCES / Path("mcprep_data.json")
+		self.json_path_update: Path = MCPREP_RESOURCES / Path("mcprep_data_update.json")
 
 		self.dev_file: Path = Path(os.path.dirname(__file__), "mcprep_dev.txt")
 
