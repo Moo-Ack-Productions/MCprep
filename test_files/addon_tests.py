@@ -23,6 +23,7 @@
 
 
 from contextlib import redirect_stdout
+import filecmp
 import importlib
 import io
 import os
@@ -57,6 +58,8 @@ class mcprep_testing():
 			self.spawn_mob,
 			self.spawn_mob_linked,
 			self.check_blend_eligible,
+			self.check_blend_eligible_middle,
+			self.check_blend_eligible_real,
 			self.change_skin,
 			self.import_world_split,
 			self.import_world_fail,
@@ -94,6 +97,8 @@ class mcprep_testing():
 			self.test_generate_material_sequence,
 			self.qa_effects,
 			self.qa_rigs,
+			self.convert_mtl_simple,
+			self.convert_mtl_skip,
 		]
 		self.run_only = None  # Name to give to only run this test
 
@@ -204,7 +209,7 @@ class mcprep_testing():
 		spec.loader.exec_module(module)
 
 		from MCprep import conf
-		conf.init()
+		conf.env = conf.MCprepEnv()
 
 	def get_mcprep_path(self):
 		"""Returns the addon basepath installed in this blender instance"""
@@ -730,6 +735,100 @@ class mcprep_testing():
 		if res is not False:
 			return "Should have been false since we are above this min blender"
 
+	def check_blend_eligible_middle(self):
+		# Warden-like example, where we have equiv of pre2.80, pre3.0, and
+		# live blender 3.0+ (presuming we want to test a 2.93-like user)
+		from MCprep.spawner import spawn_util
+		fake_base = "WardenExample"
+
+		# Assume the "current" version of blender is like 9.1
+		# To make test not be flakey, actual version of blender can be anything
+		# in range of 2.7.0 upwards to 8.999.
+		suffix_old = " pre2.7.0"  # Force active blender instance as older.
+		suffix_mid = " pre9.0.0"  # Force active blender instance as older.
+		suffix_new = ""  # presume "latest" version
+
+		p_old = fake_base + suffix_old + ".blend"
+		p_mid = fake_base + suffix_mid + ".blend"
+		p_new = fake_base + suffix_new + ".blend"
+
+		# Test in order
+		filelist = [p_old, p_mid, p_new]
+
+		res = spawn_util.check_blend_eligible(p_old, filelist)
+		if res is True:
+			return "Older file should not match (in order)"
+		res = spawn_util.check_blend_eligible(p_mid, filelist)
+		if res is not True:
+			return "Mid file SHOULD match (in order)"
+		res = spawn_util.check_blend_eligible(p_new, filelist)
+		if res is True:
+			return "Newer file should not match (in order)"
+
+		# Test out of order
+		filelist = [p_mid, p_new, p_old]
+
+		res = spawn_util.check_blend_eligible(p_old, filelist)
+		if res is True:
+			return "Older file should not match (out of order)"
+		res = spawn_util.check_blend_eligible(p_mid, filelist)
+		if res is not True:
+			return "Mid file SHOULD match (out of order)"
+		res = spawn_util.check_blend_eligible(p_new, filelist)
+		if res is True:
+			return "Newer file should not match (out of order)"
+
+	def check_blend_eligible_real(self):
+		# This order below matches a user's who was encountering an error
+		# (the actual in-memory python list order)
+		riglist = [
+			"bee - Boxscape.blend",
+			"Blaze - Trainguy.blend",
+			"Cave Spider - Austin Prescott.blend",
+			"creeper - TheDuckCow.blend",
+			"drowned - HissingCreeper-thefunnypie2.blend",
+			"enderman - Trainguy.blend",
+			"Ghast - Trainguy.blend",
+			"guardian - Trainguy.blend",
+			"hostile - boxscape.blend",
+			"illagers - Boxscape.blend",
+			"mobs - Rymdnisse.blend",
+			"nether hostile - Boxscape.blend",
+			"piglin zombified piglin - Boxscape.blend",
+			"PolarBear - PixelFrosty.blend",
+			"ravager - Boxscape.blend",
+			"Shulker - trainguy.blend",
+			"Skeleton - Trainguy.blend",
+			"stray - thefunnypie2.blend",
+			"Warden - DigDanAnimates pre2.80.0.blend",
+			"Warden - DigDanAnimates pre3.0.0.blend",
+			"Warden - DigDanAnimates.blend",
+			"Zombie - Hissing Creeper.blend",
+			"Zombie Villager - Hissing Creeper-thefunnypie2.blend"
+		]
+		target_list = [
+			"Warden - DigDanAnimates pre2.80.0.blend",
+			"Warden - DigDanAnimates pre3.0.0.blend",
+			"Warden - DigDanAnimates.blend",
+		]
+
+		from MCprep.spawner import spawn_util
+		if bpy.app.version < (2, 80):
+			correct = "Warden - DigDanAnimates pre2.80.0.blend"
+		elif bpy.app.version < (3, 0):
+			correct = "Warden - DigDanAnimates pre3.0.0.blend"
+		else:
+			correct = "Warden - DigDanAnimates.blend"
+
+		for rig in target_list:
+			res = spawn_util.check_blend_eligible(rig, riglist)
+			if rig == correct:
+				if res is not True:
+					return "Did not pick {} as correct rig".format(rig)
+			else:
+				if res is True:
+					return "Should have said {} was correct - not {}".format(correct, rig)
+
 	def change_skin(self):
 		"""Test scenarios for changing skin after adding a character."""
 		self._clear_scene()
@@ -857,7 +956,7 @@ class mcprep_testing():
 		from MCprep import conf
 
 		util.load_mcprep_json()  # force load json cache
-		mcprep_data = conf.json_data["blocks"][mapping_set]
+		mcprep_data = conf.env.json_data["blocks"][mapping_set]
 
 		# first detect alignment to the raw underlining mappings, nothing to
 		# do with canonical yet
@@ -889,6 +988,11 @@ class mcprep_testing():
 
 		if len(mapped) == 0:
 			return "No materials mapped"
+		elif mapping_set == "block_mapping_mineways" and len(mapped) > 75:
+			# Known that the "combined" atlas texture of Mineways imports
+			# has low coverge, and we're not doing anything about it.
+			# but will at least capture if coverage gets *worse*.
+			pass
 		elif len(mapped) < len(unmapped):  # too many esp. for Mineways
 			# not a very optimistic threshold, but better than none
 			return "More materials unmapped than mapped"
@@ -899,7 +1003,7 @@ class mcprep_testing():
 
 		# no matching canon name (warn)
 		mats_not_canon = [itm[0] for itm in mapped if itm[1] is None]
-		if mats_not_canon:
+		if mats_not_canon and mapping_set != "block_mapping_mineways":
 			print("Non-canon material names found: ({})".format(len(mats_not_canon)))
 			print(mats_not_canon)
 			if len(mats_not_canon) > 30:  # arbitrary threshold
@@ -1013,7 +1117,7 @@ class mcprep_testing():
 		if not did_raise:
 			return "None input SHOULD raise error"
 
-		# TODO: patch conf.json_data["blocks"] used by addon if possible,
+		# TODO: patch conf.env.json_data["blocks"] used by addon if possible,
 		# if this is transformed into a true py unit test. This will help
 		# check against report (-MNGGQfGGTJRqoizVCer)
 
@@ -1559,15 +1663,23 @@ class mcprep_testing():
 			return "Too few models loaded, missing texturepack?"
 
 		# spawn with whatever default index
-		pre_objs = len(bpy.data.objects)
+		pre_objs = list(bpy.data.objects)
 		bpy.ops.mcprep.spawn_model(
 			filepath=scn_props.model_list[scn_props.model_list_index].filepath)
-		post_objs = len(bpy.data.objects)
+		post_objs = bpy.data.objects
 
-		if post_objs == pre_objs:
+		if len(post_objs) == len(pre_objs):
 			return "No models spawned"
-		elif post_objs > pre_objs + 1:
+		elif len(post_objs) > len(pre_objs) + 1:
 			return "More than one model spawned"
+
+		# Test that materials were properly added.
+		new_objs = list(set(post_objs) - set(pre_objs))
+		model = new_objs[0]
+		if not model.active_material:
+			return "No material on model"
+
+		# TODO: fetch/check there being a texture.
 
 		# Test collection/group added
 		# Test loading from file.
@@ -1673,6 +1785,8 @@ class mcprep_testing():
 
 	def img_sequence_effect_spawner(self):
 		"""Test the image sequence variant of effect spawning works."""
+		if bpy.app.version < (2, 81):
+			return "Disabled due to consistent crashing"
 		self._clear_scene()
 		scn_props = bpy.context.scene.mcprep_props
 		etype = "img_seq"
@@ -2140,10 +2254,95 @@ class mcprep_testing():
 				issues.append([blend, resp])
 			checked += 1
 
-		return "Checked {} rigs, issues: {}".format(
-			checked, issues)
 		if issues:
-			return issues
+			return "Checked {} rigs, issues: {}".format(
+				checked, issues)
+
+	def convert_mtl_simple(self):
+		"""Ensures that conversion of the mtl with other color space works."""
+		from MCprep import world_tools
+
+		src = "mtl_simple_original.mtl"
+		end = "mtl_simple_modified.mtl"
+		test_dir = os.path.dirname(__file__)
+		simple_mtl = os.path.join(test_dir, src)
+		modified_mtl = os.path.join(test_dir, end)
+
+		# now save the texturefile somewhere
+		tmp_dir = tempfile.gettempdir()
+		tmp_mtl = os.path.join(tmp_dir, src)
+		shutil.copyfile(simple_mtl, tmp_mtl)  # leave original intact
+
+		if not os.path.isfile(tmp_mtl):
+			return "Failed to create tmp tml at " + tmp_mtl
+
+		# Need to mock:
+		# bpy.context.scene.view_settings.view_transform
+		# to be an invalid kind of attribute, to simulate an ACES or AgX space.
+		# But we can't do that since we're not (yet) using the real unittest
+		# framework, hence we'll just clear the  world_tool's vars.
+		save_init = list(world_tools.BUILTIN_SPACES)
+		world_tools.BUILTIN_SPACES = ["NotRealSpace"]
+		print("TEST: pre", world_tools.BUILTIN_SPACES)
+
+		# Resultant file
+		res = world_tools.convert_mtl(tmp_mtl)
+
+		# Restore the property we unset.
+		world_tools.BUILTIN_SPACES = save_init
+		print("TEST: post", world_tools.BUILTIN_SPACES)
+
+		if res is None:
+			return "Failed to mock color space and thus could not test convert_mtl"
+
+		if res is False:
+			return "Convert mtl failed with false response"
+
+		# Now check that the data is the same.
+		res = filecmp.cmp(tmp_mtl, modified_mtl, shallow=False)
+		if res is not True:
+			# Not removing file, since we likely want to inspect it.
+			return "Generated MTL is different: {} vs {}".format(
+				tmp_mtl, modified_mtl)
+		else:
+			os.remove(tmp_mtl)
+
+	def convert_mtl_skip(self):
+		"""Ensures that we properly skip if a built in space active."""
+		from MCprep import world_tools
+
+		src = "mtl_simple_original.mtl"
+		test_dir = os.path.dirname(__file__)
+		simple_mtl = os.path.join(test_dir, src)
+
+		# now save the texturefile somewhere
+		tmp_dir = tempfile.gettempdir()
+		tmp_mtl = os.path.join(tmp_dir, src)
+		shutil.copyfile(simple_mtl, tmp_mtl)  # leave original intact
+
+		if not os.path.isfile(tmp_mtl):
+			return "Failed to create tmp tml at " + tmp_mtl
+
+		# Need to mock:
+		# bpy.context.scene.view_settings.view_transform
+		# to be an invalid kind of attribute, to simulate an ACES or AgX space.
+		# But we can't do that since we're not (yet) using the real unittest
+		# framework, hence we'll just clear the  world_tool's vars.
+		actual_space = str(bpy.context.scene.view_settings.view_transform)
+		save_init = list(world_tools.BUILTIN_SPACES)
+		world_tools.BUILTIN_SPACES = [actual_space]
+		print("TEST: pre", world_tools.BUILTIN_SPACES)
+
+		# Resultant file
+		res = world_tools.convert_mtl(tmp_mtl)
+
+		# Restore the property we unset.
+		world_tools.BUILTIN_SPACES = save_init
+		print("TEST: post", world_tools.BUILTIN_SPACES)
+
+		if res is not None:
+			os.remove(tmp_mtl)
+			return "Should not have converter MTL for valid space"
 
 
 class OCOL:
@@ -2190,7 +2389,7 @@ class MCPTEST_OT_test_run(bpy.types.Operator):
 	bl_idname = "mcpreptest.run_test"
 	bl_description = "Run specified test index"
 
-	index = bpy.props.IntProperty(default=0)
+	index: bpy.props.IntProperty(default=0)
 
 	def execute(self, context):
 		# ind = context.window_manager.mcprep_test_index
@@ -2206,7 +2405,7 @@ class MCPTEST_OT_test_selfdestruct(bpy.types.Operator):
 	def execute(self, context):
 		print("De-registering MCprep test")
 		unregister()
-		return{'FINISHED'}
+		return {'FINISHED'}
 
 
 class MCPTEST_PT_test_panel(bpy.types.Panel):
@@ -2289,7 +2488,6 @@ def register():
 
 	# context.window_manager.mcprep_test_index = -1 put into handler to reset?
 	for cls in classes:
-		# util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 
 

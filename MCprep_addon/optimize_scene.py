@@ -46,34 +46,34 @@ class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 		]
 		return itms
 
-	caustics_bool = bpy.props.BoolProperty(
+	caustics_bool: bpy.props.BoolProperty(
 		name="Caustics (slower)",
 		default=False,
 		description="If checked allows cautics to be enabled"
 	)
-	motion_blur_bool = bpy.props.BoolProperty(
+	motion_blur_bool: bpy.props.BoolProperty(
 		name="Motion Blur (slower)",
 		default=False,
 		description="If checked allows motion blur to be enabled"
 	)
-	scene_brightness = bpy.props.EnumProperty(
+	scene_brightness: bpy.props.EnumProperty(
 		name="",
 		description="Brightness of the scene: Affects how the optimizer adjusts sampling",
 		items=scene_brightness
 	)
-	quality_vs_speed = bpy.props.BoolProperty(
+	quality_vs_speed: bpy.props.BoolProperty(
 		name="Optimize scene for quality: Makes the optimizer adjust settings in a less \"destructive\" way",
 		default=True
 	)
-	simplify = bpy.props.BoolProperty(
+	simplify: bpy.props.BoolProperty(
 		name="Simplify the viewport: Reduces subdivisions to 0. Only disable if any assets will break when using this",
 		default=True
 	)
-	scrambling_unsafe = bpy.props.BoolProperty(
+	scrambling_unsafe: bpy.props.BoolProperty(
 		name="Automatic Scrambling Distance: Can cause artifacts when rendering",
 		default=False
 	)
-	preview_scrambling = bpy.props.BoolProperty(
+	preview_scrambling: bpy.props.BoolProperty(
 		name="Preview Scrambling in the viewport",
 		default=True
 	)
@@ -185,8 +185,12 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 	def execute(self, context):
 		# ! Calling this twice seems to remove all unused materials
 		# TODO: find a better way of doing this
-		bpy.ops.outliner.orphans_purge()
-		bpy.ops.outliner.orphans_purge()
+		try:
+			bpy.ops.outliner.orphans_purge()
+			bpy.ops.outliner.orphans_purge()
+		except Exception as e:
+			print("Failed to purge orphans:")
+			print(e)
 		prefs = util.get_preferences(context)
 		cprefs = prefs.addons.get("cycles")
 		scn_props = context.scene.optimizer_props
@@ -400,7 +404,6 @@ classes = (
 
 def register():
 	for cls in classes:
-		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 
 	bpy.types.Scene.optimizer_props = bpy.props.PointerProperty(

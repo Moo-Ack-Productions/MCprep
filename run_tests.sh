@@ -13,6 +13,8 @@
 #
 # Run only a single unit test, but across all blender versions
 # ./run_tests.sh -all -run change_skin
+#
+# Add -v to any argument above to allow print statements within tests.
 
 # File containing 1 line per blender executable complete path. The first
 # line is the blender executable that will be used in 'quick' (-single) tests.
@@ -28,7 +30,7 @@ TEST_RUNNERS=(
 )
 
 # Update the mappings.
-./mcprep_data_refresh.py -auto
+python3 ./mcprep_data_refresh.py -auto
 
 # First, do a soft reload of python files.
 echo "Soft py file reload"

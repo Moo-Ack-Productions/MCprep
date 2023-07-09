@@ -171,12 +171,83 @@ One other detail: MCprep uses git lfs or Large File Storage, to avoid saving bin
 
 Run into other gotchas? Please open a [new issue](https://github.com/TheDuckCow/MCprep/issues)!
 
-## IDE Support
-If you're using an IDE, it's recommened to install `bpy` as a Python module. In my (StandingPad) experiance, the [fake-bpy package](https://github.com/nutti/fake-bpy-module) seems to be the best.
+
+## Commit Messages
+Git commits should explain why a change was made, because the diff will show the changes made. For example, instead of writing:
+```
+Added ability to "import" MTL files
+```
+
+Instead do:
+```
+Added the ability to "import" MTL files
+
+MCprep's file explorer shows both OBJs and MTLs, and sometimes users end up clicking
+MTL files. This brings a quality of life improvement to change the extension
+if the file selected is an MTL, since MTLs share the same name as their corresponding
+OBJ files
+```
+
+The first line is a summary of the changes, and should be less then 50 characters. The rest should justify the changes. Convince us why these changes are important and why they've been made this way.
+
+Git won't automatically wrap messages either, so each line should have a limit of 72 characters.
+
+Here's a template some MCprep developers found that can help (modified for simplicity) by using # to define which is the limit Git can display for each line:
+```
+# Title: Summary, imperative, start upper case, don't end with a period
+# No more than 50 chars. #### 50 chars is here:  #
+
+# Body: Explain *what* and *why* (not *how*). Include task ID (Jira issue).
+# Wrap at 72 chars. ################################## which is here:  #
+
+```
+Add this to a file called .gitmessage, and then execute the following command:
+`git config --local commit.template /path/to/.gitmessage`
+
+To use for each commit, you can use `git config --local commit.verbose true` to tell Git to perform a verbose commit all the time for just the MCprep repo.
+
+## Dependencies
+If you're using an IDE, it's recommened to install `bpy` as a Python module. In our experience, the [fake-bpy package](https://github.com/nutti/fake-bpy-module) seems to be the best. In addition, we also use `darker` to perform PEP8 formatting on changed code (this is a requirement, we expect you to use `darker` on your changes)
 
 It's also recommened to use a virtual environment (especially if you're on Linux) as to avoid issues with system wide packages and different versions of `bpy`. [See this for more details](https://realpython.com/python-virtual-environments-a-primer/)
 
-### Creating a Virtual Environment and Setting up `bpy`
+There are 2 methods to do this:
+- Poetry
+- Manualy
+
+Both are listed here.
+
+### With Poetry
+[Poetry](https://python-poetry.org/) is a useful tool that allows easy dependency handling. To quote the website:
+
+>  Python packaging and dependency management made easy 
+
+If you decide to use Poetry, then simply run the following command:
+
+`poetry install`
+
+To enable the virtual environment, run `poetry shell`, then type `exit` when you're done. When you make a change to a file, **please please please** run `poetry run darker <changed file>` to apply PEP8 formatting to the changes (or if you've enabled the virtual environment, you can just type `darker <changed file>`)
+
+### Manual: Requirements.txt Edition
+First create a virtual environment:
+
+`python3 -m venv mcprep_venv_2.80`
+
+We use the name `mcprep_venv_2.80` to follow MCprep convention. Check the next section if you're curious the why.
+
+To enable:
+
+Windows: `mcprep_venv_<version>\Scripts\activate`
+
+MacOS and Linux: `source mcprep_venv_<version>/bin/activate`
+
+To disable: `deactivate`
+
+Install dependencies:
+
+`python3 -m pip install -r requirements.txt`
+
+### Manual: Setting up `bpy` + `darker` Manually Edition
 First, we need to come up with a name. For MCprep development, it's recommended to use the following convention:
 `mcprep_venv_<version>`
 
@@ -201,5 +272,10 @@ Next we need to install `fake-bpy`:
 `python3 -m pip install fake-bpy-module-<version>`
 
 If you use PyCharm, you should check the GitHub for [additional instructions](https://github.com/nutti/fake-bpy-module#install-via-pip-package)
+
+In addition, for PEP8 formatting, we need to install `darker`:
+`python3 -m pip install darker`
+
+When you make a change to a file, **please please please** run `darker <changed file>` to apply PEP8 formatting to the changes.
 
 Now you're ready to do MCprep development

@@ -28,6 +28,7 @@ import subprocess
 import bpy
 
 from . import conf
+from .conf import env
 
 
 # Commonly used name for an excluded collection in Blender 2.8+
@@ -47,7 +48,7 @@ def apply_colorspace(node, color_enum):
 	noncolor_override = None
 
 	if not node.image:
-		conf.log("Node has no image applied yet, cannot change colorspace")
+		env.log("Node has no image applied yet, cannot change colorspace")
 
 	# For later 2.8, fix images color space user
 	if hasattr(node, "color_space"):  # 2.7 and earlier 2.8 versions
@@ -126,7 +127,7 @@ def bAppendLink(directory, name, toLink, active_layer=True):
 	Returns: true if successful, false if not.
 	"""
 
-	conf.log("Appending " + directory + " : " + name, vv_only=True)
+	env.log("Appending " + directory + " : " + name, vv_only=True)
 
 	# for compatibility, add ending character
 	if directory[-1] != "/" and directory[-1] != os.path.sep:
@@ -134,7 +135,7 @@ def bAppendLink(directory, name, toLink, active_layer=True):
 
 	if "link_append" in dir(bpy.ops.wm):
 		# OLD method of importing, e.g. in blender 2.70
-		conf.log("Using old method of append/link, 2.72 <=", vv_only=True)
+		env.log("Using old method of append/link, 2.72 <=", vv_only=True)
 		try:
 			bpy.ops.wm.link_append(directory=directory, filename=name, link=toLink)
 			return True
@@ -142,7 +143,7 @@ def bAppendLink(directory, name, toLink, active_layer=True):
 			print("bAppendLink", e)
 			return False
 	elif "link" in dir(bpy.ops.wm) and "append" in dir(bpy.ops.wm):
-		conf.log("Using post-2.72 method of append/link", vv_only=True)
+		env.log("Using post-2.72 method of append/link", vv_only=True)
 		if toLink:
 			bpy.ops.wm.link(directory=directory, filename=name)
 		elif bv28():
@@ -155,7 +156,7 @@ def bAppendLink(directory, name, toLink, active_layer=True):
 				print("bAppendLink", e)
 				return False
 		else:
-			conf.log("{} {} {}".format(directory, name, active_layer))
+			env.log("{} {} {}".format(directory, name, active_layer))
 			try:
 				bpy.ops.wm.append(
 					directory=directory,
@@ -212,12 +213,43 @@ def min_bv(version, *, inclusive=True):
 
 def bv28():
 	"""Check if blender 2.8, for layouts, UI, and properties. """
+	env.deprecation_warning()
 	return min_bv((2, 80))
 
 
 def bv30():
 	"""Check if we're dealing with Blender 3.0"""
 	return min_bv((3, 00))
+
+
+def is_atlas_export(context):
+	"""Check if the selected objects are textureswap/animate tex compatible.
+
+	Atlas textures are ones where all textures are combined into a single file,
+	while individual textures is where there is one image file per block type.
+
+	Returns a bool. If false, the UI will show a warning and link to doc
+	about using the right settings.
+	"""
+	if not context.selected_objects:
+		# Don't trigger the UI warning just because nothing is selected
+		return True
+
+	file_types = {
+		"ATLAS": 0,
+		"INDIVIDUAL": 0
+	}
+	for obj in context.selected_objects:
+		# If the header exists then we should be fine
+		if "MCPREP_OBJ_HEADER" in obj:
+			if obj["MCPREP_OBJ_FILE_TYPE"] == "ATLAS":
+				file_types["ATLAS"] += 1
+			else:
+				file_types["INDIVIDUAL"] += 1
+		else:
+			continue
+
+	return file_types["ATLAS"] == 0
 
 
 def face_on_edge(faceLoc):
@@ -267,13 +299,13 @@ def loadTexture(texture):
 		if base_filepath == bpy.path.abspath(texture):
 			data_img = bpy.data.images[base]
 			data_img.reload()
-			conf.log("Using already loaded texture", vv_only=True)
+			env.log("Using already loaded texture", vv_only=True)
 		else:
 			data_img = bpy.data.images.load(texture, check_existing=True)
-			conf.log("Loading new texture image", vv_only=True)
+			env.log("Loading new texture image", vv_only=True)
 	else:
 		data_img = bpy.data.images.load(texture, check_existing=True)
-		conf.log("Loading new texture image", vv_only=True)
+		env.log("Loading new texture image", vv_only=True)
 	return data_img
 
 
@@ -307,11 +339,11 @@ def link_selected_objects_to_scene():
 def open_program(executable):
 	# Open an external program from filepath/executbale
 	executable = bpy.path.abspath(executable)
-	conf.log("Open program request: " + executable)
+	env.log("Open program request: " + executable)
 
 	# input could be .app file, which appears as if a folder
 	if not os.path.isfile(executable):
-		conf.log("File not executable")
+		env.log("File not executable")
 		if not os.path.isdir(executable):
 			return -1
 		elif not executable.lower().endswith(".app"):
@@ -321,7 +353,7 @@ def open_program(executable):
 	osx_or_linux = platform.system() == "Darwin"
 	osx_or_linux = osx_or_linux or 'linux' in platform.system().lower()
 	if executable.lower().endswith('.exe') and osx_or_linux:
-		conf.log("Opening program via wine")
+		env.log("Opening program via wine")
 		p = Popen(['which', 'wine'], stdin=PIPE, stdout=PIPE, stderr=PIPE)
 		stdout, err = p.communicate(b"")
 		has_wine = stdout and not err
@@ -329,7 +361,7 @@ def open_program(executable):
 		if has_wine:
 			# wine is installed; this will hang blender until mineways closes.
 			p = Popen(['wine', executable], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-			conf.log(
+			env.log(
 				"Opening via wine + direct executable, will hang blender till closed")
 
 			# communicating with process makes it hang, so trust it works
@@ -342,18 +374,18 @@ def open_program(executable):
 	try:  # attempt to use blender's built-in method
 		res = bpy.ops.wm.path_open(filepath=executable)
 		if res == {"FINISHED"}:
-			conf.log("Opened using built in path opener")
+			env.log("Opened using built in path opener")
 			return 0
 		else:
-			conf.log("Did not get finished response: ", str(res))
+			env.log("Did not get finished response: ", str(res))
 	except:
-		conf.log("failed to open using builtin mehtod")
+		env.log("failed to open using builtin mehtod")
 		pass
 
 	if platform.system() == "Darwin" and executable.lower().endswith(".app"):
 		# for mac, if folder, check that it has .app otherwise throw -1
 		# (right now says will open even if just folder!!)
-		conf.log("Attempting to open .app via system Open")
+		env.log("Attempting to open .app via system Open")
 		p = Popen(['open', executable], stdin=PIPE, stdout=PIPE, stderr=PIPE)
 		stdout, err = p.communicate(b"")
 		if err != b"":
@@ -417,7 +449,7 @@ def addGroupInstance(group_name, loc, select=True):
 
 def load_mcprep_json():
 	"""Load in the json file, defered so not at addon enable time."""
-	path = conf.json_path
+	path = env.json_path
 	default = {
 		"blocks": {
 			"reflective": [],
@@ -435,18 +467,18 @@ def load_mcprep_json():
 		"make_real": []
 	}
 	if not os.path.isfile(path):
-		conf.log("Error, json file does not exist: " + path)
-		conf.json_data = default
+		env.log("Error, json file does not exist: " + path)
+		env.json_data = default
 		return False
 	with open(path) as data_file:
 		try:
-			conf.json_data = json.load(data_file)
-			conf.log("Successfully read the JSON file")
+			env.json_data = json.load(data_file)
+			env.log("Successfully read the JSON file")
 			return True
 		except Exception as err:
 			print("Failed to load json file:")
 			print('\t', err)
-			conf.json_data = default
+			env.json_data = default
 
 
 def ui_scale():
@@ -527,7 +559,6 @@ def natural_sort(elements):
 
 	return sorted(elements, key=alphanum_key)
 
-
 # -----------------------------------------------------------------------------
 # Cross blender 2.7 and 2.8 functions
 # -----------------------------------------------------------------------------
@@ -535,6 +566,7 @@ def natural_sort(elements):
 
 def make_annotations(cls):
 	"""Add annotation attribute to class fields to avoid Blender 2.8 warnings"""
+	env.deprecation_warning()
 	if not hasattr(bpy.app, "version") or bpy.app.version < (2, 80):
 		return cls
 	if bpy.app.version < (2, 93, 0):

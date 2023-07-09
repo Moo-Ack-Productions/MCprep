@@ -21,28 +21,29 @@ import os
 
 import bpy
 
-from .. import conf
 from .. import tracking
 from .. import util
 from . import sync
 
+from ..conf import env
+
 
 def default_material_in_sync_library(default_material, context):
 	"""Returns true if the material is in the sync mat library blend file."""
-	if conf.material_sync_cache is None:
+	if env.material_sync_cache is None:
 		sync.reload_material_sync_library(context)
-	if util.nameGeneralize(default_material) in conf.material_sync_cache:
+	if util.nameGeneralize(default_material) in env.material_sync_cache:
 		return True
-	elif default_material in conf.material_sync_cache:
+	elif default_material in env.material_sync_cache:
 		return True
 	return False
 
 
 def sync_default_material(context, material, default_material, engine):
 	"""Normal sync material method but with duplication and name change."""
-	if default_material in conf.material_sync_cache:
+	if default_material in env.material_sync_cache:
 		import_name = default_material
-	elif util.nameGeneralize(default_material) in conf.material_sync_cache:
+	elif util.nameGeneralize(default_material) in env.material_sync_cache:
 		import_name = util.nameGeneralize(default_material)
 
 	# If link is true, check library material not already linked.
@@ -98,12 +99,12 @@ class MCPREP_OT_default_material(bpy.types.Operator):
 	bl_label = "Sync Default Materials"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	use_pbr = bpy.props.BoolProperty(
+	use_pbr: bpy.props.BoolProperty(
 		name="Use PBR",
 		description="Use PBR or not",
 		default=False)
 
-	engine = bpy.props.StringProperty(
+	engine: bpy.props.StringProperty(
 		name="engine To Use",
 		description="Defines the engine to use",
 		default="cycles")
@@ -137,7 +138,7 @@ class MCPREP_OT_default_material(bpy.types.Operator):
 			try:
 				err = sync_default_material(context, mat, material_name, self.engine) # no linking
 				if err:
-					conf.log(err)
+					env.log(err)
 			except Exception as e:
 				print(e)
 
@@ -210,7 +211,6 @@ classes = (
 
 def register():
 	for cls in classes:
-		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 	bpy.app.handlers.load_post.append(sync.clear_sync_cache)
 
