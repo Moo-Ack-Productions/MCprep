@@ -74,7 +74,7 @@ class MCprepEnv:
 		# different dialects of Arabic and Chinese under wider Arabic and Chinese folders
 		if self.languages_folder.exists() and self.languages_folder.is_dir():
 			for language_file in self.languages_folder.iterdir():
-				if language_file.suffix is ".json":
+				if language_file.suffix == ".json":
 					with open(language_file, 'r') as jf:
 						language_data = json.load(jf)
 
@@ -85,6 +85,8 @@ class MCprepEnv:
 						
 						# Set the language data
 						self.languages[language_data["language"]] = language_data["translation"]
+
+		print(self.languages)
 
 		# lazy load json, ie only load it when needed (util function defined)
 
