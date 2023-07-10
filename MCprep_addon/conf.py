@@ -184,6 +184,15 @@ class MCprepEnv:
 			import traceback
 			self.log("Deprecation Warning: This will be removed in MCprep 3.5.1!")
 			traceback.print_stack()
+	
+	# This function is to map String IDs with actual strings
+	def translate_str(self, str_id, language='en_US'):
+		if language not in self.languages:
+			return "ERR: translation failed!"
+		if str_id not in self.languages[language]:
+			return "ERR: translation failed!"
+		if str_id in self.languages[language]:
+			return self.languages[language][str_id]
 
 
 env = MCprepEnv()
