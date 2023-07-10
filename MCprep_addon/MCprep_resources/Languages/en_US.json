@@ -9,6 +9,21 @@
     "obj_incompatible_textureswap" : "OBJ incompatible with textureswap",
     "meshswap" : "Mesh Swap",
     "ui_already_improved" : "(UI already improved)",
-    "ui_improve" : "Improve UI"
+    "ui_improve" : "Improve UI",
+    "cycles_optimizer" : "Cycles Optimizer",
+    "advanced" : "Advanced",
+    "texture_pack_folder" : "Texture pack folder",
+    "combine_materials" : "Combine Materials",
+    "combine_images" : "Combine Images",
+    "meshswap_source" : "Meshswap source:",
+    "meshswap_file_blend_error" : "MeshSwap file must be .blend",
+    "meshswap_file_not_found_error" : "MeshSwap file not found",
+    "world_tools_header" : "World Tools",
+    "world_settings_lighting" : "World settings and lighting",
+    "world_time_of_day" : "Time of day",
+    "world_add_world_1" : "No time controller,",
+    "world_add_world_2" : "add dynamic MC world.",
+    "skin_swapper_header" : "Skin Swapper",
+    "skin_select" : "Select skin"
   }
 }

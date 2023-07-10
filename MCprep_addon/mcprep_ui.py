@@ -813,7 +813,7 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		icon = "TRIA_DOWN" if scn_props.show_settings_optimizer else "TRIA_RIGHT"
 		row.prop(
 			scn_props, "show_settings_optimizer",
-			text="Cycles Optimizer", icon=icon)
+			text=env.translate_str("cycles_optimizer"), icon=icon)
 		if scn_props.show_settings_optimizer:
 			row = col.row(align=True)
 			optimize_scene.panel_draw(context, row)
@@ -830,14 +830,14 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		else:
 			row.prop(
 				scn_props, "show_settings_material",
-				text="Advanced", icon="TRIA_DOWN")
+				text=env.translate_str("advanced"), icon="TRIA_DOWN")
 			row.operator(
 				"mcprep.open_preferences",
 				text="", icon="PREFERENCES").tab = "settings"
 			box = col.box()
 			b_row = box.row()
 			b_col = b_row.column(align=False)
-			b_col.label(text="Texture pack folder")
+			b_col.label(text=env.translate_str("texture_pack_folder"))
 			row = b_col.row(align=True)
 			row.prop(context.scene, "mcprep_texturepack_path", text="")
 			row.operator("mcprep.reset_texture_path", text="", icon=LOAD_FACTORY)
@@ -853,19 +853,19 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			# TODO: operator to make all local, all packed, or set to other location
 			b_col.operator(
 				"mcprep.combine_materials",
-				text="Combine Materials").selection_only = True
+				text=env.translate_str("combine_materials")).selection_only = True
 			if bpy.app.version > (2, 77):
-				b_col.operator("mcprep.combine_images", text="Combine Images")
+				b_col.operator("mcprep.combine_images", text=env.translate_str("combine_images"))
 
-			b_col.label(text="Meshswap source:")
+			b_col.label(text=env.translate_str("meshswap_source"))
 			subrow = b_col.row(align=True)
 			subrow.prop(context.scene, "meshswap_path", text="")
 			subrow.operator(
 				"mcprep.meshswap_path_reset", icon=LOAD_FACTORY, text="")
 			if not context.scene.meshswap_path.lower().endswith('.blend'):
-				b_col.label(text="MeshSwap file must be .blend", icon="ERROR")
+				b_col.label(text=env.translate_str("meshswap_file_blend_error"), icon="ERROR")
 			if not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
-				b_col.label(text="MeshSwap file not found", icon="ERROR")
+				b_col.label(text=env.translate_str("meshswap_file_not_found_error"), icon="ERROR")
 
 		layout = self.layout  # clear out the box formatting
 		split = layout.split()
@@ -891,7 +891,7 @@ class MCPREP_PT_bridge(bpy.types.Panel):
 
 class MCPREP_PT_world_tools(bpy.types.Panel):
 	"""World settings and tools"""
-	bl_label = "World Tools"
+	bl_label = env.translate_str("world_tools_header")
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'UI'	
 	bl_category = "MCprep"
@@ -905,7 +905,7 @@ class MCPREP_PT_world_tools(bpy.types.Panel):
 		rw = layout.row()
 		col = rw.column()
 		row = col.row(align=True)
-		row.label(text="World settings and lighting")  # world time
+		row.label(text=env.translate_str("world_settings_lighting"))  # world time
 		row.operator(
 			"mcprep.open_help", text="", icon="QUESTION", emboss=False
 		).url = "https://theduckcow.com/dev/blender/mcprep/world-tools/"
@@ -920,7 +920,7 @@ class MCPREP_PT_world_tools(bpy.types.Panel):
 		rw = layout.row()
 		col = rw.column(align=True)
 		obj = world_tools.get_time_object()
-		col.label(text="Time of day")
+		col.label(text=env.translate_str("world_time_of_day"))
 		if obj and "MCprepHour" in obj:
 			time = obj["MCprepHour"]
 			col.prop(
@@ -936,8 +936,8 @@ class MCPREP_PT_world_tools(bpy.types.Panel):
 			box = col.box()
 			subcol = box.column()
 			subcol.scale_y = 0.8
-			subcol.label(text="No time controller,")
-			subcol.label(text="add dynamic MC world.")
+			subcol.label(text=env.translate_str("world_add_world_1"))
+			subcol.label(text=env.translate_str("world_add_world_2"))
 		# col.label(text="World setup")
 		# col.operator("mcprep.world")
 		# col.operator("mcprep.world", text="Add clouds")
@@ -946,7 +946,7 @@ class MCPREP_PT_world_tools(bpy.types.Panel):
 
 class MCPREP_PT_skins(bpy.types.Panel):
 	"""MCprep panel for skin swapping"""
-	bl_label = "Skin Swapper"
+	bl_label = env.translate_str("skin_swapper_header")
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'UI'
 	bl_category = "MCprep"
@@ -963,7 +963,7 @@ class MCPREP_PT_skins(bpy.types.Panel):
 		skinname = None
 
 		row = layout.row()
-		row.label(text="Select skin")
+		row.label(text=env.translate_str("skin_select"))
 		row.operator(
 			"mcprep.open_help", text="", icon="QUESTION", emboss=False
 		).url = "https://theduckcow.com/dev/blender/mcprep/skin-swapping/"
