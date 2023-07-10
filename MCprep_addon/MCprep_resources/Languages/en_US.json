@@ -1,0 +1,14 @@
+{
+  "language" : "en_US",
+  "translation" : {
+    "world_imports_header" : "World Imports",
+    "world_exporter_header" : "World exporter",
+    "obj_world_import" : "OBJ world import",
+    "mcprep_tools" : "MCprep tools",
+    "mcprep_prep_materials" : "Prep Materials",
+    "obj_incompatible_textureswap" : "OBJ incompatible with textureswap",
+    "meshswap" : "Mesh Swap",
+    "ui_already_improved" : "(UI already improved)",
+    "ui_improve" : "Improve UI"
+  }
+}

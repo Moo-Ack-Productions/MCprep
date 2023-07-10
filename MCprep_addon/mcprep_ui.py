@@ -721,7 +721,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 
 class MCPREP_PT_world_imports(bpy.types.Panel):
 	"""World importing related settings and tools"""
-	bl_label = "World Imports"
+	bl_label = env.translate_str("world_imports_header")
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'UI'
 	# bl_context = "objectmode"
@@ -744,7 +744,7 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		split = layout.split()
 		col = split.column(align=True)
 		row = col.row()
-		row.label(text="World exporter")
+		row.label(text=env.translate_str("world_exporter_header"))
 		row.operator(
 			"mcprep.open_help", text="", icon="QUESTION", emboss=False
 		).url = "https://theduckcow.com/dev/blender/mcprep/mcprep-minecraft-world-imports/"
@@ -765,23 +765,23 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		wpath = addon_prefs.world_obj_path
 		col.operator(
 			"mcprep.import_world_split",
-			text="OBJ world import").filepath = wpath
+			text=env.translate_str("obj_world_import")).filepath = wpath
 
 		split = layout.split()
 		col = split.column(align=True)
-		col.label(text="MCprep tools")
-		col.operator("mcprep.prep_materials", text="Prep Materials")
+		col.label(text=env.translate_str("mcprep_tools"))
+		col.operator("mcprep.prep_materials", text=env.translate_str("mcprep_prep_materials"))
 
 		if not util.is_atlas_export(context):
 			row = col.row()
 			row.operator(
 				"mcprep.open_help", text="", icon="QUESTION", emboss=False
 			).url = "https://github.com/TheDuckCow/MCprep/blob/master/docs/common_errors.md#common-error-messages-and-what-they-mean"
-			row.label(text="OBJ incompatible with textureswap")
+			row.label(text=env.translate_str("obj_incompatible_textureswap"))
 		p = col.operator("mcprep.swap_texture_pack")
 		p.filepath = context.scene.mcprep_texturepack_path
 		if context.mode == "OBJECT":
-			col.operator("mcprep.meshswap", text="Mesh Swap")
+			col.operator("mcprep.meshswap", text=env.translate_str("meshswap"))
 			if addon_prefs.MCprep_exporter_type == "(choose)":
 				col.label(text="Select exporter!", icon='ERROR')
 		if context.mode == 'EDIT_MESH':
@@ -803,10 +803,10 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			row.enabled = False
 			row.operator(
 				"mcprep.improve_ui",
-				text="(UI already improved)", icon='SETTINGS')
+				text=env.translate_str("ui_already_improved"), icon='SETTINGS')
 		else:
 			col.operator(
-				"mcprep.improve_ui", text="Improve UI", icon='SETTINGS')
+				"mcprep.improve_ui", text=env.translate_str("ui_improve"), icon='SETTINGS')
 
 		# Optimizer Panel (only for blender 2.80+)
 		row = col.row(align=True)
