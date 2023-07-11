@@ -188,7 +188,7 @@ class MCprepEnv:
 			traceback.print_stack()
 	
 	# This function is to map String IDs with actual strings
-	def translate_str(self, str_id, default_language='en_US'):
+	def translate_str(self, str_id: str, default_language: str='en_US') -> str:
 		language = bpy.app.translations.locale
 		if language not in self.languages:
 			language = default_language
@@ -196,6 +196,7 @@ class MCprepEnv:
 			language = default_language
 		if str_id in self.languages[language]:
 			return self.languages[language][str_id]
+		return "Err"
 
 
 env = MCprepEnv()
