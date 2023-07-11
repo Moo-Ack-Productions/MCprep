@@ -1,5 +1,6 @@
 {
-  "language" : "en_US",
+  "language" : "English (United States)",
+  "locale" : "en_US",
   "translation" : {
     "world_imports_header" : "World Imports",
     "world_exporter_header" : "World exporter",
