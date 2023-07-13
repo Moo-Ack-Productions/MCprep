@@ -34,7 +34,7 @@ BLENDER_INSTALLS=blender_installs.txt
 # Remove left over files in the build folder, but leaves the zip.
 function clean(){
 	echo "Cleaning build folder"
-	rm -r build/$NAME/
+	rm -r "build/$NAME/"
 }
 
 # Create a local build zip of the local addon.
@@ -79,7 +79,7 @@ function build() {
 
 		# Making the zip with all the sub files is also slow.
 		cd build || exit
-		rm $NAME.zip # Compeltely remove old version (else it's append/replace)
+		rm "$NAME.zip" # Compeltely remove old version (else it's append/replace)
 		zip $NAME.zip -rq $NAME
 		cd ../
 	fi

@@ -254,9 +254,34 @@ def checklist(matName: str, listName: str) -> bool:
 			return True
 	return False
 
+# Dataclass representing all options 
+# for prep materials
+# 
+# We use __slots__ since __slots__ prevents the 
+# following bug:
+#	p = PrepOptions(...)
+#	p.psses["..."] = "..." 
+# 
+# Where a non-existant variable is used. In 
+# Python, this would create a new variable 
+# "psses" on p. To prevent this, we use __slots__.
+#
+# In addition, access to objects in __slots__ is 
+# faster then it would be normally
+#
+# Python dataclasses have native support for __slots__ 
+# in 3.10, but since 2.8 uses 3.7, we have to use 
+# __slots__ directly
 @dataclass
 class PrepOptions:
-	passes: Dict[str, Image]
+	__slots__ = ("passes", 
+				 "use_reflections", 
+				 "use_principled", 
+				 "only_solid", 
+				 "pack_format", 
+				 "use_emission_nodes", 
+				 "use_emission")
+	passes: dict[str, str]
 	use_reflections: bool
 	use_principled: bool
 	only_solid: bool
