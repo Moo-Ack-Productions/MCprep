@@ -25,7 +25,11 @@ import platform
 import random
 import re
 import subprocess
-from typing import List, Optional, Union, Literal, Tuple
+from typing import List, Optional, Union, Tuple
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
 
 import bpy
 from bpy.types import (

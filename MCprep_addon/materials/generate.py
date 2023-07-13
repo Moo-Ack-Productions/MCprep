@@ -281,7 +281,7 @@ class PrepOptions:
 				 "pack_format", 
 				 "use_emission_nodes", 
 				 "use_emission")
-	passes: dict[str, str]
+	passes: Dict[str, str]
 	use_reflections: bool
 	use_principled: bool
 	only_solid: bool
@@ -1614,7 +1614,7 @@ def matgen_cycles_original(mat: Material, options: PrepOptions):
 	return 0
 
 
-def matgen_special_water(mat: Material, passes: dict[str]) -> Optional[bool]:
+def matgen_special_water(mat: Material, passes: Dict[str, Image]) -> Optional[bool]:
 	"""Generate special water material"""
 
 	matGen = util.nameGeneralize(mat.name)
@@ -1768,7 +1768,7 @@ def matgen_special_water(mat: Material, passes: dict[str]) -> Optional[bool]:
 	return 0
 
 
-def matgen_special_glass(mat: Material, passes: dict[str]) -> Optional[bool]:
+def matgen_special_glass(mat: Material, passes: Dict[str, Image]) -> Optional[bool]:
 	"""Generate special glass material"""
 
 	matGen = util.nameGeneralize(mat.name)

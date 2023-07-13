@@ -21,7 +21,11 @@ import errno
 import json
 import os
 import re
-from typing import Optional, Tuple, Literal, Dict
+from typing import Optional, Tuple, Dict
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
 from pathlib import Path
 
 import bpy

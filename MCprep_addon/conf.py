@@ -21,7 +21,11 @@ from pathlib import Path
 import bpy
 from bpy.utils.previews import ImagePreviewCollection
 
-from typing import Union, Literal, Tuple, List, Dict
+from typing import Union, Tuple, List, Dict
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
 from mathutils import Vector
 
 VectorType =  Union[Tuple[float, float, float], Vector]

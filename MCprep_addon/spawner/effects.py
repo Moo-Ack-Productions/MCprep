@@ -25,9 +25,8 @@ from pathlib import Path
 import bmesh
 from bpy_extras.io_utils import ImportHelper
 import bpy
-from bpy.types import (
-  Context, Collection, 
-  NodesModifier, Image, Mesh
+from bpy.types import ( 
+	Context, Collection, Image, Mesh
 )
 from mathutils import Vector
 
@@ -38,6 +37,12 @@ from .. import tracking
 from . import spawn_util
 
 from ..conf import env, VectorType
+
+# For Geometry nodes modifier in 3.0
+if util.bv30():
+	from bpy.types import NodesModifier
+else:
+	NodesModifier = TypeVar("NodesModifier")
 
 # Check spawn_util.py for the
 # definition of ListEffectsAssets
