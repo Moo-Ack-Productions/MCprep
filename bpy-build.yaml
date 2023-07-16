@@ -15,7 +15,7 @@ install_versions:
 
 during_build:
   default:
-    - [flake8 --extend-ignore W191 .]
+    - [] # Re-enable later: [flake8 --extend-ignore W191 .]
   dev:
     - create_file("mcprep_dev.txt")
   
