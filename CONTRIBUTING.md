@@ -44,9 +44,32 @@ As above, a critical component of maintaining support and ensuring the wide numb
 
 ### Compile MCprep using scripts
 
-MCprep uses the [bpy-addon-build](https://github.com/StandingPadAnimations/bpy-build) package to build the addon, which makes it fast to copy the entire addon structure the addon folders for multiple versions of blender.
+MCprep uses the [bpy-addon-build](https://github.com/Moo-Ack-Productions/bpy-build) package to build the addon, which makes it fast to copy the entire addon structure the addon folders for multiple versions of blender.
 
 The benefit? You don't have to manually navigate and install zip files in blender for each change you make - just run the command and restart blender. It *is* important you do restart blender after changes, as there can be unintended side effects of trying to reload a plugin.
+
+As a quick start:
+
+```bash
+# Highly recommended, create a local virtual environment (could also define globally)
+python3 -m pip install --user virtualenv
+
+
+python3 -m pip install --upgrade pip  # Install/upgrade pip
+python3 -m venv ./venv  # Add a local virtual env called `venv`
+
+# Activate that environment
+## On windows:
+.\venv\Scripts\activate
+## On Mac/linux:
+source venv/bin/activate
+
+# Now with the env active, do the pip install (or upgrade)
+pip install --upgrade bpy-addon-build
+
+```
+
+Moving forward, you can now build the addon for all intended supported versions using: `bpy-addon-build -b dev`
 
 ### Run tests
 
