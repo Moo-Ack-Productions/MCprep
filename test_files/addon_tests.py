@@ -229,13 +229,7 @@ class mcprep_testing():
 		# if not self.suppress:
 		# stdout = io.StringIO()
 		# with redirect_stdout(stdout):
-		bpy.ops.wm.read_homefile(app_template="")
-		for obj in bpy.data.objects:
-			bpy.data.objects.remove(obj)
-		for mat in bpy.data.materials:
-			bpy.data.materials.remove(mat)
-			# for txt in bpy.data.texts:
-			# 	bpy.data.texts.remove(txt)
+		bpy.ops.wm.read_homefile(app_template="", use_empty=True)
 
 	def _add_character(self):
 		"""Add a rigged character to the scene, specifically Alex"""
@@ -318,9 +312,7 @@ class mcprep_testing():
 		if name not in ['(choose)', 'jmc2obj', 'Mineways']:
 			raise Exception('Invalid exporter set tyep')
 		context = bpy.context
-		if hasattr(context, "user_preferences"):
-			prefs = context.user_preferences.addons.get("MCprep_addon", None)
-		elif hasattr(context, "preferences"):
+		if hasattr(context, "preferences"):
 			prefs = context.preferences.addons.get("MCprep_addon", None)
 		prefs.preferences.MCprep_exporter_type = name
 
@@ -953,10 +945,11 @@ class mcprep_testing():
 		from MCprep.materials.generate import get_mc_canonical_name
 		from MCprep.materials.generate import find_from_texturepack
 		from MCprep import util
-		from MCprep import conf
 
 		util.load_mcprep_json()  # force load json cache
-		mcprep_data = conf.env.json_data["blocks"][mapping_set]
+		# Must use the reference of env associated with util,
+		# can't import conf separately.
+		mcprep_data = util.env.json_data["blocks"][mapping_set]
 
 		# first detect alignment to the raw underlining mappings, nothing to
 		# do with canonical yet

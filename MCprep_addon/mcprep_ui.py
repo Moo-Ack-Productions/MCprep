@@ -19,11 +19,12 @@
 import os
 import time
 
+# library imports
 import bpy
+from bpy.types import Context, UILayout
 
 # addon imports
 from . import addon_updater_ops
-from . import conf
 from . import optimize_scene
 from . import tracking
 from . import util
@@ -126,7 +127,7 @@ class MCPREP_MT_mob_spawner(bpy.types.Menu):
 		for mobkey in keys:
 			# show icon if available
 			mob = scn_props.mob_list_all[mobkey]
-			icn = "mob-{}".format(mob.index)
+			icn = f"mob-{mob.index}"
 			if env.use_icons and icn in env.preview_collections["mobs"]:
 				ops = layout.operator(
 					"mcprep.mob_spawner",
@@ -166,7 +167,7 @@ class MCPREP_MT_meshswap_place(bpy.types.Menu):
 				icon=icn
 			)
 			opr.block = blockset[0]
-			opr.location = util.get_cuser_location(context)
+			opr.location = util.get_cursor_location(context)
 
 			# Ensure meshswap with rigs is made real, so the rigs can be used.
 			if env.json_data and blockset[1] in env.json_data.get("make_real", []):
@@ -183,7 +184,7 @@ class MCPREP_MT_item_spawn(bpy.types.Menu):
 		if not context.scene.mcprep_props.item_list:
 			layout.label(text="No items found!")
 		for item in context.scene.mcprep_props.item_list:
-			icn = "item-{}".format(item.index)
+			icn = f"item-{item.index}"
 			if env.use_icons and icn in env.preview_collections["items"]:
 				ops = layout.operator(
 					"mcprep.spawn_item", text=item.name,
@@ -203,7 +204,7 @@ class MCPREP_MT_effect_spawn(bpy.types.Menu):
 
 	def draw(self, context):
 		col = self.layout.column()
-		loc = util.get_cuser_location(context)
+		loc = util.get_cursor_location(context)
 		for effect in context.scene.mcprep_props.effects_list:
 			if effect.effect_type in (effects.GEO_AREA, effects.PARTICLE_AREA):
 				if effect.effect_type == effects.GEO_AREA:
@@ -223,7 +224,7 @@ class MCPREP_MT_effect_spawn(bpy.types.Menu):
 				ops.location = loc
 				ops.frame = context.scene.frame_current
 			elif effect.effect_type == effects.IMG_SEQ:
-				icon = "effects-{}".format(effect.index)
+				icon = f"effects-{effect.index}"
 				if env.use_icons and icon in env.preview_collections["effects"]:
 					ops = col.operator(
 						"mcprep.spawn_instant_effect",
@@ -276,7 +277,7 @@ class MCPREP_MT_model_spawn(bpy.types.Menu):
 				mcmodel.MCPREP_OT_spawn_minecraft_model.bl_idname,
 				text=model.name)
 			opr.filepath = model.filepath
-			opr.location = util.get_cuser_location(context)
+			opr.location = util.get_cursor_location(context)
 
 
 class MCPREP_MT_3dview_add(bpy.types.Menu):
@@ -354,7 +355,7 @@ class MCPREP_MT_3dview_add(bpy.types.Menu):
 			layout.menu(MCPREP_MT_meshswap_place.bl_idname)
 
 
-def mineways_update(self, context):
+def mineways_update(self, context: Context) -> None:
 	"""For updating the mineways path on OSX."""
 	if ".app/" in self.open_mineways_path:
 		# will run twice inherently
@@ -362,7 +363,7 @@ def mineways_update(self, context):
 		self.open_mineways_path = temp + ".app"
 
 
-def feature_set_update(self, context):
+def feature_set_update(self, context: Context) -> None:
 	tracking.Tracker.feature_set = self.feature_set
 	tracking.trackUsage("feature_set", param=self.feature_set)
 
@@ -380,7 +381,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 			"Default path to the meshswap asset file, for "
 			"meshswapable objects and groups"),
 		subtype='FILE_PATH',
-		default=scriptdir + "/MCprep_resources/mcprep_meshSwap.blend")
+		default=f"{scriptdir}/MCprep_resources/mcprep_meshSwap.blend")
 	entity_path: bpy.props.StringProperty(
 		name="Entity path",
 		description="Default path to the entity asset file, for entities",
@@ -390,24 +391,24 @@ class McprepPreference(bpy.types.AddonPreferences):
 		name="Mob path",
 		description="Default folder for rig loads/spawns in new blender instances",
 		subtype='DIR_PATH',
-		default=scriptdir + "/MCprep_resources/rigs/")
+		default=f"{scriptdir}/MCprep_resources/rigs/")
 	custom_texturepack_path: bpy.props.StringProperty(
 		name="Texture pack path",
 		description=(
 			"Path to a folder containing resources and textures to use "
 			"with material prepping"),
 		subtype='DIR_PATH',
-		default=scriptdir + "/MCprep_resources/resourcepacks/mcprep_default/")
+		default=f"{scriptdir}/MCprep_resources/resourcepacks/mcprep_default/")
 	skin_path: bpy.props.StringProperty(
 		name="Skin path",
 		description="Folder for skin textures, used in skin swapping",
 		subtype='DIR_PATH',
-		default=scriptdir + "/MCprep_resources/skins/")
+		default=f"{scriptdir}/MCprep_resources/skins/")
 	effects_path: bpy.props.StringProperty(
 		name="Effects path",
 		description="Folder for effects blend files and assets",
 		subtype='DIR_PATH',
-		default=scriptdir + "/MCprep_resources/effects/")
+		default=f"{scriptdir}/MCprep_resources/effects/")
 	world_obj_path: bpy.props.StringProperty(
 		name="World Folder",
 		description=(
@@ -1001,7 +1002,7 @@ class MCPREP_PT_skins(bpy.types.Panel):
 			row.scale_y = 1.5
 			if env.skin_list:
 				skinname = bpy.path.basename(env.skin_list[sind][0])
-				p = row.operator("mcprep.applyskin", text="Apply " + skinname)
+				p = row.operator("mcprep.applyskin", text=f"Apply {skinname}")
 				p.filepath = env.skin_list[sind][1]
 			else:
 				row.enabled = False
@@ -1052,7 +1053,7 @@ class MCPREP_PT_skins(bpy.types.Panel):
 				else:
 					name = scn_props.mob_list[mob_ind].name
 					# datapass = scn_props.mob_list[mob_ind].mcmob_type
-					tx = "Spawn {x} with {y}".format(x=name, y=skinname)
+					tx = f"Spawn {name} with {skinname}"
 					row.operator("mcprep.spawn_with_skin", text=tx)
 
 
@@ -1087,7 +1088,7 @@ class MCPREP_PT_materials(bpy.types.Panel):
 			row = col.row(align=True)
 			row.scale_y = 1.5
 			mat = scn_props.material_list[scn_props.material_list_index]
-			ops = row.operator("mcprep.load_material", text="Load: " + mat.name)
+			ops = row.operator("mcprep.load_material", text=f"Load: {mat.name}")
 			ops.filepath = mat.path
 		else:
 			box = col.box()
@@ -1133,7 +1134,7 @@ class MCPREP_PT_materials_subsettings(bpy.types.Panel):
 # Spawner related UI
 # -----------------------------------------------------------------------------
 
-def draw_mode_warning(ui_element):
+def draw_mode_warning(ui_element: UILayout) -> None:
 	col = ui_element.column(align=True)
 	col.label(text="Enter object mode", icon="ERROR")
 	col.label(text="to use spawner", icon="BLANK1")
@@ -1141,7 +1142,7 @@ def draw_mode_warning(ui_element):
 	col.label(text="")
 
 
-def mob_spawner(self, context):
+def mob_spawner(self, context: Context) -> None:
 	scn_props = context.scene.mcprep_props
 
 	layout = self.layout
@@ -1189,7 +1190,7 @@ def mob_spawner(self, context):
 	row = col.row(align=True)
 	row.scale_y = 1.5
 	row.enabled = len(scn_props.mob_list) > 0
-	p = row.operator("mcprep.mob_spawner", text="Spawn " + name)
+	p = row.operator("mcprep.mob_spawner", text=f"Spawn {name}")
 	if mcmob_type:
 		p.mcmob_type = mcmob_type
 
@@ -1234,7 +1235,7 @@ def mob_spawner(self, context):
 			b_col.operator("mcprep.mob_install_icon")
 		else:
 			icon_index = scn_props.mob_list[scn_props.mob_list_index].index
-			if "mob-{}".format(icon_index) in env.preview_collections["mobs"]:
+			if f"mob-{icon_index}" in env.preview_collections["mobs"]:
 				b_col.operator(
 					"mcprep.mob_install_icon", text="Change mob icon")
 			else:
@@ -1244,7 +1245,7 @@ def mob_spawner(self, context):
 		b_col.label(text=mcmob_type)
 
 
-def meshswap_spawner(self, context):
+def meshswap_spawner(self, context: Context) -> None:
 	scn_props = context.scene.mcprep_props
 
 	layout = self.layout
@@ -1295,10 +1296,10 @@ def meshswap_spawner(self, context):
 		name = scn_props.meshswap_list[scn_props.meshswap_list_index].name
 		block = scn_props.meshswap_list[scn_props.meshswap_list_index].block
 		method = scn_props.meshswap_list[scn_props.meshswap_list_index].method
-		p = row.operator("mcprep.meshswap_spawner", text="Place: " + name)
+		p = row.operator("mcprep.meshswap_spawner", text=f"Place: {name}")
 		p.block = block
 		p.method = method
-		p.location = util.get_cuser_location(context)
+		p.location = util.get_cursor_location(context)
 		# Ensure meshswap with rigs is made real, so the rigs can be used.
 		if env.json_data and block in env.json_data.get("make_real", []):
 			p.make_real = True
@@ -1337,7 +1338,7 @@ def meshswap_spawner(self, context):
 		b_col.operator("mcprep.reload_meshswap")
 
 
-def item_spawner(self, context):
+def item_spawner(self, context: Context) -> None:
 	"""Code for drawing the item spawner"""
 	scn_props = context.scene.mcprep_props
 	
@@ -1356,7 +1357,7 @@ def item_spawner(self, context):
 		row = col.row(align=True)
 		row.scale_y = 1.5
 		name = scn_props.item_list[scn_props.item_list_index].name
-		row.operator("mcprep.spawn_item", text="Place: " + name)
+		row.operator("mcprep.spawn_item", text=f"Place: {name}")
 		row = col.row(align=True)
 		row.operator("mcprep.spawn_item_file")
 	else:
@@ -1402,7 +1403,7 @@ def item_spawner(self, context):
 		b_col.operator("mcprep.reload_items")
 
 
-def entity_spawner(self, context):
+def entity_spawner(self, context: Context) -> None:
 	scn_props = context.scene.mcprep_props
 
 	layout = self.layout
@@ -1452,7 +1453,7 @@ def entity_spawner(self, context):
 	if scn_props.entity_list:
 		name = scn_props.entity_list[scn_props.entity_list_index].name
 		entity = scn_props.entity_list[scn_props.entity_list_index].entity
-		p = row.operator("mcprep.entity_spawner", text="Spawn: " + name)
+		p = row.operator("mcprep.entity_spawner", text=f"Spawn: {name}")
 		p.entity = entity
 	else:
 		row.operator("mcprep.entity_spawner", text="Spawn Entity")
@@ -1485,7 +1486,7 @@ def entity_spawner(self, context):
 		b_col.operator("mcprep.reload_entities")
 
 
-def model_spawner(self, context):
+def model_spawner(self, context: Context) -> None:
 	"""Code for drawing the model block spawner"""
 	scn_props = context.scene.mcprep_props
 	addon_prefs = util.get_user_preferences(context)
@@ -1506,8 +1507,8 @@ def model_spawner(self, context):
 		row = col.row(align=True)
 		row.scale_y = 1.5
 		model = scn_props.model_list[scn_props.model_list_index]
-		ops = row.operator("mcprep.spawn_model", text="Place: " + model.name)
-		ops.location = util.get_cuser_location(context)
+		ops = row.operator("mcprep.spawn_model", text=f"Place: {model.name}")
+		ops.location = util.get_cursor_location(context)
 		ops.filepath = model.filepath
 		if addon_prefs.MCprep_exporter_type == "Mineways":
 			ops.snapping = "offset"
@@ -1530,7 +1531,7 @@ def model_spawner(self, context):
 		row.operator(mcmodel.MCPREP_OT_spawn_minecraft_model.bl_idname)
 
 	ops = col.operator("mcprep.import_model_file")
-	ops.location = util.get_cuser_location(context)
+	ops.location = util.get_cursor_location(context)
 	if addon_prefs.MCprep_exporter_type == "Mineways":
 		ops.snapping = "center"
 	elif addon_prefs.MCprep_exporter_type == "jmc2obj":
@@ -1561,7 +1562,7 @@ def model_spawner(self, context):
 		b_col.operator("mcprep.reload_models")
 
 
-def effects_spawner(self, context):
+def effects_spawner(self, context: Context) -> None:
 	"""Code for drawing the effects spawner"""
 	scn_props = context.scene.mcprep_props
 
@@ -1582,13 +1583,13 @@ def effects_spawner(self, context):
 		effect = scn_props.effects_list[scn_props.effects_list_index]
 		if effect.effect_type in (effects.GEO_AREA, effects.PARTICLE_AREA):
 			ops = row.operator(
-				"mcprep.spawn_global_effect", text="Add: " + effect.name)
+				"mcprep.spawn_global_effect", text=f"Add: {effect.name}")
 			ops.effect_id = str(effect.index)
 		elif effect.effect_type in (effects.COLLECTION, effects.IMG_SEQ):
 			ops = row.operator(
-				"mcprep.spawn_instant_effect", text="Add: " + effect.name)
+				"mcprep.spawn_instant_effect", text=f"Add: {effect.name}")
 			ops.effect_id = str(effect.index)
-			ops.location = util.get_cuser_location(context)
+			ops.location = util.get_cursor_location(context)
 			ops.frame = context.scene.frame_current
 	else:
 		box = col.box()
@@ -1607,7 +1608,7 @@ def effects_spawner(self, context):
 		row.operator("mcprep.spawn_item", text="Add effect")
 	row = col.row(align=True)
 	ops = row.operator("mcprep.spawn_particle_planes")
-	ops.location = util.get_cuser_location(context)
+	ops.location = util.get_cursor_location(context)
 	ops.frame = context.scene.frame_current
 
 	# If particle planes has not been changed yet this session,
@@ -1858,7 +1859,7 @@ class MCPREP_PT_meshswap_spawner(bpy.types.Panel):
 # -----------------------------------------------------------------------------
 
 
-def draw_mcprepadd(self, context):
+def draw_mcprepadd(self, context: Context) -> None:
 	"""Append to Shift+A, icon for top-level MCprep section."""
 	layout = self.layout
 	pcoll = env.preview_collections["main"]
@@ -1869,7 +1870,7 @@ def draw_mcprepadd(self, context):
 		layout.menu(MCPREP_MT_3dview_add.bl_idname)
 
 
-def mcprep_uv_tools(self, context):
+def mcprep_uv_tools(self, context: Context) -> None:
 	"""Appended to UV tools in UV image editor tab, in object edit mode."""
 	layout = self.layout
 	layout.separator()
@@ -1879,7 +1880,7 @@ def mcprep_uv_tools(self, context):
 	col.operator("mcprep.select_alpha_faces")
 
 
-def mcprep_image_tools(self, context):
+def mcprep_image_tools(self, context: Context) -> None:
 	"""Tools that will display in object mode in the UV image editor."""
 	row = self.layout.row()
 	img = context.space_data.image

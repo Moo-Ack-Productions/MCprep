@@ -19,13 +19,14 @@
 import os
 import math
 from pathlib import Path
+from typing import List, Optional
 import shutil
 
 import bpy
+from bpy.types import Context, Camera
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
-from . import conf
-from .conf import env
+from .conf import env, VectorType
 from . import util
 from . import tracking
 from .materials import generate
@@ -47,7 +48,7 @@ BUILTIN_SPACES = (
 time_obj_cache = None
 
 
-def get_time_object():
+def get_time_object() -> None:
 	"""Returns the time object if present in the file"""
 	global time_obj_cache  # to avoid re parsing every time
 
@@ -78,9 +79,12 @@ class ObjHeaderOptions:
 	"""Wrapper functions to avoid typos causing issues."""
 
 	def __init__(self):
-		self._exporter = None
-		self._file_type = None
-
+		self._exporter: Optional[str] = None
+		self._file_type: Optional[str] = None
+	
+	"""
+	Wrapper functions to avoid typos causing issues
+	"""
 	def set_mineways(self):
 		self._exporter = "Mineways"
 
@@ -109,7 +113,7 @@ class ObjHeaderOptions:
 obj_header = ObjHeaderOptions()
 
 
-def detect_world_exporter(filepath):
+def detect_world_exporter(filepath: Path) -> None:
 	"""Detect whether Mineways or jmc2obj was used, based on prefix info.
 
 	Primary heruistic: if detect Mineways header, assert Mineways, else
@@ -145,7 +149,7 @@ def detect_world_exporter(filepath):
 					obj_header.set_seperated()
 				return
 		except UnicodeDecodeError:
-			print("failed to read first line of obj: " + filepath)
+			print(f"Failed to read first line of obj: {filepath}")
 			return
 		obj_header.set_jmc2obj()
 		# Since this is the default for Jmc2Obj,
@@ -588,7 +592,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			return
 		obj.name = util.nameGeneralize(mat.name)
 
-	def split_world_by_material(self, context):
+	def split_world_by_material(self, context: Context) -> None:
 		"""2.8-only function, split combined object into parts by material"""
 		world_name = os.path.basename(self.filepath)
 		world_name = os.path.splitext(world_name)[0]
@@ -596,11 +600,9 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		# Create the new world collection
 		prefs = util.get_user_preferences(context)
 		if prefs is not None and prefs.MCprep_exporter_type != '(choose)':
-			name = "{} world: {}".format(
-				prefs.MCprep_exporter_type,
-				world_name)
+			name = f"{prefs.MCprep_exporter_type} world: {world_name}"
 		else:
-			name = "minecraft_world: " + world_name
+			name = f"minecraft_world: {world_name}"
 		worldg = util.collections().new(name=name)
 		context.scene.collection.children.link(worldg)  # Add to outliner.
 
@@ -641,7 +643,7 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 			self.report({'ERROR'}, "Must be cycles, eevee, or blender internal")
 		return {'FINISHED'}
 
-	def prep_world_cycles(self, context):
+	def prep_world_cycles(self, context: Context) -> None:
 		if not context.scene.world or not context.scene.world.use_nodes:
 			context.scene.world.use_nodes = True
 
@@ -675,7 +677,7 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 			context.scene.cycles.ao_bounces = 2
 			context.scene.cycles.ao_bounces_render = 2
 
-	def prep_world_eevee(self, context):
+	def prep_world_eevee(self, context: Context) -> None:
 		"""Default world settings for Eevee rendering"""
 		if not context.scene.world or not context.scene.world.use_nodes:
 			context.scene.world.use_nodes = True
@@ -776,7 +778,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 	bl_label = "Create MC Sky"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	def enum_options(self, context):
+	def enum_options(self, context: Context) -> List[tuple]:
 		"""Dynamic set of enums to show based on engine"""
 		engine = bpy.context.scene.render.engine
 		enums = []
@@ -891,9 +893,9 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			if not os.path.isfile(blendfile):
 				self.report(
 					{'ERROR'},
-					"Source MCprep world blend file does not exist: " + blendfile)
+					f"Source MCprep world blend file does not exist: {blendfile}")
 				env.log(
-					"Source MCprep world blend file does not exist: " + blendfile)
+					f"Source MCprep world blend file does not exist: {blendfile}")
 				return {'CANCELLED'}
 			if wname in bpy.data.worlds:
 				prev_world = bpy.data.worlds[wname]
@@ -932,11 +934,11 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			if not os.path.isfile(blendfile):
 				self.report(
 					{'ERROR'},
-					"Source MCprep world blend file does not exist: " + blendfile)
+					f"Source MCprep world blend file does not exist: {blendfile}")
 				env.log(
-					"Source MCprep world blend file does not exist: " + blendfile)
+					f"Source MCprep world blend file does not exist: {blendfile}")
 				return {'CANCELLED'}
-			resource = blendfile + "/Object"
+			resource = f"{blendfile}/bpy.types.Object"
 
 			util.bAppendLink(resource, "MoonMesh", False)
 			non_empties = [
@@ -993,7 +995,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 		self.track_param = engine
 		return {'FINISHED'}
 
-	def create_sunlamp(self, context):
+	def create_sunlamp(self, context: Context) -> bpy.types.Object:
 		"""Create new sun lamp from primitives"""
 		if hasattr(bpy.data, "lamps"):  # 2.7
 			newlamp = bpy.data.lamps.new("Sun", "SUN")
@@ -1012,7 +1014,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			obj.use_contact_shadow = True
 		return obj
 
-	def create_dynamic_world(self, context, blendfile, wname):
+	def create_dynamic_world(self, context: Context, blendfile: Path, wname: str) -> List[bpy.types.Object]:
 		"""Setup fpr creating a dynamic world and setting up driver targets"""
 		resource = blendfile + "/World"
 		obj_list = []
@@ -1022,7 +1024,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			try:
 				util.obj_unlink_remove(time_obj_cache, True, context)
 			except Exception as e:
-				print("Error, could not unlink time_obj_cache " + str(time_obj_cache))
+				print(f"Error, could not unlink time_obj_cache {time_obj_cache}")
 				print(e)
 
 		time_obj_cache = None  # force reset to use newer cache object
@@ -1182,7 +1184,7 @@ class MCPREP_OT_render_helper():
 		if self.open_folder:
 			bpy.ops.mcprep.openfolder(folder=self.filepath)
 
-	def create_panorama_cam(self, name, camera_data, rot, loc):
+	def create_panorama_cam(self, name: str, camera_data: Camera, rot: VectorType, loc: VectorType) -> bpy.types.Object:
 		"""Create a camera"""
 
 		camera = bpy.data.objects.new(name, camera_data)
@@ -1191,12 +1193,12 @@ class MCPREP_OT_render_helper():
 		util.obj_link_scene(camera)
 		return camera
 
-	def cancel_render(self, scene):
+	def cancel_render(self, scene) -> None:
 		env.log("Cancelling pano render queue")
 		self.render_queue = []
 		self.cleanup_scene()
 
-	def display_current(self, use_rendered=False):
+	def display_current(self, use_rendered: bool=False) -> None:
 		"""Display the most recent image in a window."""
 		if self.rendered_count == 0:
 			bpy.ops.render.view_show("INVOKE_DEFAULT")
@@ -1213,8 +1215,7 @@ class MCPREP_OT_render_helper():
 			return
 
 		if self.rendering:
-			header_text = "Pano render in progress: {}/6 done".format(
-				self.rendered_count)
+			header_text = f"Pano render in progress: {self.rendered_count}/6 done"
 		else:
 			header_text = "Pano render finished"
 
@@ -1253,13 +1254,14 @@ class MCPREP_OT_render_helper():
 			return
 
 		self.current_render = self.render_queue.pop()
+		file_name = self.current_render["filename"]
 
 		bpy.context.scene.camera = self.current_render["camera"]
 
 		bpy.context.scene.render.filepath = os.path.join(
-			self.filepath, self.current_render["filename"])
+			self.filepath, file_name)
 
-		env.log("Starting pano render {}".format(self.current_render["filename"]))
+		env.log(f"Starting pano render {file_name}")
 		self.display_current()
 
 		bpy.app.timers.register(
@@ -1269,13 +1271,13 @@ class MCPREP_OT_render_helper():
 render_helper = MCPREP_OT_render_helper()
 
 
-def init_render_timer():
+def init_render_timer() -> None:
 	"""Helper for pano renders to offset the start of the queue from op run."""
 	env.log("Initial render timer started pano queue")
 	render_helper.render_next_in_queue(None, None)
 
 
-def render_pano_frame_timer():
+def render_pano_frame_timer() -> None:
 	"""Pano render timer callback, giving a chance to refresh display."""
 	bpy.ops.render.render(
 		'EXEC_DEFAULT', write_still=True, use_viewport=False)

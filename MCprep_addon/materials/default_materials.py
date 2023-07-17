@@ -18,17 +18,19 @@
 
 
 import os
+from typing import Union, Optional
 
 import bpy
+from bpy.types import Context, Material
 
 from .. import tracking
 from .. import util
 from . import sync
 
-from ..conf import env
+from ..conf import env, Engine
 
 
-def default_material_in_sync_library(default_material, context):
+def default_material_in_sync_library(default_material: str, context: Context) -> bool:
 	"""Returns true if the material is in the sync mat library blend file."""
 	if env.material_sync_cache is None:
 		sync.reload_material_sync_library(context)
@@ -39,7 +41,7 @@ def default_material_in_sync_library(default_material, context):
 	return False
 
 
-def sync_default_material(context, material, default_material, engine):
+def sync_default_material(context: Context, material: Material, default_material: str, engine: Engine) -> Optional[Union[Material, str]]:
 	"""Normal sync material method but with duplication and name change."""
 	if default_material in env.material_sync_cache:
 		import_name = default_material
@@ -55,7 +57,7 @@ def sync_default_material(context, material, default_material, engine):
 
 	imported = set(list(bpy.data.materials)) - set(init_mats)
 	if not imported:
-		return "Could not import " + str(material.name)
+		return f"Could not import {material.name}"
 	new_default_material = list(imported)[0]
 
 	# Checking if there's a node with the label Texture.
@@ -78,7 +80,7 @@ def sync_default_material(context, material, default_material, engine):
 	texture_file = bpy.data.images.get(image_texture)
 	default_texture_node.image = texture_file
 
-	if engine == "cycles" or engine == "blender_eevee":
+	if engine == "CYCLES" or engine == "BLENDER_EEVEE":
 		default_texture_node.interpolation = 'Closest'
 
 	# 2.78+ only, else silent failure.
@@ -107,7 +109,7 @@ class MCPREP_OT_default_material(bpy.types.Operator):
 	engine: bpy.props.StringProperty(
 		name="engine To Use",
 		description="Defines the engine to use",
-		default="cycles")
+		default="CYCLES")
 
 	SIMPLE = "simple"
 	PBR = "pbr"
@@ -119,7 +121,7 @@ class MCPREP_OT_default_material(bpy.types.Operator):
 		# Sync file stuff.
 		sync_file = sync.get_sync_blend(context)
 		if not os.path.isfile(sync_file):
-			self.report({'ERROR'}, "Sync file not found: " + sync_file)
+			self.report({'ERROR'}, f"Sync file not found: {sync_file}")
 			return {'CANCELLED'}
 
 		if sync_file == bpy.data.filepath:
@@ -127,7 +129,7 @@ class MCPREP_OT_default_material(bpy.types.Operator):
 
 		# Find the default material.
 		workflow = self.SIMPLE if not self.use_pbr else self.PBR
-		material_name = material_name = f"default_{workflow}_{self.engine}"
+		material_name = material_name = f"default_{workflow}_{self.engine.lower()}"
 		if not default_material_in_sync_library(material_name, context):
 			self.report({'ERROR'}, "No default material found")
 			return {'CANCELLED'}
@@ -136,7 +138,7 @@ class MCPREP_OT_default_material(bpy.types.Operator):
 		mat_list = list(bpy.data.materials)
 		for mat in mat_list:
 			try:
-				err = sync_default_material(context, mat, material_name, self.engine) # no linking
+				err = sync_default_material(context, mat, material_name, self.engine.upper()) # no linking
 				if err:
 					env.log(err)
 			except Exception as e:
@@ -155,14 +157,14 @@ class MCPREP_OT_create_default_material(bpy.types.Operator):
 
 	def execute(self, context):
 		engine = context.scene.render.engine
-		self.create_default_material(context, engine.lower(), "simple")
+		self.create_default_material(context, engine, "simple")
 		return {'FINISHED'}
 
 	def create_default_material(self, context, engine, type):
 		"""
 		create_default_material: takes 3 arguments and returns nothing
 		context: Blender Context
-		engine: the render engine in lowercase
+		engine: the render engine
 		type: the type of texture that's being dealt with
 		"""
 		if not len(bpy.context.selected_objects):
@@ -170,10 +172,7 @@ class MCPREP_OT_create_default_material(bpy.types.Operator):
 			self.report({'ERROR'}, "Select an object to create the material")
 			return
 
-		material_name = "default_{type}_{engine}".format(
-			type=type,
-			engine=engine
-		)
+		material_name = f"default_{type}_{engine.lower()}"
 		default_material = bpy.data.materials.new(name=material_name)
 		default_material.use_nodes = True
 		nodes = default_material.node_tree.nodes
@@ -196,7 +195,7 @@ class MCPREP_OT_create_default_material(bpy.types.Operator):
 		links.new(default_texture_node.outputs[0], principled.inputs[0])
 		links.new(principled.outputs["BSDF"], nodeOut.inputs[0])
 
-		if engine == "eevee":
+		if engine == "EEVEE":
 			if hasattr(default_material, "blend_method"):
 				default_material.blend_method = 'HASHED'
 			if hasattr(default_material, "shadow_method"):
