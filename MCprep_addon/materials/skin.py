@@ -26,9 +26,7 @@ import urllib.request
 import bpy
 from bpy_extras.io_utils import ImportHelper
 from bpy.app.handlers import persistent
-from bpy.types import (
-  Context, Image, Material
-)
+from bpy.types import Context, Image, Material
 
 from . import generate
 from .. import tracking

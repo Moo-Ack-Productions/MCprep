@@ -17,26 +17,21 @@
 # ##### END GPL LICENSE BLOCK #####
 
 
-# library imports
+from pathlib import Path
+from typing import List
 import errno
 import os
 import shutil
-from typing import List
-from pathlib import Path
 
 import bpy
 from bpy_extras.io_utils import ImportHelper
-from bpy.types import (
-  Context
-)
+from bpy.types import Context
 
-from .. import conf
 from ..conf import env
 from .. import util
 from .. import tracking
 
 from . import spawn_util
-
 
 
 # -----------------------------------------------------------------------------

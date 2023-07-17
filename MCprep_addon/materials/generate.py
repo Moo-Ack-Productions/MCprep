@@ -22,16 +22,13 @@ from pathlib import Path
 from dataclasses import dataclass
 
 import bpy
-from bpy.types import (
-  Context, Material, Image, Texture,
-  NodeTree, Nodes, NodeLinks, Node
-)
+from bpy.types import Context, Material, Image, Texture, Nodes, NodeLinks, Node
 
 from .. import util
-
 from ..conf import env, Form
 
 AnimatedTex = Dict[str, int]
+
 # -----------------------------------------------------------------------------
 # Material prep and generation functions (no registration)
 # -----------------------------------------------------------------------------

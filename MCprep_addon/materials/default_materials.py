@@ -21,9 +21,7 @@ import os
 from typing import Union, Optional
 
 import bpy
-from bpy.types import (
-  Context, Material
-)
+from bpy.types import Context, Material
 
 from .. import tracking
 from .. import util

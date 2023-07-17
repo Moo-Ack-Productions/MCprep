@@ -18,9 +18,7 @@
 
 
 import bpy
-from bpy.types import (
-  Context
-)
+from bpy.types import Context
 
 import time
 from typing import Dict, List, Tuple
@@ -146,13 +144,13 @@ class MCPREP_OT_scale_uv(bpy.types.Operator):
 	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	@classmethod
-	def poll(cls, context):
+	def poll(cls, context: Context):
 		return context.mode == 'EDIT_MESH' or (
 			context.mode == 'OBJECT' and context.object)
 
 	track_function = "scale_uv"
 	@tracking.report_error
-	def execute(self, context):
+	def execute(self, context: Context):
 
 		# INITIAL WIP
 		"""
@@ -254,12 +252,12 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	@classmethod
-	def poll(cls, context):
+	def poll(cls, context: Context):
 		return context.mode == 'EDIT_MESH'
 
 	track_function = "alpha_faces"
 	@tracking.report_error
-	def execute(self, context):
+	def execute(self, context: Context):
 
 		ob = context.object
 		if ob is None:

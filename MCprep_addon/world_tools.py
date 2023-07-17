@@ -23,13 +23,10 @@ from typing import List, Optional
 import shutil
 
 import bpy
-from bpy.types import (
-  Context, Camera
-)
+from bpy.types import Context, Camera
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
-from . import conf
-from .conf import env, Path, VectorType
+from .conf import env, VectorType
 from . import util
 from . import tracking
 from .materials import generate
@@ -49,7 +46,6 @@ BUILTIN_SPACES = (
 
 
 time_obj_cache = None
-
 
 
 def get_time_object() -> None:

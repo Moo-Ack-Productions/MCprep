@@ -25,7 +25,6 @@ from bpy.types import Context, UILayout
 
 # addon imports
 from . import addon_updater_ops
-from . import conf
 from . import optimize_scene
 from . import tracking
 from . import util
@@ -383,7 +382,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 			"meshswapable objects and groups"),
 		subtype='FILE_PATH',
 		default=f"{scriptdir}/MCprep_resources/mcprep_meshSwap.blend")
-	entity_path = bpy.props.StringProperty(
+	entity_path: bpy.props.StringProperty(
 		name="Entity path",
 		description="Default path to the entity asset file, for entities",
 		subtype='FILE_PATH',
@@ -393,24 +392,24 @@ class McprepPreference(bpy.types.AddonPreferences):
 		description="Default folder for rig loads/spawns in new blender instances",
 		subtype='DIR_PATH',
 		default=f"{scriptdir}/MCprep_resources/rigs/")
-	custom_texturepack_path = bpy.props.StringProperty(
+	custom_texturepack_path: bpy.props.StringProperty(
 		name="Texture pack path",
 		description=(
 			"Path to a folder containing resources and textures to use "
 			"with material prepping"),
 		subtype='DIR_PATH',
 		default=f"{scriptdir}/MCprep_resources/resourcepacks/mcprep_default/")
-	skin_path = bpy.props.StringProperty(
+	skin_path: bpy.props.StringProperty(
 		name="Skin path",
 		description="Folder for skin textures, used in skin swapping",
 		subtype='DIR_PATH',
 		default=f"{scriptdir}/MCprep_resources/skins/")
-	effects_path = bpy.props.StringProperty(
+	effects_path: bpy.props.StringProperty(
 		name="Effects path",
 		description="Folder for effects blend files and assets",
 		subtype='DIR_PATH',
 		default=f"{scriptdir}/MCprep_resources/effects/")
-	world_obj_path = bpy.props.StringProperty(
+	world_obj_path: bpy.props.StringProperty(
 		name="World Folder",
 		description=(
 			"Default folder for opening world objs from programs "

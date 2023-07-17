@@ -23,16 +23,16 @@ from bpy.utils.previews import ImagePreviewCollection
 
 from typing import Union, Tuple, List, Dict
 try:
-    from typing import Literal
+	from typing import Literal
 except ImportError:
-    from typing_extensions import Literal
+	from typing_extensions import Literal
 from mathutils import Vector
 
-VectorType =  Union[Tuple[float, float, float], Vector]
+VectorType = Union[Tuple[float, float, float], Vector]
 
 Form = Literal["mc", "mineways", "jmc2obj"]
-Engine = Literal["CYCLES", "BLENDER_EEVEE", "BLENDER_EEVEE_NEXT"] 
-# EEVEE Next is the next generation EEVEE. So in preperation for that, 
+Engine = Literal["CYCLES", "BLENDER_EEVEE", "BLENDER_EEVEE_NEXT"]
+# EEVEE Next is the next generation EEVEE. So in preperation for that,
 # we've added "BLENDER_EEVEE_NEXT" as an Engine option
 
 Skin = Tuple[str, Path]
@@ -163,8 +163,8 @@ class MCprepEnv:
 			self.use_icons = False
 			for iconset in collection_sets:
 				self.preview_collections[iconset] = ""
-    
-	def log(self, statement: str, vv_only: bool=False):
+
+	def log(self, statement: str, vv_only: bool = False):
 		if self.verbose and vv_only and self.very_verbose:
 			print(statement)
 		elif self.verbose:

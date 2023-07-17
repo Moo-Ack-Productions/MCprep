@@ -23,21 +23,18 @@ import os
 import re
 from typing import Optional, Tuple, Dict
 try:
-    from typing import Literal
+	from typing import Literal
 except ImportError:
-    from typing_extensions import Literal
+	from typing_extensions import Literal
 from pathlib import Path
 
 import bpy
-from bpy.types import (
-  Context, Material, Image, Texture
-)
+from bpy.types import Context, Material, Image, Texture
 
 from . import generate
+from . import uv_tools
 from .. import tracking
 from .. import util
-from . import uv_tools
-
 from ..conf import env, Engine, Form
 
 ExportLocation = Literal["original", "local", "texturepack"]

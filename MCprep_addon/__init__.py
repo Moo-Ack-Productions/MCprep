@@ -60,6 +60,7 @@ else:
 
 import bpy
 
+
 def register():
 	load_modules.register(bl_info)
 

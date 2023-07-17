@@ -20,26 +20,28 @@ from subprocess import Popen, PIPE
 import json
 import operator
 import os
-import pathlib
 import platform
 import random
 import re
 import subprocess
 from typing import List, Optional, Union, Tuple
 try:
-    from typing import Literal
+	from typing import Literal
 except ImportError:
-    from typing_extensions import Literal
+	from typing_extensions import Literal
 
 import bpy
 from bpy.types import (
 	Preferences,
-  	Context, Collection,
-  	Material, Image, Node,
+	Context,
+	Collection,
+	Material,
+	Image,
+	Node,
 	UILayout
-  )
+)
 from mathutils import Vector, Matrix
-from . import conf
+
 from .conf import env
 
 # Commonly used name for an excluded collection in Blender 2.8+
@@ -56,7 +58,7 @@ def apply_colorspace(node: Node, color_enum: Tuple) -> None:
 	Use enum nomeclature matching Blender 2.8x Default, not 2.7 or other lang
 	"""
 	global noncolor_override
-	noncolor_override= None
+	noncolor_override = None
 
 	if not node.image:
 		env.log("Node has no image applied yet, cannot change colorspace")

@@ -17,14 +17,12 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import os
-from typing import Dict, List, Tuple
-from dataclasses import dataclass
+from typing import Dict, List
 
 import bpy
 
 from bpy.types import Context
-from .. import conf
-from ..conf import env, VectorType, Entity
+from ..conf import env, Entity
 from .. import util
 from .. import tracking
 

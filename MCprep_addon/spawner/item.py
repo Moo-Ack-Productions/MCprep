@@ -16,21 +16,19 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from pathlib import Path
+from typing import Optional, Tuple
+import mathutils
 import os
 
 import bpy
-from bpy.types import (
-  Context
-)
+from bpy.types import Context
 from bpy_extras.io_utils import ImportHelper
-import mathutils
-from typing import Optional, Tuple
-from pathlib import Path
 
 from .. import util
 from .. import tracking
 from ..conf import env
-from ..materials import generate 
+from ..materials import generate
 try:
 	import bpy.utils.previews
 except ImportError:

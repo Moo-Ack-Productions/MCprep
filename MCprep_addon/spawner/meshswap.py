@@ -17,22 +17,18 @@
 # ##### END GPL LICENSE BLOCK #####
 
 
+from dataclasses import dataclass
+from typing import Dict, List, Union, Tuple
 import math
+import mathutils
 import os
 import random
 import time
 
 import bpy
-from bpy.types import (
-  Context, Collection
-)
-import mathutils
-
-from typing import Dict, List, Union, Tuple
-from dataclasses import dataclass
+from bpy.types import Context, Collection
 
 from . import spawn_util
-from .. import conf
 from ..conf import env, VectorType
 from ..materials import generate
 from .. import util

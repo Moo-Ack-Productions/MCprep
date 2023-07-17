@@ -18,10 +18,9 @@
 
 
 import bpy
-from bpy.types import (
-  Context, UILayout, Node
-)
+from bpy.types import Context, UILayout, Node
 import addon_utils
+
 from . import util
 from .materials import generate
 

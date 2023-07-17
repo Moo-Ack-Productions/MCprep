@@ -18,13 +18,11 @@
 
 import os
 import re
-
-import bpy
-from bpy.types import (
-  Context, Collection, BlendDataLibraries
-)
 from typing import List, Optional
 from pathlib import Path
+
+import bpy
+from bpy.types import Context, Collection, BlendDataLibraries
 
 from ..conf import env
 from .. import util
@@ -32,7 +30,6 @@ from .. import tracking
 from . import mobs
 from . import effects
 
-from ..conf import env
 
 # Top-level names used for inclusion or exclusions when filtering through
 # collections in blend files for spawners: mobs, meshswap, and entities.

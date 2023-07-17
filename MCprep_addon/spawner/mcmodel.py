@@ -21,19 +21,17 @@ import json
 from mathutils import Vector
 from math import sin, cos, radians
 from pathlib import Path
+from typing import Dict, Optional, Tuple, Union, Sequence
 
 import bpy
 import bmesh
-from bpy.types import (
-  Context, Material
-)
+from bpy.types import Context, Material
 from bpy_extras.io_utils import ImportHelper
-from typing import Dict, List, Optional, Tuple, Union, Sequence
 
 from ..conf import env, VectorType
 from .. import util
 from .. import tracking
-from ..materials import generate
+from ..materials import generate  # TODO: Use this module for mat gen in future
 
 TexFace = Dict[str, Dict[str, str]]
 
@@ -43,6 +41,7 @@ Texture = Dict[str, str]
 # -----------------------------------------------------------------------------
 # Core MC model functions and implementation
 # -----------------------------------------------------------------------------
+
 
 class ModelException(Exception):
 	"""Custom exception type for model loading."""

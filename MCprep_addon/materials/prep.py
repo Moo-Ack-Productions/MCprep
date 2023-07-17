@@ -21,16 +21,13 @@ import os
 
 import bpy
 from bpy_extras.io_utils import ImportHelper
-from bpy.types import (
-  Context
-)
+from bpy.types import Context
 
 from . import generate
 from . import sequences
+from . import uv_tools
 from .. import tracking
 from .. import util
-from . import uv_tools
-
 from ..conf import env
 
 # -----------------------------------------------------------------------------

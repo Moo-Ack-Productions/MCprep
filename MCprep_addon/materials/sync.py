@@ -34,6 +34,7 @@ from .. import util
 # Utilities
 # -----------------------------------------------------------------------------
 
+
 @persistent
 def clear_sync_cache(scene):
 	env.log("Resetting sync mat cache", vv_only=True)

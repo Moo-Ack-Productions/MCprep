@@ -25,12 +25,9 @@ from pathlib import Path
 import bmesh
 from bpy_extras.io_utils import ImportHelper
 import bpy
-from bpy.types import ( 
-	Context, Collection, Image, Mesh
-)
+from bpy.types import Context, Collection, Image, Mesh
 from mathutils import Vector
 
-from .. import conf
 from .. import util
 from .. import tracking
 
