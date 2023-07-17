@@ -951,10 +951,11 @@ class mcprep_testing():
 		from MCprep.materials.generate import get_mc_canonical_name
 		from MCprep.materials.generate import find_from_texturepack
 		from MCprep import util
-		from MCprep import conf
 
 		util.load_mcprep_json()  # force load json cache
-		mcprep_data = conf.env.json_data["blocks"][mapping_set]
+		# Must use the reference of env associated with util,
+		# can't import conf separately.
+		mcprep_data = util.env.json_data["blocks"][mapping_set]
 
 		# first detect alignment to the raw underlining mappings, nothing to
 		# do with canonical yet
