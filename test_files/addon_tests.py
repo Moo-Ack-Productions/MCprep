@@ -229,13 +229,7 @@ class mcprep_testing():
 		# if not self.suppress:
 		# stdout = io.StringIO()
 		# with redirect_stdout(stdout):
-		bpy.ops.wm.read_homefile(app_template="")
-		for obj in bpy.data.objects:
-			bpy.data.objects.remove(obj)
-		for mat in bpy.data.materials:
-			bpy.data.materials.remove(mat)
-			# for txt in bpy.data.texts:
-			# 	bpy.data.texts.remove(txt)
+		bpy.ops.wm.read_homefile(app_template="", use_empty=True)
 
 	def _add_character(self):
 		"""Add a rigged character to the scene, specifically Alex"""

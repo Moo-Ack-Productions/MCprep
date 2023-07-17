@@ -132,7 +132,6 @@ class MCprepEnv:
 	# ICONS INIT
 	# -----------------------------------------------------------------------------
 
-
 	def icons_init(self):
 		collection_sets = [
 			"main", "skins", "mobs", "entities", "blocks", "items", "effects", "materials"]
@@ -388,10 +387,14 @@ def updater_select_link_function(self, tag):
 # GLOBAL REGISTRATOR INIT
 # -----------------------------------------------------------------------------
 
-# ! Deprecated as of MCprep 3.4.2
+
 def register():
-	env.deprecation_warning()
-	init()
+	global env
+	if not env.json_data:
+		# Enforce re-creation of data structures, to ensure populated after
+		# the addon was disabled once (or more) and then re-enabled, while
+		# avoiding a double call to init() on the first time load.
+		env = MCprepEnv()
 
 
 def unregister():
