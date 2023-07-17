@@ -162,9 +162,9 @@ def updateMeshswapList(context: Context) -> None:
 @dataclass
 class FaceStruct:
 	"""Structure class for preprocessed faces of a mesh"""
-	normal_coord: VectorType
-	global_coord: VectorType 
-	local_coord: VectorType
+	n: VectorType  # For normal_coord
+	g: VectorType  # For global_coord
+	l: VectorType  # For local_coord
 
 
 # -----------------------------------------------------------------------------
@@ -1006,7 +1006,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			'doorlike': doorlike, 'new_groups': new_groups}
 
 	def proccess_poly_orientations(
-			self, face: FaceStruct, swapProps: Dict[str, str], swapGen: str, 
+			self, face: FaceStruct, swapProps: Dict[str, str], swapGen: str,
 			instance_configs: Dict[str, Tuple[VectorType, int]]
 		) -> None:
 		"""Iterate over individual face, updating instance loc/rotation
