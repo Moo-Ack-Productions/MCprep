@@ -194,22 +194,22 @@ class MCprepEnv:
 env = MCprepEnv()
 
 
-# ! Deprecated as of MCprep 3.4.2
+# ! Deprecated as of MCprep 3.5
 def init():
 	env.deprecation_warning()
 	# -----------------------------------------------
 	# Verbose, use as env.verbose
 	# Used to print out extra information, set false with distribution
 	# -----------------------------------------------
-	# ! Deprecated as of MCprep 3.4.2
+	# ! Deprecated as of MCprep 3.5
 	global dev
 	dev = False
 
-	# ! Deprecated as of MCprep 3.4.2
+	# ! Deprecated as of MCprep 3.5
 	global v
 	v = True  # $VERBOSE, UI setting
 
-	# ! Deprecated as of MCprep 3.4.2
+	# ! Deprecated as of MCprep 3.5
 	global vv
 	vv = dev  # $VERYVERBOSE
 
@@ -219,16 +219,16 @@ def init():
 
 	# shouldn't load here, just globalize any json data?
 
-	# ! Deprecated as of MCprep 3.4.2
+	# ! Deprecated as of MCprep 3.5
 	global data
 	# import json
 
-	# ! Deprecated as of MCprep 3.4.2
+	# ! Deprecated as of MCprep 3.5
 	global json_data  # mcprep_data.json
 	json_data = None  # later will load addon information etc
 
 	# if existing json_data_update exists, overwrite it
-	# ! Deprecated as of MCprep 3.4.2
+	# ! Deprecated as of MCprep 3.5
 	global json_path
 	json_path = os.path.join(
 		os.path.dirname(__file__),
@@ -256,10 +256,10 @@ def init():
 	# For preview icons
 	# -----------------------------------------------
 
-	# ! Deprecated as of MCprep 3.4.2
+	# ! Deprecated as of MCprep 3.5
 	global use_icons
 	use_icons = True
-	# ! Deprecated as of MCprep 3.4.2
+	# ! Deprecated as of MCprep 3.5
 	global preview_collections
 	preview_collections = {}
 
@@ -275,19 +275,19 @@ def init():
 	# To ensure shift-A starts drawing sub menus after pressing load all spawns
 	# as without this, if any one of the spawners loads nothing (invalid folder,
 	# no blend files etc), then it would continue to ask to reload spanwers.
-	# ! Deprecated as of MCprep 3.4.2
+	# ! Deprecated as of MCprep 3.5
 	global loaded_all_spawners
 	loaded_all_spawners = False
 
-	# ! Deprecated as of MCprep 3.4.2
+	# ! Deprecated as of MCprep 3.5
 	global skin_list
 	skin_list = []  # each is: [ basename, path ]
 
-	# ! Deprecated as of MCprep 3.4.2
+	# ! Deprecated as of MCprep 3.5
 	global rig_categories
 	rig_categories = []  # simple list of directory names
 
-	# ! Deprecated as of MCprep 3.4.2
+	# ! Deprecated as of MCprep 3.5
 	global entity_list
 	entity_list = []
 
@@ -298,12 +298,12 @@ def init():
 	# list of material names, each is a string. None by default to indicate
 	# that no reading has occurred. If lib not found, will update to [].
 	# If ever changing the resource pack, should also reset to None.
-	# ! Deprecated as of MCprep 3.4.2
+	# ! Deprecated as of MCprep 3.5
 	global material_sync_cache
 	material_sync_cache = None
 
 
-# ! Deprecated as of MCprep 3.4.2
+# ! Deprecated as of MCprep 3.5
 # -----------------------------------------------------------------------------
 # ICONS INIT
 # -----------------------------------------------------------------------------
@@ -361,7 +361,7 @@ def icons_init():
 			preview_collections[iconset] = ""
 
 
-# ! Deprecated as of MCprep 3.4.2
+# ! Deprecated as of MCprep 3.5
 def log(statement, vv_only=False):
 	env.deprecation_warning()
 	if env.verbose and vv_only and env.very_verbose:
