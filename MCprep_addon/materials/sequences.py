@@ -17,16 +17,13 @@
 # ##### END GPL LICENSE BLOCK #####
 
 
+from pathlib import Path
+from typing import Optional, Tuple, Dict
+import enum
 import errno
 import json
 import os
 import re
-from typing import Optional, Tuple, Dict
-try:
-	from typing import Literal
-except ImportError:
-	from typing_extensions import Literal
-from pathlib import Path
 
 import bpy
 from bpy.types import Context, Material, Image, Texture
@@ -37,7 +34,13 @@ from .. import tracking
 from .. import util
 from ..conf import env, Engine, Form
 
-ExportLocation = Literal["original", "local", "texturepack"]
+
+class ExportLocation(enum.Enum):
+	ORIGINAL = "original"
+	LOCAL = "local"
+	TEXTUREPACK = "texturepack"
+
+
 # -----------------------------------------------------------------------------
 # Supporting functions
 # -----------------------------------------------------------------------------

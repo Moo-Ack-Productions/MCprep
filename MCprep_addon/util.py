@@ -17,6 +17,8 @@
 # ##### END GPL LICENSE BLOCK #####
 
 from subprocess import Popen, PIPE
+from typing import List, Optional, Union, Tuple
+import enum
 import json
 import operator
 import os
@@ -24,11 +26,6 @@ import platform
 import random
 import re
 import subprocess
-from typing import List, Optional, Union, Tuple
-try:
-	from typing import Literal
-except ImportError:
-	from typing_extensions import Literal
 
 import bpy
 from bpy.types import (
@@ -507,22 +504,30 @@ def ui_scale() -> float:
 		return 1
 
 
-def uv_select(obj: bpy.types.Object, action: Literal["SELECT", "DESELECT", "TOGGLE"]='TOGGLE') -> None:
+class UvSelAct(enum.Enum):
+	SELECT = 'SELECT'
+	DESELECT = 'DESELECT'
+	TOGGLE = 'TOGGLE'
+
+
+def uv_select(
+	obj: bpy.types.Object, action: UvSelAct = UvSelAct.TOGGLE) -> None:
 	"""Direct way to select all UV verts of an object, assumings 1 uv layer.
 
 	Actions are: SELECT, DESELECT, TOGGLE.
 	"""
+	# TODO: Use or remove this function, not referenced.
 	if not obj.data.uv_layers.active:
 		return  # consider raising error
-	if action == 'TOGGLE':
+	if action == UvSelAct.TOGGLE:
 		for face in obj.data.polygons:
 			face.select = not face.select
-	elif action == 'SELECT':
+	elif action == UvSelAct.SELECT:
 		for face in obj.data.polygons:
 			# if len(face.loop_indices) < 3:
 			# 	continue
 			face.select = True
-	elif action == 'DESELECT':
+	elif action == UvSelAct.DESELECT:
 		for face in obj.data.polygons:
 			# if len(face.loop_indices) < 3:
 			# 	continue

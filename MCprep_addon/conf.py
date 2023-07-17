@@ -16,24 +16,38 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import os
+from mathutils import Vector
 from pathlib import Path
+from typing import Union, Tuple, List, Dict
+import enum
+import os
+
 import bpy
 from bpy.utils.previews import ImagePreviewCollection
 
-from typing import Union, Tuple, List, Dict
-try:
-	from typing import Literal
-except ImportError:
-	from typing_extensions import Literal
-from mathutils import Vector
+
+# -----------------------------------------------------------------------------
+# TYPING UTILITIES
+# -----------------------------------------------------------------------------
+
+
+class Form(enum.Enum):
+	"""Texture or world import interpretation, for mapping or other needs."""
+	MC = "mc"
+	MINEWAYS = "mineways"
+	JMC2OBJ = "jmc2obj"
+
+
+class Engine(enum.Enum):
+	"""String exact match to output from blender itself for branching."""
+	CYCLES = "CYCLES"
+	BLENDER_EEVEE = "BLENDER_EEVEE"
+	# EEVEE Next is the next generation EEVEE. So in preperation for that,
+	# we've added "BLENDER_EEVEE_NEXT" as an Engine option
+	BLENDER_EEVEE_NEXT = "BLENDER_EEVEE_NEXT"
+
 
 VectorType = Union[Tuple[float, float, float], Vector]
-
-Form = Literal["mc", "mineways", "jmc2obj"]
-Engine = Literal["CYCLES", "BLENDER_EEVEE", "BLENDER_EEVEE_NEXT"]
-# EEVEE Next is the next generation EEVEE. So in preperation for that,
-# we've added "BLENDER_EEVEE_NEXT" as an Engine option
 
 Skin = Tuple[str, Path]
 Entity = Tuple[str, str, str]
@@ -44,6 +58,7 @@ try:
 except:
 	print("MCprep: No custom icons in this blender instance")
 	pass
+
 
 # -----------------------------------------------------------------------------
 # ADDON GLOBAL VARIABLES AND INITIAL SETTINGS
