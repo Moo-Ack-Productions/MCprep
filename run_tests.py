@@ -1,0 +1,138 @@
+# ##### BEGIN GPL LICENSE BLOCK #####
+#
+#  This program is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU General Public License
+#  as published by the Free Software Foundation; either version 2
+#  of the License, or (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software Foundation,
+#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# ##### END GPL LICENSE BLOCK #####
+
+import argparse
+import os
+import subprocess
+from typing import List
+
+
+COMPILE_CMD = ["./compile.sh", "-fast"]
+DCC_EXES = "blender_execs.txt"
+TEST_RUNNER = os.path.join("test_files", "test_runner.py")
+TEST_CSV_OUTPUTS = "test_results.csv"
+SPACER = "-" * 79
+
+
+def main():
+    args = get_args()
+
+    # Read arguments
+    blender_execs = get_blender_binaries()
+    if not len(blender_execs):
+        print("ERROR : No Blender exe paths found!")
+        return
+
+    # Compile the addon
+    res = subprocess.check_output(COMPILE_CMD)
+    print(res.decode("utf-8"))
+
+    reset_test_file()
+
+    # Loop over all binaries and run tests.
+    for ind, binary in enumerate(blender_execs):
+        run_all = args.all_execs is True
+        run_specific = args.version is not None
+        if ind > 0 and not (run_all or run_specific):
+            continue  # Only run the first test unless specified
+        if not os.path.exists(binary):
+            print(f"Bledner EXE not found: {binary}")
+            continue
+        cmd = [binary,
+               "--background",
+               "--factory-startup",
+               "-y",
+               "--python",
+               TEST_RUNNER,
+               "--"]  # TODO: Option to specify specific test or test class
+        if args.test_specific is not None:
+            cmd.extend(["-t", args.test_specific])
+        if args.version is not None:
+            cmd.extend(["-v", args.version])
+        output = subprocess.check_output(cmd)
+        print(output.decode("utf-8"))
+
+    output_results()
+
+
+def get_args():
+    """Sets up and returns argument parser for module functions."""
+    parser = argparse.ArgumentParser(description="Run MCprep tests.")
+    # Would use action=argparse.BooleanOptionalAction,
+    # but that's python 3.9+ only; we need to support 3.7.0+ (Blender 2.80)
+    parser.add_argument(
+        "-a", "--all_execs", action="store_true",
+        help="Run the test suite once per each executable in blender_execs.txt"
+    )
+    parser.set_defaults(all_execs=False)
+    parser.add_argument(
+        "-t", "--test_specific",
+        help="Run only a specific test function or class matching this name")
+    parser.add_argument(
+        "-v", "--version",
+        help="Specify the blender version(s) to test, in #.# or #.##,#.#")
+    return parser.parse_args()
+
+
+def get_blender_binaries() -> List:
+    """Extracts a list of strings meant to be blender binary paths."""
+    if not os.path.exists(DCC_EXES):
+        print(f"ERROR : The {DCC_EXES} file is missing! Please create it!")
+        return []
+
+    with open(DCC_EXES, "r") as f:
+        blender_execs = [ln.rstrip() for ln in f.readlines()]
+
+    return blender_execs
+
+
+def reset_test_file():
+    """Removes and reinitializes the output csv test file."""
+    try:
+        os.remove(TEST_CSV_OUTPUTS)
+    except Exception as e:
+        print(e)
+
+    with open(TEST_CSV_OUTPUTS, "w") as fopen:
+        header = ["bversion", "ran_tests", "ran", "failed", "errors"]
+        fopen.write(",".join(header) + "\n")
+
+
+def output_results():
+    """Reads in and prints out the csv of test results."""
+    if not os.path.isfile(TEST_CSV_OUTPUTS):
+        print("Could not find test results csv!")
+        return
+    print(SPACER)
+    with open(TEST_CSV_OUTPUTS, "r") as fopen:
+        lns = fopen.readlines()
+        for idx, line in enumerate(lns):
+            line = line.strip()
+            cols = line.split(",")
+
+            # Update the first column to be a nicer written format, add
+            # spacing to help columns align.
+            cols[0] = cols[0].replace(". ", ".") + "   "  #
+            tabline = "\t".join(cols)
+            print(tabline)
+            if idx == 0:
+                print(SPACER)
+
+
+if __name__ == "__main__":
+    main()
