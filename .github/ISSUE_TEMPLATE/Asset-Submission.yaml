@@ -1,6 +1,6 @@
 name: Asset contribution
 description: Submit an asset to include with MCprep
-labels: ["enhancement"]
+labels: ["enhancement", "asset-submission"]
 body:
   - type: markdown
     attributes:
