@@ -12,3 +12,6 @@ MCprep_addon/MCprep_resources/resourcepacks/mcprep_default/materials.blend1
 mcprep_venv_*
 .cache
 .python-version
+venv/
+MCprep_addon/MCprep_resources/
+*.sublime-*
