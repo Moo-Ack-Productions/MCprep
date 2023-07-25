@@ -21,13 +21,13 @@ import os
 
 import bpy
 from bpy_extras.io_utils import ImportHelper
+from bpy.types import Context
 
 from . import generate
 from . import sequences
+from . import uv_tools
 from .. import tracking
 from .. import util
-from . import uv_tools
-
 from ..conf import env
 
 # -----------------------------------------------------------------------------
@@ -127,7 +127,7 @@ class McprepMaterialProps():
 	)
 
 
-def draw_mats_common(self, context):
+def draw_mats_common(self, context: Context) -> None:
 	row = self.layout.row()
 	col = row.column()
 	engine = context.scene.render.engine
@@ -202,6 +202,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 				self.report({'ERROR'}, "No materials found on selected objects")
 			return {'CANCELLED'}
 
+		
 		# check if linked material exists
 		engine = context.scene.render.engine
 		count = 0
@@ -276,16 +277,18 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 			bpy.ops.mcprep.sync_materials(
 				selected=True, link=False, replace_materials=False, skipUsage=True)
 
+		
 		# Combine materials.
 		if self.combineMaterials is True:
 			bpy.ops.mcprep.combine_materials(selection_only=True, skipUsage=True)
 
-		# Improve UI.
+        # Improve UI.
 		if self.improveUiSettings:
 			try:
 				bpy.ops.mcprep.improve_ui()
 			except RuntimeError as err:
-				print("Failed to improve UI with error: " + str(err))
+				print(f"Failed to improve UI with error: {err}")
+
 
 		if self.optimizeScene and engine == 'CYCLES':
 			bpy.ops.mcprep.optimize_scene()
@@ -295,14 +298,14 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 		elif count_lib_skipped > 0:
 			self.report(
 				{"INFO"},
-				"Modified {} materials, skipped {} linked ones.".format(
-					count, count_lib_skipped))
+				f"Modified {count} materials, skipped {count_lib_skipped} linked ones.")
 		elif count > 0:
-			self.report({"INFO"}, "Modified " + str(count) + " materials")
+			self.report({"INFO"}, f"Modified  {count} materials")
 		else:
 			self.report(
 				{"ERROR"},
-				"Nothing modified, be sure you selected objects with existing materials!")
+				"Nothing modified, be sure you selected objects with existing materials!"
+			)
 
 		addon_prefs = util.get_user_preferences(context)
 		self.track_param = context.scene.render.engine
@@ -388,24 +391,25 @@ class MCPREP_OT_swap_texture_pack(
 	bl_options = {'REGISTER', 'UNDO'}
 
 	filter_glob: bpy.props.StringProperty(
-		default="",
-		options={'HIDDEN'})
+		default="", 
+		options={"HIDDEN"})
 	use_filter_folder = True
 	fileselectparams = "use_filter_blender"
-	filepath: bpy.props.StringProperty(subtype='DIR_PATH')
+	filepath: bpy.props.StringProperty(subtype="DIR_PATH")
 	filter_image: bpy.props.BoolProperty(
-		default=True,
-		options={'HIDDEN', 'SKIP_SAVE'})
+		default=True, 
+		options={"HIDDEN", "SKIP_SAVE"})
 	filter_folder: bpy.props.BoolProperty(
-		default=True,
-		options={'HIDDEN', 'SKIP_SAVE'})
+		default=True, 
+		options={"HIDDEN", "SKIP_SAVE"})
 	prepMaterials: bpy.props.BoolProperty(
 		name="Prep materials",
 		description="Runs prep materials after texture swap to regenerate materials",
-		default=False)
-	skipUsage: bpy.props.BoolProperty(
 		default=False,
-		options={'HIDDEN'})
+	)
+	skipUsage: bpy.props.BoolProperty(
+		default=False, 
+		options={"HIDDEN"})
 
 	@classmethod
 	def poll(cls, context):
@@ -435,10 +439,11 @@ class MCPREP_OT_swap_texture_pack(
 			col.prop(self, "syncMaterials")
 			col.prop(self, "improveUiSettings")
 			col.prop(self, "combineMaterials")
-
+	
 	track_function = "texture_pack"
 	track_param = None
 	track_exporter = None
+
 	@tracking.report_error
 	def execute(self, context):
 		addon_prefs = util.get_user_preferences(context)
@@ -447,7 +452,7 @@ class MCPREP_OT_swap_texture_pack(
 		folder = self.filepath
 		if os.path.isfile(bpy.path.abspath(folder)):
 			folder = os.path.dirname(folder)
-		env.log("Folder: " + folder)
+		env.log(f"Folder: {folder}")
 
 		if not os.path.isdir(bpy.path.abspath(folder)):
 			self.report({'ERROR'}, "Selected folder does not exist")
@@ -472,7 +477,7 @@ class MCPREP_OT_swap_texture_pack(
 		# set the scene's folder for the texturepack being swapped
 		context.scene.mcprep_texturepack_path = folder
 
-		env.log("Materials detected: " + str(len(mat_list)))
+		env.log(f"Materials detected: {len(mat_list)}")
 		res = 0
 		for mat in mat_list:
 			self.preprocess_material(mat)
@@ -505,7 +510,7 @@ class MCPREP_OT_swap_texture_pack(
 			env.log("Detected scaledd UV's, incompatible with swap textures")
 			env.log([ob.name for ob in affected_objs], vv_only=True)
 		else:
-			self.report({'INFO'}, "{} materials affected".format(res))
+			self.report({'INFO'}, f"{res} materials affected")
 		self.track_param = context.scene.render.engine
 		return {'FINISHED'}
 
@@ -605,6 +610,7 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 
 			env.log("Added blank texture node")
 
+
 			# now use standard method to update textures
 			generate.set_cycles_texture(image, mat, self.useExtraMaps)
 		else:
@@ -615,14 +621,14 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 	def update_material(self, context, mat):
 		"""Update the initially created material"""
 		if not mat:
-			env.log("During prep, found null material:" + str(mat), vv_only=True)
+			env.log(f"During prep, found null material: {mat}", vv_only=True)
 			return
 		elif mat.library:
 			return
 
 		engine = context.scene.render.engine
 		passes = generate.get_textures(mat)
-		env.log("Load Mat Passes:" + str(passes), vv_only=True)
+		env.log(f"Load Mat Passes:{passes}", vv_only=True)
 		if not self.useExtraMaps:
 			for pass_name in passes:
 				if pass_name != "diffuse":

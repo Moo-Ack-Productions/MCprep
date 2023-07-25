@@ -84,7 +84,7 @@ def reload_materials(context):
 		canon, _ = generate.get_mc_canonical_name(basename)
 		asset = mcprep_props.material_list.add()
 		asset.name = canon
-		asset.description = "Generate {} ({})".format(canon, basename)
+		asset.description = f"Generate {canon} ({basename})"
 		asset.path = image_file
 		asset.index = i
 
@@ -92,7 +92,7 @@ def reload_materials(context):
 		if not env.use_icons or env.preview_collections["materials"] == "":
 			continue
 		env.preview_collections["materials"].load(
-			"material-{}".format(i), image_file, 'IMAGE')
+			f"material-{i}", image_file, 'IMAGE')
 
 	if mcprep_props.material_list_index >= len(mcprep_props.material_list):
 		mcprep_props.material_list_index = len(mcprep_props.material_list) - 1
@@ -214,9 +214,7 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 			postcount = len([True for x in bpy.data.materials if x.users > 0])
 			self.report(
 				{"INFO"},
-				"Consolidated {x} materials, down to {y} overall".format(
-					x=precount - postcount,
-					y=postcount))
+				f"Consolidated {precount - postcount} materials, down to {postcount} overall")
 			return {'FINISHED'}
 
 		# perform the consolidation with one basename set at a time
@@ -227,7 +225,7 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 			name_cat[base].sort()  # in-place sorting
 			baseMat = bpy.data.materials[name_cat[base][0]]
 
-			env.log([name_cat[base], " ## ", baseMat], vv_only=True)
+			env.log(f"{name_cat[base]} ##  {baseMat}", vv_only=True)
 
 			for matname in name_cat[base][1:]:
 				# skip if fake user set
@@ -239,16 +237,16 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 					self.report({'ERROR'}, str(res))
 					return {'CANCELLED'}
 				old = bpy.data.materials[matname]
-				env.log("removing old? " + matname, vv_only=True)
+				env.log(f"removing old? {matname}", vv_only=True)
 				if removeold is True and old.users == 0:
-					env.log("removing old:" + matname, vv_only=True)
+					env.log(f"removing old:{matname}", vv_only=True)
 					try:
 						data.remove(old)
 					except ReferenceError as err:
-						print('Error trying to remove material ' + matname)
+						print(f'Error trying to remove material {matname}')
 						print(str(err))
 					except ValueError as err:
-						print('Error trying to remove material ' + matname)
+						print(f'Error trying to remove material {matname}')
 						print(str(err))
 
 			# Final step.. rename to not have .001 if it does,
@@ -262,12 +260,10 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 					baseMat.name = gen_base
 			else:
 				baseMat.name = gen_base
-			env.log(["Final: ", baseMat], vv_only=True)
+			env.log(f"Final: {baseMat}", vv_only=True)
 
 		postcount = len(["x" for x in getMaterials(self, context) if x.users > 0])
-		self.report({"INFO"}, "Consolidated {x} materials down to {y}".format(
-			x=precount,
-			y=postcount))
+		self.report({"INFO"}, f"Consolidated {precount} materials down to {postcount}")
 
 		return {'FINISHED'}
 
@@ -338,8 +334,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 			postcount = len(["x" for x in bpy.data.materials if x.users > 0])
 			self.report(
 				{"INFO"},
-				"Consolidated {x} materials, down to {y} overall".format(
-					x=precount - postcount, y=postcount))
+				f"Consolidated {precount - postcount} materials, down to {postcount} overall")
 			return {'FINISHED'}
 
 		# perform the consolidation with one basename set at a time
@@ -373,9 +368,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 
 		postcount = len(["x" for x in bpy.data.images if x.users > 0])
 		self.report(
-			{"INFO"}, "Consolidated {x} images down to {y}".format(
-				x=precount,
-				y=postcount))
+			{"INFO"}, f"Consolidated {precount} images down to {postcount}")
 
 		return {'FINISHED'}
 
@@ -428,17 +421,16 @@ class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 					updated = True
 			if updated:
 				count += 1
-				env.log("Updated " + mat.name)
+				env.log(f"Updated {mat.name}")
 				if self.animateTextures:
 					sequences.animate_single_material(
 						mat, context.scene.render.engine)
 		if count == 0:
 			self.report(
 				{'INFO'},
-				"No missing image blocks detected in {} materials".format(
-					len(mat_list)))
+				f"No missing image blocks detected in {len(mat_list)} materials")
 
-		self.report({'INFO'}, "Updated {} materials".format(count))
+		self.report({'INFO'}, f"Updated {count} materials")
 		self.track_param = context.scene.render.engine
 		addon_prefs = util.get_user_preferences(context)
 		self.track_exporter = addon_prefs.MCprep_exporter_type
@@ -446,15 +438,15 @@ class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 
 	def load_from_texturepack(self, mat):
 		"""If image datablock not found in passes, try to directly load and assign"""
-		env.log("Loading from texpack for " + mat.name, vv_only=True)
+		env.log(f"Loading from texpack for {mat.name}", vv_only=True)
 		canon, _ = generate.get_mc_canonical_name(mat.name)
 		image_path = generate.find_from_texturepack(canon)
 		if not image_path or not os.path.isfile(image_path):
-			env.log("Find missing images: No source file found for " + mat.name)
+			env.log(f"Find missing images: No source file found for {mat.name}")
 			return False
 
 		# even if images of same name already exist, load new block
-		env.log("Find missing images: Creating new image datablock for " + mat.name)
+		env.log(f"Find missing images: Creating new image datablock for {mat.name}")
 		# do not use 'check_existing=False' to keep compatibility pre 2.79
 		image = bpy.data.images.load(image_path, check_existing=True)
 
