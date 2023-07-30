@@ -479,6 +479,7 @@ def load_linked(self, context: Context, path: str, name: str) -> None:
 				{'INFO'}, "This addon works better when the root bone's name is 'MAIN'")
 
 
+# TODO: Add a way to check the version before load_append()
 def load_append(self, context: Context, path: Path, name: str) -> None:
 	"""Append an entire collection/group into this blend file and fix armature.
 
@@ -637,6 +638,14 @@ def load_append(self, context: Context, path: Path, name: str) -> None:
 	# add the original selection back
 	for objs in sel:
 		util.select_set(objs, True)
+		
+def init_entity_prop(obj: bpy.types.Object, name: str, rig_version = (0,0,0)):
+	# Vanilla mobs name or Custom, useful for skinswap villager rig
+	rig_type = obj.get("MCPREP_RIGTYPE")
+	# This will set the current Blender version if not exist
+	rig_version = obj.get("MCPREP_RIGVERS")
+	if rig_type == None:
+		util.set_prop(obj, "MCPREP_RIGTYPE", name)
 
 # -----------------------------------------------------------------------------
 # class definitions

@@ -207,6 +207,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 		engine = context.scene.render.engine
 		count = 0
 		count_lib_skipped = 0
+		count_no_prep = 0
 
 		for mat in mat_list:
 			if not mat:
@@ -214,6 +215,10 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 					"During prep, found null material:" + str(mat), vv_only=True)
 				continue
 
+			elif util.is_no_prep(mat):
+				count_no_prep += 1
+				continue
+			
 			elif mat.library:
 				count_lib_skipped += 1
 				continue
@@ -293,20 +298,26 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 		if self.optimizeScene and engine == 'CYCLES':
 			bpy.ops.mcprep.optimize_scene()
 
+		has_no_prep = count_no_prep > 0
+		has_lib_skipped = count_lib_skipped > 0
+		has_mat = count > 0
+		
+		_info = {}
+		_info[f"modified {count}"] = has_mat
+		_info[f"skipped {count_lib_skipped} linked"] = has_lib_skipped
+		_info[f"founded {count_no_prep} no prep"] = has_no_prep
+		
+		mat_info = ",".join(k for k,v in _info.items() if v).capitalize()
+		
 		if self.skipUsage is True:
 			pass  # Don't report if a meta-call.
-		elif count_lib_skipped > 0:
-			self.report(
-				{"INFO"},
-				f"Modified {count} materials, skipped {count_lib_skipped} linked ones.")
-		elif count > 0:
-			self.report({"INFO"}, f"Modified  {count} materials")
+		elif has_mat or has_lib_skipped or has_no_prep:
+			self.report({"INFO"}, mat_info) 
 		else:
 			self.report(
 				{"ERROR"},
-				"Nothing modified, be sure you selected objects with existing materials!"
-			)
-
+				"Nothing modified, be sure you selected objects with existing materials!")
+		
 		addon_prefs = util.get_user_preferences(context)
 		self.track_param = context.scene.render.engine
 		self.track_exporter = addon_prefs.MCprep_exporter_type

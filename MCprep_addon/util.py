@@ -17,7 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 from subprocess import Popen, PIPE
-from typing import List, Optional, Union, Tuple
+from typing import List, Optional, Union, Tuple, Any
 import enum
 import json
 import operator
@@ -809,3 +809,25 @@ def move_assets_to_excluded_layer(context: Context, collections: List[Collection
 			continue  # not linked, likely a sub-group not added to scn
 		spawner_exclude_vl.collection.children.link(grp)
 		initial_view_coll.collection.children.unlink(grp)
+		
+def set_prop(id_block: ID, key: str, value: Any, **kwargs: Dict[str, Any]):
+	"""Create or set the properties"""
+	id_block[key] = value
+	id_props = id_block.id_properties_ui(key)
+	id_props.update(**kwargs)
+	overrides = kwargs.get("overridable_library")
+	if overrides != None:
+		id_block.property_overridable_library_set(f'["{key}"]', overrides)
+
+def is_no_prep(mat: Material):
+	"""Check is material has no prep properties 
+	If no_prep is 1 returns True
+	not exist or 0 returns False
+	"""
+	return mat.get("MCPREP_NO_PREP", False)
+	
+def get_entity_prop(obj, prop: Optional[str] = None):
+	if prop:
+		return obj.get(prop)
+	else:
+		return obj.items()
