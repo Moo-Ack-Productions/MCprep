@@ -488,7 +488,7 @@ class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 			if r:
 				self.report(
 					{"ERROR"}, "This not a valid json for Minecraft Java model")
-			return {'CANCELLED'}
+				return {'CANCELLED'}
 		except ModelException as e:
 			self.report({"ERROR"}, f"Encountered error: {e}")
 			return {'CANCELLED'}
@@ -530,7 +530,7 @@ class MCPREP_OT_import_minecraft_model_file(
 			if r:
 				self.report(
 					{"ERROR"}, "This not a valid json for Minecraft Java model")
-			return {'CANCELLED'}
+				return {'CANCELLED'}
 		except ModelException as e:
 			self.report({"ERROR"}, f"Encountered error: {e}")
 			return {'CANCELLED'}
