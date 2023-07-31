@@ -19,7 +19,7 @@
 import os
 import json
 from mathutils import Vector
-from math import sin, cos, radians
+from math import sin, cos, radians, dist
 from pathlib import Path
 from typing import Dict, Optional, Tuple, Union, Sequence
 
@@ -48,7 +48,7 @@ class ModelException(Exception):
 
 
 def rotate_around(
-	d: float, pos: VectorType, origin: VectorType, axis:str='z', offset: VectorType=[8, 0, 8], scale: VectorType=[0.063, 0.063, 0.063]) -> VectorType:
+	d: float, pos: VectorType, origin: VectorType, axis:str='z', offset: VectorType=[8, 0, 8], scale: VectorType=[0.0625, 0.0625, 0.0625]) -> VectorType:
 	r = -radians(d)
 	axis_i = ord(axis) - 120  # 'x'=0, 'y'=1, 'z'=2
 	a = pos[(1 + axis_i) % 3]
@@ -99,14 +99,22 @@ def add_element(
 
 	edges = []
 	faces = [
-		[0, 1, 2, 3],
-		[5, 4, 7, 6],
-		[1, 0, 4, 5],
-		[7, 6, 2, 3],
-		[4, 0, 3, 7],
-		[1, 5, 6, 2]]
+		[0, 1, 2, 3], # north
+		[5, 4, 7, 6], # south
+		[1, 0, 4, 5], # up
+		[7, 6, 2, 3], # down
+		[4, 0, 3, 7], # west
+		[1, 5, 6, 2]] # east
 
-	return [verts, edges, faces]
+	# zNight: This isn't well made for now
+	# Because it can be scale not just by up,down
+	# Slice out if the distance of any element is True
+	is_plane = any([dist([t],[f]) == 0 for t,f in zip(elm_to, elm_from)]) 
+	if is_plane:
+		verts = verts[0:2] + verts[4:6] # Take 0,1,4,5 to 0,1,3,2
+		faces = [[0,1,3,2]]
+
+	return [verts, edges, faces, is_plane]
 
 
 def add_material(name: str="material", path: str="") -> Material:
@@ -238,7 +246,7 @@ def read_model(context: Context, model_filepath: Path) -> Tuple[Element, Texture
 	return elements, textures
 
 
-def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> bpy.types.Object:
+def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int, bpy.types.Object]:
 	"""Primary function for generating a model from json file."""
 	mesh = bpy.data.meshes.new(obj_name)  # add a new mesh
 	obj = bpy.data.objects.new(obj_name, mesh)  # add a new object using the mesh
@@ -270,19 +278,22 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> bpy.types
 	if elements is None:
 		elements = [
 			{'from': [0, 0, 0], 'to':[0, 0, 0]}]  # temp default elements
+		return 1, None
 
 	for e in elements:
 		rotation = e.get("rotation")
 		if rotation is None:
 			# rotation default
 			rotation = {"angle": 0, "axis": "y", "origin": [8, 8, 8]}
-
 		element = add_element(
 			e['from'], e['to'], rotation['origin'], rotation['axis'], rotation['angle'])
 		verts = [bm.verts.new(v) for v in element[0]]  # add a new vert
 		uvs = [[1, 1], [0, 1], [0, 0], [1, 0]]
 		# face directions defaults
 		face_dir = ["north", "south", "up", "down", "west", "east"]
+		# zNight: See add_element note
+		if element[3]:
+			face_dir = ["up", "down"]
 		faces = e.get("faces")
 		for i in range(len(element[2])):
 			f = element[2][i]
@@ -336,7 +347,7 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> bpy.types
 	# make the bmesh the object's mesh
 	bm.to_mesh(mesh)
 	bm.free()
-	return obj
+	return 0, obj
 
 
 # -----------------------------------------------------------------------------
@@ -484,7 +495,9 @@ class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 			return {'CANCELLED'}
 
 		try:
-			obj = add_model(os.path.normpath(self.filepath), name)
+			r, obj = add_model(os.path.normpath(self.filepath), name)
+			if r:
+				raise Exception("This maybe not a valid Minecraft Java model")
 		except ModelException as e:
 			self.report({"ERROR"}, f"Encountered error: {e}")
 			return {'CANCELLED'}
@@ -522,7 +535,9 @@ class MCPREP_OT_import_minecraft_model_file(
 			return {'CANCELLED'}
 
 		try:
-			obj = add_model(os.path.normpath(self.filepath), filename)
+			r, obj = add_model(os.path.normpath(self.filepath), filename)
+			if r:
+				raise Exception("This maybe not a valid Minecraft Java model")
 		except ModelException as e:
 			self.report({"ERROR"}, f"Encountered error: {e}")
 			return {'CANCELLED'}

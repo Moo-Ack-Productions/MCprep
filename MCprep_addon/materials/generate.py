@@ -1212,7 +1212,7 @@ def matgen_cycles_simple(mat: Material, options: PrepOptions) -> Optional[bool]:
 	else:
 		env.log(f"Texture desaturated: {canon}", vv_only=True)
 		desat_color = env.json_data['blocks']['desaturated'][canon]
-		if len(desat_color) < len(nodeSaturateMix.inputs[2].default_value):
+		if len(desat_color) < len(nodeSaturateMix.inputs[saturateMixIn[2]].default_value):
 				desat_color.append(1.0)
 		nodeSaturateMix.inputs[saturateMixIn[2]].default_value = desat_color
 		nodeSaturateMix.mute = False
