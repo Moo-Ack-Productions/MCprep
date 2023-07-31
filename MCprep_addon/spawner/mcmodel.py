@@ -106,15 +106,7 @@ def add_element(
 		[4, 0, 3, 7], # west
 		[1, 5, 6, 2]] # east
 
-	# zNight: This isn't well made for now
-	# Because it can be scale not just by up,down
-	# Slice out if the distance of any element is True
-	is_plane = any([dist([t],[f]) == 0 for t,f in zip(elm_to, elm_from)]) 
-	if is_plane:
-		verts = verts[0:2] + verts[4:6] # Take 0,1,4,5 to 0,1,3,2
-		faces = [[0,1,3,2]]
-
-	return [verts, edges, faces, is_plane]
+	return [verts, edges, faces]
 
 
 def add_material(name: str="material", path: str="") -> Material:
@@ -291,9 +283,6 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 		uvs = [[1, 1], [0, 1], [0, 0], [1, 0]]
 		# face directions defaults
 		face_dir = ["north", "south", "up", "down", "west", "east"]
-		# zNight: See add_element note
-		if element[3]:
-			face_dir = ["up", "down"]
 		faces = e.get("faces")
 		for i in range(len(element[2])):
 			f = element[2][i]
