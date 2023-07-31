@@ -19,7 +19,7 @@
 import os
 import json
 from mathutils import Vector
-from math import sin, cos, radians, dist
+from math import sin, cos, radians
 from pathlib import Path
 from typing import Dict, Optional, Tuple, Union, Sequence
 
