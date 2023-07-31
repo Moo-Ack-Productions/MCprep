@@ -268,8 +268,8 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 				materials.append(f"#{img}")
 
 	if elements is None:
-		elements = [
-			{'from': [0, 0, 0], 'to':[0, 0, 0]}]  # temp default elements
+		# elements = [
+		# 	{'from': [0, 0, 0], 'to':[0, 0, 0]}]  # temp default elements
 		return 1, None
 
 	for e in elements:
@@ -486,7 +486,9 @@ class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 		try:
 			r, obj = add_model(os.path.normpath(self.filepath), name)
 			if r:
-				raise Exception("This maybe not a valid Minecraft Java model")
+				self.report(
+					{"ERROR"}, "This not a valid json for Minecraft Java model")
+			return {'CANCELLED'}
 		except ModelException as e:
 			self.report({"ERROR"}, f"Encountered error: {e}")
 			return {'CANCELLED'}
@@ -526,7 +528,9 @@ class MCPREP_OT_import_minecraft_model_file(
 		try:
 			r, obj = add_model(os.path.normpath(self.filepath), filename)
 			if r:
-				raise Exception("This maybe not a valid Minecraft Java model")
+				self.report(
+					{"ERROR"}, "This not a valid json for Minecraft Java model")
+			return {'CANCELLED'}
 		except ModelException as e:
 			self.report({"ERROR"}, f"Encountered error: {e}")
 			return {'CANCELLED'}
