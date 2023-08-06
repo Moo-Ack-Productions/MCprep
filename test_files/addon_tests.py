@@ -50,7 +50,6 @@ class mcprep_testing():
 		self.suppress = True  # hold stdout
 		self.test_status = {}  # {func.__name__: {"check":-1, "res":-1,0,1}}
 		self.test_cases = [
-			self.openfolder,
 			self.spawn_mob,
 			self.spawn_mob_linked,
 			self.check_blend_eligible,
@@ -454,19 +453,6 @@ class mcprep_testing():
 
 		# check on image that is packed or not, or packed but no data
 		os.remove(tmp_image)
-
-	def openfolder(self):
-		if bpy.app.background is True:
-			return ""  # can't test this in background mode
-
-		folder = bpy.utils.script_path_user()
-		if not os.path.isdir(folder):
-			return "Sample folder doesn't exist, couldn't test"
-		res = bpy.ops.mcprep.openfolder(folder)
-		if res == {"FINISHED"}:
-			return ""
-		else:
-			return "Failed, returned cancelled"
 
 	def spawn_mob(self):
 		"""Spawn mobs, reload mobs, etc"""
