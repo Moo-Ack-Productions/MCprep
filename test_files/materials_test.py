@@ -314,6 +314,25 @@ class MaterialsTest(unittest.TestCase):
         # TODO: test that it is caching as expected.. by setting a false
         # value for cache flag and seeing it's returning the property value
 
+    def test_matprep_cycles(self):
+        """Tests the generation function used within an operator."""
+        canon = "grass_block_top"
+        mat, img_node = self._create_canon_mat(canon, test_pack=False)
+        passes = {"diffuse": img_node.image}
+        options = generate.PrepOptions(
+            passes=passes,
+            use_reflections=False,
+            use_principled=True,
+            only_solid=False,
+            pack_format="simple",
+            use_emission_nodes=False,
+            use_emission=False
+        )
+
+        generate.matprep_cycles(mat, options)
+        self.assertEqual(1, len(bpy.data.materials))
+        self.assertEqual(1, len(bpy.data.images), list(bpy.data.images))
+
 
 if __name__ == '__main__':
     unittest.main(exit=False)
