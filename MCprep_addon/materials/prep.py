@@ -270,7 +270,9 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 
 			if self.animateTextures:
 				sequences.animate_single_material(
-					mat, context.scene.render.engine)
+					mat,
+					context.scene.render.engine,
+					export_location="original")
 
 		# Sync materials.
 		if self.syncMaterials is True:
@@ -484,7 +486,9 @@ class MCPREP_OT_swap_texture_pack(
 			res += generate.set_texture_pack(mat, folder, self.useExtraMaps)
 			if self.animateTextures:
 				sequences.animate_single_material(
-					mat, context.scene.render.engine)
+					mat,
+					context.scene.render.engine,
+					export_location="original")
 			# may be a double call if was animated tex
 			generate.set_saturation_material(mat)
 
@@ -661,7 +665,7 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 
 		if self.animateTextures:
 			sequences.animate_single_material(
-				mat, context.scene.render.engine)
+				mat, context.scene.render.engine, export_location="original")
 
 		return success, None
 

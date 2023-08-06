@@ -19,13 +19,20 @@
 from typing import Tuple
 import os
 import unittest
+import shutil
 
 import bpy
 from bpy.types import Material
 
+from MCprep_addon.materials.sequences import generate_material_sequence
+
 
 class MaterialsTest(unittest.TestCase):
     """Materials-related tests."""
+
+    @classmethod
+    def setUpClass(cls):
+        bpy.ops.preferences.addon_enable(module="MCprep_addon")
 
     def setUp(self):
         """Clears scene and data between each test"""
@@ -201,6 +208,59 @@ class MaterialsTest(unittest.TestCase):
             count_images, 3, "Should have 3 pass after pbr load")
         self.assertEqual(
             missing_images, 0, "Should have 0 unloaded passes")
+
+    def test_generate_material_sequence(self):
+        """Validates generating an image sequence works ok."""
+        self._material_sequnece_subtest(operator=False)
+
+    def test_load_material_animated(self):
+        """Validates loading an animated material works ok."""
+        self._material_sequnece_subtest(operator=True)
+
+    def _material_sequnece_subtest(self, operator: bool):
+        """Validates generating an image sequence works ok."""
+
+        tiled_img = os.path.join(
+            os.path.dirname(__file__),
+            "test_resource_pack", "textures", "campfire_fire.png")
+        fake_orig_img = tiled_img
+        result_dir = os.path.splitext(tiled_img)[0]
+
+        try:
+            shutil.rmtree(result_dir)
+        except Exception:
+            pass  # Ok, generally should be cleaned up anyways.
+
+        # Ensure that the folder does not initially exist
+        self.assertFalse(os.path.isdir(result_dir),
+                         "Folder pre-exists, should be removed before test")
+
+        res, err = None, None
+        if operator is True:
+            # Add a mesh to operate on
+            bpy.ops.mesh.primitive_plane_add()
+            res = bpy.ops.mcprep.load_material(
+                filepath=tiled_img, animateTextures=True)
+            self.assertEqual(res, {'FINISHED'})
+        else:
+            res, err = generate_material_sequence(
+                source_path=fake_orig_img,
+                image_path=tiled_img,
+                form=None,
+                export_location="original",
+                clear_cache=True)
+
+        gen_files = [img for img in os.listdir(result_dir) if img.endswith(".png")]
+        self.assertTrue(os.path.isdir(result_dir),
+                        "Output directory does not exist")
+        shutil.rmtree(result_dir)
+        self.assertTrue(gen_files, "No images generated")
+
+        if operator is True:
+            self.assertEqual(res, {'FINISHED'})
+        else:
+            self.assertIsNone(err, "Generate materials had an error")
+            self.assertTrue(res, "Failed to get success resposne from generate img sequence")
 
 
 if __name__ == '__main__':
