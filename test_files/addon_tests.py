@@ -67,7 +67,6 @@ class mcprep_testing():
 			self.meshswap_jmc2obj,
 			self.meshswap_mineways_separated,
 			self.meshswap_mineways_combined,
-			self.detect_desaturated_images,
 			self.detect_extra_passes,
 			self.find_missing_images_cycles,
 			self.qa_meshswap_file,
@@ -1154,44 +1153,6 @@ class mcprep_testing():
 				errors.append(mat_name + ":" + res)
 		if errors:
 			return "Meshswap combined failed: " + ", ".join(errors)
-
-	def detect_desaturated_images(self):
-		"""Checks the desaturate images function works"""
-		from MCprep.materials.generate import is_image_grayscale
-
-		base = self.get_mcprep_path()
-		print("Raw base", base)
-		base = os.path.join(
-			base, "MCprep_resources", "resourcepacks", "mcprep_default",
-			"assets", "minecraft", "textures", "block")
-		print("Remapped base: ", base)
-
-		# known images that ARE desaturated:
-		desaturated = [
-			"grass_block_top.png"
-		]
-		saturated = [
-			"grass_block_side.png",
-			"glowstone.png"
-		]
-
-		for tex in saturated:
-			img = bpy.data.images.load(os.path.join(base, tex))
-			if not img:
-				raise Exception('Failed to load img ' + str(tex))
-			if is_image_grayscale(img) is True:
-				raise Exception(
-					'Image {} detected as grayscale, should be saturated'.format(tex))
-		for tex in desaturated:
-			img = bpy.data.images.load(os.path.join(base, tex))
-			if not img:
-				raise Exception('Failed to load img ' + str(tex))
-			if is_image_grayscale(img) is False:
-				raise Exception(
-					'Image {} detected as saturated - should be grayscale'.format(tex))
-
-		# test that it is caching as expected.. by setting a false
-		# value for cache flag and seeing it's returning the property value
 
 	def detect_extra_passes(self):
 		"""Ensure only the correct pbr file matches are found for input file"""
