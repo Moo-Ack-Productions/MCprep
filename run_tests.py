@@ -21,6 +21,7 @@ from typing import List
 import argparse
 import os
 import subprocess
+import time
 
 
 COMPILE_CMD = ["./compile.sh", "-fast"]
@@ -56,6 +57,7 @@ def main():
     reset_test_file()
 
     # Loop over all binaries and run tests.
+    t0 = time.time()
     for ind, binary in enumerate(blender_execs):
         run_all = args.all_execs is True
         run_specific = args.version is not None
@@ -78,7 +80,11 @@ def main():
         output = subprocess.check_output(cmd)
         print(output.decode("utf-8"))
 
+    t1 = time.time()
+
     output_results()
+    round_s = round(t1 - t0)
+    print(f"tests took {round_s}s to run")
 
 
 def get_args():
