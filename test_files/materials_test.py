@@ -75,7 +75,7 @@ class MaterialsTest(unittest.TestCase):
         mat = bpy.data.materials.new(name)
         mat.use_nodes = True
         img_node = mat.node_tree.nodes.new(type="ShaderNodeTexImage")
-        if canon and not test_pack:
+        if canon:
             filepath = self._get_canon_texture_image(canon, test_pack)
             img = bpy.data.images.load(filepath)
         else:
