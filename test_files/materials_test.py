@@ -24,7 +24,8 @@ import shutil
 import bpy
 from bpy.types import Material
 
-from MCprep_addon.materials.sequences import generate_material_sequence
+from MCprep_addon.materials import sequences
+from MCprep_addon.materials import generate
 
 
 class MaterialsTest(unittest.TestCase):
@@ -45,23 +46,37 @@ class MaterialsTest(unittest.TestCase):
         bpy.ops.wm.save_as_mainfile(filepath=path)
         print(f"Saved to debug file: {path}")
 
-    def _create_canon_mat(self, canon=None, test_pack=False):
+    def _get_mcprep_path(self):
+        """Returns the addon basepath installed in this blender instance"""
+        for base in bpy.utils.script_paths():
+            init = os.path.join(
+                base, "addons", "MCprep_addon")  # __init__.py folder
+            if os.path.isdir(init):
+                return init
+        self.fail("Failed to get MCprep path")
+
+    def _get_canon_texture_image(self, name: str, test_pack=False):
+        if test_pack:
+            testdir = os.path.dirname(__file__)
+            filepath = os.path.join(
+                testdir, "test_resource_pack", "textures", name + ".png")
+            return filepath
+        else:
+            base = self._get_mcprep_path()
+            filepath = os.path.join(
+                base, "MCprep_resources",
+                "resourcepacks", "mcprep_default", "assets", "minecraft",
+                "textures", "block", name + ".png")
+            return filepath
+
+    def _create_canon_mat(self, canon: str = None, test_pack=False):
         """Creates a material that should be recognized."""
         name = canon if canon else "dirt"
         mat = bpy.data.materials.new(name)
         mat.use_nodes = True
         img_node = mat.node_tree.nodes.new(type="ShaderNodeTexImage")
         if canon and not test_pack:
-            base = self.get_mcprep_path()
-            filepath = os.path.join(
-                base, "MCprep_resources",
-                "resourcepacks", "mcprep_default", "assets", "minecraft",
-                "textures", "block", canon + ".png")
-            img = bpy.data.images.load(filepath)
-        elif canon and test_pack:
-            testdir = os.path.dirname(__file__)
-            filepath = os.path.join(
-                testdir, "test_resource_pack", "textures", canon + ".png")
+            filepath = self._get_canon_texture_image(canon, test_pack)
             img = bpy.data.images.load(filepath)
         else:
             img = bpy.data.images.new(name, 16, 16)
@@ -243,14 +258,15 @@ class MaterialsTest(unittest.TestCase):
                 filepath=tiled_img, animateTextures=True)
             self.assertEqual(res, {'FINISHED'})
         else:
-            res, err = generate_material_sequence(
+            res, err = sequences.generate_material_sequence(
                 source_path=fake_orig_img,
                 image_path=tiled_img,
                 form=None,
                 export_location="original",
                 clear_cache=True)
 
-        gen_files = [img for img in os.listdir(result_dir) if img.endswith(".png")]
+        gen_files = [img for img in os.listdir(result_dir)
+                     if img.endswith(".png")]
         self.assertTrue(os.path.isdir(result_dir),
                         "Output directory does not exist")
         shutil.rmtree(result_dir)
@@ -260,7 +276,43 @@ class MaterialsTest(unittest.TestCase):
             self.assertEqual(res, {'FINISHED'})
         else:
             self.assertIsNone(err, "Generate materials had an error")
-            self.assertTrue(res, "Failed to get success resposne from generate img sequence")
+            self.assertTrue(
+                res,
+                "Failed to get success resposne from generate img sequence")
+
+    def test_detect_desaturated_images(self):
+        """Checks the desaturate images are recognized as such."""
+        should_saturate = {
+            # Sample of canonically grayscale textures.
+            "grass_block_top": True,
+            "acacia_leaves": True,
+            "redstone_dust_line0": True,
+            "water_flow": True,
+
+            # Sample of textures already saturated
+            "grass_block_side": False,
+            "glowstone": False
+        }
+
+        for tex in list(should_saturate):
+            do_sat = should_saturate[tex]
+            with self.subTest(f"Assert {tex} saturate is {do_sat}"):
+                img_file = self._get_canon_texture_image(tex, test_pack=False)
+                self.assertTrue(
+                    os.path.isfile(img_file),
+                    f"Failed to get test file {img_file}")
+                img = bpy.data.images.load(img_file)
+                self.assertTrue(img, 'Failed to load img')
+                res = generate.is_image_grayscale(img)
+                if do_sat:
+                    self.assertTrue(
+                        res, f"Should detect {tex} as grayscale")
+                else:
+                    self.assertFalse(
+                        res, f"Should not detect {tex} as grayscale")
+
+        # TODO: test that it is caching as expected.. by setting a false
+        # value for cache flag and seeing it's returning the property value
 
 
 if __name__ == '__main__':
