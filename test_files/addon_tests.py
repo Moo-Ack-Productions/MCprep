@@ -89,7 +89,6 @@ class mcprep_testing():
 			self.uv_transform_combined_alert,
 			self.world_tools,
 			self.test_enable_obj_importer,
-			self.test_generate_material_sequence,
 			self.qa_effects,
 			self.qa_rigs,
 			self.convert_mtl_simple,
@@ -1896,52 +1895,6 @@ class mcprep_testing():
 		invalid, invalid_objs = detect_invalid_uvs_from_objs([lava_obj, water_obj])
 		if invalid is False:
 			return "Combined lava/water should still alert"
-
-	def test_generate_material_sequence(self):
-		"""Ensure that generating an image sequence works as expected."""
-		from MCprep.materials.sequences import generate_material_sequence
-
-		# ALT: call animate_single_material
-		# animate_single_material(
-		# mat, engine, export_location='original', clear_cache=False)
-
-		tiled_img = os.path.join(
-			os.path.dirname(__file__),
-			"test_resource_pack", "textures", "campfire_fire.png")
-		fake_orig_img = tiled_img
-		result_dir = tiled_img[:-4]  # Same name, sans extension.
-
-		try:
-			shutil.rmtree(result_dir)
-		except Exception as err:
-			print("Error removing prior directory of animated campfire")
-			print(err)
-
-		# Ensure that the folder does not initially exist
-		if os.path.isdir(result_dir):
-			return "Folder pre-exists, should be removed before test"
-
-		res, err = generate_material_sequence(
-			source_path=fake_orig_img,
-			image_path=tiled_img,
-			form=None,
-			export_location="original",
-			clear_cache=True)
-
-		if err:
-			return "Generate materials had an error: " + str(err)
-		if not res:
-			return "Failed to get success resposne from generate img sequence"
-
-		if not os.path.isdir(result_dir):
-			return "Output directory does not exist"
-
-		gen_files = [img for img in os.listdir(result_dir) if img.endswith(".png")]
-		if not gen_files:
-			return "No images generated"
-
-		# Now do cleanup.
-		shutil.rmtree(result_dir)
 
 	def test_enable_obj_importer(self):
 		"""Ensure module name is correct, since error won't be reported."""

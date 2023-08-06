@@ -49,9 +49,26 @@ def get_args():
     return parser.parse_args()
 
 
+def setup_env_paths(self):
+    """Adds the MCprep installed addon path to sys for easier importing."""
+    to_add = None
+
+    for base in bpy.utils.script_paths():
+        init = os.path.join(base, "addons", "MCprep_addon", "__init__.py")
+        if os.path.isfile(init):
+            to_add = init
+            break
+    if not to_add:
+        raise Exception("Could not add MCprep addon path for importing")
+
+    sys.path.insert(0, to_add)
+
+
 def main():
     args = get_args()
     suite = unittest.TestSuite()
+
+    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
     if args.version is not None:
         # A concatenated list like 3.5,2.80
