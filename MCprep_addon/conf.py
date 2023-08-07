@@ -133,6 +133,8 @@ class MCprepEnv:
 	# -----------------------------------------------------------------------------
 
 	def icons_init(self):
+		self.clear_previews()
+
 		collection_sets = [
 			"main", "skins", "mobs", "entities", "blocks", "items", "effects", "materials"]
 
@@ -177,6 +179,15 @@ class MCprepEnv:
 			self.use_icons = False
 			for iconset in collection_sets:
 				self.preview_collections[iconset] = ""
+
+	def clear_previews(self):
+		for pcoll in self.preview_collections.values():
+			try:
+				bpy.utils.previews.remove(pcoll)
+			except Exception as e:
+				self.log('Issue clearing preview set ' + str(pcoll))
+				print(e)
+		self.preview_collections.clear()
 
 	def log(self, statement: str, vv_only: bool = False):
 		if self.verbose and vv_only and self.very_verbose:
@@ -398,14 +409,7 @@ def register():
 
 
 def unregister():
-	if env.use_icons:
-		for pcoll in env.preview_collections.values():
-			try:
-				bpy.utils.previews.remove(pcoll)
-			except:
-				env.log('Issue clearing preview set ' + str(pcoll))
-	env.preview_collections.clear()
-
+	env.clear_previews()
 	env.json_data = None  # actively clearing out json data for next open
 
 	env.loaded_all_spawners = False

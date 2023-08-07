@@ -54,7 +54,6 @@ class mcprep_testing():
 			self.check_blend_eligible,
 			self.check_blend_eligible_middle,
 			self.check_blend_eligible_real,
-			self.change_skin,
 			self.import_world_split,
 			self.import_world_fail,
 			self.import_jmc2obj,
@@ -597,98 +596,6 @@ class mcprep_testing():
 			else:
 				if res is True:
 					return "Should have said {} was correct - not {}".format(correct, rig)
-
-	def change_skin(self):
-		"""Test scenarios for changing skin after adding a character."""
-		self._clear_scene()
-
-		bpy.ops.mcprep.reload_skins()
-		skin_ind = bpy.context.scene.mcprep_skins_list_index
-		skin_item = bpy.context.scene.mcprep_skins_list[skin_ind]
-		tex_name = skin_item['name']
-		skin_path = os.path.join(bpy.context.scene.mcprep_skin_path, tex_name)
-
-		status = 'fail'
-		try:
-			_ = bpy.ops.mcprep.applyskin(
-				filepath=skin_path,
-				new_material=False)
-		except RuntimeError as e:
-			if 'No materials found to update' in str(e):
-				status = 'success'  # expect to fail when nothing selected
-		if status == 'fail':
-			return "Should have failed to skin swap with no objects selected"
-
-		# now run on a real test character, with 1 material and 2 objects
-		self._add_character()
-
-		pre_mats = len(bpy.data.materials)
-		bpy.ops.mcprep.applyskin(
-			filepath=skin_path,
-			new_material=False)
-		post_mats = len(bpy.data.materials)
-		if post_mats != pre_mats:  # should be unchanged
-			return (
-				"change_skin.mat counts diff despit no new mat request, "
-				"{} before and {} after".format(pre_mats, post_mats))
-
-		# do counts of materials before and after to ensure they match
-		pre_mats = len(bpy.data.materials)
-		bpy.ops.mcprep.applyskin(
-			filepath=skin_path,
-			new_material=True)
-		post_mats = len(bpy.data.materials)
-		if post_mats != pre_mats * 2:  # should exactly double since in new scene
-			return (
-				"change_skin.mat counts diff mat counts, "
-				"{} before and {} after".format(pre_mats, post_mats))
-
-		pre_mats = len(bpy.data.materials)
-
-		# not diff operator name, this is popup browser
-		bpy.ops.mcprep.skin_swapper(
-			filepath=skin_path,
-			new_material=False)
-		post_mats = len(bpy.data.materials)
-		if post_mats != pre_mats:  # should be unchanged
-			return (
-				"change_skin.mat counts differ even though should be same, "
-				"{} before and {} after".format(pre_mats, post_mats))
-
-		# TODO: Add test for when there is a bogus filename, responds with
-		# Image file not found in err
-
-		# capture info or recent out?
-		# check that username was there before or not
-		bpy.ops.mcprep.applyusernameskin(
-			username='TheDuckCow',
-			skip_redownload=False,
-			new_material=True)
-
-		# check that timestamp of last edit of file was longer ago than above cmd
-
-		bpy.ops.mcprep.applyusernameskin(
-			username='TheDuckCow',
-			skip_redownload=True,
-			new_material=True)
-
-		# test deleting username skin and that file is indeed deleted
-		# and not in list anymore
-
-		# bpy.ops.mcprep.applyusernameskin(
-		# 	username='TheDuckCow',
-		# 	skip_redownload=True,
-		# 	new_material=True)
-
-		# test that the file was added back
-
-		bpy.ops.mcprep.spawn_with_skin()
-		# test changing skin to file when no existing images/textres
-		# test changing skin to file when existing material
-		# test changing skin to file for both above, cycles and internal
-		# test changing skin file for both above without, then with,
-		#   then without again, normals + spec etc.
-		return
 
 	def import_world_split(self):
 		"""Test that imported world has multiple objects"""

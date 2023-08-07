@@ -758,20 +758,6 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 			context.scene.world.zenith_color = (0.0954261, 0.546859, 1)
 
 
-class MCPREP_OT_add_mc_world(bpy.types.Operator):
-	"""Please used the new operator, mcprep.add_mc_sky"""
-	bl_idname = "mcprep.add_mc_world"
-	bl_label = "Create MC World"
-	bl_options = {'REGISTER', 'UNDO'}
-
-	track_function = "world_time"
-	track_param = "Deprecated"
-	@tracking.report_error
-	def execute(self, context):
-		self.report({"ERROR"}, "Use the new operator, mcprep.add_mc_sky")
-		return {'CANCELLED'}
-
-
 class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 	"""Add sun lamp and time of day (dynamic) driver, setup sky with sun and moon"""
 	bl_idname = "mcprep.add_mc_sky"
@@ -1383,7 +1369,6 @@ classes = (
 	MCPREP_OT_open_mineways,
 	MCPREP_OT_install_mineways,
 	MCPREP_OT_prep_world,
-	MCPREP_OT_add_mc_world,
 	MCPREP_OT_add_mc_sky,
 	MCPREP_OT_time_set,
 	MCPREP_OT_import_world_split,
