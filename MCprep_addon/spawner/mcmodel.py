@@ -70,6 +70,16 @@ def rotate_around(
 		(new_pos[1] - offset[1]) * scale[1]
 	))
 
+def getPlanarAxis(verts: List[VectorType]) -> int:
+	"""Return the axis of the face"""
+	if all([verts[0][0] == x for x in [verts[1][0], verts[2][0], verts[3][0]]]):
+		return 0
+	elif all([verts[0][1] == y for y in [verts[1][1], verts[2][1], verts[3][1]]]):
+		return 1
+	elif all([verts[0][2] == z for z in [verts[1][2], verts[2][2], verts[3][2]]]):
+		return 2
+	else:
+		return 3
 
 def add_element(
 	elm_from: VectorType=[0, 0, 0],
@@ -105,8 +115,31 @@ def add_element(
 		[7, 6, 2, 3], # down
 		[4, 0, 3, 7], # west
 		[1, 5, 6, 2]] # east
-
-	return [verts, edges, faces]
+	
+	# Remove unused billboard face
+	# Night: Should this has a toggle option?
+	for f in faces:
+		planar = getPlanarAxis([verts[v] for v in f])
+		if plannar != 3:
+			break
+	face_dir = ["north", "south", "up", "down", "west", "east"]
+	if plannar == 0: 
+		faces = [[4, 0, 3, 7],
+						 [1, 5, 6, 2]]
+		face_dir = ["west", "east"]
+	elif plannar == 1:
+		faces = [[1, 0, 4, 5], # up is the tex face
+						 [7, 6, 2, 3]]
+		face_dir = ["up", "down"]
+	elif plannar == 2:
+		faces = [[0, 1, 2, 3],
+						 [5, 4, 7, 6]]
+		face_dir = ["north", "south"]
+	# for v in verts:
+	# 	if v in faces[1]:
+	# 		verts.remove(v)
+	# faces = [faces[0]]
+	return [verts, edges, faces], facedir
 
 
 def add_material(name: str="material", path: str="") -> Material:
@@ -235,7 +268,7 @@ def read_model(context: Context, model_filepath: Path) -> Tuple[Element, Texture
 	# env.log("elements:" + str(elements))
 	# env.log("textures:" + str(textures))
 
-	return elements, textures
+	return elements, textures, parent
 
 
 def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int, bpy.types.Object]:
@@ -256,35 +289,52 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 
 	# Called recursively!
 	# Can raise ModelException due to permission or corrupted file data.
-	elements, textures = read_model(bpy.context, model_filepath)
+	elements, textures, parent = read_model(bpy.context, model_filepath)
 
 	materials = []
 	if textures:
+		particle = textures.get("particle")
+		# Rough way to check if it is water.json (hard coded)
+		# Raise warn for now
+		if particle == "block/water_still" and "water" in model_filepath:
+			return 1, None
 		for img in textures:
 			if img != "particle":
 				tex_pth = locate_image(bpy.context, textures, img, model_filepath)
-				mat = add_material(f"{obj_name}_{img}", tex_pth)
-				obj.data.materials.append(mat)
+				mat = add_material(f"{obj_name}_{img}", tex_pth) # TODO I think the name arg does nothing
+				obj_mats = obj.data.materials
+				if not f"#{img}" in materials:
+					obj_mats.append(mat)
+				else:
+					obj_mats[len(obj_mats)] = obj_mats[f"{obj_name}_{img}"]
 				materials.append(f"#{img}")
 
+	if parent in ["builtin/entity"]:
+		return 1, None
+	
 	if elements is None:
 		# elements = [
 		# 	{'from': [0, 0, 0], 'to':[0, 0, 0]}]  # temp default elements
 		return 1, None
 
+	prev_median = (0,0,0) 
+	is_first = True
 	for e in elements:
 		rotation = e.get("rotation")
 		if rotation is None:
 			# rotation default
 			rotation = {"angle": 0, "axis": "y", "origin": [8, 8, 8]}
-		element = add_element(
+		element, face_dir = add_element(
 			e['from'], e['to'], rotation['origin'], rotation['axis'], rotation['angle'])
 		verts = [bm.verts.new(v) for v in element[0]]  # add a new vert
+		median = sum(element[0], Vector()) / len(element[0])
 		uvs = [[1, 1], [0, 1], [0, 0], [1, 0]]
-		# face directions defaults
-		face_dir = ["north", "south", "up", "down", "west", "east"]
+		# TODO: debug 
 		faces = e.get("faces")
-		for i in range(len(element[2])):
+		faces_len = len(element[2]
+		for i in range(faces_len)):
+			if faces_len == 2 and i > 1:
+				continue # ? skip face
 			f = element[2][i]
 
 			if not faces:
@@ -293,11 +343,6 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 			d_face = faces.get(face_dir[i])
 			if not d_face:
 				continue
-
-			face = bm.faces.new(
-				(verts[f[0]], verts[f[1]], verts[f[2]], verts[f[3]])
-			)
-			face.normal_update()
 
 			# uv can be rotated 0, 90, 180, or 270 degrees
 			uv_rot = d_face.get("rotation")
@@ -322,7 +367,16 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 				[uv_coords[0] / 16, 1 - (uv_coords[3] / 16)],  # [x1, y2]
 				[uv_coords[2] / 16, 1 - (uv_coords[3] / 16)]   # [x2, y2]
 			]
-
+			# TODO:
+			# Debug UV coord for check
+			face = bm.faces.new(
+				(verts[f[0]], verts[f[1]], verts[f[2]], verts[f[3]])
+			)
+			
+			face.normal_update()
+			# slightly offset the face by normal if the median point is exact
+			if prev_median == median and not is_first:
+				bmesh.ops.translate(bm, verts=face.verts, vec=0.1 * face.normal)
 			for j in range(len(face.loops)):
 				# uv coords order is determened by the rotation of the uv,
 				# e.g. if the uv is rotated by 180 degrees, the first index
@@ -332,6 +386,7 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 			face_mat = d_face.get("texture")
 			if face_mat is not None and face_mat in materials:
 				face.material_index = materials.index(face_mat)
+			is_first = False
 
 	# make the bmesh the object's mesh
 	bm.to_mesh(mesh)
