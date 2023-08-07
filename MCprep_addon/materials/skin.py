@@ -101,7 +101,7 @@ def handler_skins_load(scene):
 
 def loadSkinFile(self, context: Context, filepath: Path, new_material: bool=False):
 	if not os.path.isfile(filepath):
-		self.report({'ERROR'}, "Image file not found")
+		self.report({'ERROR'}, f"Image file not found: {filepath}")
 		return 1
 		# special message for library linking?
 
@@ -469,9 +469,11 @@ class MCPREP_OT_apply_username_skin(bpy.types.Operator):
 			self.report({"ERROR"}, "Invalid username")
 			return {'CANCELLED'}
 
+		user_ref = self.username.lower() + ".png"
+
 		skins = [str(skin[0]).lower() for skin in env.skin_list]
 		paths = [skin[1] for skin in env.skin_list]
-		if self.username.lower() not in skins or not self.skip_redownload:
+		if user_ref not in skins or not self.skip_redownload:
 			# Do the download
 			saveloc = download_user(self, context, self.username)
 			if not saveloc:
@@ -485,8 +487,8 @@ class MCPREP_OT_apply_username_skin(bpy.types.Operator):
 			return {'FINISHED'}
 		else:
 			env.log("Reusing downloaded skin")
-			ind = skins.index(self.username.lower())
-			res = loadSkinFile(self, context, paths[ind][1], self.new_material)
+			ind = skins.index(user_ref)
+			res = loadSkinFile(self, context, paths[ind], self.new_material)
 			if res != 0:
 				return {'CANCELLED'}
 			return {'FINISHED'}
@@ -579,7 +581,7 @@ class MCPREP_OT_remove_skin(bpy.types.Operator):
 		skin_path = env.skin_list[context.scene.mcprep_skins_list_index]
 		col = self.layout.column()
 		col.scale_y = 0.7
-		col.label(text= f"Warning, will delete file {os.path.basename(skin_path[0])} from")
+		col.label(text=f"Warning, will delete file {os.path.basename(skin_path[0])} from")
 		col.label(text=os.path.dirname(skin_path[-1]))
 
 	@tracking.report_error

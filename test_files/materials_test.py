@@ -17,9 +17,10 @@
 # ##### END GPL LICENSE BLOCK #####
 
 from typing import Tuple
+import datetime
 import os
-import unittest
 import shutil
+import unittest
 
 import bpy
 from bpy.types import Material
@@ -70,6 +71,7 @@ class MaterialsTest(unittest.TestCase):
             return filepath
 
     def _create_canon_mat(self, canon: str = None, test_pack=False):
+        # ) -> Tuple(bpy.types.Material, bpy.types.ShaderNode):
         """Creates a material that should be recognized."""
         name = canon if canon else "dirt"
         mat = bpy.data.materials.new(name)
@@ -332,6 +334,136 @@ class MaterialsTest(unittest.TestCase):
         generate.matprep_cycles(mat, options)
         self.assertEqual(1, len(bpy.data.materials))
         self.assertEqual(1, len(bpy.data.images), list(bpy.data.images))
+
+    def test_skin_swap_local(self):
+        bpy.ops.mcprep.reload_skins()
+        skin_ind = bpy.context.scene.mcprep_skins_list_index
+        skin_item = bpy.context.scene.mcprep_skins_list[skin_ind]
+        tex_name = skin_item["name"]
+        skin_path = os.path.join(bpy.context.scene.mcprep_skin_path, tex_name)
+
+        self.assertIsNone(bpy.context.object, "Should have no initial object")
+
+        with self.assertRaises(RuntimeError) as raised:
+            res = bpy.ops.mcprep.applyskin(
+                filepath=skin_path,
+                new_material=False)
+            self.assertEqual(res, {'CANCELLED'})
+
+        self.assertEqual('Error: No materials found to update\n',
+                         str(raised.exception),
+                         "Should fail when no existing materials exist")
+
+        # now run on a real test character, with 1 material and 2 objects
+        # self._add_character()
+        # Using a simple material now, to make things fast.
+        mat, _ = self._create_canon_mat()
+        bpy.ops.mesh.primitive_plane_add()
+        self.assertIsNotNone(bpy.context.object, "Object should be selected")
+        bpy.context.object.active_material = mat
+
+        # Perform the main action
+        pre_mats = len(bpy.data.materials)
+        res = bpy.ops.mcprep.applyskin(filepath=skin_path,
+                                       new_material=False)
+        post_mats = len(bpy.data.materials)
+        self.assertEqual(pre_mats, post_mats, "Should not create a new mat")
+
+        # do counts of materials before and after to ensure they match
+        pre_mats = len(bpy.data.materials)
+        bpy.ops.mcprep.applyskin(
+            filepath=skin_path,
+            new_material=True)
+        post_mats = len(bpy.data.materials)
+        self.assertEqual(pre_mats * 2, post_mats,
+                         "Should have 2x as many mats after new mats created")
+
+    def test_skin_swap_username(self):
+        bpy.ops.mcprep.reload_skins()
+
+        mat, _ = self._create_canon_mat()
+        bpy.ops.mesh.primitive_plane_add()
+        self.assertIsNotNone(bpy.context.object, "Object should be selected")
+        bpy.context.object.active_material = mat
+
+        username = "theduckcow"
+
+        # Be sure to delete the skin first, otherwise just testing locality.
+        target_index = None
+        for ind, itm in enumerate(bpy.context.scene.mcprep_skins_list):
+            if itm["name"].lower() == username.lower() + ".png":
+                target_index = ind
+                break
+
+        if target_index is not None:
+            bpy.context.scene.mcprep_skins_list_index = target_index
+            res = bpy.ops.mcprep.remove_skin()
+            self.assertEqual(res, {'FINISHED'})
+
+        # Triple verify the file is now gone.
+        skin_path = os.path.join(bpy.context.scene.mcprep_skin_path,
+                                 username + ".png")
+        self.assertFalse(os.path.isfile(skin_path),
+                         "Skin should initially be removed")
+
+        res = bpy.ops.mcprep.applyusernameskin(
+            username='TheDuckCow',
+            skip_redownload=False,
+            new_material=True)
+
+        self.assertEqual(res, {'FINISHED'})
+        self.assertTrue(os.path.isfile(skin_path),
+                        "Skin should have downloaded")
+
+        initial_mod_stat = os.path.getmtime(skin_path)
+        initial_mod = datetime.datetime.fromtimestamp(initial_mod_stat)
+
+        # import time
+        # time.sleep(1)
+        res = bpy.ops.mcprep.applyusernameskin(
+            username='TheDuckCow',
+            skip_redownload=True,
+            new_material=True)
+        self.assertEqual(res, {'FINISHED'})
+
+        new_mod_stat = os.path.getmtime(skin_path)
+        new_mod = datetime.datetime.fromtimestamp(new_mod_stat)
+
+        # TODO: Verify if this is truly cross platform for last time modified.
+        self.assertEqual(initial_mod, new_mod, "Should not have redownloaded")
+
+    def test_download_username_list(self):
+        usernames = ["theduckcow", "thekindkitten"]
+        skin_path = bpy.context.scene.mcprep_skin_path
+
+        for _user in usernames:
+            _user_file = os.path.join(skin_path, f"{_user}.png")
+            if os.path.isfile(_user_file):
+                os.remove(_user_file)
+
+        res = bpy.ops.mcprep.download_username_list(
+            username_list=','.join(usernames),
+            skip_redownload=True,
+            convert_layout=True)
+        self.assertEqual(res, {'FINISHED'})
+        for _user in usernames:
+            with self.subTest(_user):
+                _user_file = os.path.join(skin_path, f"{_user}.png")
+                self.assertTrue(os.path.isfile(_user_file),
+                                f"{_user} file should have downloaded")
+
+    def test_spawn_with_skin(self):
+        bpy.ops.mcprep.reload_mobs()
+        bpy.ops.mcprep.reload_skins()
+
+        res = bpy.ops.mcprep.spawn_with_skin()
+        self.assertEqual(res, {'FINISHED'})
+
+        # test changing skin to file when no existing images/textres
+        # test changing skin to file when existing material
+        # test changing skin to file for both above, cycles and internal
+        # test changing skin file for both above without, then with,
+        #   then without again, normals + spec etc.
 
 
 if __name__ == '__main__':
