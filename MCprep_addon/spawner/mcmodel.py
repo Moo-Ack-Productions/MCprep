@@ -277,6 +277,16 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 	collection = bpy.context.collection
 	view_layer = bpy.context.view_layer
 	
+	# Forcing usage of "fixed" block to meshswap spawner instead
+	if env.json_data:
+		if obj_name in env.json_data.get("fixed_block", []):
+			bpy.ops.mesh.select_all(action='DESELECT')
+			r = bpy.ops.mcprep.meshswap_spawner(block=obj_name)
+			if r != {'FINISHED'}:
+				return 1, None
+			obj = bpy.context.obj
+			return 0, obj
+		
 	# Called recursively!
 	# Can raise ModelException due to permission or corrupted file data.
 	elements, textures = read_model(bpy.context, model_filepath)
@@ -300,9 +310,6 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 	materials = []
 	if textures:
 		particle = textures.get("particle")
-		# Rough way to check if it is water.json (hard coded)
-		# Raise warn for now
-		if particle == "block/water_still" and "water" in model_filepath:
 			return 1, None
 		for img in textures:
 			if img != "particle":
