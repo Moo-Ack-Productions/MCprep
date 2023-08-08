@@ -118,7 +118,6 @@ def add_element(
 	
 	# Remove unused billboard face
 	# Night: Should this has a toggle option?
-	print(verts)
 	# for f in faces:
 	# 	planar = getPlanarAxis([verts[v] for v in f])
 	# 	if planar != 3:
@@ -245,11 +244,11 @@ def read_model(context: Context, model_filepath: Path) -> Tuple[Element, Texture
 			base_path = os.path.join(fallback_folder, models_dir)
 
 			if os.path.isfile(target_path):
-				elements, textures, parent = read_model(context, target_path)
+				elements, textures = read_model(context, target_path)
 			if os.path.isfile(active_path):
-				elements, textures, parent = read_model(context, active_path)
+				elements, textures = read_model(context, active_path)
 			elif os.path.isfile(base_path):
-				elements, textures, parent = read_model(context, base_path)
+				elements, textures = read_model(context, base_path)
 			else:
 				env.log(f"Failed to find mcmodel file {parent_filepath}")
 
@@ -270,7 +269,7 @@ def read_model(context: Context, model_filepath: Path) -> Tuple[Element, Texture
 	# env.log("elements:" + str(elements))
 	# env.log("textures:" + str(textures))
 
-	return elements, textures, parent
+	return elements, textures
 
 
 def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int, bpy.types.Object]:
@@ -280,7 +279,7 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 	
 	# Called recursively!
 	# Can raise ModelException due to permission or corrupted file data.
-	elements, textures, parent = read_model(bpy.context, model_filepath)
+	elements, textures = read_model(bpy.context, model_filepath)
 	
 	if elements is None:
 		# elements = [
@@ -345,7 +344,8 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 			d_face = faces.get(face_dir[i])
 			if not d_face:
 				continue
-
+			
+			face_mat = d_face.get("texture")
 			# uv can be rotated 0, 90, 180, or 270 degrees
 			uv_rot = d_face.get("rotation")
 			if uv_rot is None:
@@ -358,6 +358,12 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 			uv_coords = d_face.get("uv")  # in the format [x1, y1, x2, y2]
 			if uv_coords is None:
 				uv_coords = [0, 0, 16, 16]
+				if "cake" in obj_name:
+					if face_mat == "#top":
+						uv_coords = [e['to'][0], e['to'][2], e['from'][0], e['from'][2]]
+					if "side" in face_mat:
+						uv_coords = [e['to'][0], -e['to'][1], e['from'][0], -e['from'][2]]
+				
 
 			# uv in the model is between 0 to 16 regardless of resolution,
 			# in blender its 0 to 1 the y-axis is inverted when compared to
@@ -385,7 +391,7 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 				# will be 2 then 3, 0, 1.
 				face.loops[j][uv_layer].uv = uvs[(j + uv_idx) % len(uvs)]
 
-			face_mat = d_face.get("texture")
+			
 			if face_mat is not None and face_mat in materials:
 				face.material_index = materials.index(face_mat)
 			is_first = False
