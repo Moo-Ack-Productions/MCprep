@@ -21,7 +21,7 @@ import json
 from mathutils import Vector
 from math import sin, cos, radians
 from pathlib import Path
-from typing import Dict, Optional, Tuple, Union, Sequence
+from typing import Dict, Optional, Tuple, Union, Sequence, List
 
 import bpy
 import bmesh
@@ -118,28 +118,29 @@ def add_element(
 	
 	# Remove unused billboard face
 	# Night: Should this has a toggle option?
-	for f in faces:
-		planar = getPlanarAxis([verts[v] for v in f])
-		if plannar != 3:
-			break
+	print(verts)
+	# for f in faces:
+	# 	planar = getPlanarAxis([verts[v] for v in f])
+	# 	if planar != 3:
+	# 		break
 	face_dir = ["north", "south", "up", "down", "west", "east"]
-	if plannar == 0: 
-		faces = [[4, 0, 3, 7],
-						 [1, 5, 6, 2]]
-		face_dir = ["west", "east"]
-	elif plannar == 1:
-		faces = [[1, 0, 4, 5], # up is the tex face
-						 [7, 6, 2, 3]]
-		face_dir = ["up", "down"]
-	elif plannar == 2:
-		faces = [[0, 1, 2, 3],
-						 [5, 4, 7, 6]]
-		face_dir = ["north", "south"]
+	# if planar == 0: 
+	# 	faces = [[4, 0, 3, 7],
+	# 					 [1, 5, 6, 2]]
+	# 	face_dir = ["west", "east"]
+	# elif planar == 1:
+	# 	faces = [[1, 0, 4, 5], # up is the tex face
+	# 					 [7, 6, 2, 3]]
+	# 	face_dir = ["up", "down"]
+	# elif planar == 2:
+	# 	faces = [[0, 1, 2, 3],
+	# 					 [5, 4, 7, 6]]
+	# 	face_dir = ["north", "south"]
 	# for v in verts:
 	# 	if v in faces[1]:
 	# 		verts.remove(v)
 	# faces = [faces[0]]
-	return [verts, edges, faces], facedir
+	return [verts, edges, faces], face_dir
 
 
 def add_material(name: str="material", path: str="") -> Material:
@@ -156,6 +157,7 @@ def add_material(name: str="material", path: str="") -> Material:
 		return None
 
 	mat = new_mats[0]
+	mat.name = name
 	return mat
 
 
@@ -243,11 +245,11 @@ def read_model(context: Context, model_filepath: Path) -> Tuple[Element, Texture
 			base_path = os.path.join(fallback_folder, models_dir)
 
 			if os.path.isfile(target_path):
-				elements, textures = read_model(context, target_path)
+				elements, textures, parent = read_model(context, target_path)
 			if os.path.isfile(active_path):
-				elements, textures = read_model(context, active_path)
+				elements, textures, parent = read_model(context, active_path)
 			elif os.path.isfile(base_path):
-				elements, textures = read_model(context, base_path)
+				elements, textures, parent = read_model(context, base_path)
 			else:
 				env.log(f"Failed to find mcmodel file {parent_filepath}")
 
@@ -273,11 +275,20 @@ def read_model(context: Context, model_filepath: Path) -> Tuple[Element, Texture
 
 def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int, bpy.types.Object]:
 	"""Primary function for generating a model from json file."""
-	mesh = bpy.data.meshes.new(obj_name)  # add a new mesh
-	obj = bpy.data.objects.new(obj_name, mesh)  # add a new object using the mesh
-
 	collection = bpy.context.collection
 	view_layer = bpy.context.view_layer
+	
+	# Called recursively!
+	# Can raise ModelException due to permission or corrupted file data.
+	elements, textures, parent = read_model(bpy.context, model_filepath)
+	
+	if elements is None:
+		# elements = [
+		# 	{'from': [0, 0, 0], 'to':[0, 0, 0]}]  # temp default elements
+		return 1, None
+	
+	mesh = bpy.data.meshes.new(obj_name)  # add a new mesh
+	obj = bpy.data.objects.new(obj_name, mesh)  # add a new object using the mesh
 	collection.objects.link(obj)  # put the object into the scene (link)
 	view_layer.objects.active = obj  # set as the active object in the scene
 	obj.select_set(True)  # select object
@@ -286,10 +297,6 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 
 	mesh.uv_layers.new()
 	uv_layer = bm.loops.layers.uv.verify()
-
-	# Called recursively!
-	# Can raise ModelException due to permission or corrupted file data.
-	elements, textures, parent = read_model(bpy.context, model_filepath)
 
 	materials = []
 	if textures:
@@ -305,17 +312,11 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 				obj_mats = obj.data.materials
 				if not f"#{img}" in materials:
 					obj_mats.append(mat)
-				else:
-					obj_mats[len(obj_mats)] = obj_mats[f"{obj_name}_{img}"]
-				materials.append(f"#{img}")
+					materials.append(f"#{img}")
 
-	if parent in ["builtin/entity"]:
-		return 1, None
-	
-	if elements is None:
-		# elements = [
-		# 	{'from': [0, 0, 0], 'to':[0, 0, 0]}]  # temp default elements
-		return 1, None
+	# For some reason append add an extra "west"
+	obj.active_material_index = 0
+	bpy.ops.object.material_slot_remove()
 
 	prev_median = (0,0,0) 
 	is_first = True
@@ -330,10 +331,11 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 		median = sum(element[0], Vector()) / len(element[0])
 		uvs = [[1, 1], [0, 1], [0, 0], [1, 0]]
 		# TODO: debug 
+		# face_dir = ["north", "south", "up", "down", "west", "east"]
 		faces = e.get("faces")
-		faces_len = len(element[2]
-		for i in range(faces_len)):
-			if faces_len == 2 and i > 1:
+		faces_len = len(element[2])
+		for i in range(faces_len):
+			if faces_len == 2 and i > 0:
 				continue # ? skip face
 			f = element[2][i]
 
