@@ -103,6 +103,23 @@
 	"Strider",
 	"Warden"
 ],
+"fixed_blocks": [
+	"*banner",
+	"*bed",
+	"bell",
+	"brewing_stand",
+	"*cake",
+	"cauldron",
+	"*chest",
+	"enchanting_table",
+	"end_portal",
+	"hopper",
+	"*piston",
+	"scaffolding",
+	"*shulker_box",
+	"sunflower",
+	"water_still"
+],
 "make_real": [
 	"chest",
 	"chest_double"]
