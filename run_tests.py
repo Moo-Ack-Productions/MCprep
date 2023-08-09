@@ -24,7 +24,8 @@ import subprocess
 import time
 
 
-COMPILE_CMD = ["./compile.sh", "-fast"]
+COMPILE_CMD = ["bpy-addon-build", "--during-build", "dev"]
+DATA_CMD = ["python", "mcprep_data_refresh.py", "-auto"]  # TODO, include in build
 DCC_EXES = "blender_execs.txt"
 TEST_RUNNER = os.path.join("test_files", "test_runner.py")
 TEST_CSV_OUTPUTS = "test_results.csv"

@@ -16,11 +16,13 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+import os
 import unittest
 
 import bpy
 
 from MCprep_addon import world_tools
+from MCprep_addon import util
 
 
 class WorldToolsTest(unittest.TestCase):
@@ -33,12 +35,38 @@ class WorldToolsTest(unittest.TestCase):
     def setUp(self):
         """Clears scene and data between each test"""
         bpy.ops.wm.read_homefile(app_template="", use_empty=True)
+        self.addon_prefs = util.get_user_preferences(bpy.context)
 
-    def _import_world_with_settings(self, mode, file):
-        self.skipTest("Not yet implemented")
+    def _import_world_with_settings(self, file: str):
+        testdir = os.path.dirname(__file__)
+        obj_path = os.path.join(testdir, file)
 
-    def test_world_import_jmc_combined(self):
-        self._import_world_with_settings("", "")
+        self.assertEqual(len(bpy.data.objects), 0, "Should start with no objs")
+        self.assertTrue(os.path.isfile(obj_path),
+                        f"Obj file missing: {obj_path}, {file}")
+        res = bpy.ops.mcprep.import_world_split(filepath=obj_path)
+        self.assertEqual(res, {'FINISHED'})
+        self.assertGreater(len(bpy.data.objects), 50, "Should have many objs")
+        self.assertGreater(
+            len(bpy.data.materials), 50, "Should have many mats")
+
+    def test_world_import_jmc_full(self):
+        test_subpath = os.path.join(
+            "test_data", "jmc2obj_test_1_15_2.obj")
+        self._import_world_with_settings(file=test_subpath)
+        self.assertEqual(self.addon_prefs.MCprep_exporter_type, "jmc2obj")
+
+    def test_world_import_mineways_separated(self):
+        test_subpath = os.path.join(
+            "test_data", "mineways_test_separated_1_15_2.obj")
+        self._import_world_with_settings(file=test_subpath)
+        self.assertEqual(self.addon_prefs.MCprep_exporter_type, "Mineways")
+
+    def test_world_import_mineways_combined(self):
+        test_subpath = os.path.join(
+            "test_data", "mineways_test_combined_1_15_2.obj")
+        self._import_world_with_settings(file=test_subpath)
+        self.assertEqual(self.addon_prefs.MCprep_exporter_type, "Mineways")
 
 
 if __name__ == '__main__':

@@ -248,6 +248,31 @@ def convert_mtl(filepath):
 	return True
 
 
+def enble_obj_importer() -> Optional[bool]:
+	"""Checks if obj import is avail and tries to activate if not.
+
+	If we fail to enable obj importing, return false. True if enabled, and Non
+	if nothing changed.
+	"""
+	enable_addon = None
+	if util.min_bv((4, 0)):
+		return None  # No longer an addon, native built in.
+	else:
+		in_import_scn = "obj_import" not in dir(bpy.ops.wm)
+		in_wm = ""
+		if not in_import_scn and not in_wm:
+			enable_addon = "io_scene_obj"
+
+	if enable_addon is None:
+		return None
+
+	try:
+		bpy.ops.preferences.addon_enable(module=enable_addon)
+		return True
+	except RuntimeError:
+		return False
+
+
 # -----------------------------------------------------------------------------
 # open mineways/jmc2obj related
 # -----------------------------------------------------------------------------
@@ -449,15 +474,16 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			self.report({"ERROR"}, "You must select a .obj file to import")
 			return {'CANCELLED'}
 
-		if "obj" not in dir(bpy.ops.import_scene):
-			try:
-				bpy.ops.preferences.addon_enable(module="io_scene_obj")
-				self.report(
-					{"INFO"},
-					"FYI: had to enable OBJ imports in user preferences")
-			except RuntimeError:
-				self.report({"ERROR"}, "Built-in OBJ importer could not be enabled")
-				return {'CANCELLED'}
+		res = enble_obj_importer()
+		if res is None:
+			pass
+		elif res is True:
+			self.report(
+				{"INFO"},
+				"FYI: had to enable OBJ imports in user preferences")
+		elif res is False:
+			self.report({"ERROR"}, "Built-in OBJ importer could not be enabled")
+			return {'CANCELLED'}
 
 		# There are a number of bug reports that come from the generic call
 		# of obj importing. If this fails, should notify the user to try again
