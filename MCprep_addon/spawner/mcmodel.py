@@ -142,7 +142,7 @@ def add_element(
 	return [verts, edges, faces], face_dir
 
 
-def add_material(name: str="material", path: str="") -> Material:
+def add_material(name: str="material", path: str="", use_name: bool= False) -> Material:
 	"""Creates a simple material with an image texture from path."""
 	cur_mats = list(bpy.data.materials)
 	res = bpy.ops.mcprep.load_material(filepath=path, skipUsage=True)
@@ -156,7 +156,8 @@ def add_material(name: str="material", path: str="") -> Material:
 		return None
 
 	mat = new_mats[0]
-	mat.name = name
+	if use_name:
+		mat.name = name
 	return mat
 
 
@@ -272,20 +273,26 @@ def read_model(context: Context, model_filepath: Path) -> Tuple[Element, Texture
 	return elements, textures
 
 
-def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int, bpy.types.Object]:
+def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int, str ,bpy.types.Object]:
 	"""Primary function for generating a model from json file."""
 	collection = bpy.context.collection
 	view_layer = bpy.context.view_layer
-	
 	# Forcing usage of "fixed" block to meshswap spawner instead
-	if env.json_data:
-		if obj_name in env.json_data.get("fixed_block", []):
-			bpy.ops.mesh.select_all(action='DESELECT')
+	blocks = ["chest", "banner", "lantern", "campfire"]
+	if env.json_data and obj_name in env.json_data.get("fixed_blocks", blocks) or obj_name in blocks: # Return the definite blocks that meshswap currently has
+		if os.path.isfile(bpy.path.abspath(bpy.context.scene.meshswap_path)) and bpy.context.scene.meshswap_path.endswith('.blend'):
+			bpy.ops.mcprep.reload_meshswap()
+			if obj_name == "campfire":
+				obj_name = "campfire_log"
+			bpy.ops.object.select_all(action='DESELECT')
 			r = bpy.ops.mcprep.meshswap_spawner(block=obj_name)
 			if r != {'FINISHED'}:
-				return 1, None
-			obj = bpy.context.obj
-			return 0, obj
+				return 1, "Something happened with Meshswap", None
+			obj = bpy.context.object
+			return 0, "", obj
+		else:
+			return 1, "Something happened with Meshswap", None
+		
 		
 	# Called recursively!
 	# Can raise ModelException due to permission or corrupted file data.
@@ -294,7 +301,7 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 	if elements is None:
 		# elements = [
 		# 	{'from': [0, 0, 0], 'to':[0, 0, 0]}]  # temp default elements
-		return 1, None
+		return 1, "", None
 	
 	mesh = bpy.data.meshes.new(obj_name)  # add a new mesh
 	obj = bpy.data.objects.new(obj_name, mesh)  # add a new object using the mesh
@@ -310,11 +317,10 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 	materials = []
 	if textures:
 		particle = textures.get("particle")
-			return 1, None
 		for img in textures:
 			if img != "particle":
 				tex_pth = locate_image(bpy.context, textures, img, model_filepath)
-				mat = add_material(f"{obj_name}_{img}", tex_pth) # TODO I think the name arg does nothing
+				mat = add_material(f"{obj_name}_{img}", tex_pth,use_name = False) # TODO I think the name arg does nothing
 				obj_mats = obj.data.materials
 				if not f"#{img}" in materials:
 					obj_mats.append(mat)
@@ -336,7 +342,6 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 		verts = [bm.verts.new(v) for v in element[0]]  # add a new vert
 		median = sum(element[0], Vector()) / len(element[0])
 		uvs = [[1, 1], [0, 1], [0, 0], [1, 0]]
-		# TODO: debug 
 		# face_dir = ["north", "south", "up", "down", "west", "east"]
 		faces = e.get("faces")
 		faces_len = len(element[2])
@@ -406,7 +411,7 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 	# make the bmesh the object's mesh
 	bm.to_mesh(mesh)
 	bm.free()
-	return 0, obj
+	return 0, "", obj
 
 
 # -----------------------------------------------------------------------------
@@ -554,10 +559,11 @@ class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 			return {'CANCELLED'}
 
 		try:
-			r, obj = add_model(os.path.normpath(self.filepath), name)
+			r, log, obj = add_model(os.path.normpath(self.filepath), name)
 			if r:
+				log = log if log else "This not a valid json for Minecraft Java model" 
 				self.report(
-					{"ERROR"}, "This not a valid json for Minecraft Java model")
+					{"ERROR"}, log)
 				return {'CANCELLED'}
 		except ModelException as e:
 			self.report({"ERROR"}, f"Encountered error: {e}")
@@ -596,10 +602,11 @@ class MCPREP_OT_import_minecraft_model_file(
 			return {'CANCELLED'}
 
 		try:
-			r, obj = add_model(os.path.normpath(self.filepath), filename)
+			r, log, obj = add_model(os.path.normpath(self.filepath), filename)
 			if r:
+				log = log if log else "This not a valid json for Minecraft Java model" 
 				self.report(
-					{"ERROR"}, "This not a valid json for Minecraft Java model")
+					{"ERROR"}, log)
 				return {'CANCELLED'}
 		except ModelException as e:
 			self.report({"ERROR"}, f"Encountered error: {e}")

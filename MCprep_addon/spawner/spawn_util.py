@@ -46,32 +46,6 @@ elif util.bv28():
 else:
 	COLL_ICON = 'GROUP'
 
-class ColorVariation(Enum):
-	def _generate_next_value_(name, start, count, last_values):
-		return name.lower()
-
-	@classmethod
-	def get_id(cls, color: "ColorVariation"):
-		"""returns the index of the color"""
-		return cls._member_names_.index(color.value.upper())
-
-	WHITE = auto()
-	ORANGE = auto()
-	MAGENTA = auto()
-	LIGHTBLUE = auto()
-	YELLOW = auto()
-	LIME = auto()
-	PINK = auto()
-	GRAY = auto()
-	LIGHTGRAY = auto()
-	CYAN = auto()
-	PURPLE = auto()
-	BLUE = auto()
-	BROWN = auto()
-	GREEN = auto()
-	RED = auto()
-	BLACK = auto()
-
 # -----------------------------------------------------------------------------
 # Reusable functions for spawners
 # -----------------------------------------------------------------------------
@@ -664,14 +638,6 @@ def load_append(self, context: Context, path: Path, name: str) -> None:
 	# add the original selection back
 	for objs in sel:
 		util.select_set(objs, True)
-
-def has_color_prefix(name: str) -> Optional[str]:
-	for color in ColorVariation:
-		if color.value in name:
-			return color
-
-def remove_color_prefix(name: str):
-	return name.replace(f"{color.value}_", "") if has_color_prefix(name)
 
 # -----------------------------------------------------------------------------
 # class definitions
