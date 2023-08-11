@@ -68,6 +68,37 @@ class WorldToolsTest(unittest.TestCase):
         self._import_world_with_settings(file=test_subpath)
         self.assertEqual(self.addon_prefs.MCprep_exporter_type, "Mineways")
 
+    def test_add_mc_sky(self):
+        subtests = [
+            # name / enum option, add_clouds, remove_existing_suns
+            ["world_shader", True, True],
+            ["world_mesh", True, False],
+            ["world_only", False, True],
+            ["world_static_mesh", False, False],
+            ["world_static_only", True, True]
+        ]
+
+        for sub in subtests:
+            with self.subTest(sub[0]):
+                # Reset the scene
+                bpy.ops.wm.read_homefile(app_template="", use_empty=True)
+
+                pre_objs = len(bpy.data.objects)
+                res = bpy.ops.mcprep.add_mc_sky(
+                    world_type=sub[0],
+                    add_clouds=sub[1],
+                    remove_existing_suns=sub[2]
+                )
+                post_objs = len(bpy.data.objects)
+                self.assertEqual(res, {'FINISHED'})
+                self.assertGreater(
+                    post_objs, pre_objs, "No timeobject imported")
+                obj = world_tools.get_time_object()
+                if "static" in sub[0]:
+                    self.assertFalse(obj, "Static scn should have no timeobj")
+                else:
+                    self.assertTrue(obj, "Dynamic scn should have timeobj")
+
 
 if __name__ == '__main__':
     unittest.main(exit=False)

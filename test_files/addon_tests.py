@@ -80,7 +80,6 @@ class mcprep_testing():
 			self.uv_transform_detection,
 			self.uv_transform_no_alert,
 			self.uv_transform_combined_alert,
-			self.world_tools,
 			self.test_enable_obj_importer,
 			self.qa_effects,
 			self.qa_rigs,
@@ -1353,86 +1352,6 @@ class mcprep_testing():
 			return "Didn't end up with selected collection instance"
 
 		# TODO: Further checks it actually loaded the effect.
-
-	def world_tools(self):
-		"""Test adding skies, prepping the world, etc"""
-		from MCprep.world_tools import get_time_object
-
-		# test with both engines (cycles+eevee, or cycles+internal)
-		self._clear_scene()
-		bpy.ops.mcprep.world()
-
-		pre_objs = len(bpy.data.objects)
-		bpy.ops.mcprep.add_mc_sky(
-			world_type='world_shader',
-			# initial_time='8',
-			add_clouds=True,
-			remove_existing_suns=True)
-		post_objs = len(bpy.data.objects)
-		if pre_objs >= post_objs:
-			return "Nothing added"
-		# find the sun, ensure it's pointed partially to the side
-		obj = get_time_object()
-		if not obj:
-			return "No detected MCprepHour controller (a)"
-
-		self._clear_scene()
-		pre_objs = len(bpy.data.objects)
-		bpy.ops.mcprep.add_mc_sky(
-			world_type='world_mesh',
-			# initial_time='12',
-			add_clouds=False,
-			remove_existing_suns=True)
-		post_objs = len(bpy.data.objects)
-		if pre_objs >= post_objs:
-			return "Nothing added"
-		# find the sun, ensure it's pointed straight down
-		obj = get_time_object()
-		if not obj:
-			return "No detected MCprepHour controller (b)"
-
-		self._clear_scene()
-		pre_objs = len(bpy.data.objects)
-		bpy.ops.mcprep.add_mc_sky(
-			world_type='world_only',
-			# initial_time='18',
-			add_clouds=False,
-			remove_existing_suns=True)
-		post_objs = len(bpy.data.objects)
-		if pre_objs >= post_objs:
-			return "Nothing added"
-		# find the sun, ensure it's pointed straight down
-		obj = get_time_object()
-		if not obj:
-			return "No detected MCprepHour controller (c)"
-
-		self._clear_scene()
-		pre_objs = len(bpy.data.objects)
-		bpy.ops.mcprep.add_mc_sky(
-			world_type='world_static_mesh',
-			# initial_time='0',
-			add_clouds=False,
-			remove_existing_suns=True)
-		post_objs = len(bpy.data.objects)
-		if pre_objs >= post_objs:
-			return "Nothing added"
-		# find the sun, ensure it's pointed straight down
-
-		self._clear_scene()
-		obj = get_time_object()
-		if obj:
-			return "Found MCprepHour controller, shouldn't be one (d)"
-		pre_objs = len(bpy.data.objects)
-		bpy.ops.mcprep.add_mc_sky(
-			world_type='world_static_only',
-			# initial_time='6',
-			add_clouds=False,
-			remove_existing_suns=True)
-		post_objs = len(bpy.data.objects)
-		if pre_objs >= post_objs:
-			return "Nothing added"
-		# test that it removes existing suns by first placing one, and then
-		# affirming it's gone
 
 	def sync_materials(self):
 		"""Test syncing materials works"""
