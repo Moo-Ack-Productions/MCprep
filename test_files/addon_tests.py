@@ -49,8 +49,6 @@ class mcprep_testing():
 		self.suppress = True  # hold stdout
 		self.test_status = {}  # {func.__name__: {"check":-1, "res":-1,0,1}}
 		self.test_cases = [
-			self.spawn_mob,
-			self.spawn_mob_linked,
 			self.check_blend_eligible,
 			self.check_blend_eligible_middle,
 			self.check_blend_eligible_real,
@@ -444,26 +442,6 @@ class mcprep_testing():
 
 		# check on image that is packed or not, or packed but no data
 		os.remove(tmp_image)
-
-	def spawn_mob(self):
-		"""Spawn mobs, reload mobs, etc"""
-		self._clear_scene()
-		self._add_character()  # run the utility as it's own sort of test
-
-		self._clear_scene()
-		bpy.ops.mcprep.reload_mobs()
-
-		# sample don't specify mob, just load whatever is first
-		bpy.ops.mcprep.mob_spawner()
-
-		# spawn with linking
-		# try changing the folder
-		# try install mob and uninstall
-
-	def spawn_mob_linked(self):
-		self._clear_scene()
-		bpy.ops.mcprep.reload_mobs()
-		bpy.ops.mcprep.mob_spawner(toLink=True)
 
 	def check_blend_eligible(self):
 		from MCprep.spawner import spawn_util

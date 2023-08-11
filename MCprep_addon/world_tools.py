@@ -687,7 +687,11 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 			world_links.new(skynode.outputs["Color"], background.inputs[0])
 			world_links.new(background.outputs["Background"], output.inputs[0])
 
-		context.scene.world.light_settings.use_ambient_occlusion = False
+		if hasattr(context.scene.world.light_settings, "use_ambient_occlusion"):
+			# pre 4.0
+			context.scene.world.light_settings.use_ambient_occlusion = False
+		else:
+			print("Unable to disbale use_ambient_occlusion")
 
 		if hasattr(context.scene, "cycles"):
 			context.scene.cycles.caustics_reflective = False
@@ -734,8 +738,13 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 				background_camera.outputs["Background"], mix_shader.inputs[2])
 			world_links.new(mix_shader.outputs["Shader"], output.inputs[0])
 
-		# is not great
-		context.scene.world.light_settings.use_ambient_occlusion = False
+		# Increase render speeds by disabling ambienet occlusion.
+		if hasattr(context.scene.world.light_settings, "use_ambient_occlusion"):
+			# pre 4.0
+			context.scene.world.light_settings.use_ambient_occlusion = False
+		else:
+			print("Unable to disbale use_ambient_occlusion")
+
 		if hasattr(context.scene, "cycles"):
 			context.scene.cycles.caustics_reflective = False
 			context.scene.cycles.caustics_refractive = False

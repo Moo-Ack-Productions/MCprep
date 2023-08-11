@@ -22,8 +22,7 @@ import unittest
 import bpy
 
 
-class ItemSpawnerTest(unittest.TestCase):
-    """Item spawning related tests."""
+class BaseSpawnerTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -32,6 +31,69 @@ class ItemSpawnerTest(unittest.TestCase):
     def setUp(self):
         """Clears scene and data between each test"""
         bpy.ops.wm.read_homefile(app_template="", use_empty=True)
+
+
+class MobSpawnerTest(BaseSpawnerTest):
+    """Mob spawning related tests."""
+
+    fast_mcmob_type: str = 'hostile/mobs - Rymdnisse.blend:/:endermite'
+
+    def test_mob_spawner_append(self):
+        """Spawn mobs, reload mobs, etc"""
+        res = bpy.ops.mcprep.reload_mobs()
+        self.assertEqual(res, {'FINISHED'})
+
+        # sample don't specify mob, just load whatever is first
+        res = bpy.ops.mcprep.mob_spawner(
+            mcmob_type=self.fast_mcmob_type,
+            toLink=False,  # By design for this subtest
+            clearPose=False,
+            prep_materials=False
+        )
+        self.assertEqual(res, {'FINISHED'})
+
+        # spawn with linking
+        # try changing the folder
+        # try install mob and uninstall
+
+    def test_mob_spawner_linked(self):
+        res = bpy.ops.mcprep.reload_mobs()
+        self.assertEqual(res, {'FINISHED'})
+        res = bpy.ops.mcprep.mob_spawner(
+            mcmob_type=self.fast_mcmob_type,
+            toLink=True,  # By design for this subtest
+            clearPose=False,
+            prep_materials=False)
+        self.assertEqual(res, {'FINISHED'})
+
+    def test_mob_spawner_relocate(self):
+        res = bpy.ops.mcprep.reload_mobs()
+        # Set cursor location.
+        for method in ["Clear", "Offset"]:  # Cursor tested above
+            res = bpy.ops.mcprep.mob_spawner(
+                mcmob_type=self.fast_mcmob_type,
+                relocation=method,
+                toLink=False,
+                clearPose=True,
+                prep_materials=False)
+            self.assertEqual(res, {'FINISHED'})
+
+    def test_bogus_mob_spawn(self):
+        """Spawn mobs, reload mobs, etc"""
+        res = bpy.ops.mcprep.reload_mobs()
+        self.assertEqual(res, {'FINISHED'})
+
+        # sample don't specify mob, just load whatever is first
+        with self.assertRaises(TypeError):
+            res = bpy.ops.mcprep.mob_spawner(
+                mcmob_type="bogus"
+            )
+
+    # TODO: changing the folder, install / uninstall mob
+
+
+class ItemSpawnerTest(BaseSpawnerTest):
+    """Item spawning related tests."""
 
     def test_item_spawner(self):
         """Test item spawning and reloading"""
@@ -90,16 +152,8 @@ class ItemSpawnerTest(unittest.TestCase):
         self.assertEqual(16, polys, "Wrong pixel scaling applied")
 
 
-class EffectsSpawnerTest(unittest.TestCase):
+class EffectsSpawnerTest(BaseSpawnerTest):
     """EffectsSpawning-related tests."""
-
-    @classmethod
-    def setUpClass(cls):
-        bpy.ops.preferences.addon_enable(module="MCprep_addon")
-
-    def setUp(self):
-        """Clears scene and data between each test"""
-        bpy.ops.wm.read_homefile(app_template="", use_empty=True)
 
     def test_particle_plane_effect_spawner(self):
         """Test the particle plane variant of effect spawning works."""
@@ -144,6 +198,41 @@ class EffectsSpawnerTest(unittest.TestCase):
         self.assertEqual(res, {'FINISHED'})
 
         # TODO: Further checks it actually loaded the effect.
+
+
+class ModelSpawnerTest(BaseSpawnerTest):
+    """ModelSpawning-related tests."""
+
+    def model_spawner(self):
+        """Test model spawning and reloading"""
+        scn_props = bpy.context.scene.mcprep_props
+
+        pre_count = len(scn_props.model_list)
+        res = bpy.ops.mcprep.reload_models()
+        self.assertEqual(res, {'FINISHED'})
+        post_count = len(scn_props.model_list)
+
+        self.assertEqual(pre_count, 0,
+                         "Should have opened new file with unloaded assets")
+        self.assertGreater(post_count, 0, "No models loaded")
+        self.assertGreater(post_count, 50,
+                           "Too few models loaded, missing texturepack?")
+
+        # spawn with whatever default index
+        pre_objs = list(bpy.data.objects)
+        res = bpy.ops.mcprep.spawn_model(
+            filepath=scn_props.model_list[scn_props.model_list_index].filepath)
+        self.assertEqual(res, {'FINISHED'})
+        post_objs = bpy.data.objects
+
+        self.assertGreater(post_objs, pre_objs, "No models spawned")
+        self.assertEqual(len(post_objs), len(pre_objs) + 1,
+                         "More than one model spawned")
+
+        # Test that materials were properly added.
+        new_objs = list(set(post_objs) - set(pre_objs))
+        model = new_objs[0]
+        self.assertTrue(model.active_material, "No material on model")
 
 
 if __name__ == '__main__':
