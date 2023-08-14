@@ -20,27 +20,35 @@ import os
 import json
 from mathutils import Vector
 from math import sin, cos, radians
+from pathlib import Path
+from typing import Dict, Optional, Tuple, Union, Sequence
 
 import bpy
 import bmesh
+from bpy.types import Context, Material
 from bpy_extras.io_utils import ImportHelper
 
-from .. import conf
+from ..conf import env, VectorType
 from .. import util
 from .. import tracking
-from ..materials import generate
+from ..materials import generate  # TODO: Use this module for mat gen in future
 
+TexFace = Dict[str, Dict[str, str]]
+
+Element = Sequence[Union[Dict[str, VectorType], TexFace]]
+Texture = Dict[str, str]
 
 # -----------------------------------------------------------------------------
 # Core MC model functions and implementation
 # -----------------------------------------------------------------------------
+
 
 class ModelException(Exception):
 	"""Custom exception type for model loading."""
 
 
 def rotate_around(
-	d, pos, origin, axis='z', offset=[8, 0, 8], scale=[0.063, 0.063, 0.063]):
+	d: float, pos: VectorType, origin: VectorType, axis:str='z', offset: VectorType=[8, 0, 8], scale: VectorType=[0.063, 0.063, 0.063]) -> VectorType:
 	r = -radians(d)
 	axis_i = ord(axis) - 120  # 'x'=0, 'y'=1, 'z'=2
 	a = pos[(1 + axis_i) % 3]
@@ -64,11 +72,11 @@ def rotate_around(
 
 
 def add_element(
-	elm_from=[0, 0, 0],
-	elm_to=[16, 16, 16],
-	rot_origin=[8, 8, 8],
-	rot_axis='y',
-	rot_angle=0):
+	elm_from: VectorType=[0, 0, 0],
+	elm_to: VectorType=[16, 16, 16],
+	rot_origin: VectorType=[8, 8, 8],
+	rot_axis: str='y',
+	rot_angle: float=0) -> list:
 	"""Calculates and defines the verts, edge, and faces that to create."""
 	verts = [
 		rotate_around(
@@ -101,24 +109,24 @@ def add_element(
 	return [verts, edges, faces]
 
 
-def add_material(name="material", path=""):
+def add_material(name: str="material", path: str="") -> Material:
 	"""Creates a simple material with an image texture from path."""
 	cur_mats = list(bpy.data.materials)
 	res = bpy.ops.mcprep.load_material(filepath=path, skipUsage=True)
 	if res != {'FINISHED'}:
-		conf.log("Failed to generate material as specified")
+		env.log("Failed to generate material as specified")
 	post_mats = list(bpy.data.materials)
 
 	new_mats = list(set(post_mats) - set(cur_mats))
 	if not new_mats:
-		conf.log("Failed to fetch any generated material")
+		env.log("Failed to fetch any generated material")
 		return None
 
 	mat = new_mats[0]
 	return mat
 
 
-def locate_image(context, textures, img, model_filepath):
+def locate_image(context: Context, textures: Dict[str, str], img: str, model_filepath: Path) -> Path:
 	"""Finds and returns the filepath of the image texture."""
 	resource_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
 
@@ -143,7 +151,7 @@ def locate_image(context, textures, img, model_filepath):
 		return os.path.realpath(os.path.join(directory, local_path) + ".png")
 
 
-def read_model(context, model_filepath):
+def read_model(context: Context, model_filepath: Path) -> Tuple[Element, Texture]:
 	"""Reads json file to get textures and elements needed for model.
 
 	This function is recursively called to also get the elements and textures
@@ -175,8 +183,8 @@ def read_model(context, model_filepath):
 	resource_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
 	fallback_folder = bpy.path.abspath(addon_prefs.custom_texturepack_path)
 
-	elements = None
-	textures = None
+	elements: Optional[Element] = None
+	textures: Optional[Texture] = None
 
 	parent = obj_data.get("parent")
 	if parent is not None:
@@ -196,7 +204,7 @@ def read_model(context, model_filepath):
 
 			# resource_folder
 			models_dir = os.path.join(
-				"assets", namespace, "models", parent_filepath + ".json")
+				"assets", namespace, "models", f"{parent_filepath}.json")
 			target_path = os.path.join(targets_folder, models_dir)
 			active_path = os.path.join(resource_folder, models_dir)
 			base_path = os.path.join(fallback_folder, models_dir)
@@ -208,13 +216,13 @@ def read_model(context, model_filepath):
 			elif os.path.isfile(base_path):
 				elements, textures = read_model(context, base_path)
 			else:
-				conf.log("Failed to find mcmodel file " + parent_filepath)
+				env.log(f"Failed to find mcmodel file {parent_filepath}")
 
-	current_elements = obj_data.get("elements")
+	current_elements: Element = obj_data.get("elements")
 	if current_elements is not None:
 		elements = current_elements  # overwrites any elements from parents
 
-	current_textures = obj_data.get("textures")
+	current_textures: Texture = obj_data.get("textures")
 	if current_textures is not None:
 		if textures is None:
 			textures = current_textures
@@ -222,15 +230,15 @@ def read_model(context, model_filepath):
 			for img in current_textures:
 				textures[img] = current_textures[img]
 
-	conf.log("\nfile:" + str(model_filepath), vv_only=True)
-	# conf.log("parent:" + str(parent))
-	# conf.log("elements:" + str(elements))
-	# conf.log("textures:" + str(textures))
+	env.log(f"\nfile: {model_filepath}", vv_only=True)
+	# env.log("parent:" + str(parent))
+	# env.log("elements:" + str(elements))
+	# env.log("textures:" + str(textures))
 
 	return elements, textures
 
 
-def add_model(model_filepath, obj_name="MinecraftModel"):
+def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> bpy.types.Object:
 	"""Primary function for generating a model from json file."""
 	mesh = bpy.data.meshes.new(obj_name)  # add a new mesh
 	obj = bpy.data.objects.new(obj_name, mesh)  # add a new object using the mesh
@@ -255,9 +263,9 @@ def add_model(model_filepath, obj_name="MinecraftModel"):
 		for img in textures:
 			if img != "particle":
 				tex_pth = locate_image(bpy.context, textures, img, model_filepath)
-				mat = add_material(obj_name + "_" + img, tex_pth)
+				mat = add_material(f"{obj_name}_{img}", tex_pth)
 				obj.data.materials.append(mat)
-				materials.append("#" + img)
+				materials.append(f"#{img}")
 
 	if elements is None:
 		elements = [
@@ -336,7 +344,7 @@ def add_model(model_filepath, obj_name="MinecraftModel"):
 # -----------------------------------------------------------------------------
 
 
-def update_model_list(context):
+def update_model_list(context: Context):
 	"""Update the model list.
 
 	Prefer loading model names from the active resource pack, but fall back
@@ -359,7 +367,7 @@ def update_model_list(context):
 	if not os.path.isdir(active_pack):
 		scn_props.model_list.clear()
 		scn_props.model_list_index = 0
-		conf.log("No models found for active path " + active_pack)
+		env.log(f"No models found for active path {active_pack}")
 		return
 	base_has_models = os.path.isdir(base_pack)
 
@@ -374,7 +382,7 @@ def update_model_list(context):
 			if os.path.isfile(os.path.join(active_pack, model))
 			and model.lower().endswith(".json")]
 	else:
-		conf.log("Base resource pack has no models folder: " + base_pack)
+		env.log(f"Base resource pack has no models folder: {base_pack}")
 		base_models = []
 
 	sorted_models = [
@@ -405,7 +413,7 @@ def update_model_list(context):
 		scn_props.model_list_index = len(scn_props.model_list) - 1
 
 
-def draw_import_mcmodel(self, context):
+def draw_import_mcmodel(self, context: Context):
 	"""Import bar layout definition."""
 	layout = self.layout
 	layout.operator("mcprep.import_model_file", text="Minecraft Model (.json)")
@@ -413,23 +421,23 @@ def draw_import_mcmodel(self, context):
 
 class ModelSpawnBase():
 	"""Class to inheret reused MCprep item spawning settings and functions."""
-	location = bpy.props.FloatVectorProperty(
+	location: bpy.props.FloatVectorProperty(
 		default=(0, 0, 0),
 		name="Location")
-	snapping = bpy.props.EnumProperty(
+	snapping: bpy.props.EnumProperty(
 		name="Snapping",
 		items=[
 			("none", "No snap", "Keep exact location"),
 			("center", "Snap center", "Snap to block center"),
 			("offset", "Snap offset", "Snap to block center with 0.5 offset")],
 		description="Automatically snap to whole block locations")
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 
 	@classmethod
 	def poll(cls, context):
-		return context.mode == 'OBJECT' and util.bv28()
+		return context.mode == 'OBJECT'
 
 	def place_model(self, obj):
 		if self.snapping == "center":
@@ -456,7 +464,7 @@ class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 	bl_label = "Place model"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	filepath = bpy.props.StringProperty(
+	filepath: bpy.props.StringProperty(
 		default="",
 		subtype="FILE_PATH",
 		options={'HIDDEN', 'SKIP_SAVE'})
@@ -472,13 +480,13 @@ class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 			return {'CANCELLED'}
 		if not self.filepath.lower().endswith(".json"):
 			self.report(
-				{"ERROR"}, "File is not json: " + self.filepath)
+				{"ERROR"}, f"File is not json: {self.filepath}")
 			return {'CANCELLED'}
 
 		try:
 			obj = add_model(os.path.normpath(self.filepath), name)
 		except ModelException as e:
-			self.report({"ERROR"}, "Encountered error: " + str(e))
+			self.report({"ERROR"}, f"Encountered error: {e}")
 			return {'CANCELLED'}
 
 		self.place_model(obj)
@@ -494,7 +502,7 @@ class MCPREP_OT_import_minecraft_model_file(
 	bl_options = {'REGISTER', 'UNDO'}
 
 	filename_ext = ".json"
-	filter_glob = bpy.props.StringProperty(
+	filter_glob: bpy.props.StringProperty(
 		default="*.json",
 		options={'HIDDEN'},
 		maxlen=255  # Max internal buffer length, longer would be clamped.
@@ -510,13 +518,13 @@ class MCPREP_OT_import_minecraft_model_file(
 			return {'CANCELLED'}
 		if not self.filepath.lower().endswith(".json"):
 			self.report(
-				{"ERROR"}, "File is not json: " + self.filepath)
+				{"ERROR"}, f"File is not json: {self.filepath}")
 			return {'CANCELLED'}
 
 		try:
 			obj = add_model(os.path.normpath(self.filepath), filename)
 		except ModelException as e:
-			self.report({"ERROR"}, "Encountered error: " + str(e))
+			self.report({"ERROR"}, f"Encountered error: {e}")
 			return {'CANCELLED'}
 
 		self.place_model(obj)
@@ -543,17 +551,13 @@ classes = (
 
 
 def register():
-	util.make_annotations(ModelSpawnBase)  # Don't register, only annotate.
 	for cls in classes:
-		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 
-	if util.bv28():
-		bpy.types.TOPBAR_MT_file_import.append(draw_import_mcmodel)
+	bpy.types.TOPBAR_MT_file_import.append(draw_import_mcmodel)
 
 
 def unregister():
-	if util.bv28():
-		bpy.types.TOPBAR_MT_file_import.remove(draw_import_mcmodel)
+	bpy.types.TOPBAR_MT_file_import.remove(draw_import_mcmodel)
 	for cls in reversed(classes):
 		bpy.utils.unregister_class(cls)

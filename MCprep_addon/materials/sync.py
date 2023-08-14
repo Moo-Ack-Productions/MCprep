@@ -18,56 +18,59 @@
 
 
 import os
+from typing import Union, Tuple
+from pathlib import Path
 
 import bpy
 from bpy.app.handlers import persistent
+from bpy.types import Context, Material
 
 from . import generate
-from .. import conf
+from ..conf import env
 from .. import tracking
 from .. import util
-
 
 # -----------------------------------------------------------------------------
 # Utilities
 # -----------------------------------------------------------------------------
 
+
 @persistent
 def clear_sync_cache(scene):
-	conf.log("Resetting sync mat cache", vv_only=True)
-	conf.material_sync_cache = None
+	env.log("Resetting sync mat cache", vv_only=True)
+	env.material_sync_cache = None
 
 
-def get_sync_blend(context):
+def get_sync_blend(context: Context) -> Path:
 	"""Return the sync blend file path that might exist, based on active pack"""
 	resource_pack = bpy.path.abspath(context.scene.mcprep_texturepack_path)
 	return os.path.join(resource_pack, "materials.blend")
 
 
-def reload_material_sync_library(context):
+def reload_material_sync_library(context: Context) -> None:
 	"""Reloads the library and cache"""
 	sync_file = get_sync_blend(context)
 	if not os.path.isfile(sync_file):
-		conf.material_sync_cache = []
+		env.material_sync_cache = []
 		return
 
 	with bpy.data.libraries.load(sync_file) as (data_from, _):
-		conf.material_sync_cache = list(data_from.materials)
-	conf.log("Updated sync cache", vv_only=True)
+		env.material_sync_cache = list(data_from.materials)
+	env.log("Updated sync cache", vv_only=True)
 
 
-def material_in_sync_library(mat_name, context):
+def material_in_sync_library(mat_name: str, context: Context) -> bool:
 	"""Returns true if the material is in the sync mat library blend file"""
-	if conf.material_sync_cache is None:
+	if env.material_sync_cache is None:
 		reload_material_sync_library(context)
-	if util.nameGeneralize(mat_name) in conf.material_sync_cache:
+	if util.nameGeneralize(mat_name) in env.material_sync_cache:
 		return True
-	elif mat_name in conf.material_sync_cache:
+	elif mat_name in env.material_sync_cache:
 		return True
 	return False
 
 
-def sync_material(context, source_mat, sync_mat_name, link, replace):
+def sync_material(context: Context, source_mat: Material, sync_mat_name: str, link: bool, replace: bool) -> Tuple[bool, Union[bool, str, None]]:
 	"""If found, load and apply the material found in a library.
 
 	Args:
@@ -81,9 +84,9 @@ def sync_material(context, source_mat, sync_mat_name, link, replace):
 		0 if nothing modified, 1 if modified
 		None if no error or string if error
 	"""
-	if sync_mat_name in conf.material_sync_cache:
+	if sync_mat_name in env.material_sync_cache:
 		import_name = sync_mat_name
-	elif util.nameGeneralize(sync_mat_name) in conf.material_sync_cache:
+	elif util.nameGeneralize(sync_mat_name) in env.material_sync_cache:
 		import_name = util.nameGeneralize(sync_mat_name)
 
 	# if link is true, check library material not already linked
@@ -93,7 +96,7 @@ def sync_material(context, source_mat, sync_mat_name, link, replace):
 
 	imported = set(bpy.data.materials[:]) - set(init_mats)
 	if not imported:
-		return 0, "Could not import {}".format(import_name)
+		return 0, f"Could not import {import_name}"
 	new_material = list(imported)[0]
 
 	# 2.78+ only, else silent failure
@@ -118,21 +121,21 @@ class MCPREP_OT_sync_materials(bpy.types.Operator):
 	bl_label = "Sync Materials"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	selected = bpy.props.BoolProperty(
+	selected: bpy.props.BoolProperty(
 		name="Only selected",
 		description=(
 			"Affect only the materials on selected objects, otherwise "
 			"sync all materials in blend file"),
 		default=True)
-	link = bpy.props.BoolProperty(
+	link: bpy.props.BoolProperty(
 		name="Link",
 		description="Link instead of appending material",
 		default=False)
-	replace_materials = bpy.props.BoolProperty(
+	replace_materials: bpy.props.BoolProperty(
 		name="Replace",
 		description="Delete the local materials being synced, where matched",
 		default=False)
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 
@@ -146,7 +149,7 @@ class MCPREP_OT_sync_materials(bpy.types.Operator):
 		sync_file = get_sync_blend(context)
 		if not os.path.isfile(sync_file):
 			if not self.skipUsage:
-				self.report({'ERROR'}, "Sync file not found: " + sync_file)
+				self.report({'ERROR'}, "Sync file not found: {sync_file}")
 			return {'CANCELLED'}
 
 		if sync_file == bpy.data.filepath:
@@ -197,7 +200,7 @@ class MCPREP_OT_sync_materials(bpy.types.Operator):
 				last_err = err
 
 		if last_err:
-			conf.log("Most recent error during sync:" + str(last_err))
+			env.log(f"Most recent error during sync:{last_err}")
 
 		# Re-establish initial state, as append material clears selections
 		for obj in inital_selection:
@@ -217,7 +220,38 @@ class MCPREP_OT_sync_materials(bpy.types.Operator):
 		elif modified == 1:
 			self.report({'INFO'}, "Synced 1 material")
 		else:
-			self.report({'INFO'}, "Synced {} materials".format(modified))
+			self.report({'INFO'}, f"Synced {modified} materials")
+		return {'FINISHED'}
+
+
+class MCPREP_OT_edit_sync_materials_file(bpy.types.Operator):
+	"""Open the the file used fo syncrhonization."""
+	bl_idname = "mcprep.edit_sync_materials_file"
+	bl_label = "Edit sync file"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	track_function = "edit_sync_materials"
+	track_param = None
+	@tracking.report_error
+	def execute(self, context):
+		file = get_sync_blend(context)
+		if not bpy.data.is_saved:
+			self.report({'ERROR'}, "Save your blend file first")
+			return {'CANCELLED'}
+
+		# Will open without saving or prompting!
+		# TODO: Perform action more similar to the asset browser, which opens
+		# a new instance of blender.
+		if os.path.isfile(file):
+			bpy.ops.wm.open_mainfile(filepath=file)
+		else:
+			# Open and save a new sync file instead.
+			bpy.ops.wm.read_homefile(use_empty=True)
+
+			# Set the local resource pack to match this generated file.
+			bpy.context.scene.mcprep_texturepack_path = "//"
+
+			bpy.ops.wm.save_as_mainfile(filepath=file)
 		return {'FINISHED'}
 
 
@@ -265,7 +299,6 @@ classes = (
 
 def register():
 	for cls in classes:
-		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 	bpy.app.handlers.load_post.append(clear_sync_cache)
 

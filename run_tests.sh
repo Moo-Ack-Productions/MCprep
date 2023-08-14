@@ -30,11 +30,11 @@ TEST_RUNNERS=(
 )
 
 # Update the mappings.
-./mcprep_data_refresh.py -auto
+python3 ./mcprep_data_refresh.py -auto
 
 # First, do a soft reload of python files.
 echo "Soft py file reload"
-./compile.sh -fast
+bpy-addon-build -b dev
 
 
 # Remove old test results.

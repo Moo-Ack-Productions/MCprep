@@ -18,10 +18,12 @@
 
 
 import bpy
+from bpy.types import Context
 
 import time
+from typing import Dict, List, Tuple
 
-from .. import conf
+from ..conf import env
 from . import generate
 from .. import tracking
 from .. import util
@@ -31,7 +33,7 @@ from .. import util
 # UV functions
 # -----------------------------------------------------------------------------
 
-def get_uv_bounds_per_material(obj):
+def get_uv_bounds_per_material(obj: bpy.types.Object) -> Dict[str, list]:
 	"""Return the maximum uv bounds per object, split per material
 
 	Returns:
@@ -83,7 +85,7 @@ def get_uv_bounds_per_material(obj):
 	return res
 
 
-def detect_invalid_uvs_from_objs(obj_list):
+def detect_invalid_uvs_from_objs(obj_list: List[bpy.types.Object]) -> Tuple[bool, List[bpy.types.Object]]:
 	"""Detect all-in one combined images from concentrated UV layouts.
 
 	Returns:
@@ -98,7 +100,7 @@ def detect_invalid_uvs_from_objs(obj_list):
 	# rightfully not up against bounds of image. But generally, for combined
 	# images the area covered is closer to 0.05
 	thresh = 0.25
-	conf.log("Doing check for invalid UV faces", vv_only=True)
+	env.log("Doing check for invalid UV faces", vv_only=True)
 	t0 = time.time()
 
 	for obj in obj_list:
@@ -122,7 +124,7 @@ def detect_invalid_uvs_from_objs(obj_list):
 			invalid_objects.append(obj)
 	t1 = time.time()
 	t_diff = t1 - t0  # round to .1s
-	conf.log("UV check took {}s".format(t_diff), vv_only=True)
+	env.log(f"UV check took {t_diff}s", vv_only=True)
 	return invalid, invalid_objects
 
 
@@ -137,18 +139,18 @@ class MCPREP_OT_scale_uv(bpy.types.Operator):
 	bl_description = "Scale all selected UV faces. See F6 or redo-last panel to adjust factor"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	scale = bpy.props.FloatProperty(default=0.75, name="Scale")
-	selected_only = bpy.props.BoolProperty(default=True, name="Seleced only")
-	skipUsage = bpy.props.BoolProperty(default=False, options={'HIDDEN'})
+	scale: bpy.props.FloatProperty(default=0.75, name="Scale")
+	selected_only: bpy.props.BoolProperty(default=True, name="Seleced only")
+	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	@classmethod
-	def poll(cls, context):
+	def poll(cls, context: Context):
 		return context.mode == 'EDIT_MESH' or (
 			context.mode == 'OBJECT' and context.object)
 
 	track_function = "scale_uv"
 	@tracking.report_error
-	def execute(self, context):
+	def execute(self, context: Context):
 
 		# INITIAL WIP
 		"""
@@ -158,10 +160,10 @@ class MCPREP_OT_scale_uv(bpy.types.Operator):
 		uvs = ob.data.uv_layers[0].data
 		matchingVertIndex = list(chain.from_iterable(polyIndices))
 		# example, matching list of uv coord and 3dVert coord:
-		uvs_XY = [i.uv for i in Object.data.uv_layers[0].data]
-		vertXYZ= [v.co for v in Object.data.vertices]
+		uvs_XY = [i.uv for i in bpy.types.Object.data.uv_layers[0].data]
+		vertXYZ= [v.co for v in bpy.types.Object.data.vertices]
 		matchingVertIndex = list(chain.from_iterable(
-			[p.vertices for p in Object.data.polygons]))
+			[p.vertices for p in bpy.types.Object.data.polygons]))
 		# and now, the coord to pair with uv coord:
 		matchingVertsCoord = [vertsXYZ[i] for i in matchingVertIndex]
 		"""
@@ -187,7 +189,7 @@ class MCPREP_OT_scale_uv(bpy.types.Operator):
 
 		if ret is not None:
 			self.report({'ERROR'}, ret)
-			conf.log("Error, " + ret)
+			env.log(f"Error, {ret}")
 			return {'CANCELLED'}
 
 		return {'FINISHED'}
@@ -237,25 +239,25 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 	bl_description = "Select or delete transparent UV faces of a mesh"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	delete = bpy.props.BoolProperty(
+	delete: bpy.props.BoolProperty(
 		name="Delete faces",
 		description="Delete detected transparent mesh faces",
 		default=False)
-	threshold = bpy.props.FloatProperty(
+	threshold: bpy.props.FloatProperty(
 		name="Threshold",
 		description="How transparent pixels need to be to select",
 		default=0.2,
 		min=0.0,
 		max=1.0)
-	skipUsage = bpy.props.BoolProperty(default=False, options={'HIDDEN'})
+	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	@classmethod
-	def poll(cls, context):
+	def poll(cls, context: Context):
 		return context.mode == 'EDIT_MESH'
 
 	track_function = "alpha_faces"
 	@tracking.report_error
-	def execute(self, context):
+	def execute(self, context: Context):
 
 		ob = context.object
 		if ob is None:
@@ -285,7 +287,7 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 			return {"CANCELLED"}
 
 		if not ret and self.delete:
-			conf.log("Delet faces")
+			env.log("Delet faces")
 			bpy.ops.mesh.delete(type='FACE')
 
 		return {"FINISHED"}
@@ -293,7 +295,7 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 	def select_alpha(self, ob, threshold):
 		"""Core function to select alpha faces based on active material/image."""
 		if not ob.material_slots:
-			conf.log("No materials, skipping.")
+			env.log("No materials, skipping.")
 			return "No materials"
 
 		# pre-cache the materials and their respective images for comparing
@@ -309,7 +311,7 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 				continue
 			elif image.channels != 4:
 				textures.append(None)  # no alpha channel anyways
-				conf.log("No alpha channel for: " + image.name)
+				env.log(f"No alpha channel for: {image.name}")
 				continue
 			textures.append(image)
 		data = [None for tex in textures]
@@ -321,7 +323,7 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 			fnd = f.material_index
 			image = textures[fnd]
 			if not image:
-				conf.log("Could not get image from face's material")
+				env.log("Could not get image from face's material")
 				return "Could not get image from face's material"
 
 			# lazy load alpha part of image to memory, hold for whole operator
@@ -348,7 +350,7 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 			xmax = round(max(xlist) * image.size[0]) - 0.5
 			ymin = round(min(ylist) * image.size[1]) - 0.5
 			ymax = round(max(ylist) * image.size[1]) - 0.5
-			conf.log(["\tSet size:", xmin, xmax, ymin, ymax], vv_only=True)
+			env.log(["\tSet size:", xmin, xmax, ymin, ymax], vv_only=True)
 
 			# assuming faces are roughly rectangular, sum pixels a face covers
 			asum = 0
@@ -362,17 +364,16 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 							asum += data[fnd][image.size[1] * row + col]
 							acount += 1
 						except IndexError as err:
-							print("Index error while parsing col {}, row {}: {}".format(
-								col, row, err))
+							print(f"Index error while parsing col {col}, row {row}: {err}")
 
 			if acount == 0:
 				acount = 1
 			ratio = float(asum) / float(acount)
 			if ratio < float(threshold):
-				print("\t{} - Below threshold, select".format(ratio))
+				print(f"\t{ratio} - Below threshold, select")
 				f.select = True
 			else:
-				print("\t{} - above thresh, NO select".format(ratio))
+				print(f"\t{ratio} - above thresh, NO select")
 				f.select = False
 		return
 
@@ -390,7 +391,6 @@ classes = (
 
 def register():
 	for cls in classes:
-		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 
 

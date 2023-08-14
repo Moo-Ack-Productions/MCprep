@@ -16,16 +16,19 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from pathlib import Path
+from typing import Optional, Tuple
+import mathutils
 import os
 
 import bpy
+from bpy.types import Context
 from bpy_extras.io_utils import ImportHelper
-import mathutils
 
-from .. import conf
 from .. import util
 from .. import tracking
-from ..materials import generate 
+from ..conf import env
+from ..materials import generate
 try:
 	import bpy.utils.previews
 except ImportError:
@@ -36,7 +39,7 @@ except ImportError:
 # -----------------------------------------------------------------------------
 
 
-def reload_items(context):
+def reload_items(context: Context) -> None:
 	"""Reload the items UI list for spawning"""
 
 	mcprep_props = context.scene.mcprep_props
@@ -44,12 +47,12 @@ def reload_items(context):
 	extensions = [".png", ".jpg", ".jpeg"]
 
 	mcprep_props.item_list.clear()
-	if conf.use_icons and conf.preview_collections["items"]:
+	if env.use_icons and env.preview_collections["items"]:
 		try:
-			bpy.utils.previews.remove(conf.preview_collections["items"])
+			bpy.utils.previews.remove(env.preview_collections["items"])
 		except Exception as e:
 			print(e)
-			conf.log("MCPREP: Failed to remove icon set, items")
+			env.log("MCPREP: Failed to remove icon set, items")
 
 	# Check levels
 	lvl_1 = os.path.join(resource_folder, "textures")
@@ -57,7 +60,7 @@ def reload_items(context):
 	lvl_3 = os.path.join(resource_folder, "assets", "minecraft", "textures")
 
 	if not os.path.isdir(resource_folder):
-		conf.log("Error, resource folder does not exist")
+		env.log("Error, resource folder does not exist")
 		return
 	elif os.path.isdir(lvl_1):
 		resource_folder = lvl_1
@@ -84,22 +87,24 @@ def reload_items(context):
 		basename = os.path.splitext(os.path.basename(item_file))[0]
 		asset = mcprep_props.item_list.add()
 		asset.name = basename.replace("_", " ")
-		asset.description = "Spawn one " + basename
+		asset.description = f"Spawn one {basename}"
 		asset.path = item_file
 		asset.index = i
 
 		# if available, load the custom icon too
-		if not conf.use_icons or conf.preview_collections["items"] == "":
+		if not env.use_icons or env.preview_collections["items"] == "":
 			continue
-		conf.preview_collections["items"].load(
-			"item-{}".format(i), item_file, 'IMAGE')
+		env.preview_collections["items"].load(
+			f"item-{i}", item_file, 'IMAGE')
 
 	if mcprep_props.item_list_index >= len(mcprep_props.item_list):
 		mcprep_props.item_list_index = len(mcprep_props.item_list) - 1
 
 
 def spawn_item_from_filepath(
-	context, path, max_pixels, thickness, threshold, transparency):
+		context: Context, path: Path, 
+		max_pixels: int, thickness: float, threshold: float, transparency: bool
+	) -> Tuple[Optional[bpy.types.Object], Optional[str]]:
 	"""Reusable function for generating an item from an image filepath
 
 	Arguments
@@ -225,7 +230,7 @@ def spawn_item_from_filepath(
 		bpy.ops.mesh.delete(type='FACE')
 		bpy.ops.object.mode_set(mode='OBJECT')
 
-	itm_obj.location = util.get_cuser_location(context)
+	itm_obj.location = util.get_cursor_location(context)
 
 	# Material and Textures.
 	# TODO: use the generate functions here instead
@@ -297,44 +302,44 @@ class ItemSpawnBase():
 	"""Class to inheret reused MCprep item spawning settings and functions."""
 
 	# TODO: add options like spawning attached to rig hand or other,
-	size = bpy.props.FloatProperty(
+	size: bpy.props.FloatProperty(
 		name="Size",
 		default=1.0,
 		min=0.001,
 		description="Size in blender units of the item")
-	thickness = bpy.props.FloatProperty(
+	thickness: bpy.props.FloatProperty(
 		name="Thickness",
 		default=1.0,
 		min=0.0,
 		description=(
 			"The thickness of the item (this can later be changed in "
 			"modifiers)"))
-	transparency = bpy.props.BoolProperty(
+	transparency: bpy.props.BoolProperty(
 		name="Remove transparent faces",
 		description="Transparent pixels will be transparent once rendered",
 		default=True)
-	threshold = bpy.props.FloatProperty(
+	threshold: bpy.props.FloatProperty(
 		name="Transparent threshold",
 		description="1.0 = zero tolerance, no transparent pixels will be generated",
 		default=0.5,
 		min=0.0,
 		max=1.0)
-	max_pixels = bpy.props.IntProperty(
+	max_pixels: bpy.props.IntProperty(
 		name="Max pixels",
 		default=50000,
 		min=1,
 		description=(
 			"If needed, scale down image to generate less than this maximum "
 			"pixel count"))
-	scale_uvs = bpy.props.FloatProperty(
+	scale_uvs: bpy.props.FloatProperty(
 		name="Scale UVs",
 		default=0.75,
 		description="Scale individual UV faces of the generated item")
-	filepath = bpy.props.StringProperty(
+	filepath: bpy.props.StringProperty(
 		default="",
 		subtype="FILE_PATH",
 		options={'HIDDEN', 'SKIP_SAVE'})
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 
@@ -343,7 +348,7 @@ class ItemSpawnBase():
 		pose_active = context.mode == 'POSE' and context.active_bone
 		return context.mode == 'OBJECT' or pose_active
 
-	def spawn_item_execution(self, context):
+	def spawn_item_execution(self, context: Context):
 		"""Common execution for both spawn item from filepath and list."""
 		if context.mode == 'POSE' and context.active_bone:
 			spawn_in_pose = True
@@ -421,14 +426,14 @@ class MCPREP_OT_spawn_item_from_file(bpy.types.Operator, ImportHelper, ItemSpawn
 	bl_idname = "mcprep.spawn_item_file"
 	bl_label = "Item from file"
 
-	filter_glob = bpy.props.StringProperty(
+	filter_glob: bpy.props.StringProperty(
 		default="",
 		options={'HIDDEN'})
 	fileselectparams = "use_filter_blender"
-	files = bpy.props.CollectionProperty(
+	files: bpy.props.CollectionProperty(
 		type=bpy.types.PropertyGroup,
 		options={'HIDDEN', 'SKIP_SAVE'})
-	filter_image = bpy.props.BoolProperty(
+	filter_image: bpy.props.BoolProperty(
 		default=True,
 		options={'HIDDEN', 'SKIP_SAVE'})
 
@@ -466,9 +471,7 @@ classes = (
 
 
 def register():
-	util.make_annotations(ItemSpawnBase)  # Don't register, only annotate.
 	for cls in classes:
-		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 
 
