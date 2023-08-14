@@ -202,7 +202,6 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 				self.report({'ERROR'}, "No materials found on selected objects")
 			return {'CANCELLED'}
 
-		
 		# check if linked material exists
 		engine = context.scene.render.engine
 		count = 0
@@ -248,13 +247,13 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 
 			if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 				options = generate.PrepOptions(
-					passes, 
-					self.useReflections, 
-					self.usePrincipledShader, 
-					self.makeSolid, 
-					self.packFormat, 
-					self.useEmission, 
-					False # This is for an option set in matprep_cycles
+					passes=passes,
+					use_reflections=self.useReflections,
+					use_principled=self.usePrincipledShader,
+					only_solid=self.makeSolid,
+					pack_format=self.packFormat,
+					use_emission_nodes=self.useEmission,
+					use_emission=False  # This is for an option set in matprep_cycles
 				)
 				res = generate.matprep_cycles(
 					mat=mat,
@@ -270,25 +269,25 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 
 			if self.animateTextures:
 				sequences.animate_single_material(
-					mat, context.scene.render.engine)
+					mat,
+					context.scene.render.engine,
+					export_location="original")
 
 		# Sync materials.
 		if self.syncMaterials is True:
 			bpy.ops.mcprep.sync_materials(
 				selected=True, link=False, replace_materials=False, skipUsage=True)
 
-		
 		# Combine materials.
 		if self.combineMaterials is True:
 			bpy.ops.mcprep.combine_materials(selection_only=True, skipUsage=True)
 
-        # Improve UI.
+		# Improve UI.
 		if self.improveUiSettings:
 			try:
 				bpy.ops.mcprep.improve_ui()
 			except RuntimeError as err:
 				print(f"Failed to improve UI with error: {err}")
-
 
 		if self.optimizeScene and engine == 'CYCLES':
 			bpy.ops.mcprep.optimize_scene()
@@ -484,7 +483,9 @@ class MCPREP_OT_swap_texture_pack(
 			res += generate.set_texture_pack(mat, folder, self.useExtraMaps)
 			if self.animateTextures:
 				sequences.animate_single_material(
-					mat, context.scene.render.engine)
+					mat,
+					context.scene.render.engine,
+					export_location="original")
 			# may be a double call if was animated tex
 			generate.set_saturation_material(mat)
 
@@ -642,13 +643,13 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 
 		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 			options = generate.PrepOptions(
-				passes, 
-				self.useReflections, 
-				self.usePrincipledShader, 
-				self.makeSolid, 
-				self.packFormat, 
-				self.useEmission, 
-				False # This is for an option set in matprep_cycles
+				passes=passes,
+				use_reflections=self.useReflections,
+				use_principled=self.usePrincipledShader,
+				only_solid=self.makeSolid,
+				pack_format=self.packFormat,
+				use_emission_nodes=self.useEmission,
+				use_emission=False  # This is for an option set in matprep_cycles
 			)
 			res = generate.matprep_cycles(
 				mat=mat,
@@ -661,7 +662,7 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 
 		if self.animateTextures:
 			sequences.animate_single_material(
-				mat, context.scene.render.engine)
+				mat, context.scene.render.engine, export_location="original")
 
 		return success, None
 

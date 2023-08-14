@@ -2,6 +2,7 @@ addon_folder: MCprep_addon
 build_name: MCprep_addon
 
 install_versions:
+  - '4.0'
   - '3.6'
   - '3.5'
   - '3.4'

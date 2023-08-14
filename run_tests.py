@@ -16,17 +16,30 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from enum import Enum
+from typing import List
 import argparse
 import os
 import subprocess
-from typing import List
+import time
 
 
-COMPILE_CMD = ["./compile.sh", "-fast"]
+COMPILE_CMD = ["bpy-addon-build", "--during-build", "dev"]
+DATA_CMD = ["python", "mcprep_data_refresh.py", "-auto"]  # TODO, include in build
 DCC_EXES = "blender_execs.txt"
 TEST_RUNNER = os.path.join("test_files", "test_runner.py")
 TEST_CSV_OUTPUTS = "test_results.csv"
 SPACER = "-" * 79
+
+
+class TestSpeed(Enum):
+    """Which tests to run."""
+    SLOW = 'slow'  # All tests, including any UI-triggering ones.
+    MEDIUM = 'medium'  # All but the slowest tests.
+    FAST = 'fast'  # Only fast-running tests (TBD target runtime).
+
+    def __str__(self):
+        return self.value
 
 
 def main():
@@ -45,6 +58,7 @@ def main():
     reset_test_file()
 
     # Loop over all binaries and run tests.
+    t0 = time.time()
     for ind, binary in enumerate(blender_execs):
         run_all = args.all_execs is True
         run_specific = args.version is not None
@@ -67,7 +81,11 @@ def main():
         output = subprocess.check_output(cmd)
         print(output.decode("utf-8"))
 
+    t1 = time.time()
+
     output_results()
+    round_s = round(t1 - t0)
+    print(f"tests took {round_s}s to run")
 
 
 def get_args():
@@ -86,6 +104,11 @@ def get_args():
     parser.add_argument(
         "-v", "--version",
         help="Specify the blender version(s) to test, in #.# or #.##,#.#")
+    parser.add_argument(
+        "-s", "--speed",
+        type=TestSpeed,
+        choices=list(TestSpeed),
+        help="Which speed of tests to run")
     return parser.parse_args()
 
 
@@ -109,7 +132,7 @@ def reset_test_file():
         print(e)
 
     with open(TEST_CSV_OUTPUTS, "w") as fopen:
-        header = ["bversion", "ran_tests", "ran", "failed", "errors"]
+        header = ["bversion", "ran_tests", "ran", "skips", "failed", "errors"]
         fopen.write(",".join(header) + "\n")
 
 

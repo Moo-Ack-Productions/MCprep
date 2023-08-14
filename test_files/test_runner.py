@@ -49,9 +49,26 @@ def get_args():
     return parser.parse_args()
 
 
+def setup_env_paths(self):
+    """Adds the MCprep installed addon path to sys for easier importing."""
+    to_add = None
+
+    for base in bpy.utils.script_paths():
+        init = os.path.join(base, "addons", "MCprep_addon", "__init__.py")
+        if os.path.isfile(init):
+            to_add = init
+            break
+    if not to_add:
+        raise Exception("Could not add MCprep addon path for importing")
+
+    sys.path.insert(0, to_add)
+
+
 def main():
     args = get_args()
     suite = unittest.TestSuite()
+
+    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
     if args.version is not None:
         # A concatenated list like 3.5,2.80
@@ -101,14 +118,17 @@ def main():
     # runs across different versions of blender to verify successes.
     errs = [res[0].id().split(".")[-1] for res in results.errors]
     fails = [res[0].id().split(".")[-1] for res in results.failures]
+    skipped = [res[0].id().split(".")[-1] for res in results.skipped]
+
     with open("test_results.csv", 'a') as csv:
         errors = ";".join(errs + fails).replace(",", " ")
         if errors == "":
             errors = "No errors"
-        csv.write("{},{},{},{},{}\r\n".format(
+        csv.write("{},{},{},{},{},{}\r\n".format(
             str(bpy.app.version).replace(",", "."),
             "all_tests" if not args.test_specific else args.test_specific,
-            results.testsRun,
+            results.testsRun - len(skipped),
+            len(skipped),
             len(results.errors) + len(results.failures),
             errors,
         ))

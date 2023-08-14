@@ -248,6 +248,31 @@ def convert_mtl(filepath):
 	return True
 
 
+def enble_obj_importer() -> Optional[bool]:
+	"""Checks if obj import is avail and tries to activate if not.
+
+	If we fail to enable obj importing, return false. True if enabled, and Non
+	if nothing changed.
+	"""
+	enable_addon = None
+	if util.min_bv((4, 0)):
+		return None  # No longer an addon, native built in.
+	else:
+		in_import_scn = "obj_import" not in dir(bpy.ops.wm)
+		in_wm = ""
+		if not in_import_scn and not in_wm:
+			enable_addon = "io_scene_obj"
+
+	if enable_addon is None:
+		return None
+
+	try:
+		bpy.ops.preferences.addon_enable(module=enable_addon)
+		return True
+	except RuntimeError:
+		return False
+
+
 # -----------------------------------------------------------------------------
 # open mineways/jmc2obj related
 # -----------------------------------------------------------------------------
@@ -449,15 +474,16 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			self.report({"ERROR"}, "You must select a .obj file to import")
 			return {'CANCELLED'}
 
-		if "obj" not in dir(bpy.ops.import_scene):
-			try:
-				bpy.ops.preferences.addon_enable(module="io_scene_obj")
-				self.report(
-					{"INFO"},
-					"FYI: had to enable OBJ imports in user preferences")
-			except RuntimeError:
-				self.report({"ERROR"}, "Built-in OBJ importer could not be enabled")
-				return {'CANCELLED'}
+		res = enble_obj_importer()
+		if res is None:
+			pass
+		elif res is True:
+			self.report(
+				{"INFO"},
+				"FYI: had to enable OBJ imports in user preferences")
+		elif res is False:
+			self.report({"ERROR"}, "Built-in OBJ importer could not be enabled")
+			return {'CANCELLED'}
 
 		# There are a number of bug reports that come from the generic call
 		# of obj importing. If this fails, should notify the user to try again
@@ -661,7 +687,11 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 			world_links.new(skynode.outputs["Color"], background.inputs[0])
 			world_links.new(background.outputs["Background"], output.inputs[0])
 
-		context.scene.world.light_settings.use_ambient_occlusion = False
+		if hasattr(context.scene.world.light_settings, "use_ambient_occlusion"):
+			# pre 4.0
+			context.scene.world.light_settings.use_ambient_occlusion = False
+		else:
+			print("Unable to disbale use_ambient_occlusion")
 
 		if hasattr(context.scene, "cycles"):
 			context.scene.cycles.caustics_reflective = False
@@ -708,8 +738,13 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 				background_camera.outputs["Background"], mix_shader.inputs[2])
 			world_links.new(mix_shader.outputs["Shader"], output.inputs[0])
 
-		# is not great
-		context.scene.world.light_settings.use_ambient_occlusion = False
+		# Increase render speeds by disabling ambienet occlusion.
+		if hasattr(context.scene.world.light_settings, "use_ambient_occlusion"):
+			# pre 4.0
+			context.scene.world.light_settings.use_ambient_occlusion = False
+		else:
+			print("Unable to disbale use_ambient_occlusion")
+
 		if hasattr(context.scene, "cycles"):
 			context.scene.cycles.caustics_reflective = False
 			context.scene.cycles.caustics_refractive = False
@@ -756,20 +791,6 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 			context.scene.world.use_sky_blend = True
 			context.scene.world.horizon_color = (0.647705, 0.859927, 0.940392)
 			context.scene.world.zenith_color = (0.0954261, 0.546859, 1)
-
-
-class MCPREP_OT_add_mc_world(bpy.types.Operator):
-	"""Please used the new operator, mcprep.add_mc_sky"""
-	bl_idname = "mcprep.add_mc_world"
-	bl_label = "Create MC World"
-	bl_options = {'REGISTER', 'UNDO'}
-
-	track_function = "world_time"
-	track_param = "Deprecated"
-	@tracking.report_error
-	def execute(self, context):
-		self.report({"ERROR"}, "Use the new operator, mcprep.add_mc_sky")
-		return {'CANCELLED'}
 
 
 class MCPREP_OT_add_mc_sky(bpy.types.Operator):
@@ -1383,7 +1404,6 @@ classes = (
 	MCPREP_OT_open_mineways,
 	MCPREP_OT_install_mineways,
 	MCPREP_OT_prep_world,
-	MCPREP_OT_add_mc_world,
 	MCPREP_OT_add_mc_sky,
 	MCPREP_OT_time_set,
 	MCPREP_OT_import_world_split,

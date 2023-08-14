@@ -251,58 +251,65 @@ def checklist(matName: str, listName: str) -> bool:
 			return True
 	return False
 
-# Dataclass representing all options 
+
+# Dataclass representing all options
 # for prep materials
-# 
-# We use __slots__ since __slots__ prevents the 
+#
+# We use __slots__ since __slots__ prevents the
 # following bug:
-#	p = PrepOptions(...)
-#	p.psses["..."] = "..." 
-# 
-# Where a non-existant variable is used. In 
-# Python, this would create a new variable 
+#   p = PrepOptions(...)
+#   p.psses["..."] = "..."
+#
+# Where a non-existant variable is used. In
+# Python, this would create a new variable
 # "psses" on p. To prevent this, we use __slots__.
 #
-# In addition, access to objects in __slots__ is 
+# In addition, access to objects in __slots__ is
 # faster then it would be normally
 #
-# Python dataclasses have native support for __slots__ 
-# in 3.10, but since 2.8 uses 3.7, we have to use 
+# Python dataclasses have native support for __slots__
+# in 3.10, but since 2.8 uses 3.7, we have to use
 # __slots__ directly
+
 @dataclass
 class PrepOptions:
-	__slots__ = ("passes", 
-				 "use_reflections", 
-				 "use_principled", 
-				 "only_solid", 
-				 "pack_format", 
-				 "use_emission_nodes", 
-				 "use_emission")
-	passes: Dict[str, str]
+	"""Class defining structure for prepping or generating materials
+
+	passes: dictionary struc of all found pass names
+	use_reflections: whether to turn reflections on
+	use_principled: if available and cycles, use principled node
+	saturate: if a desaturated texture (by canonical resource), add color
+	pack_format: which format of PBR, string ("Simple", Specular", "SEUS")
+	"""
+	__slots__ = (
+		"passes",
+		"use_reflections",
+		"use_principled",
+		"only_solid",
+		"pack_format",
+		"use_emission_nodes",
+		"use_emission")
+	passes: Dict[str, bpy.types.Image]
 	use_reflections: bool
 	use_principled: bool
 	only_solid: bool
-	pack_format: str
+	pack_format: str  # TODO: Enforce enum value assignment.
 	use_emission_nodes: bool
 	use_emission: bool
+
 
 def matprep_cycles(mat: Material, options: PrepOptions) -> Optional[bool]:
 	"""Determine how to prep or generate the cycles materials.
 
 	Args:
 		mat: the existing material
-		passes: dictionary struc of all found pass names
-		use_reflections: whether to turn reflections on
-		use_principled: if available and cycles, use principled node
-		saturate: if a desaturated texture (by canonical resource), add color
-		pack_format: which format of PBR, string ("Simple", Specular", "SEUS")
+		options: All PrepOptions for this configuration, see class definition
 
 	Returns:
 		int: 0 only if successful, otherwise None or other
 	"""
-	if util.bv28():
-		# ensure nodes are enabled esp. after importing from BI scenes
-		mat.use_nodes = True
+	# ensure nodes are enabled
+	mat.use_nodes = True
 
 	matGen = util.nameGeneralize(mat.name)
 	canon, _ = get_mc_canonical_name(matGen)
@@ -310,15 +317,15 @@ def matprep_cycles(mat: Material, options: PrepOptions) -> Optional[bool]:
 
 	# TODO: Update different options for water before enabling this
 	# if use_reflections and checklist(canon, "water"):
-	#	res = matgen_special_water(mat, passes)
+	#     res = matgen_special_water(mat, passes)
 	# if use_reflections and checklist(canon, "glass"):
-	#	res = matgen_special_glass(mat, passes)
-	if options.pack_format == "simple" and util.bv28():
+	#     res = matgen_special_glass(mat, passes)
+	if options.pack_format == "simple":
 		res = matgen_cycles_simple(mat, options)
-	elif options.use_principled and hasattr(bpy.types, 'ShaderNodeBsdfPrincipled'):
-		res = matgen_cycles_principled(mat, options) 	
+	elif options.use_principled:
+		res = matgen_cycles_principled(mat, options)
 	else:
-		res = matgen_cycles_original(mat, options) 
+		res = matgen_cycles_original(mat, options)
 	return res
 
 
@@ -425,6 +432,7 @@ def set_cycles_texture(image: Image, material: Material, extra_passes: bool=Fals
 		changed = True
 
 	return changed
+
 
 def get_node_for_pass(material: Material, pass_name: str) -> Optional[Node]:
 	"""Assumes cycles material, returns texture node for given pass in mat."""
@@ -754,7 +762,7 @@ def create_node(tree_nodes: Nodes, node_type: str, **attrs: Dict[str, Any]) -> N
 	return node
 
 
-def get_node_socket(node: Node, is_input: bool=True) -> list:
+def get_node_socket(node: Node, is_input: bool = True) -> list:
 	"""Gets the input or output sockets indicies for node"""
 	n_type = node.bl_idname
 	if n_type == 'ShaderNodeMix' or n_type == 'ShaderNodeMixRGB':
@@ -1192,7 +1200,7 @@ def matgen_cycles_simple(mat: Material, options: PrepOptions) -> Optional[bool]:
 				mat.blend_method = 'HASHED'
 			if hasattr(mat, "shadow_method"):
 				mat.shadow_method = 'HASHED'
-	
+
 	if options.use_emission_nodes and options.use_emission:
 		inputs = [inp.name for inp in principled.inputs]
 		if 'Emission Strength' in inputs:  # Later 2.9 versions only.
@@ -1212,8 +1220,8 @@ def matgen_cycles_simple(mat: Material, options: PrepOptions) -> Optional[bool]:
 	else:
 		env.log(f"Texture desaturated: {canon}", vv_only=True)
 		desat_color = env.json_data['blocks']['desaturated'][canon]
-		if len(desat_color) < len(nodeSaturateMix.inputs[2].default_value):
-				desat_color.append(1.0)
+		if len(desat_color) < len(nodeSaturateMix.inputs[saturateMixIn[2]].default_value):
+			desat_color.append(1.0)
 		nodeSaturateMix.inputs[saturateMixIn[2]].default_value = desat_color
 		nodeSaturateMix.mute = False
 		nodeSaturateMix.hide = False
@@ -1374,7 +1382,7 @@ def matgen_cycles_principled(mat: Material, options: PrepOptions) -> Optional[bo
 			# both work fine with depth of field.
 
 			# but, BLEND does NOT work well with Depth of Field or layering
-	
+
 	# reapply animation data if any to generated nodes
 	apply_texture_animation_pass_settings(mat, animated_data)
 
@@ -1382,7 +1390,7 @@ def matgen_cycles_principled(mat: Material, options: PrepOptions) -> Optional[bo
 
 
 def matgen_cycles_original(mat: Material, options: PrepOptions):
-	"""Generate principled cycles material"""
+	"""Generate non-principled cycles material"""
 
 	matGen = util.nameGeneralize(mat.name)
 	canon, form = get_mc_canonical_name(matGen)
