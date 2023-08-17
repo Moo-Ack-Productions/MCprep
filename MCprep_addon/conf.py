@@ -20,6 +20,7 @@ import json
 import os
 from pathlib import Path
 from typing import Dict, Tuple
+from . import translate_enum as te
 import bpy
 
 # check if custom preview icons available
@@ -190,14 +191,14 @@ class MCprepEnv:
 			traceback.print_stack()
 	
 	# This function is to map String IDs with actual strings
-	def translate_str(self, str_id: str, default_locale: str='en_US') -> str:
+	def translate_str(self, str_id: te.TranslateKeys, default_locale: str='en_US') -> str:
 		locale = bpy.app.translations.locale
 		if locale not in self.languages:
 			locale = default_locale
 		if str_id not in self.languages[locale][1]:
 			locale = default_locale
 		if str_id in self.languages[locale][1]:
-			return self.languages[locale][1][str_id]
+			return self.languages[locale][1][str_id.value]
 		return "Err"
 
 
