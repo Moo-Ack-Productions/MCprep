@@ -59,6 +59,13 @@
     "no_blocks_loaded" : "No blocks loaded",
     "place" : "Place: ",
     "place_block" : "Place block",
-    "meshswap_file" : "Meshswap file"
+    "meshswap_file" : "Meshswap file",
+    "item_from_texture" : "Generate items from textures",
+    "no_items_loaded" : "No items loaded",
+    "place_item" : "Place item",
+    "import_entities" : "Import pre-rigged entities",
+    "entity_blend" : "Entity file must be a .blend",
+    "entity_file_not_found" : "Entity file not found",
+    "reset_entity_path" : "Reset entity path"
   }
 }
