@@ -1286,8 +1286,10 @@ def skip_tag_function(self, tag):
 	# ---- write any custom code above, return true to disallow version --- #
 	
 	# Ignore release candidates
-	if 'rc' in tag.lower():
-		return True
+	skip_if_present = ['rc', 'alpha', 'beta']
+	for skip_name in skip_if_present:
+		if skip_name in tag.lower():
+			return True
 
 	if self.include_branches:
 		for branch in self.include_branch_list:
