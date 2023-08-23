@@ -20,6 +20,7 @@ import os
 from typing import Dict, Optional, List, Any, Tuple
 from pathlib import Path
 from dataclasses import dataclass
+from enum import Enum, auto
 
 import bpy
 from bpy.types import Context, Material, Image, Texture, Nodes, NodeLinks, Node
@@ -28,6 +29,18 @@ from .. import util
 from ..conf import env, Form
 
 AnimatedTex = Dict[str, int]
+
+class PackFormat(Enum):
+  SIMPLE = auto()
+  SEUS = auto()
+  SPECULAR = auto()
+  
+	def _generate_next_value_(name, start, count, last_values):
+		return name
+		
+	@staticmethod
+	def from_str(enum_name: str):
+			return PackFormat[enum_name]
 
 # -----------------------------------------------------------------------------
 # Material prep and generation functions (no registration)
@@ -282,7 +295,7 @@ class PrepOptions:
 	use_reflections: bool
 	use_principled: bool
 	only_solid: bool
-	pack_format: str
+	pack_format: Union[str, PackFormat]
 	use_emission_nodes: bool
 	use_emission: bool
 
@@ -313,7 +326,7 @@ def matprep_cycles(mat: Material, options: PrepOptions) -> Optional[bool]:
 	#	res = matgen_special_water(mat, passes)
 	# if use_reflections and checklist(canon, "glass"):
 	#	res = matgen_special_glass(mat, passes)
-	if options.pack_format == "simple" and util.bv28():
+	if options.pack_format == PackFormat.SIMPLE and util.bv28():
 		res = matgen_cycles_simple(mat, options)
 	elif options.use_principled and hasattr(bpy.types, 'ShaderNodeBsdfPrincipled'):
 		res = matgen_cycles_principled(mat, options) 	
@@ -1104,6 +1117,35 @@ def texgen_seus(mat: Material, passes: Dict[str, Image], nodeInputs: List, use_r
 	# nodeTexDisp["MCPREP_disp"] = True
 	nodeTexDiff.image = image_diff
 
+def generate_base_material(context: Context, name: str, path: Union[Path, str], useExtraMaps):
+		"""Generate a base material from name and active resource pack"""
+		image = bpy.data.images.load(path, check_existing=True)
+		mat = bpy.data.materials.new(name=name)
+
+		engine = context.scene.render.engine
+		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+			# need to create at least one texture node first, then the rest works
+			mat.use_nodes = True
+			nodes = mat.node_tree.nodes
+			node_diff = generate.create_node(nodes, 'ShaderNodeTexImage', image=image)
+			node_diff["MCPREP_diffuse"] = True
+
+			# Initialize extra passes as well
+			node_spec = generate.create_node(nodes, 'ShaderNodeTexImage')
+			node_spec["MCPREP_specular"] = True
+			node_nrm = generate.create_node(nodes, 'ShaderNodeTexImage')
+			node_nrm["MCPREP_normal"] = True
+
+			env.log("Added blank texture node")
+
+
+			# now use standard method to update textures
+			set_cycles_texture(image, mat, useExtraMaps)
+		else:
+			return None, "Only Cycles and Eevee supported"
+
+		return mat, None
+
 
 def matgen_cycles_simple(mat: Material, options: PrepOptions) -> Optional[bool]:
 	"""Generate principled cycles material."""
@@ -1335,9 +1377,9 @@ def matgen_cycles_principled(mat: Material, options: PrepOptions) -> Optional[bo
 		nodes.remove(nodeEmitCam)
 		nodes.remove(nodeMixEmit)
 	# generate texture format and connect
-	if options.pack_format == "specular":
+	if options.pack_format == PackFormat.SPECULAR:
 		texgen_specular(mat, options.passes, nodeInputs, options.use_reflections)
-	elif options.pack_format == "seus":
+	elif options.pack_format == PackFormat.SEUS:
 		texgen_seus(mat, options.passes, nodeInputs, options.use_reflections, options.use_emission_nodes)
 
 	if options.only_solid is True or checklist(canon, "solid"):
@@ -1564,9 +1606,9 @@ def matgen_cycles_original(mat: Material, options: PrepOptions):
 			nodeBump.inputs["Normal"]]]
 
 	# generate texture format and connect
-	if options.pack_format == "specular":
+	if options.pack_format == PackFormat.SPECULAR:
 		texgen_specular(mat, options.passes, nodeInputs, options.use_reflections)
-	elif options.pack_format == "seus":
+	elif options.pack_format == PackFormat.SEUS:
 		texgen_seus(mat, options.passes, nodeInputs, options.use_reflections, options.use_emission_nodes)
 
 	if options.only_solid is True or checklist(canon, "solid"):

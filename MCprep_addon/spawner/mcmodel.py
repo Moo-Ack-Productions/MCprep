@@ -144,9 +144,33 @@ def add_element(
 def add_material(name: str="material", path: str="", use_name: bool= False) -> Material:
 	"""Creates a simple material with an image texture from path."""
 	cur_mats = list(bpy.data.materials)
-	res = bpy.ops.mcprep.load_material(filepath=path, skipUsage=True)
-	if res != {'FINISHED'}:
-		env.log("Failed to generate material as specified")
+	mat, err = generate.generate_base_material(context, mat_name, path, False)
+	if not (mat is None and err):
+		passes = generate.get_textures(mat)
+		for pass_name in passes:
+			if pass_name != "diffuse":
+				passes[pass_name] = None
+			if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+				options = generate.PrepOptions(
+					passes, 
+					False, 
+					True, 
+					False, 
+					generate.PackFormat.SIMPLE, 
+					False, 
+					False # This is for an option set in matprep_cycles
+				)
+				res = generate.matprep_cycles(
+					mat=mat,
+					options=options
+				)
+	# if not use_name:
+	# 	res = bpy.ops.mcprep.load_material(filepath=path, skipUsage=True)
+	# 		if res != {'FINISHED'}:
+	# 	env.log("Failed to generate material as specified")
+	# lse:
+		
+	mat.name = name
 	post_mats = list(bpy.data.materials)
 
 	new_mats = list(set(post_mats) - set(cur_mats))
@@ -155,8 +179,7 @@ def add_material(name: str="material", path: str="", use_name: bool= False) -> M
 		return None
 
 	mat = new_mats[0]
-	if use_name:
-		mat.name = name
+
 	return mat
 
 
@@ -268,6 +291,10 @@ def read_model(context: Context, model_filepath: Path) -> Tuple[Element, Texture
 	# env.log("parent:" + str(parent))
 	# env.log("elements:" + str(elements))
 	# env.log("textures:" + str(textures))
+	
+	# If the namespace isn't a minecraft resourcepack/ modded
+	if namespace != "minecraft":
+		textures["_no_minecraft"] = True
 
 	return elements, textures
 
@@ -317,10 +344,11 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 	materials = []
 	if textures:
 		particle = textures.get("particle")
+		no_minecraft = textures.get("_no_minecraft")
 		for img in textures:
 			if img != "particle":
 				tex_pth = locate_image(bpy.context, textures, img, model_filepath)
-				mat = add_material(f"{obj_name}_{img}", tex_pth,use_name = False) # TODO I think the name arg does nothing, this need a newer design
+				mat = add_material(f"{obj_name}_{img}", tex_pth,use_name = no_minecraft) # TODO I think the name arg does nothing, this need a newer design
 				obj_mats = obj.data.materials
 				if not f"#{img}" in materials:
 					obj_mats.append(mat)
