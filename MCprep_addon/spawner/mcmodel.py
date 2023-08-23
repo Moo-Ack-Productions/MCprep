@@ -70,78 +70,77 @@ def rotate_around(
 		(new_pos[1] - offset[1]) * scale[1]
 	))
 
-def getPlanarAxis(verts: List[VectorType]) -> int:
-	"""Return the axis of the face"""
-	if all([verts[0][0] == x for x in [verts[1][0], verts[2][0], verts[3][0]]]):
-		return 0
-	elif all([verts[0][1] == y for y in [verts[1][1], verts[2][1], verts[3][1]]]):
-		return 1
-	elif all([verts[0][2] == z for z in [verts[1][2], verts[2][2], verts[3][2]]]):
-		return 2
-	else:
-		return 3
-
-def add_element(
-	elm_from: VectorType=[0, 0, 0],
-	elm_to: VectorType=[16, 16, 16],
-	rot_origin: VectorType=[8, 8, 8],
-	rot_axis: str='y',
-	rot_angle: float=0) -> list:
-	"""Calculates and defines the verts, edge, and faces that to create."""
-	verts = [
-		rotate_around(
-			rot_angle, [elm_from[0], elm_to[1], elm_from[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_to[0], elm_to[1], elm_from[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_to[0], elm_from[1], elm_from[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_from[0], elm_from[1], elm_from[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_from[0], elm_to[1], elm_to[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_to[0], elm_to[1], elm_to[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_to[0], elm_from[1], elm_to[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_from[0], elm_from[1], elm_to[2]], rot_origin, rot_axis),
-	]
-
-	edges = []
-	faces = [
-		[0, 1, 2, 3], # north
-		[5, 4, 7, 6], # south
-		[1, 0, 4, 5], # up
-		[7, 6, 2, 3], # down
-		[4, 0, 3, 7], # west
-		[1, 5, 6, 2]] # east
+def getPlanarAxis(elm_from: VectorType, elm_to: VectorType) -> int:
+		"""Return the axis of the plane element
+			x = 0, y = 1, z = 2
+			3 is when it is not small enough/ not a plane
+		"""
+		length = []
+		for i,(f,t) in enumerate(zip(elm_from, elm_to)):
+			length.append(abs(f - t))
+		small = min(length)
+		return 3 if small < 1 else length.index(small)
 	
-	# Remove unused billboard face
-	# Night: Should this has a toggle option?
-	# for f in faces:
-	# 	planar = getPlanarAxis([verts[v] for v in f])
-	# 	if planar != 3:
-	# 		break
-	face_dir = ["north", "south", "up", "down", "west", "east"]
-	# if planar == 0: 
-	# 	faces = [[4, 0, 3, 7],
-	# 					 [1, 5, 6, 2]]
-	# 	face_dir = ["west", "east"]
-	# elif planar == 1:
-	# 	faces = [[1, 0, 4, 5], # up is the tex face
-	# 					 [7, 6, 2, 3]]
-	# 	face_dir = ["up", "down"]
-	# elif planar == 2:
-	# 	faces = [[0, 1, 2, 3],
-	# 					 [5, 4, 7, 6]]
-	# 	face_dir = ["north", "south"]
-	# for v in verts:
-	# 	if v in faces[1]:
-	# 		verts.remove(v)
-	# faces = [faces[0]]
-	return [verts, edges, faces], face_dir
+def add_element(
+		elm_from: VectorType=[0, 0, 0],
+		elm_to: VectorType=[16, 16, 16],
+		rot_origin: VectorType=[8, 8, 8],
+		rot_axis: str='y',
+		rot_angle: float=0) -> list:
+		"""Calculates and defines the verts, edge, and faces that to create."""
+		verts = [
+			rotate_around(
+				rot_angle, [elm_from[0], elm_to[1], elm_from[2]], rot_origin, rot_axis),
+			rotate_around(
+				rot_angle, [elm_to[0], elm_to[1], elm_from[2]], rot_origin, rot_axis),
+			rotate_around(
+				rot_angle, [elm_to[0], elm_from[1], elm_from[2]], rot_origin, rot_axis),
+			rotate_around(
+				rot_angle, [elm_from[0], elm_from[1], elm_from[2]], rot_origin, rot_axis),
+			rotate_around(
+				rot_angle, [elm_from[0], elm_to[1], elm_to[2]], rot_origin, rot_axis),
+			rotate_around(
+				rot_angle, [elm_to[0], elm_to[1], elm_to[2]], rot_origin, rot_axis),
+			rotate_around(
+				rot_angle, [elm_to[0], elm_from[1], elm_to[2]], rot_origin, rot_axis),
+			rotate_around(
+				rot_angle, [elm_from[0], elm_from[1], elm_to[2]], rot_origin, rot_axis),
+		]
+	
+		edges = []
+		faces = [
+			[0, 1, 2, 3], # north
+			[5, 4, 7, 6], # south
+			[1, 0, 4, 5], # up
+			[7, 6, 2, 3], # down
+			[4, 0, 3, 7], # west
+			[1, 5, 6, 2]] # east
+		
+		# TODO: Remove unused billboard face
+		# Night: Should this has a toggle option?
+		face_dir = ["north", "south", "up", "down", "west", "east"]
+		planar = getPlanarAxis(elm_from, elm_to)
+		
+		if planar == 0: 
+			faces = [[4, 0, 3, 7],
+							 [1, 5, 6, 2]]
+			face_dir = ["west", "east"]
+		elif planar == 1:
+			faces = [[1, 0, 4, 5],
+							 [7, 6, 2, 3]]
+			face_dir = ["up", "down"]
+		 elif planar == 2:
+			faces = [[0, 1, 2, 3],
+							 [5, 4, 7, 6]]
+			face_dir = ["north", "south"]
+		for v in verts:
+			if v in faces[1]:
+				verts.remove(v)
+		faces = [faces[0]]
+		face_dir = [facedir[0]]
+		return [verts, edges, faces], face_dir
 
-
+# TODO: Newer design
 def add_material(name: str="material", path: str="", use_name: bool= False) -> Material:
 	"""Creates a simple material with an image texture from path."""
 	cur_mats = list(bpy.data.materials)
@@ -277,21 +276,24 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 	"""Primary function for generating a model from json file."""
 	collection = bpy.context.collection
 	view_layer = bpy.context.view_layer
+	
 	# Forcing usage of "fixed" block to meshswap spawner instead
+	# Theses blocks certainly are already in meshswap
 	blocks = ["chest", "banner", "lantern", "campfire"]
-	if env.json_data and obj_name in env.json_data.get("fixed_blocks", blocks) or obj_name in blocks: # Return the definite blocks that meshswap currently has
+	if env.json_data and obj_name in env.json_data.get("fixed_blocks", blocks) or obj_name in blocks:
 		if os.path.isfile(bpy.path.abspath(bpy.context.scene.meshswap_path)) and bpy.context.scene.meshswap_path.endswith('.blend'):
+			# Make sure meshswap is properly loaded
 			bpy.ops.mcprep.reload_meshswap()
 			if obj_name == "campfire":
 				obj_name = "campfire_log"
 			bpy.ops.object.select_all(action='DESELECT')
 			r = bpy.ops.mcprep.meshswap_spawner(block=obj_name)
 			if r != {'FINISHED'}:
-				return 1, "Something happened with Meshswap", None
+				return 1, None
 			obj = bpy.context.object
-			return 0, "", obj
+			return 0, obj
 		else:
-			return 1, "Something happened with Meshswap", None
+			return 1, None
 		
 		
 	# Called recursively!
@@ -299,9 +301,7 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 	elements, textures = read_model(bpy.context, model_filepath)
 	
 	if elements is None:
-		# elements = [
-		# 	{'from': [0, 0, 0], 'to':[0, 0, 0]}]  # temp default elements
-		return 1, "", None
+		return 1, None
 	
 	mesh = bpy.data.meshes.new(obj_name)  # add a new mesh
 	obj = bpy.data.objects.new(obj_name, mesh)  # add a new object using the mesh
@@ -320,13 +320,13 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 		for img in textures:
 			if img != "particle":
 				tex_pth = locate_image(bpy.context, textures, img, model_filepath)
-				mat = add_material(f"{obj_name}_{img}", tex_pth,use_name = False) # TODO I think the name arg does nothing
+				mat = add_material(f"{obj_name}_{img}", tex_pth,use_name = False) # TODO I think the name arg does nothing, this need a newer design
 				obj_mats = obj.data.materials
 				if not f"#{img}" in materials:
 					obj_mats.append(mat)
 					materials.append(f"#{img}")
 
-	# For some reason append add an extra "west"
+	# For some unonown reason the last added slot get append twice and move up to index 0, "west" gets duplicate.
 	obj.active_material_index = 0
 	bpy.ops.object.material_slot_remove()
 
@@ -369,14 +369,14 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 
 			uv_coords = d_face.get("uv")  # in the format [x1, y1, x2, y2]
 			if uv_coords is None:
-				uv_coords = [0, 0, 16, 16]
+				uv_coords = [0, 0, 16, 16] 
+				# Cake, cake slices don't have UV key in the dict so use the default one which is incorrect.
 				if "cake" in obj_name:
 					if face_mat == "#top":
 						uv_coords = [e['to'][0], e['to'][2], e['from'][0], e['from'][2]]
 					if "side" in face_mat:
 						uv_coords = [e['to'][0], -e['to'][1], e['from'][0], -e['from'][2]]
 				
-
 			# uv in the model is between 0 to 16 regardless of resolution,
 			# in blender its 0 to 1 the y-axis is inverted when compared to
 			# blender uvs, which is why it is subtracted from 1, essentially
@@ -387,8 +387,7 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 				[uv_coords[0] / 16, 1 - (uv_coords[3] / 16)],  # [x1, y2]
 				[uv_coords[2] / 16, 1 - (uv_coords[3] / 16)]   # [x2, y2]
 			]
-			# TODO:
-			# Debug UV coord for check
+			
 			face = bm.faces.new(
 				(verts[f[0]], verts[f[1]], verts[f[2]], verts[f[3]])
 			)
@@ -403,7 +402,7 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 				# will be 2 then 3, 0, 1.
 				face.loops[j][uv_layer].uv = uvs[(j + uv_idx) % len(uvs)]
 
-			
+			# Assign the material on face
 			if face_mat is not None and face_mat in materials:
 				face.material_index = materials.index(face_mat)
 			is_first = False
@@ -411,7 +410,7 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 	# make the bmesh the object's mesh
 	bm.to_mesh(mesh)
 	bm.free()
-	return 0, "", obj
+	return 0, obj
 
 
 # -----------------------------------------------------------------------------
@@ -559,11 +558,10 @@ class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 			return {'CANCELLED'}
 
 		try:
-			r, log, obj = add_model(os.path.normpath(self.filepath), name)
+			r, obj = add_model(os.path.normpath(self.filepath), name)
 			if r:
-				log = log if log else "This not a valid json for Minecraft Java model" 
 				self.report(
-					{"ERROR"}, log)
+					{"ERROR"}, "The JSON defined is not valid for a Minecraft Java Edition model")
 				return {'CANCELLED'}
 		except ModelException as e:
 			self.report({"ERROR"}, f"Encountered error: {e}")
@@ -602,11 +600,10 @@ class MCPREP_OT_import_minecraft_model_file(
 			return {'CANCELLED'}
 
 		try:
-			r, log, obj = add_model(os.path.normpath(self.filepath), filename)
+			r, obj = add_model(os.path.normpath(self.filepath), filename)
 			if r:
-				log = log if log else "This not a valid json for Minecraft Java model" 
 				self.report(
-					{"ERROR"}, log)
+					{"ERROR"}, "The JSON defined is not valid for a Minecraft Java Edition model")
 				return {'CANCELLED'}
 		except ModelException as e:
 			self.report({"ERROR"}, f"Encountered error: {e}")
