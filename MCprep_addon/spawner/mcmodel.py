@@ -263,12 +263,11 @@ def read_model(context: Context, model_filepath: Path) -> Tuple[Element, Texture
 	# env.log("parent:" + str(parent))
 	# env.log("elements:" + str(elements))
 	# env.log("textures:" + str(textures))
-	
 
 	return elements, textures
 
 
-def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int, str ,bpy.types.Object]:
+def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int, bpy.types.Object]:
 	"""Primary function for generating a model from json file."""
 	collection = bpy.context.collection
 	view_layer = bpy.context.view_layer
@@ -323,12 +322,12 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 					obj_mats.append(mat)
 					materials.append(f"#{img}")
 
+	# TODO: Cleanup
 	# For some unonown reason the last added slot get append twice and move up to index 0, "west" gets duplicate.
 	# Cause by mcprep load_material() appending 
 	# obj.active_material_index = 0
 	# bpy.ops.object.material_slot_remove()
 
-	prev_median = (0,0,0) 
 	is_first = True
 	for e in elements:
 		rotation = e.get("rotation")
@@ -338,14 +337,10 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 		element = add_element(
 			e['from'], e['to'], rotation['origin'], rotation['axis'], rotation['angle'])
 		verts = [bm.verts.new(v) for v in element[0]]  # add a new vert
-		median = sum(element[0], Vector()) / len(element[0])
 		uvs = [[1, 1], [0, 1], [0, 0], [1, 0]]
 		face_dir = ["north", "south", "up", "down", "west", "east"]
 		faces = e.get("faces")
-		faces_len = len(element[2])
-		for i in range(faces_len):
-			if faces_len == 2 and i > 0:
-				continue # ? skip face
+		for i in range(len(element[2])):
 			f = element[2][i]
 
 			if not faces:
@@ -392,8 +387,6 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 			
 			face.normal_update()
 			# slightly offset the face by normal if the median point is exact
-			if prev_median == median and not is_first:
-				bmesh.ops.translate(bm, verts=face.verts, vec=0.1 * face.normal)
 			for j in range(len(face.loops)):
 				# uv coords order is determened by the rotation of the uv,
 				# e.g. if the uv is rotated by 180 degrees, the first index
