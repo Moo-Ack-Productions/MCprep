@@ -214,7 +214,8 @@ def obj_copy(base: bpy.types.Object, context: Optional[Context]=None, vertex_gro
 				setattr(dest, prop, getattr(mod_src, prop))
 	return new_ob
 
-def min_bv(version: Tuple, *, inclusive: bool=True) -> bool:
+
+def min_bv(version: Tuple, *, inclusive: bool = True) -> bool:
 	if hasattr(bpy.app, "version"):
 		if inclusive is False:
 			return bpy.app.version > version

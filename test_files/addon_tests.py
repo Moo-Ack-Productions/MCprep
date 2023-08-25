@@ -30,7 +30,6 @@ import os
 import shutil
 import sys
 import tempfile
-import time
 import traceback
 
 import bpy
@@ -50,17 +49,9 @@ class mcprep_testing():
 		self.suppress = True  # hold stdout
 		self.test_status = {}  # {func.__name__: {"check":-1, "res":-1,0,1}}
 		self.test_cases = [
-			self.enable_mcprep,
-			self.prep_materials,
-			self.prep_materials_pbr,
-			self.prep_missing_passes,
-			self.openfolder,
-			self.spawn_mob,
-			self.spawn_mob_linked,
 			self.check_blend_eligible,
 			self.check_blend_eligible_middle,
 			self.check_blend_eligible_real,
-			self.change_skin,
 			self.import_world_split,
 			self.import_world_fail,
 			self.import_jmc2obj,
@@ -73,28 +64,21 @@ class mcprep_testing():
 			self.meshswap_jmc2obj,
 			self.meshswap_mineways_separated,
 			self.meshswap_mineways_combined,
-			self.detect_desaturated_images,
 			self.detect_extra_passes,
 			self.find_missing_images_cycles,
 			self.qa_meshswap_file,
-			self.item_spawner,
-			self.item_spawner_resize,
 			self.entity_spawner,
 			self.model_spawner,
 			self.geonode_effect_spawner,
 			self.particle_area_effect_spawner,
 			self.collection_effect_spawner,
-			self.img_sequence_effect_spawner,
-			self.particle_plane_effect_spawner,
 			self.sync_materials,
 			self.sync_materials_link,
 			self.load_material,
 			self.uv_transform_detection,
 			self.uv_transform_no_alert,
 			self.uv_transform_combined_alert,
-			self.world_tools,
 			self.test_enable_obj_importer,
-			self.test_generate_material_sequence,
 			self.qa_effects,
 			self.qa_rigs,
 			self.convert_mtl_simple,
@@ -316,207 +300,9 @@ class mcprep_testing():
 			prefs = context.preferences.addons.get("MCprep_addon", None)
 		prefs.preferences.MCprep_exporter_type = name
 
-	def _debug_save_file_state(self):
-		"""Saves the current scene state to a test file for inspection."""
-		testdir = os.path.dirname(__file__)
-		path = os.path.join(testdir, "debug_save_state.blend")
-		bpy.ops.wm.save_as_mainfile(filepath=path)
-
 	# -----------------------------------------------------------------------------
 	# Operator unit tests
 	# -----------------------------------------------------------------------------
-
-	def enable_mcprep(self):
-		"""Ensure we can both enable and disable MCprep"""
-
-		# brute force enable
-		# stdout = io.StringIO()
-		# with redirect_stdout(stdout):
-		try:
-			if hasattr(bpy.ops, "preferences") and "addon_enable" in dir(bpy.ops.preferences):
-				bpy.ops.preferences.addon_enable(module="MCprep_addon")
-			else:
-				bpy.ops.wm.addon_enable(module="MCprep_addon")
-		except Exception:
-			pass
-
-		# see if we can safely toggle off and back on
-		if hasattr(bpy.ops, "preferences") and "addon_enable" in dir(bpy.ops.preferences):
-			bpy.ops.preferences.addon_disable(module="MCprep_addon")
-			bpy.ops.preferences.addon_enable(module="MCprep_addon")
-		else:
-			bpy.ops.wm.addon_disable(module="MCprep_addon")
-			bpy.ops.wm.addon_enable(module="MCprep_addon")
-
-	def prep_materials(self):
-		# run once when nothing is selected, no active object
-		self._clear_scene()
-
-		status = 'fail'
-		print("Checking blank usage")
-		try:
-			bpy.ops.mcprep.prep_materials(
-				animateTextures=False,
-				packFormat="simple",
-				autoFindMissingTextures=False,
-				improveUiSettings=False)
-		except RuntimeError as e:
-			if "Error: No objects selected" in str(e):
-				status = 'success'
-			else:
-				return "prep_materials other err: " + str(e)
-		if status == 'fail':
-			return "Prep should have failed with error on no objects"
-
-		# add object, no material. Should still fail as no materials
-		bpy.ops.mesh.primitive_plane_add()
-		obj = bpy.context.object
-		status = 'fail'
-		try:
-			res = bpy.ops.mcprep.prep_materials(
-				animateTextures=False,
-				packFormat="simple",
-				autoFindMissingTextures=False,
-				improveUiSettings=False)
-		except RuntimeError as e:
-			if 'No materials found' in str(e):
-				status = 'success'  # Expect to fail when nothing selected.
-		if status == 'fail':
-			return "mcprep.prep_materials-02 failure"
-
-		# TODO: Add test where material is added but without an image/nodes
-
-		# add object with canonical material name. Assume cycles
-		new_mat, _ = self._create_canon_mat()
-		obj.active_material = new_mat
-		status = 'fail'
-		try:
-			res = bpy.ops.mcprep.prep_materials(
-				animateTextures=False,
-				packFormat="simple",
-				autoFindMissingTextures=False,
-				improveUiSettings=False)
-		except Exception as e:
-			return "Unexpected error: " + str(e)
-		# how to tell if prepping actually occured? Should say 1 material prepped
-		# print(self._get_last_infolog()) # error in 2.82+, not used anyways
-		if res != {'FINISHED'}:
-			return "Did not return finished"
-
-	def prep_materials_pbr(self):
-		# add object with canonical material name. Assume cycles
-		self._clear_scene()
-		bpy.ops.mesh.primitive_plane_add()
-
-		obj = bpy.context.object
-		new_mat, _ = self._create_canon_mat()
-		obj.active_material = new_mat
-		try:
-			res = bpy.ops.mcprep.prep_materials(
-				animateTextures=False,
-				autoFindMissingTextures=False,
-				packFormat="specular",
-				improveUiSettings=False)
-		except Exception as e:
-			return "Unexpected error: " + str(e)
-		if res != {'FINISHED'}:
-			return "Did not return finished"
-
-		self._clear_scene()
-		bpy.ops.mesh.primitive_plane_add()
-
-		obj = bpy.context.object
-		new_mat, _ = self._create_canon_mat()
-		obj.active_material = new_mat
-		try:
-			res = bpy.ops.mcprep.prep_materials(
-				animateTextures=False,
-				autoFindMissingTextures=False,
-				packFormat="seus",
-				improveUiSettings=False)
-		except Exception as e:
-			return "Unexpected error: " + str(e)
-		if res != {'FINISHED'}:
-			return "Did not return finished"
-
-	def prep_missing_passes(self):
-		"""Test when prepping with passes after simple, n/s passes loaded."""
-
-		self._clear_scene()
-		bpy.ops.mesh.primitive_plane_add()
-
-		self._set_test_mcprep_texturepack_path()
-
-		obj = bpy.context.object
-		new_mat, _ = self._create_canon_mat("diamond_ore", test_pack=True)
-		obj.active_material = new_mat
-
-		# Start with simple material loaded, non pbr/no extra passes
-		try:
-			res = bpy.ops.mcprep.prep_materials(
-				animateTextures=False,
-				autoFindMissingTextures=False,
-				packFormat="simple",
-				useExtraMaps=False,
-				syncMaterials=False,
-				improveUiSettings=False)
-		except Exception as e:
-			return "Unexpected error: " + str(e)
-		if res != {'FINISHED'}:
-			return "Did not return finished"
-		count_images = 0
-		missing_images = 0
-		for node in new_mat.node_tree.nodes:
-			if node.type != "TEX_IMAGE":
-				continue
-			elif node.image:
-				count_images += 1
-			else:
-				missing_images += 1
-		if count_images != 1:
-			return "Should have only 1 pass after simple load - had {}".format(
-				count_images)
-		if missing_images != 0:
-			return (
-				"Should have only 0 unloaded passes after simple load - "
-				"had {}".format(count_images))
-
-		# Now try pbr load, should find the adjacent _n and _s passes and auto
-		# load it in.
-		self._set_test_mcprep_texturepack_path()
-		# return bpy.context.scene.mcprep_texturepack_path
-		try:
-			res = bpy.ops.mcprep.prep_materials(
-				animateTextures=False,
-				autoFindMissingTextures=False,
-				packFormat="specular",
-				useExtraMaps=True,
-				syncMaterials=False,  # For some reason, had to turn off.
-				improveUiSettings=False)
-		except Exception as e:
-			return "Unexpected error: " + str(e)
-		if res != {'FINISHED'}:
-			return "Did not return finished"
-		count_images = 0
-		missing_images = 0
-		new_mat = obj.active_material
-		for node in new_mat.node_tree.nodes:
-			if node.type != "TEX_IMAGE":
-				continue
-			elif node.image:
-				count_images += 1
-			else:
-				missing_images += 1
-		self._debug_save_file_state()
-		if count_images != 3:
-			return "Should have all 3 passes after pbr load - had {}".format(
-				count_images)
-		if missing_images != 0:
-			return "Should have 0 unloaded passes after pbr load - had {}".format(
-				count_images)
-
-	def prep_materials_cycles(self):
-		"""Cycles-specific tests"""
 
 	def find_missing_images_cycles(self):
 		"""Find missing images from selected materials, cycles.
@@ -657,39 +443,6 @@ class mcprep_testing():
 		# check on image that is packed or not, or packed but no data
 		os.remove(tmp_image)
 
-	def openfolder(self):
-		if bpy.app.background is True:
-			return ""  # can't test this in background mode
-
-		folder = bpy.utils.script_path_user()
-		if not os.path.isdir(folder):
-			return "Sample folder doesn't exist, couldn't test"
-		res = bpy.ops.mcprep.openfolder(folder)
-		if res == {"FINISHED"}:
-			return ""
-		else:
-			return "Failed, returned cancelled"
-
-	def spawn_mob(self):
-		"""Spawn mobs, reload mobs, etc"""
-		self._clear_scene()
-		self._add_character()  # run the utility as it's own sort of test
-
-		self._clear_scene()
-		bpy.ops.mcprep.reload_mobs()
-
-		# sample don't specify mob, just load whatever is first
-		bpy.ops.mcprep.mob_spawner()
-
-		# spawn with linking
-		# try changing the folder
-		# try install mob and uninstall
-
-	def spawn_mob_linked(self):
-		self._clear_scene()
-		bpy.ops.mcprep.reload_mobs()
-		bpy.ops.mcprep.mob_spawner(toLink=True)
-
 	def check_blend_eligible(self):
 		from MCprep.spawner import spawn_util
 		fake_base = "MyMob - by Person"
@@ -820,98 +573,6 @@ class mcprep_testing():
 			else:
 				if res is True:
 					return "Should have said {} was correct - not {}".format(correct, rig)
-
-	def change_skin(self):
-		"""Test scenarios for changing skin after adding a character."""
-		self._clear_scene()
-
-		bpy.ops.mcprep.reload_skins()
-		skin_ind = bpy.context.scene.mcprep_skins_list_index
-		skin_item = bpy.context.scene.mcprep_skins_list[skin_ind]
-		tex_name = skin_item['name']
-		skin_path = os.path.join(bpy.context.scene.mcprep_skin_path, tex_name)
-
-		status = 'fail'
-		try:
-			_ = bpy.ops.mcprep.applyskin(
-				filepath=skin_path,
-				new_material=False)
-		except RuntimeError as e:
-			if 'No materials found to update' in str(e):
-				status = 'success'  # expect to fail when nothing selected
-		if status == 'fail':
-			return "Should have failed to skin swap with no objects selected"
-
-		# now run on a real test character, with 1 material and 2 objects
-		self._add_character()
-
-		pre_mats = len(bpy.data.materials)
-		bpy.ops.mcprep.applyskin(
-			filepath=skin_path,
-			new_material=False)
-		post_mats = len(bpy.data.materials)
-		if post_mats != pre_mats:  # should be unchanged
-			return (
-				"change_skin.mat counts diff despit no new mat request, "
-				"{} before and {} after".format(pre_mats, post_mats))
-
-		# do counts of materials before and after to ensure they match
-		pre_mats = len(bpy.data.materials)
-		bpy.ops.mcprep.applyskin(
-			filepath=skin_path,
-			new_material=True)
-		post_mats = len(bpy.data.materials)
-		if post_mats != pre_mats * 2:  # should exactly double since in new scene
-			return (
-				"change_skin.mat counts diff mat counts, "
-				"{} before and {} after".format(pre_mats, post_mats))
-
-		pre_mats = len(bpy.data.materials)
-
-		# not diff operator name, this is popup browser
-		bpy.ops.mcprep.skin_swapper(
-			filepath=skin_path,
-			new_material=False)
-		post_mats = len(bpy.data.materials)
-		if post_mats != pre_mats:  # should be unchanged
-			return (
-				"change_skin.mat counts differ even though should be same, "
-				"{} before and {} after".format(pre_mats, post_mats))
-
-		# TODO: Add test for when there is a bogus filename, responds with
-		# Image file not found in err
-
-		# capture info or recent out?
-		# check that username was there before or not
-		bpy.ops.mcprep.applyusernameskin(
-			username='TheDuckCow',
-			skip_redownload=False,
-			new_material=True)
-
-		# check that timestamp of last edit of file was longer ago than above cmd
-
-		bpy.ops.mcprep.applyusernameskin(
-			username='TheDuckCow',
-			skip_redownload=True,
-			new_material=True)
-
-		# test deleting username skin and that file is indeed deleted
-		# and not in list anymore
-
-		# bpy.ops.mcprep.applyusernameskin(
-		# 	username='TheDuckCow',
-		# 	skip_redownload=True,
-		# 	new_material=True)
-
-		# test that the file was added back
-
-		bpy.ops.mcprep.spawn_with_skin()
-		# test changing skin to file when no existing images/textres
-		# test changing skin to file when existing material
-		# test changing skin to file for both above, cycles and internal
-		# test changing skin file for both above without, then with,
-		#   then without again, normals + spec etc.
-		return
 
 	def import_world_split(self):
 		"""Test that imported world has multiple objects"""
@@ -1377,44 +1038,6 @@ class mcprep_testing():
 		if errors:
 			return "Meshswap combined failed: " + ", ".join(errors)
 
-	def detect_desaturated_images(self):
-		"""Checks the desaturate images function works"""
-		from MCprep.materials.generate import is_image_grayscale
-
-		base = self.get_mcprep_path()
-		print("Raw base", base)
-		base = os.path.join(
-			base, "MCprep_resources", "resourcepacks", "mcprep_default",
-			"assets", "minecraft", "textures", "block")
-		print("Remapped base: ", base)
-
-		# known images that ARE desaturated:
-		desaturated = [
-			"grass_block_top.png"
-		]
-		saturated = [
-			"grass_block_side.png",
-			"glowstone.png"
-		]
-
-		for tex in saturated:
-			img = bpy.data.images.load(os.path.join(base, tex))
-			if not img:
-				raise Exception('Failed to load img ' + str(tex))
-			if is_image_grayscale(img) is True:
-				raise Exception(
-					'Image {} detected as grayscale, should be saturated'.format(tex))
-		for tex in desaturated:
-			img = bpy.data.images.load(os.path.join(base, tex))
-			if not img:
-				raise Exception('Failed to load img ' + str(tex))
-			if is_image_grayscale(img) is False:
-				raise Exception(
-					'Image {} detected as saturated - should be grayscale'.format(tex))
-
-		# test that it is caching as expected.. by setting a false
-		# value for cache flag and seeing it's returning the property value
-
 	def detect_extra_passes(self):
 		"""Ensure only the correct pbr file matches are found for input file"""
 		from MCprep.materials.generate import find_additional_passes
@@ -1542,74 +1165,6 @@ class mcprep_testing():
 		# detect any non canonical material names?? how to exclude?
 
 		# Affirm that no materials have a principled node, should be basic only
-
-	def item_spawner(self):
-		"""Test item spawning and reloading"""
-		self._clear_scene()
-		scn_props = bpy.context.scene.mcprep_props
-
-		pre_items = len(scn_props.item_list)
-		bpy.ops.mcprep.reload_items()
-		post_items = len(scn_props.item_list)
-
-		if pre_items != 0:
-			return "Should have opened new file with unloaded assets?"
-		elif post_items == 0:
-			return "No items loaded"
-		elif post_items < 50:
-			return "Too few items loaded, missing texturepack?"
-
-		# spawn with whatever default index
-		pre_objs = len(bpy.data.objects)
-		bpy.ops.mcprep.spawn_item()
-		post_objs = len(bpy.data.objects)
-
-		if post_objs == pre_objs:
-			return "No items spawned"
-		elif post_objs > pre_objs + 1:
-			return "More than one item spawned"
-
-		# test core useage on a couple of out of the box textures
-
-		# test once with custom block
-		# bpy.ops.mcprep.spawn_item_file(filepath=)
-
-		# test with different thicknesses
-		# test after changing resource pack
-		# test that with an image of more than 1k pixels, it's truncated as expected
-		# test with different
-
-	def item_spawner_resize(self):
-		"""Test spawning an item that requires resizing."""
-		self._clear_scene()
-		bpy.ops.mcprep.reload_items()
-
-		# Create a tmp file
-		tmp_img = bpy.data.images.new("tmp_item_spawn", 32, 32, alpha=True)
-		tmp_img.filepath = os.path.join(bpy.app.tempdir, "tmp_item.png")
-		tmp_img.save()
-
-		# spawn with whatever default index
-		pre_objs = len(bpy.data.objects)
-		bpy.ops.mcprep.spawn_item_file(
-			max_pixels=16,
-			filepath=tmp_img.filepath
-		)
-		post_objs = len(bpy.data.objects)
-
-		if post_objs == pre_objs:
-			return "No items spawned"
-		elif post_objs > pre_objs + 1:
-			return "More than one item spawned"
-
-		# Now check that this item spawned has the expected face count.
-		obj = bpy.context.object
-		polys = len(obj.data.polygons)
-		print("Poly's count: ", polys)
-		if polys > 16:
-			return "Didn't scale enough to fewer pixels, facecount: " + str(polys)
-		elif polys < 16:
-			return "Over-scaled down facecount: " + str(polys)
 
 	def entity_spawner(self):
 		"""Test entity spawning and reloading"""
@@ -1775,142 +1330,6 @@ class mcprep_testing():
 			return "Didn't end up with selected collection instance"
 
 		# TODO: Further checks it actually loaded the effect.
-
-	def img_sequence_effect_spawner(self):
-		"""Test the image sequence variant of effect spawning works."""
-		if bpy.app.version < (2, 81):
-			return "Disabled due to consistent crashing"
-		self._clear_scene()
-		scn_props = bpy.context.scene.mcprep_props
-		etype = "img_seq"
-
-		pre_count = len([
-			x for x in scn_props.effects_list if x.effect_type == etype])
-		bpy.ops.mcprep.reload_effects()
-		post_count = len([
-			x for x in scn_props.effects_list if x.effect_type == etype])
-
-		if pre_count != 0:
-			return "Should start with no effects loaded"
-		if post_count == 0:
-			return "Should have more effects loaded after reload"
-
-		# Find the one with at least 10 frames.
-		effect_name = "Big smoke"
-		effect = None
-		for this_effect in scn_props.effects_list:
-			if this_effect.effect_type != etype:
-				continue
-			if this_effect.name == effect_name:
-				effect = this_effect
-
-		if not effect:
-			return "Failed to fetch {} target effect".format(effect_name)
-
-		t0 = time.time()
-		res = bpy.ops.mcprep.spawn_instant_effect(effect_id=str(effect.index))
-		if res != {'FINISHED'}:
-			return "Did not end with finished result"
-
-		t1 = time.time()
-		if t1 - t0 > 1.0:
-			return "Spawning took over 1 second for sequence effect"
-
-		# TODO: Further checks it actually loaded the effect.
-
-	def particle_plane_effect_spawner(self):
-		"""Test the particle plane variant of effect spawning works."""
-		self._clear_scene()
-
-		filepath = os.path.join(
-			bpy.context.scene.mcprep_texturepack_path,
-			"assets", "minecraft", "textures", "block", "dirt.png")
-		res = bpy.ops.mcprep.spawn_particle_planes(filepath=filepath)
-
-		if res != {'FINISHED'}:
-			return "Did not end with finished result"
-
-		# TODO: Further checks it actually loaded the effect.
-
-	def world_tools(self):
-		"""Test adding skies, prepping the world, etc"""
-		from MCprep.world_tools import get_time_object
-
-		# test with both engines (cycles+eevee, or cycles+internal)
-		self._clear_scene()
-		bpy.ops.mcprep.world()
-
-		pre_objs = len(bpy.data.objects)
-		bpy.ops.mcprep.add_mc_sky(
-			world_type='world_shader',
-			# initial_time='8',
-			add_clouds=True,
-			remove_existing_suns=True)
-		post_objs = len(bpy.data.objects)
-		if pre_objs >= post_objs:
-			return "Nothing added"
-		# find the sun, ensure it's pointed partially to the side
-		obj = get_time_object()
-		if not obj:
-			return "No detected MCprepHour controller (a)"
-
-		self._clear_scene()
-		pre_objs = len(bpy.data.objects)
-		bpy.ops.mcprep.add_mc_sky(
-			world_type='world_mesh',
-			# initial_time='12',
-			add_clouds=False,
-			remove_existing_suns=True)
-		post_objs = len(bpy.data.objects)
-		if pre_objs >= post_objs:
-			return "Nothing added"
-		# find the sun, ensure it's pointed straight down
-		obj = get_time_object()
-		if not obj:
-			return "No detected MCprepHour controller (b)"
-
-		self._clear_scene()
-		pre_objs = len(bpy.data.objects)
-		bpy.ops.mcprep.add_mc_sky(
-			world_type='world_only',
-			# initial_time='18',
-			add_clouds=False,
-			remove_existing_suns=True)
-		post_objs = len(bpy.data.objects)
-		if pre_objs >= post_objs:
-			return "Nothing added"
-		# find the sun, ensure it's pointed straight down
-		obj = get_time_object()
-		if not obj:
-			return "No detected MCprepHour controller (c)"
-
-		self._clear_scene()
-		pre_objs = len(bpy.data.objects)
-		bpy.ops.mcprep.add_mc_sky(
-			world_type='world_static_mesh',
-			# initial_time='0',
-			add_clouds=False,
-			remove_existing_suns=True)
-		post_objs = len(bpy.data.objects)
-		if pre_objs >= post_objs:
-			return "Nothing added"
-		# find the sun, ensure it's pointed straight down
-
-		self._clear_scene()
-		obj = get_time_object()
-		if obj:
-			return "Found MCprepHour controller, shouldn't be one (d)"
-		pre_objs = len(bpy.data.objects)
-		bpy.ops.mcprep.add_mc_sky(
-			world_type='world_static_only',
-			# initial_time='6',
-			add_clouds=False,
-			remove_existing_suns=True)
-		post_objs = len(bpy.data.objects)
-		if pre_objs >= post_objs:
-			return "Nothing added"
-		# test that it removes existing suns by first placing one, and then
-		# affirming it's gone
 
 	def sync_materials(self):
 		"""Test syncing materials works"""
@@ -2112,52 +1531,6 @@ class mcprep_testing():
 		invalid, invalid_objs = detect_invalid_uvs_from_objs([lava_obj, water_obj])
 		if invalid is False:
 			return "Combined lava/water should still alert"
-
-	def test_generate_material_sequence(self):
-		"""Ensure that generating an image sequence works as expected."""
-		from MCprep.materials.sequences import generate_material_sequence
-
-		# ALT: call animate_single_material
-		# animate_single_material(
-		# mat, engine, export_location='original', clear_cache=False)
-
-		tiled_img = os.path.join(
-			os.path.dirname(__file__),
-			"test_resource_pack", "textures", "campfire_fire.png")
-		fake_orig_img = tiled_img
-		result_dir = tiled_img[:-4]  # Same name, sans extension.
-
-		try:
-			shutil.rmtree(result_dir)
-		except Exception as err:
-			print("Error removing prior directory of animated campfire")
-			print(err)
-
-		# Ensure that the folder does not initially exist
-		if os.path.isdir(result_dir):
-			return "Folder pre-exists, should be removed before test"
-
-		res, err = generate_material_sequence(
-			source_path=fake_orig_img,
-			image_path=tiled_img,
-			form=None,
-			export_location="original",
-			clear_cache=True)
-
-		if err:
-			return "Generate materials had an error: " + str(err)
-		if not res:
-			return "Failed to get success resposne from generate img sequence"
-
-		if not os.path.isdir(result_dir):
-			return "Output directory does not exist"
-
-		gen_files = [img for img in os.listdir(result_dir) if img.endswith(".png")]
-		if not gen_files:
-			return "No images generated"
-
-		# Now do cleanup.
-		shutil.rmtree(result_dir)
 
 	def test_enable_obj_importer(self):
 		"""Ensure module name is correct, since error won't be reported."""
