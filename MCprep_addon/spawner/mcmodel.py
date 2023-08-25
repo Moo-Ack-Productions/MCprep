@@ -69,17 +69,6 @@ def rotate_around(
 		(new_pos[2] - offset[2]) * scale[2],
 		(new_pos[1] - offset[1]) * scale[1]
 	))
-
-def getPlanarAxis(elm_from: VectorType, elm_to: VectorType) -> int:
-		"""Return the axis of the plane element
-			x = 0, y = 1, z = 2
-			3 is when it is not small enough/ not a plane
-		"""
-		length = []
-		for i,(f,t) in enumerate(zip(elm_from, elm_to)):
-			length.append(abs(f - t))
-		small = min(length)
-		return 3 if small < 1 else length.index(small)
 	
 def add_element(
 		elm_from: VectorType=[0, 0, 0],
@@ -115,62 +104,42 @@ def add_element(
 			[7, 6, 2, 3], # down
 			[4, 0, 3, 7], # west
 			[1, 5, 6, 2]] # east
-		
-		# TODO: Remove unused billboard face
-		# Night: Should this has a toggle option?
-		face_dir = ["north", "south", "up", "down", "west", "east"]
-		planar = getPlanarAxis(elm_from, elm_to)
-		
-		if planar == 0: 
-			faces = [[4, 0, 3, 7],
-							 [1, 5, 6, 2]]
-			face_dir = ["west", "east"]
-		elif planar == 1:
-			faces = [[1, 0, 4, 5],
-							 [7, 6, 2, 3]]
-			face_dir = ["up", "down"]
-		 elif planar == 2:
-			faces = [[0, 1, 2, 3],
-							 [5, 4, 7, 6]]
-			face_dir = ["north", "south"]
-		for v in verts:
-			if v in faces[1]:
-				verts.remove(v)
-		faces = [faces[0]]
-		face_dir = [facedir[0]]
-		return [verts, edges, faces], face_dir
 
-# TODO: Newer design
+		return verts, edges, faces
+
 def add_material(name: str="material", path: str="", use_name: bool= False) -> Material:
 	"""Creates a simple material with an image texture from path."""
+	engine = bpy.context.scene.render.engine
 	cur_mats = list(bpy.data.materials)
-	mat, err = generate.generate_base_material(context, mat_name, path, False)
+	mat, err = generate.generate_base_material(bpy.context, name, path, False)
 	if not (mat is None and err):
 		passes = generate.get_textures(mat)
 		for pass_name in passes:
 			if pass_name != "diffuse":
 				passes[pass_name] = None
-			if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
-				options = generate.PrepOptions(
-					passes, 
-					False, 
-					True, 
-					False, 
-					generate.PackFormat.SIMPLE, 
-					False, 
-					False # This is for an option set in matprep_cycles
-				)
-				res = generate.matprep_cycles(
-					mat=mat,
-					options=options
-				)
+		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+			options = generate.PrepOptions(
+				passes, 
+				False, 
+				True, 
+				False, 
+				generate.PackFormat.SIMPLE, 
+				False, 
+				False # This is for an option set in matprep_cycles
+			)
+			res = generate.matprep_cycles(
+				mat=mat,
+				options=options
+			)
+	# TODO: Cleanup
 	# if not use_name:
 	# 	res = bpy.ops.mcprep.load_material(filepath=path, skipUsage=True)
 	# 		if res != {'FINISHED'}:
 	# 	env.log("Failed to generate material as specified")
-	# lse:
-		
-	mat.name = name
+	# else:
+
+	if use_name:
+		mat.name = name
 	post_mats = list(bpy.data.materials)
 
 	new_mats = list(set(post_mats) - set(cur_mats))
@@ -274,6 +243,9 @@ def read_model(context: Context, model_filepath: Path) -> Tuple[Element, Texture
 				elements, textures = read_model(context, base_path)
 			else:
 				env.log(f"Failed to find mcmodel file {parent_filepath}")
+			# If the namespace isn't a minecraft resourcepack/ modded
+			if namespace != "minecraft":
+				textures["_no_minecraft"] = True
 
 	current_elements: Element = obj_data.get("elements")
 	if current_elements is not None:
@@ -292,9 +264,6 @@ def read_model(context: Context, model_filepath: Path) -> Tuple[Element, Texture
 	# env.log("elements:" + str(elements))
 	# env.log("textures:" + str(textures))
 	
-	# If the namespace isn't a minecraft resourcepack/ modded
-	if namespace != "minecraft":
-		textures["_no_minecraft"] = True
 
 	return elements, textures
 
@@ -348,15 +317,16 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 		for img in textures:
 			if img != "particle":
 				tex_pth = locate_image(bpy.context, textures, img, model_filepath)
-				mat = add_material(f"{obj_name}_{img}", tex_pth,use_name = no_minecraft) # TODO I think the name arg does nothing, this need a newer design
+				mat = add_material(f"{obj_name}_{img}", tex_pth, use_name = no_minecraft) # TODO I think the name arg does nothing, this need a newer design
 				obj_mats = obj.data.materials
 				if not f"#{img}" in materials:
 					obj_mats.append(mat)
 					materials.append(f"#{img}")
 
 	# For some unonown reason the last added slot get append twice and move up to index 0, "west" gets duplicate.
-	obj.active_material_index = 0
-	bpy.ops.object.material_slot_remove()
+	# Cause by mcprep load_material() appending 
+	# obj.active_material_index = 0
+	# bpy.ops.object.material_slot_remove()
 
 	prev_median = (0,0,0) 
 	is_first = True
@@ -365,12 +335,12 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 		if rotation is None:
 			# rotation default
 			rotation = {"angle": 0, "axis": "y", "origin": [8, 8, 8]}
-		element, face_dir = add_element(
+		element = add_element(
 			e['from'], e['to'], rotation['origin'], rotation['axis'], rotation['angle'])
 		verts = [bm.verts.new(v) for v in element[0]]  # add a new vert
 		median = sum(element[0], Vector()) / len(element[0])
 		uvs = [[1, 1], [0, 1], [0, 0], [1, 0]]
-		# face_dir = ["north", "south", "up", "down", "west", "east"]
+		face_dir = ["north", "south", "up", "down", "west", "east"]
 		faces = e.get("faces")
 		faces_len = len(element[2])
 		for i in range(faces_len):
@@ -435,6 +405,9 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 				face.material_index = materials.index(face_mat)
 			is_first = False
 
+	# Quick way to clean the model, hopefully it doesn't cause any UV issue
+	bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.01)
+	
 	# make the bmesh the object's mesh
 	bm.to_mesh(mesh)
 	bm.free()

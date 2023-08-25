@@ -252,7 +252,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 					self.useReflections, 
 					self.usePrincipledShader, 
 					self.makeSolid, 
-					generate.PackFormat.from_str(self.packFormat.upper(, 
+					generate.PackFormat.from_str(self.packFormat.upper), 
 					self.useEmission, 
 					False # This is for an option set in matprep_cycles
 				)

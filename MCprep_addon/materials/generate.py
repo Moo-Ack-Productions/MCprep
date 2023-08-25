@@ -17,7 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import os
-from typing import Dict, Optional, List, Any, Tuple
+from typing import Dict, Optional, List, Any, Tuple, Union
 from pathlib import Path
 from dataclasses import dataclass
 from enum import Enum, auto
@@ -31,13 +31,13 @@ from ..conf import env, Form
 AnimatedTex = Dict[str, int]
 
 class PackFormat(Enum):
-  SIMPLE = auto()
-  SEUS = auto()
-  SPECULAR = auto()
-  
 	def _generate_next_value_(name, start, count, last_values):
 		return name
-		
+	
+	SIMPLE = auto()
+	SEUS = auto()
+	SPECULAR = auto()
+  
 	@staticmethod
 	def from_str(enum_name: str):
 			return PackFormat[enum_name]
@@ -1127,13 +1127,13 @@ def generate_base_material(context: Context, name: str, path: Union[Path, str], 
 			# need to create at least one texture node first, then the rest works
 			mat.use_nodes = True
 			nodes = mat.node_tree.nodes
-			node_diff = generate.create_node(nodes, 'ShaderNodeTexImage', image=image)
+			node_diff = create_node(nodes, 'ShaderNodeTexImage', image=image)
 			node_diff["MCPREP_diffuse"] = True
 
 			# Initialize extra passes as well
-			node_spec = generate.create_node(nodes, 'ShaderNodeTexImage')
+			node_spec = create_node(nodes, 'ShaderNodeTexImage')
 			node_spec["MCPREP_specular"] = True
-			node_nrm = generate.create_node(nodes, 'ShaderNodeTexImage')
+			node_nrm = create_node(nodes, 'ShaderNodeTexImage')
 			node_nrm["MCPREP_normal"] = True
 
 			env.log("Added blank texture node")
