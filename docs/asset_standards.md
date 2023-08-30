@@ -23,6 +23,7 @@ Treat the below steps as a checklist in a way to audit your own rig.
     - `Warden - DigDanAnimates pre3.0.0.blend` Will be used by anything _before_ blender 3.0 (e.g. 2.80, 2.93)
     - `Warden - DigDanAnimates.blend` Will be used by blender 3.0 and higher (due to no other "pre#.#.# being higher than 3.0.0)
   - We should aim to NOT partition rigs by version as much as possible, as it bloats download size and becomes even more to maintain. But sometimes, we can't avoid it.
+- The rig/asset needs to have the correct scale (1 Blender unit = 1 meter), and the scale should be applied (control+a, scale)
 - The rig must be self contained. That means textures are packed (File > External Data > Pack Resources)
    - This is to negate the issue of relative vs absolute paths, which just become a pain
    - Best practice is still to run "relpaths" beforehand, to avoid having any user's paths hard coded into the file, which is more of a privacy thing than anything.
