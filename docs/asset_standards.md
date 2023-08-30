@@ -1,15 +1,20 @@
 MCprep thrives on the contribution of rigs from the community. However, to maintain a feel of consistency and usability, we set a number of standards when accepting a rig. 
 
-In the past, the MCprep team (mostly @TheDuckCow) have accepted rigs and created manual changes to fix any of the QA issues found below. Going forward, due to volume and where time coud be better spent, we are more likely to ask asset contributors to address these issues themselves, and hence this detail page outlining those expectations.
+In the past, the MCprep team (mostly @TheDuckCow) have accepted rigs and created manual changes to fix any of the QA issues found below. Going forward, due to volume and where time could be better spent, we are more likely to ask asset contributors to address these issues themselves, and hence this detail page outlining those expectations.
+
+All contributors are welcomed and encouraged, but we do recommend you have a baseline level of experience in the areas of modeling, UV, and rigging to ensure quality submissions. However, any feedback given will always be constructive if any standards below are not met.
 
 _Anything unclear? Report [an issue](https://github.com/Moo-Ack-Productions/MCprep/issues/)!_
 
 
-## Mob + Entity standard proposal
+## Mob + Entity standards checklist
+
+Treat the below steps as a checklist in a way to audit your own rig.
 
 - The most important QA test: use "install rig" in MCprep, and then test importing
    - There should be no errors, and materials should work, and the armature and everything should be there with no unexpected parented objects or "extras" coming in (e.g. custom bone shapes popping into the scene)
    - Do this test in BOTH blender 2.80 and the latest stable release (e.g. 3.6 as on August 2023). 
+   - Make sure the rig still looks correct when posed or animated from all sides.
 - The blend file must be last saved in blender 2.80 OR have version partitioning across all versions of blender 2.80+
   - This is important as we support 2.80+, so all rigs need to adhere to that
   - You can check the last version saved by opening the given blend file, going to the Script tab, and then typing this command into the Interactive Python Console: `bpy.data.version`, it should print out something like the screenshot below
@@ -18,7 +23,7 @@ _Anything unclear? Report [an issue](https://github.com/Moo-Ack-Productions/MCpr
     - `Warden - DigDanAnimates pre3.0.0.blend` Will be used by anything _before_ blender 3.0 (e.g. 2.80, 2.93)
     - `Warden - DigDanAnimates.blend` Will be used by blender 3.0 and higher (due to no other "pre#.#.# being higher than 3.0.0)
   - We should aim to NOT partition rigs by version as much as possible, as it bloats download size and becomes even more to maintain. But sometimes, we can't avoid it.
-- The rig must be self contained. That means textures are packed
+- The rig must be self contained. That means textures are packed (File > External Data > Pack Resources)
    - This is to negate the issue of relative vs absolute paths, which just become a pain
    - Best practice is still to run "relpaths" beforehand, to avoid having any user's paths hard coded into the file, which is more of a privacy thing than anything.
 - Extra unused data should be purged, to minimize bloat
