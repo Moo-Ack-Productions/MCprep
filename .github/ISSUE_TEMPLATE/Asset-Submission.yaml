@@ -23,6 +23,8 @@ body:
       options:
         - label: I have read, understood, and applied all the conventions of [this page](https://github.com/Moo-Ack-Productions/MCprep/blob/master/docs/asset_standards.md)
           required: true
+        - label: This file was last saved in blender 2.80 (for backwards compatibility)
+          required: true
         - label: This is a vanilla minecraft asset/mob/effect, and uses only vanilla textures
           required: true
         - label: I am the sole creator of this rig, other than any textures by Mojang. Any custom textures I created myself.

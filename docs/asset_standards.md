@@ -16,6 +16,7 @@ Treat the below steps as a checklist in a way to audit your own rig.
    - Do this test in BOTH blender 2.80 and the latest stable release (e.g. 3.6 as on August 2023). 
    - Make sure the rig still looks correct when posed or animated from all sides.
 - The blend file must be last saved in blender 2.80 OR have version partitioning across all versions of blender 2.80+
+  - NOT SAVING IN 2.80 WILL LIKELY BE THE MOST COMMON REASON A RIG WILL BE REJECTED / REQUESTED FOR UPDATES.
   - This is important as we support 2.80+, so all rigs need to adhere to that
   - You can check the last version saved by opening the given blend file, going to the Script tab, and then typing this command into the Interactive Python Console: `bpy.data.version`, it should print out something like the screenshot below
   - Not sure what rig partitioning means? Take this as an example, and hopefully it clarifies:
@@ -30,6 +31,7 @@ Treat the below steps as a checklist in a way to audit your own rig.
 - Extra unused data should be purged, to minimize bloat
 - All rigs should be defined in their own top level collection. All other collections in the file not related to the rig must be removed
   - If a rig itself has multiple nested collections, that's ok - the top level collection just needs to have "MCprep" in the name, e.g. "Warden MCprep" will be what gets listed in the UI list, and it won't list any sub collections or other collections in the file. The warden rig is again an example of this. But prefer to just have a single collection where possible.
+  - The rig's root bone, while in rest mode, should be placed at the origin of the armature, and the origin of the armature should be matching the same 3D point as the origin for the collection. If there is only one rig in the file, it should be at the origin (0,0,0). If there are multiple rigs in the file, it is allowed to move the whole rig in object mode to be offset, as long as the collection origin is updated to match.
 - Custom bone shapes are ok and in fact encouraged, just don't put them in the rig scene. If you want to put them into their own collection, either give it the name MCskip OR make sure the primary collection (s) have the text MCprep in it, so that the 
 - The root-most bone of the rig must:
   1. Exist. Ie one central bone that everything is parented to, so if you move this everything, including control-only panels, also move
@@ -44,6 +46,7 @@ Treat the below steps as a checklist in a way to audit your own rig.
 - Drivers are ok, but shouldn't be excessive - and minimize the use of python expression drivers where possible
   - Drivers add a lot of overhead, especially if you have many of one mob type in a scene. 
   - Simple drivers, such as "SUM position" used to translate a control panel to bone transforms are fine - but they should NOT be python expressions, rather they should be SUM of [variable transform channels], as these run much quicker.
+- As much as possible, the rig should continue to look and render correctly if someone were to use prep materials on it (this is in fact the default of what happens on import into blender, for compatibility).
 - A fun note: The default position of the rig should show off its flaire! Ie, the saved pose _should_ be posted.
   - MCprep has controls for clearing the post on import. Meanwhile, having a posed starting point helps show off what the rig can do.
 - If relevant, the rig can have a single default animation. There should _not_ be more than one animation though, since it wouldn't be obvious and would clutter the file during subsequent imports
