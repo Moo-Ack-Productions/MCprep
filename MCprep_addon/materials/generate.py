@@ -306,7 +306,7 @@ class PrepOptions:
 	use_reflections: bool
 	use_principled: bool
 	only_solid: bool
-	pack_format: Union[str, PackFormat]
+	pack_format: PackFormat
 	use_emission_nodes: bool
 	use_emission: bool
 
@@ -333,7 +333,7 @@ def matprep_cycles(mat: Material, options: PrepOptions) -> Optional[bool]:
 	#     res = matgen_special_water(mat, passes)
 	# if use_reflections and checklist(canon, "glass"):
 	#	res = matgen_special_glass(mat, passes)
-	if options.pack_format == PackFormat.SIMPLE and util.bv28():
+	if options.pack_format == PackFormat.SIMPLE:
 		res = matgen_cycles_simple(mat, options)
 	elif options.use_principled:
 		res = matgen_cycles_principled(mat, options)
@@ -1157,20 +1157,17 @@ def generate_base_material(context: Context, name: str, path: Union[Path, str], 
 					break
 			
 			links.new(node_diff.outputs[0], principled.inputs[0])
-			links.new(node_diff.outputs[1], principled.inputs["Alpha"]) 
-
+			links.new(node_diff.outputs[1], principled.inputs["Alpha"])
+			
+			env.log("Added blank texture node")
 			# Initialize extra passes as well
 			if image:
 				node_spec = create_node(nodes, 'ShaderNodeTexImage')
 				node_spec["MCPREP_specular"] = True
 				node_nrm = create_node(nodes, 'ShaderNodeTexImage')
 				node_nrm["MCPREP_normal"] = True
-
+				# now use standard method to update textures
 				set_cycles_texture(image, mat, useExtraMaps)
-			env.log("Added blank texture node")
-
-
-			# now use standard method to update textures
 			
 		else:
 			return None, "Only Cycles and Eevee supported"

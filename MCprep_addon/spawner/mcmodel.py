@@ -370,7 +370,6 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 			)
 			
 			face.normal_update()
-			# slightly offset the face by normal if the median point is exact
 			for j in range(len(face.loops)):
 				# uv coords order is determened by the rotation of the uv,
 				# e.g. if the uv is rotated by 180 degrees, the first index
