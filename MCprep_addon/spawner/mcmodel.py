@@ -313,7 +313,6 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 					materials.append(f"#{img}")
 
 
-	is_first = True
 	for e in elements:
 		rotation = e.get("rotation")
 		if rotation is None:

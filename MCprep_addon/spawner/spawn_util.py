@@ -18,7 +18,6 @@
 
 import os
 import re
-from enum import Enum, auto
 from typing import List, Optional
 from pathlib import Path
 
