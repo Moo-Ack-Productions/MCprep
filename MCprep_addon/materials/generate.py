@@ -1127,7 +1127,10 @@ def texgen_seus(mat: Material, passes: Dict[str, Image], nodeInputs: List, use_r
 
 def generate_base_material(context: Context, name: str, path: Union[Path, str], useExtraMaps):
 		"""Generate a base material from name and active resource pack"""
-		image = bpy.data.images.load(path, check_existing=True)
+		try:
+			image = bpy.data.images.load(path, check_existing=True)
+		except: # if Image is not found
+			image = None
 		mat = bpy.data.materials.new(name=name)
 
 		engine = context.scene.render.engine
@@ -1135,20 +1138,40 @@ def generate_base_material(context: Context, name: str, path: Union[Path, str], 
 			# need to create at least one texture node first, then the rest works
 			mat.use_nodes = True
 			nodes = mat.node_tree.nodes
-			node_diff = create_node(nodes, 'ShaderNodeTexImage', image=image)
+			node_diff = create_node(
+				nodes, 'ShaderNodeTexImage', 
+				name="Diffuse Texture",
+				label="Diffuse Texture", 
+				location=(-380, 140),
+				interpolation='Closest', 
+				image=image
+			)
 			node_diff["MCPREP_diffuse"] = True
 
-			# Initialize extra passes as well
-			node_spec = create_node(nodes, 'ShaderNodeTexImage')
-			node_spec["MCPREP_specular"] = True
-			node_nrm = create_node(nodes, 'ShaderNodeTexImage')
-			node_nrm["MCPREP_normal"] = True
+			# The offset and link diffuse is for default no texture setup
+			links = mat.node_tree.links 
+			principled = None
+			for n in nodes:
+				if n.bl_idname == 'ShaderNodeBsdfPrincipled':
+					principled = n 
+					break
+			
+			links.new(node_diff.outputs[0], principled.inputs[0])
+			links.new(node_diff.outputs[1], principled.inputs["Alpha"]) 
 
+			# Initialize extra passes as well
+			if image:
+				node_spec = create_node(nodes, 'ShaderNodeTexImage')
+				node_spec["MCPREP_specular"] = True
+				node_nrm = create_node(nodes, 'ShaderNodeTexImage')
+				node_nrm["MCPREP_normal"] = True
+
+				set_cycles_texture(image, mat, useExtraMaps)
 			env.log("Added blank texture node")
 
 
 			# now use standard method to update textures
-			set_cycles_texture(image, mat, useExtraMaps)
+			
 		else:
 			return None, "Only Cycles and Eevee supported"
 

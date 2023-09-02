@@ -131,12 +131,6 @@ def add_material(name: str="material", path: str="", use_name: bool= False) -> M
 				mat=mat,
 				options=options
 			)
-	# TODO: Cleanup
-	# if not use_name:
-	# 	res = bpy.ops.mcprep.load_material(filepath=path, skipUsage=True)
-	# 		if res != {'FINISHED'}:
-	# 	env.log("Failed to generate material as specified")
-	# else:
 
 	if use_name:
 		mat.name = name
@@ -243,9 +237,6 @@ def read_model(context: Context, model_filepath: Path) -> Tuple[Element, Texture
 				elements, textures = read_model(context, base_path)
 			else:
 				env.log(f"Failed to find mcmodel file {parent_filepath}")
-			# If the namespace isn't a minecraft resourcepack/ modded
-			if namespace != "minecraft":
-				textures["_no_minecraft"] = True
 
 	current_elements: Element = obj_data.get("elements")
 	if current_elements is not None:
@@ -312,21 +303,15 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 	materials = []
 	if textures:
 		particle = textures.get("particle")
-		no_minecraft = textures.get("_no_minecraft")
 		for img in textures:
 			if img != "particle":
 				tex_pth = locate_image(bpy.context, textures, img, model_filepath)
-				mat = add_material(f"{obj_name}_{img}", tex_pth, use_name = no_minecraft) # TODO I think the name arg does nothing, this need a newer design
+				mat = add_material(f"{obj_name}_{img}", tex_pth, use_name = False) # TODO I think the name arg does nothing, Should I remove it?
 				obj_mats = obj.data.materials
 				if not f"#{img}" in materials:
 					obj_mats.append(mat)
 					materials.append(f"#{img}")
 
-	# TODO: Cleanup
-	# For some unonown reason the last added slot get append twice and move up to index 0, "west" gets duplicate.
-	# Cause by mcprep load_material() appending 
-	# obj.active_material_index = 0
-	# bpy.ops.object.material_slot_remove()
 
 	is_first = True
 	for e in elements:
