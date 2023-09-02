@@ -45,10 +45,57 @@ elif util.bv28():
 else:
 	COLL_ICON = 'GROUP'
 
+class ColorVariation(Enum):
+	WHITE = auto()
+	ORANGE = auto()
+	MAGENTA = auto()
+	LIGHTBLUE = auto()
+	YELLOW = auto()
+	LIME = auto()
+	PINK = auto()
+	GRAY = auto()
+	LIGHTGRAY = auto()
+	CYAN = auto()
+	PURPLE = auto()
+	BLUE = auto()
+	BROWN = auto()
+	GREEN = auto()
+	RED = auto()
+	BLACK = auto()
+	
+class VillagerProfession(Enum):
+	"""Preserve for villager"""
+	# def _generate_next_value_(name, start, count, last_values):
+	# 	return name
+	
+	FARMER = auto()
+	FISHERMAN = auto()
+	SHEPHERD = auto()
+	FLETCHER = auto()
+	LIBRARIAN = auto()
+	CARTOGRAPHER = auto()
+	CLERIC = auto()
+	ARMORER = auto()
+	WEAPONSMITH = auto()
+	TOOLSMITH = auto()
+	BUTCHER = auto()
+	LEATHERWORKER = auto()
+	MASON = auto()
+	NITWIT = auto()
+	
+class ColorVariationProp():
+	def color_items(self, context):
+		return [(i.value, i.name, i.name) for i in ColorVariation]
+	
+	color_variation = bpy.props.EnumProperty(name="Color Variation", items=color_items)
+
 # -----------------------------------------------------------------------------
 # Reusable functions for spawners
 # -----------------------------------------------------------------------------
 
+def has_color(name):
+	"""Return True if has the color in name"""
+	return name in ["white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray", "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"]
 
 def filter_collections(data_from: BlendDataLibraries) -> List[str]:
 	""" TODO 2.7 groups 
