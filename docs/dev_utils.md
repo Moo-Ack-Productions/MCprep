@@ -47,7 +47,7 @@ Returns that new copy object.
 
  
 
-**bv28()**
+**bv28()** (Deprecated)
 
  Check for version is 2.8, sees `min_bv()`
 
