@@ -91,13 +91,7 @@ Returns true if datablock is a duplicate or not, e.g. ending in .00#
 
 Returns a texture. Load a texture from its path once, reusing existing texture if present.
 
-  
 
-**remap_users(old, new)** (D2.78)
-
-
-
-Remap user datablock 
 
 **get_objects_conext(context)**
 

@@ -83,11 +83,7 @@ def sync_default_material(context: Context, material: Material, default_material
 	if engine == "CYCLES" or engine == "BLENDER_EEVEE":
 		default_texture_node.interpolation = 'Closest'
 
-	# 2.78+ only, else silent failure.
-	res = util.remap_users(material, new_default_material)
-	if res != 0:
-		# Try a fallback where we at least go over the selected objects.
-		return res
+	material.user_remap(new_default_material)
 
 	# remove the old material since we're changing the default and we don't
 	# want to overwhelm users
