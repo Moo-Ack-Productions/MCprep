@@ -209,12 +209,6 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 	location: bpy.props.FloatVectorProperty(
 		default=(0, 0, 0),
 		name="Location")
-	append_layer: bpy.props.IntProperty(
-		name="Append layer",
-		default=20,
-		min=0,
-		max=20,
-		description="Set the layer for appending groups, 0 means same as active layers")
 	prep_materials: bpy.props.BoolProperty(
 		name="Prep materials",
 		default=True,
@@ -385,14 +379,6 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 		for ob in util.get_objects_conext(context):
 			util.select_set(ob, False)
 
-		layers = [False] * 20
-		if not hasattr(context.scene, "layers"):
-			# TODO: here add all subcollections to an MCprepLib collection.
-			pass
-		elif self.append_layer == 0:
-			layers = context.scene.layers
-		else:
-			layers[self.append_layer - 1] = True
 		objlist = []
 		group = None
 		for coll in util.collections():
@@ -423,9 +409,6 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 			for ob in util.get_objects_conext(context):
 				util.select_set(ob, False)
 
-		if hasattr(context.scene, "layers"):  # 2.7 only
-			for obj in objlist:
-				obj.layers = layers
 		return group
 
 
@@ -872,7 +855,6 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 
 		# Need to initialize to something, though this obj not used.
 		importedObj = None
-		groupAppendLayer = self.append_layer  # Need to remove
 
 		# for blender 2.8 compatibility
 		if hasattr(bpy.data, "groups"):
