@@ -170,10 +170,7 @@ def add_area_particle_effect(context: Context, effect: ListEffectsAssets, locati
 	bpy.ops.object.particle_system_add()
 	psystem = obj.particle_systems[-1]
 	psystem.settings = imported_particles
-	if util.bv28():
-		obj.show_instancer_for_render = False
-	else:
-		psystem.settings.use_render_emitter = False
+	obj.show_instancer_for_render = False
 
 	# Update particle density to match the current timeline.
 	frames = psystem.settings.frame_end - psystem.settings.frame_start
@@ -219,8 +216,7 @@ def add_collection_effect(context: Context, effect: ListEffectsAssets, location:
 	obj = util.addGroupInstance(coll.name, location)
 	obj.location = location
 	obj.name = keyname
-	if util.bv28():
-		util.move_to_collection(obj, context.collection)
+	util.move_to_collection(obj, context.collection)
 
 	# Deselect everything and set newly added empty as active.
 	for ob in context.scene.objects:
@@ -254,17 +250,13 @@ def add_image_sequence_effect(context: Context, effect: ListEffectsAssets, locat
 	# Create the collection to add objects into.
 	keyname = f"{effect.name}_frame_{frame}@{speed:.2f}"
 
-	if util.bv28():
-		# Move the source collection (world center) into excluded coll
-		effects_vl = util.get_or_create_viewlayer(context, EFFECT_EXCLUDE)
-		effects_vl.exclude = True
-
-		seq_coll = bpy.data.collections.get(keyname)
-		if not seq_coll:
-			seq_coll = bpy.data.collections.new(name=keyname)
-			effects_vl.collection.children.link(seq_coll)
-	else:
-		seq_coll = bpy.data.groups.new(keyname)
+	# Move the source collection (world center) into excluded coll
+	effects_vl = util.get_or_create_viewlayer(context, EFFECT_EXCLUDE)
+	effects_vl.exclude = True
+	seq_coll = bpy.data.collections.get(keyname)
+	if not seq_coll:
+		seq_coll = bpy.data.collections.new(name=keyname)
+		effects_vl.collection.children.link(seq_coll)
 
 	if len(seq_coll.objects) != len(human_sorted):
 		# Generate the items before instancing collection/group.
@@ -300,12 +292,8 @@ def add_image_sequence_effect(context: Context, effect: ListEffectsAssets, locat
 				frame = context.scene.frame_current
 
 				obj.hide_render = state
-				if util.bv28():
-					obj.hide_viewport = state
-					obj.keyframe_insert(data_path="hide_viewport", frame=frame)
-				else:
-					obj.hide = state
-					obj.keyframe_insert(data_path="hide", frame=frame)
+				obj.hide_viewport = state
+				obj.keyframe_insert(data_path="hide_viewport", frame=frame)
 				obj.keyframe_insert(data_path="hide_render", frame=frame)
 
 			context.scene.frame_current = target_frame - 1
@@ -317,10 +305,7 @@ def add_image_sequence_effect(context: Context, effect: ListEffectsAssets, locat
 			context.scene.frame_current = end_frame
 			keyframe_current_visibility(context, obj, True)
 
-			if util.bv28():
-				util.move_to_collection(obj, seq_coll)
-			else:
-				seq_coll.objects.link(obj)
+			util.move_to_collection(obj, seq_coll)
 
 	context.scene.frame_current = frame
 
@@ -341,10 +326,8 @@ def add_image_sequence_effect(context: Context, effect: ListEffectsAssets, locat
 		img_block = bpy.data.images.load(img, check_existing=True)
 		instance.data = img_block
 
-	if util.bv28():
-		# Move the new object into the active layer.
-		util.move_to_collection(instance, context.collection)
-	# TODO: if not bv28, unlink the src group objects from the scene.
+	# Move the new object into the active layer.
+	util.move_to_collection(instance, context.collection)
 
 	return instance
 
@@ -566,15 +549,12 @@ def get_or_create_particle_meshes_coll(context: Context, particle_name: str, img
 	particle_coll = util.collections().get(particle_key)
 	if particle_coll:
 		# Check if any objects.
-		if util.bv28() and len(particle_coll.objects) > 0:
+		if len(particle_coll.objects) > 0:
 			return particle_coll
 
 	# Create the collection/group.
-	if util.bv28():
-		particle_view = util.get_or_create_viewlayer(context, particle_key)
-		particle_view.exclude = True
-	else:
-		particle_group = bpy.data.groups.new(name=particle_key)
+	particle_view = util.get_or_create_viewlayer(context, particle_key)
+	particle_view.exclude = True
 
 	# Get or create the material.
 	if particle_name in bpy.data.materials:
@@ -610,18 +590,13 @@ def get_or_create_particle_meshes_coll(context: Context, particle_name: str, img
 		obj = bpy.data.objects.new(name, mesh)
 		obj.data.materials.append(mat)
 
-		if util.bv28():
-			util.move_to_collection(obj, particle_view.collection)
-		else:
-			particle_group.objects.link(obj)
+		util.move_to_collection(obj, particle_view.collection)
 
-	if util.bv28():
-		return particle_view.collection
-	else:
-		return particle_group
+	return particle_view.collection
 
 
-def apply_particle_settings(obj: bpy.types.Object, frame: int, base_name: str, pcoll: Collection) -> None:
+def apply_particle_settings(
+	obj: bpy.types.Object, frame: int, base_name: str, pcoll: Collection) -> None:
 	"""Update the particle settings for particle planes."""
 	obj.scale = (0.5, 0.5, 0.5)  # Tighen up the area it spawns over.
 
@@ -643,17 +618,13 @@ def apply_particle_settings(obj: bpy.types.Object, frame: int, base_name: str, p
 	psystem.settings.particle_size = 0.2
 	psystem.settings.factor_random = 1
 
-	if util.bv28():
-		obj.show_instancer_for_render = False
-		psystem.settings.render_type = 'COLLECTION'
-		psystem.settings.instance_collection = pcoll
-	else:
-		psystem.settings.use_render_emitter = False
-		psystem.settings.render_type = 'GROUP'
-		psystem.settings.dupli_group = pcoll
+	obj.show_instancer_for_render = False
+	psystem.settings.render_type = 'COLLECTION'
+	psystem.settings.instance_collection = pcoll
 
 
-def import_animated_coll(context: Context, effect: ListEffectsAssets, keyname: str) -> Collection:
+def import_animated_coll(
+	context: Context, effect: ListEffectsAssets, keyname: str) -> Collection:
 	"""Import and return a new animated collection given a specific key."""
 	init_colls = list(util.collections())
 	any_imported = False
@@ -662,12 +633,8 @@ def import_animated_coll(context: Context, effect: ListEffectsAssets, keyname: s
 		for itm in collections:
 			if itm != effect.name:
 				continue
-			if util.bv28():
-				data_to.collections.append(itm)
-				any_imported = True
-			else:
-				data_to.groups.append(itm)
-				any_imported = True
+			data_to.collections.append(itm)
+			any_imported = True
 
 	final_colls = list(util.collections())
 	new_colls = list(set(final_colls) - set(init_colls))
@@ -688,11 +655,10 @@ def import_animated_coll(context: Context, effect: ListEffectsAssets, keyname: s
 	else:
 		coll = new_colls[0]
 
-	if util.bv28():
-		# Move the source collection (world center) into excluded coll
-		effects_vl = util.get_or_create_viewlayer(context, EFFECT_EXCLUDE)
-		effects_vl.exclude = True
-		effects_vl.collection.children.link(coll)
+	# Move the source collection (world center) into excluded coll
+	effects_vl = util.get_or_create_viewlayer(context, EFFECT_EXCLUDE)
+	effects_vl.exclude = True
+	effects_vl.collection.children.link(coll)
 
 	return coll
 
@@ -707,19 +673,12 @@ def offset_animation_to_frame(collection: Collection, frame: int) -> None:
 	actions = []
 	mats = []
 
-	if util.bv28():
-		objs = list(collection.all_objects)
-	else:
-		objs = list(collection.objects)
+	objs = list(collection.all_objects)
 
 	# Expand the list by checking for any empties instancing other collections.
 	for obj in objs:
-		if util.bv28():
-			if obj.instance_collection:
-				objs.extend(list(obj.instance_collection.all_objects))
-		else:
-			if obj.dupli_group:
-				objs.extend(list(obj.dupli_group.objects))
+		if obj.instance_collection:
+			objs.extend(list(obj.instance_collection.all_objects))
 
 	# Make unique.
 	objs = list(set(objs))
@@ -902,9 +861,6 @@ def load_area_particle_effects(context : Context) -> None:
 
 def load_collection_effects(context: Context) -> None:
 	"""Load effects defined by collections saved to an effects blend file."""
-	if not util.bv28():
-		print("Collection spawning not supported in Blender 2.7x")
-		return
 	mcprep_props = context.scene.mcprep_props
 	path = context.scene.mcprep_effects_path
 	path = os.path.join(path, "collection")
@@ -933,7 +889,7 @@ def load_collection_effects(context: Context) -> None:
 			effect.index = len(mcprep_props.effects_list) - 1  # For icon index.
 
 
-def load_image_sequence_effects(context : Context) -> None:
+def load_image_sequence_effects(context: Context) -> None:
 	"""Load effects from the particles folder that should be animated."""
 	mcprep_props = context.scene.mcprep_props
 

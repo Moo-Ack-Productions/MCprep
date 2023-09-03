@@ -20,6 +20,9 @@ import os
 import unittest
 
 import bpy
+from mathutils import Vector
+
+from MCprep_addon import util
 
 
 class BaseSpawnerTest(unittest.TestCase):
@@ -203,7 +206,7 @@ class EffectsSpawnerTest(BaseSpawnerTest):
 class ModelSpawnerTest(BaseSpawnerTest):
     """ModelSpawning-related tests."""
 
-    def model_spawner(self):
+    def test_model_spawner(self):
         """Test model spawning and reloading"""
         scn_props = bpy.context.scene.mcprep_props
 
@@ -223,9 +226,9 @@ class ModelSpawnerTest(BaseSpawnerTest):
         res = bpy.ops.mcprep.spawn_model(
             filepath=scn_props.model_list[scn_props.model_list_index].filepath)
         self.assertEqual(res, {'FINISHED'})
-        post_objs = bpy.data.objects
+        post_objs = list(bpy.data.objects)
 
-        self.assertGreater(post_objs, pre_objs, "No models spawned")
+        self.assertGreater(len(post_objs), len(pre_objs), "No models spawned")
         self.assertEqual(len(post_objs), len(pre_objs) + 1,
                          "More than one model spawned")
 
@@ -233,6 +236,226 @@ class ModelSpawnerTest(BaseSpawnerTest):
         new_objs = list(set(post_objs) - set(pre_objs))
         model = new_objs[0]
         self.assertTrue(model.active_material, "No material on model")
+
+
+class EntitySpawnerTest(BaseSpawnerTest):
+    """EntitySpawning-related tests."""
+
+    def test_entity_spawner(self):
+        scn_props = bpy.context.scene.mcprep_props
+
+        pre_count = len(scn_props.entity_list)
+        self.assertEqual(pre_count, 0,
+                         "Should have opened new file with unloaded assets")
+        bpy.ops.mcprep.reload_entities()
+        post_count = len(scn_props.entity_list)
+
+        self.assertGreater(post_count, 5, "Too few entities loaded")
+
+        # spawn with whatever default index
+        pre_objs = len(bpy.data.objects)
+        bpy.ops.mcprep.entity_spawner()
+        post_objs = len(bpy.data.objects)
+
+        self.assertGreater(post_objs, pre_objs, "No entity spawned")
+        # Test collection/group added
+        # Test loading from file.
+
+
+class MeshswapTest(BaseSpawnerTest):
+    """Meshswap-related tests."""
+
+    def _import_world_with_settings(self, file: str):
+        testdir = os.path.dirname(__file__)
+        obj_path = os.path.join(testdir, file)
+
+        self.assertTrue(os.path.isfile(obj_path),
+                        f"Obj file missing: {obj_path}, {file}")
+        res = bpy.ops.mcprep.import_world_split(filepath=obj_path)
+        self.assertEqual(res, {'FINISHED'})
+        self.assertGreater(len(bpy.data.objects), 50, "Should have many objs")
+        self.assertGreater(
+            len(bpy.data.materials), 50, "Should have many mats")
+
+    def _meshswap_util(self, mat_name: str) -> str:
+        """Run meshswap on the first object with found mat_name"""
+        if mat_name not in bpy.data.materials:
+            return "Not a material: " + mat_name
+        print("\nAttempt meshswap of " + mat_name)
+        mat = bpy.data.materials[mat_name]
+
+        obj = None
+        for ob in bpy.data.objects:
+            for slot in ob.material_slots:
+                if slot and slot.material == mat:
+                    obj = ob
+                    break
+            if obj:
+                break
+        if not obj:
+            return "Failed to find obj for " + mat_name
+        print("Found the object - " + obj.name)
+
+        # Select only the object in question
+        for ob in bpy.context.scene.objects:
+            try:
+                ob.select_set(False)
+            except Exception:
+                pass
+        obj.select_set(True)
+        res = bpy.ops.mcprep.meshswap()
+        if res != {'FINISHED'}:
+            return "Meshswap returned cancelled for " + mat_name
+        return ""
+
+    def test_meshswap_world_jmc(self):
+        test_subpath = os.path.join("test_data", "jmc2obj_test_1_15_2.obj")
+        self._import_world_with_settings(file=test_subpath)
+        self.addon_prefs = util.get_user_preferences(bpy.context)
+        self.assertEqual(self.addon_prefs.MCprep_exporter_type, "jmc2obj")
+
+        # known jmc2obj material names which we expect to be able to meshswap
+        test_materials = [
+            "torch",
+            "fire",
+            "lantern",
+            "cactus_side",
+            "vines",  # plural
+            "enchant_table_top",
+            "redstone_torch_on",
+            "glowstone",
+            "redstone_lamp_on",
+            "pumpkin_front_lit",
+            "sugarcane",
+            "chest",
+            "largechest",
+            "sunflower_bottom",
+            "sapling_birch",
+            "white_tulip",
+            "sapling_oak",
+            "sapling_acacia",
+            "sapling_jungle",
+            "blue_orchid",
+            "allium",
+        ]
+
+        for mat_name in test_materials:
+            with self.subTest(mat_name):
+                res = self._meshswap_util(mat_name)
+                self.assertEqual("", res)
+
+    def test_meshswap_world_mineways_separated(self):
+        test_subpath = os.path.join(
+            "test_data", "mineways_test_separated_1_15_2.obj")
+        self._import_world_with_settings(file=test_subpath)
+        self.addon_prefs = util.get_user_preferences(bpy.context)
+        self.assertEqual(self.addon_prefs.MCprep_exporter_type, "Mineways")
+
+        # known mineways material names which we expect to be able to meshswap
+        test_materials = [
+            "grass",
+            "torch",
+            "fire_0",
+            "MWO_chest_top",
+            "MWO_double_chest_top_left",
+            # "lantern", not in test object
+            "cactus_side",
+            "vine",  # singular
+            "enchanting_table_top",
+            # "redstone_torch_on", no separate "on" for Mineways separated exports
+            "glowstone",
+            "redstone_torch",
+            "jack_o_lantern",
+            "sugar_cane",
+            "jungle_sapling",
+            "dark_oak_sapling",
+            "oak_sapling",
+            "campfire_log",
+            "white_tulip",
+            "blue_orchid",
+            "allium",
+        ]
+
+        for mat_name in test_materials:
+            with self.subTest(mat_name):
+                res = self._meshswap_util(mat_name)
+                self.assertEqual("", res)
+
+    def test_meshswap_world_mineways_combined(self):
+        test_subpath = os.path.join(
+            "test_data", "mineways_test_combined_1_15_2.obj")
+        self._import_world_with_settings(file=test_subpath)
+        self.addon_prefs = util.get_user_preferences(bpy.context)
+        self.assertEqual(self.addon_prefs.MCprep_exporter_type, "Mineways")
+
+        # known mineways material names which we expect to be able to meshswap
+        test_materials = [
+            "Sunflower",
+            "Torch",
+            "Redstone_Torch_(active)",
+            "Lantern",
+            "Dark_Oak_Sapling",
+            "Sapling",  # should map to oak sapling
+            "Birch_Sapling",
+            "Cactus",
+            "White_Tulip",
+            "Vines",
+            "Ladder",
+            "Enchanting_Table",
+            "Campfire",
+            "Jungle_Sapling",
+            "Red_Tulip",
+            "Blue_Orchid",
+            "Allium",
+        ]
+
+        for mat_name in test_materials:
+            with self.subTest(mat_name):
+                res = self._meshswap_util(mat_name)
+                self.assertEqual("", res)
+
+    def test_meshswap_spawner(self):
+        scn_props = bpy.context.scene.mcprep_props
+        bpy.ops.mcprep.reload_meshswap()
+        self.assertGreater(len(scn_props.meshswap_list), 15,
+                           "Too few meshswap assets available")
+
+        # Add with make real = False
+        res = bpy.ops.mcprep.meshswap_spawner(
+            block='banner', method="collection", make_real=False)
+        self.assertEqual(res, {'FINISHED'})
+
+        # test doing two of the same one (first won't be cached, second will)
+        # Add one with make real = True
+        res = bpy.ops.mcprep.meshswap_spawner(
+            block='fire', method="collection", make_real=True)
+        self.assertEqual(res, {'FINISHED'})
+        self.assertTrue('fire' in bpy.data.collections,
+                        "Fire not in collections")
+        self.assertTrue(len(bpy.context.selected_objects) > 0,
+                        "Added made-real meshswap objects not selected")
+
+        # Test that cache is properly used. Also test that the default
+        # 'method=colleciton' is used.
+        res = bpy.ops.mcprep.meshswap_spawner(block='fire', make_real=False)
+        count = sum([1 for itm in bpy.data.collections if 'fire' in itm.name])
+        self.assertEqual(
+            count, 1, "Imported extra fire group, should have cached instead!")
+
+        # test that added item ends up in location location=(1,2,3)
+        loc = (1, 2, 3)
+        bpy.ops.mcprep.meshswap_spawner(
+            block='fire', method="collection", make_real=False, location=loc)
+        self.assertTrue(
+            bpy.context.object, "Added meshswap object not added as active")
+        self.assertTrue(
+            bpy.context.selected_objects, "Added meshswap object not selected")
+        self.assertEqual(bpy.context.object.location,
+                         Vector(loc),
+                         "Location not properly applied")
+        count = sum([1 for itm in bpy.data.collections if 'fire' in itm.name])
+        self.assertEqual(
+            count, 1, "Should have 1 fire groups exactly, did not cache")
 
 
 if __name__ == '__main__':

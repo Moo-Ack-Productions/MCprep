@@ -99,11 +99,7 @@ def sync_material(context: Context, source_mat: Material, sync_mat_name: str, li
 		return 0, f"Could not import {import_name}"
 	new_material = list(imported)[0]
 
-	# 2.78+ only, else silent failure
-	res = util.remap_users(source_mat, new_material)
-	if res != 0:
-		# try a fallback where we at least go over the selected objects
-		return 0, res
+	source_mat.user_remap(new_material)
 	if replace is True:
 		bpy.data.materials.remove(source_mat)
 

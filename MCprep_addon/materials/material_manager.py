@@ -232,10 +232,7 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 				if bpy.data.materials[matname].use_fake_user is True:
 					continue
 				# otherwise, remap
-				res = util.remap_users(bpy.data.materials[matname], baseMat)
-				if res != 0:
-					self.report({'ERROR'}, str(res))
-					return {'CANCELLED'}
+				bpy.data.materials[matname].user_remap(baseMat)
 				old = bpy.data.materials[matname]
 				env.log(f"removing old? {matname}", vv_only=True)
 				if removeold is True and old.users == 0:
@@ -349,7 +346,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 				if bpy.data.images[imgname].use_fake_user is True:
 					continue
 				# otherwise, remap
-				util.remap_users(data[imgname], baseImg)
+				data[imgname].user_remap(baseImg)
 				old = bpy.data.images[imgname]
 				if removeold is True and old.users == 0:
 					bpy.data.images.remove(bpy.data.images[imgname])

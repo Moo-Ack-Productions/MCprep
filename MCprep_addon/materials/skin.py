@@ -128,9 +128,6 @@ def loadSkinFile(self, context: Context, filepath: Path, new_material: bool=Fals
 	else:
 		pass
 
-	if not util.bv28():
-		setUVimage(context.selected_objects, image)
-
 	# TODO: adjust the UVs if appropriate, and fix eyes
 	if image.size[0] != 0 and image.size[1] / image.size[0] != 1:
 		self.report({'INFO'}, "Skin swapper works best on 1.8 skins")
@@ -280,20 +277,6 @@ def getMatsFromSelected(selected: List[bpy.types.Object], new_material: bool=Fal
 				tx.texture = tx.texture.copy()
 
 	return mat_ret, linked_objs
-
-
-def setUVimage(objs: List[bpy.types.Object], image: Image) -> None:
-	"""Set image for each face for viewport displaying (2.7 only)"""
-	for obj in objs:
-		if obj.type != "MESH":
-			continue
-		if not hasattr(obj.data, "uv_textures"):
-			env.log("Called setUVimage on object with no uv_textures, 2.8?")
-			return
-		if obj.data.uv_textures.active is None:
-			continue
-		for uv_face in obj.data.uv_textures.active.data:
-			uv_face.image = image
 
 
 def download_user(self, context: Context, username: str) -> Optional[Path]:

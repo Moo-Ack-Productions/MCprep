@@ -16,6 +16,22 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+"""MCprep unit test runner
+
+Example usage:
+
+# Run all tests for the first blender exec listed in blender_execs.txt
+python3 run_tests.py
+
+# Run all tests across all available versions of blender in blender_execs.txt
+python3 run_tests.py -a
+
+# Run a specific test, across specific versions of blender
+python3 run_tests.py -v 3.6,3.5 -t test_disable_enable
+
+Run script with -h to see all options. Must run with bpy-addon-build installed
+"""
+
 from enum import Enum
 from typing import List
 import argparse
