@@ -128,9 +128,6 @@ def loadSkinFile(self, context: Context, filepath: Path, new_material: bool=Fals
 	else:
 		pass
 
-	if not util.bv28():
-		setUVimage(context.selected_objects, image)
-
 	# TODO: adjust the UVs if appropriate, and fix eyes
 	if image.size[0] != 0 and image.size[1] / image.size[0] != 1:
 		self.report({'INFO'}, "Skin swapper works best on 1.8 skins")

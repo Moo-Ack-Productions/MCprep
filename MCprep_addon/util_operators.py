@@ -68,18 +68,8 @@ class MCPREP_OT_improve_ui(bpy.types.Operator):
 				pass
 
 		# now change the active drawing level to a minimum of solid mode
-		view27 = ['TEXTURED', 'MATEIRAL', 'RENDERED']
 		view28 = ['SOLID', 'MATERIAL', 'RENDERED']
-		engine = bpy.context.scene.render.engine
-		if not util.bv28() and view.viewport_shade not in view27:
-			if not hasattr(context.space_data, "viewport_shade"):
-				self.report({"WARNING"}, "Improve UI is meant for the 3D view")
-				return {'FINISHED'}
-			if engine == 'CYCLES':
-				view.viewport_shade = 'TEXTURED'
-			else:
-				view.viewport_shade = 'SOLID'
-		elif util.bv28() and context.scene.display.shading.type not in view28:
+		if context.scene.display.shading.type not in view28:
 			if not scn_disp or not scn_disp_shade:
 				self.report({"WARNING"}, "Improve UI is meant for the 3D view")
 				return {'FINISHED'}
@@ -119,7 +109,6 @@ class MCPREP_OT_show_preferences(bpy.types.Operator):
 		if not addon_blinfo["show_expanded"]:
 			has_prefs = hasattr(bpy.ops, "preferences")
 			has_prefs = has_prefs and hasattr(bpy.ops.preferences, "addon_expand")
-			has_prefs = has_prefs and util.bv28()
 
 			has_exp = hasattr(bpy.ops, "wm")
 			has_exp = has_exp and hasattr(bpy.ops.wm, "addon_expand")

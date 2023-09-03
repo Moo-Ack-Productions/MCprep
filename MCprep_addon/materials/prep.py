@@ -45,10 +45,9 @@ class McprepMaterialProps():
 	def pack_formats(self, context):
 		"""Blender version-dependant format for cycles/eevee material formats."""
 		itms = []
-		if util.bv28():
-			itms.append((
-				"simple", "Simple (no PBR)",
-				"Use a simple shader setup with no PBR or emission falloff."))
+		itms.append((
+			"simple", "Simple (no PBR)",
+			"Use a simple shader setup with no PBR or emission falloff."))
 		itms.append(("specular", "Specular", "Sets the pack format to Specular."))
 		itms.append(("seus", "SEUS", "Sets the pack format to SEUS."))
 		return itms

@@ -156,7 +156,7 @@ def bAppendLink(directory: str, name: str, toLink: bool, active_layer: bool=True
 		env.log("Using post-2.72 method of append/link", vv_only=True)
 		if toLink:
 			bpy.ops.wm.link(directory=directory, filename=name)
-		elif bv28():
+		else:
 			try:
 				bpy.ops.wm.append(
 					directory=directory,
@@ -165,18 +165,6 @@ def bAppendLink(directory: str, name: str, toLink: bool, active_layer: bool=True
 			except RuntimeError as e:
 				print("bAppendLink", e)
 				return False
-		else:
-			env.log(f"{directory} {name} {active_layer}")
-			try:
-				bpy.ops.wm.append(
-					directory=directory,
-					filename=name,
-					active_layer=active_layer)
-				return True
-			except RuntimeError as e:
-				print("bAppendLink", e)
-				return False
-
 
 def obj_copy(base: bpy.types.Object, context: Optional[Context]=None, vertex_groups: bool=True, modifiers: bool=True) -> bpy.types.Object:
 	"""Copy an object's data, vertex groups, and modifiers without operators.
@@ -332,9 +320,7 @@ def remap_users(old, new) -> Union[int, str]:
 
 def get_objects_conext(context: Context) -> List[bpy.types.Object]:
 	"""Returns list of objects, either from view layer if 2.8 or scene if 2.8"""
-	if bv28():
-		return context.view_layer.objects
-	return context.scene.objects
+	return context.view_layer.objects
 
 
 def link_selected_objects_to_scene() -> None:
@@ -445,14 +431,9 @@ def addGroupInstance(group_name: str, loc: Tuple, select: bool=True) -> bpy.type
 
 	scene = bpy.context.scene
 	ob = bpy.data.objects.new(group_name, None)
-	if bv28():
-		ob.instance_type = 'COLLECTION'
-		ob.instance_collection = collections().get(group_name)
-		scene.collection.objects.link(ob)  # links to scene collection
-	else:
-		ob.dupli_type = 'GROUP'
-		ob.dupli_group = collections().get(group_name)
-		scene.objects.link(ob)
+	ob.instance_type = 'COLLECTION'
+	ob.instance_collection = collections().get(group_name)
+	scene.collection.objects.link(ob)  # links to scene collection
 	ob.location = loc
 	select_set(ob, select)
 	return ob
@@ -775,15 +756,10 @@ def matmul(v1: Union[Vector, Matrix], v2: Union[Vector, Matrix], v3: Optional[Un
 
 	This is a workaround for the syntax that otherwise could be used a @ b.
 	"""
-	if bv28():
-		# does not exist pre 2.7<#?>, syntax error
-		mtm = getattr(operator, "matmul")
-		if v3:
-			return mtm(v1, mtm(v2, v3))
-		return mtm(v1, v2)
+	mtm = getattr(operator, "matmul")
 	if v3:
-		return v1 * v2 * v3
-	return v1 * v2
+		return mtm(v1, mtm(v2, v3))
+	return mtm(v1, v2)
 
 
 def scene_update(context: Optional[Context]=None) -> None:

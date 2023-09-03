@@ -306,8 +306,7 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 			for obj in util.get_objects_conext(context):
 				util.select_set(obj, False)
 			ob = util.addGroupInstance(group.name, self.location)
-			if util.bv28():
-				util.move_to_collection(ob, context.collection)
+			util.move_to_collection(ob, context.collection)
 			if self.snapping == "center":
 				offset = 0  # could be 0.5
 				ob.location = [round(x + offset) - offset for x in self.location]
@@ -317,38 +316,35 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 			ob["MCprep_noSwap"] = 1
 
 			if self.make_real:
-				if util.bv28():
-					# make real doesn't select resulting output now (true for
-					# earlier versions of 2.8, not true in 2.82 at least where
-					# selects everything BUT the source of original instance
+				# make real doesn't select resulting output now (true for
+				# earlier versions of 2.8, not true in 2.82 at least where
+				# selects everything BUT the source of original instance
 
-					pre_objs = list(bpy.data.objects)
-					bpy.ops.object.duplicates_make_real()
-					post_objs = list(bpy.data.objects)
-					new_objs = list(set(post_objs) - set(pre_objs))
-					for obj in new_objs:
-						util.select_set(obj, True)
+				pre_objs = list(bpy.data.objects)
+				bpy.ops.object.duplicates_make_real()
+				post_objs = list(bpy.data.objects)
+				new_objs = list(set(post_objs) - set(pre_objs))
+				for obj in new_objs:
+					util.select_set(obj, True)
 
-						# Re-apply animation if any
-						# TODO: Causes an issue for any animation that depends
-						# on direct xyz placement (noting that parents are
-						# cleared on Make Real). Could try adding a parent to
-						# any given object's current location and give the
-						# equivalent xyz offset at some point in time.
-						"""
-						orig_objs = [obo for obo in group.objects
-							if util.nameGeneralize(obj.name) == util.nameGeneralize(obo.name)]
-						if not orig_objs:
-							continue
-						obo = orig_objs[0]
-						if not obo or not obo.animation_data:
-							continue
-						if not obj.animation_data:
-							obj.animation_data_create()
-						obj.animation_data.action = obo.animation_data.action
-						"""
-				else:
-					bpy.ops.object.duplicates_make_real()
+					# Re-apply animation if any
+					# TODO: Causes an issue for any animation that depends
+					# on direct xyz placement (noting that parents are
+					# cleared on Make Real). Could try adding a parent to
+					# any given object's current location and give the
+					# equivalent xyz offset at some point in time.
+					"""
+					orig_objs = [obo for obo in group.objects
+						if util.nameGeneralize(obj.name) == util.nameGeneralize(obo.name)]
+					if not orig_objs:
+						continue
+					obo = orig_objs[0]
+					if not obo or not obo.animation_data:
+						continue
+					if not obj.animation_data:
+						obj.animation_data_create()
+					obj.animation_data.action = obo.animation_data.action
+					"""
 
 				if group is not None:
 					spawn_util.fix_armature_target(
@@ -376,7 +372,7 @@ class MCPREP_OT_meshswap_spawner(bpy.types.Operator):
 				util.set_active_object(context, ob)
 
 			# Move source of group instance into excluded view layer
-			if util.bv28() and group:
+			if group:
 				util.move_assets_to_excluded_layer(context, [group])
 
 		self.track_param = f"{self.method}/{self.block}"
@@ -520,8 +516,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		row.prop(self, "link_groups")
 		row.prop(self, "prep_materials")
 		row = layout.row()
-		if not util.bv28():
-			row.prop(self, "append_layer")
+		row.prop(self, "append_layer")
 
 		# multi settings, to come
 		# layout.split()
@@ -619,10 +614,6 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			t1s[-1] = time.time()
 			offset = 0.5 if self.track_exporter == 'Mineways' else 0
 			facebook = self.get_face_list(swap, offset)
-
-			if not util.bv28():
-				for obj in context.selected_objects:
-					util.select_set(obj, False)
 
 			# removing duplicates and checking orientation
 			# structure of: "x-y-z":[[x,y,z], [xr, yr, zr]]
@@ -725,12 +716,11 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		# Create nicer nested organization of meshswapped assets, and excluding
 		# this meshswap group to avoid showing in render. Also move newly
 		# spawned instances into a collection of its own (2.8 only)
-		if util.bv28():
-			swaped_vl = util.get_or_create_viewlayer(context, "Meshswap Render")
-			for obj in new_objects:
-				util.move_to_collection(obj, swaped_vl.collection)
+		swaped_vl = util.get_or_create_viewlayer(context, "Meshswap Render")
+		for obj in new_objects:
+			util.move_to_collection(obj, swaped_vl.collection)
 
-			util.move_assets_to_excluded_layer(context, new_groups)
+		util.move_assets_to_excluded_layer(context, new_groups)
 
 		# end progress bar, end of primary section
 		bpy.context.window_manager.progress_end()
@@ -925,9 +915,8 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 						util.bAppendLink(os.path.join(meshSwapPath, g_or_c), f"{name}.2", toLink)
 				util.bAppendLink(os.path.join(meshSwapPath, g_or_c), name, toLink)
 
-				if util.bv28():
-					post_colls = list(util.collections())
-					new_groups += list(set(post_colls) - set(pre_colls))
+				post_colls = list(util.collections())
+				new_groups += list(set(post_colls) - set(pre_colls))
 
 				grouped = True
 				# if activated a different layer, go back to the original ones
@@ -1198,10 +1187,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			self.runcount += 1
 			if (self.counterObject > self.countMax):
 				self.counterObject = 0
-				if not util.bv28():
-					pass
-					# bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
-				elif hasattr(context, "view_layer"):
+				if hasattr(context, "view_layer"):
 					context.view_layer.update()  # but does not redraw ui
 
 			loc = util.matmul(swap.matrix_world, mathutils.Vector(loc_local))
@@ -1288,11 +1274,6 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				y = (random.random() - 0.5) * 0.5
 				new_ob.location += mathutils.Vector((x, y, 0))
 
-			# Clear selection before moving on with next iteration
-			for ob in context.selected_objects:
-				if util.bv28():
-					continue
-				util.select_set(ob, False)
 		return grouped, dupedObj
 
 	def offsetByHalf(self, obj: bpy.types.Object) -> None:

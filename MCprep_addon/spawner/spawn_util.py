@@ -40,10 +40,8 @@ SKIP_COLL_LEGACY = "noimport"  # Supporting older MCprep Meshswap lib.
 # Icon backwards compatibility.
 if util.bv30():
 	COLL_ICON = 'OUTLINER_COLLECTION'
-elif util.bv28():
-	COLL_ICON = 'COLLECTION_NEW'
 else:
-	COLL_ICON = 'GROUP'
+	COLL_ICON = 'COLLECTION_NEW'
 
 # -----------------------------------------------------------------------------
 # Reusable functions for spawners
@@ -558,13 +556,6 @@ def load_append(self, context: Context, path: Path, name: str) -> None:
 			# without deleting them, just unlinking them from the scene
 			util.obj_unlink_remove(ob, False, context)
 
-	if not util.bv28():
-		grp_added.name = "reload-blend-to-remove-this-empty-group"
-		for obj in grp_added.objects:
-			grp_added.objects.unlink(obj)
-			util.select_set(obj, True)
-		grp_added.user_clear()
-	else:
 		for obj in grp_added.objects:
 			if obj not in context.view_layer.objects[:]:
 				continue
