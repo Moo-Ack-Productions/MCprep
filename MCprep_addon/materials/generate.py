@@ -20,7 +20,7 @@ import os
 from typing import Dict, Optional, List, Any, Tuple, Union
 from pathlib import Path
 from dataclasses import dataclass
-from enum import Enum, auto
+from enum import Enum
 
 import bpy
 from bpy.types import Context, Material, Image, Texture, Nodes, NodeLinks, Node
@@ -31,16 +31,9 @@ from ..conf import env, Form
 AnimatedTex = Dict[str, int]
 
 class PackFormat(Enum):
-	def _generate_next_value_(name, start, count, last_values):
-		return name
-	
-	SIMPLE = auto()
-	SEUS = auto()
-	SPECULAR = auto()
-  
-	@staticmethod
-	def from_str(enum_name: str):
-			return PackFormat[enum_name]
+	SIMPLE = 0
+	SEUS = 1
+	SPECULAR = 2
 
 # -----------------------------------------------------------------------------
 # Material prep and generation functions (no registration)
@@ -1125,7 +1118,10 @@ def texgen_seus(mat: Material, passes: Dict[str, Image], nodeInputs: List, use_r
 	# nodeTexDisp["MCPREP_disp"] = True
 	nodeTexDiff.image = image_diff
 
-def generate_base_material(context: Context, name: str, path: Union[Path, str], useExtraMaps):
+def generate_base_material(
+	context: Context, name: str, 
+	path: Union[Path, str], useExtraMaps: bool
+) -> Tuple[Optional[Material], Optional[str]]:
 		"""Generate a base material from name and active resource pack"""
 		try:
 			image = bpy.data.images.load(path, check_existing=True)
@@ -1134,7 +1130,7 @@ def generate_base_material(context: Context, name: str, path: Union[Path, str], 
 		mat = bpy.data.materials.new(name=name)
 
 		engine = context.scene.render.engine
-		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+		if engine in ['CYCLES','BLENDER_EEVEE']:
 			# need to create at least one texture node first, then the rest works
 			mat.use_nodes = True
 			nodes = mat.node_tree.nodes
@@ -1150,14 +1146,11 @@ def generate_base_material(context: Context, name: str, path: Union[Path, str], 
 
 			# The offset and link diffuse is for default no texture setup
 			links = mat.node_tree.links 
-			principled = None
 			for n in nodes:
 				if n.bl_idname == 'ShaderNodeBsdfPrincipled':
-					principled = n 
+					links.new(node_diff.outputs[0], principled.inputs[0])
+					links.new(node_diff.outputs[1], principled.inputs["Alpha"])
 					break
-			
-			links.new(node_diff.outputs[0], principled.inputs[0])
-			links.new(node_diff.outputs[1], principled.inputs["Alpha"])
 			
 			env.log("Added blank texture node")
 			# Initialize extra passes as well

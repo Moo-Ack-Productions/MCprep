@@ -251,7 +251,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 					self.useReflections, 
 					self.usePrincipledShader, 
 					self.makeSolid, 
-					generate.PackFormat.from_str(self.packFormat.upper()), 
+					generate.PackFormatself.packFormat.upper(), 
 					self.useEmission, 
 					False # This is for an option set in matprep_cycles
 				)
@@ -557,6 +557,7 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 				"File not found! Reset the resource pack under advanced "
 				"settings (return arrow icon) and press reload materials"))
 			return {'CANCELLED'}
+		# Create the base material node tree setup
 		mat, err = generate.generate_base_material(
 			context, mat_name, self.filepath, self.useExtraMaps)
 		if mat is None and err:

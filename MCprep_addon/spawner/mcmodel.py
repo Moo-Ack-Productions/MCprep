@@ -107,41 +107,41 @@ def add_element(
 
 		return verts, edges, faces
 
-def add_material(name: str="material", path: str="", use_name: bool= False) -> Material:
+def add_material(name: str="material", path: str="", use_name: bool= False) -> Optional[Material]:
 	"""Creates a simple material with an image texture from path."""
 	engine = bpy.context.scene.render.engine
-	cur_mats = list(bpy.data.materials)
+	
+	# Create the base material node tree setup
 	mat, err = generate.generate_base_material(bpy.context, name, path, False)
-	if not (mat is None and err):
-		passes = generate.get_textures(mat)
-		for pass_name in passes:
-			if pass_name != "diffuse":
-				passes[pass_name] = None
-		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
-			options = generate.PrepOptions(
-				passes, 
-				False, 
-				True, 
-				False, 
-				generate.PackFormat.SIMPLE, 
-				False, 
-				False # This is for an option set in matprep_cycles
-			)
-			res = generate.matprep_cycles(
-				mat=mat,
-				options=options
-			)
-
+	if mat is None and err:
+	  env.log("Failed to fetch any generated material")
+		return None
+	
+	passes = generate.get_textures(mat)
+	# In most case Minecraft JSON material 
+	# do not use PBR passes, so set it to None
+	for pass_name in passes:
+		if pass_name != "diffuse":
+			passes[pass_name] = None
+	# Prep material
+	# Halt if no diffuse image found
+	if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+		options = generate.PrepOptions(
+			passes=passes, 
+			use_reflections=False, 
+			use_principled=True, 
+			only_solid=False, 
+			pack_format=generate.PackFormat.SIMPLE, 
+			use_emission_nodes=False, 
+			use_emission=False # This is for an option set in matprep_cycles
+		)
+		res = generate.matprep_cycles(
+			mat=mat,
+			options=options
+		)
+	
 	if use_name:
 		mat.name = name
-	post_mats = list(bpy.data.materials)
-
-	new_mats = list(set(post_mats) - set(cur_mats))
-	if not new_mats:
-		env.log("Failed to fetch any generated material")
-		return None
-
-	mat = new_mats[0]
 
 	return mat
 
@@ -306,7 +306,7 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 		for img in textures:
 			if img != "particle":
 				tex_pth = locate_image(bpy.context, textures, img, model_filepath)
-				mat = add_material(f"{obj_name}_{img}", tex_pth, use_name = False) # TODO I think the name arg does nothing, Should I remove it?
+				mat = add_material(f"{obj_name}_{img}", tex_pth, use_name=False)
 				obj_mats = obj.data.materials
 				if not f"#{img}" in materials:
 					obj_mats.append(mat)
@@ -347,7 +347,9 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 			uv_coords = d_face.get("uv")  # in the format [x1, y1, x2, y2]
 			if uv_coords is None:
 				uv_coords = [0, 0, 16, 16] 
-				# Cake, cake slices don't have UV key in the dict so use the default one which is incorrect.
+				# Cake and cake slices don't store the UV keys
+				# in the JSON model, which causes issues. This
+				# workaround this fixes those texture issues
 				if "cake" in obj_name:
 					if face_mat == "#top":
 						uv_coords = [e['to'][0], e['to'][2], e['from'][0], e['from'][2]]
@@ -381,7 +383,7 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 				face.material_index = materials.index(face_mat)
 			is_first = False
 
-	# Quick way to clean the model, hopefully it doesn't cause any UV issue
+	# Quick way to clean the model, hopefully it doesn't cause any UV issues
 	bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.01)
 	
 	# make the bmesh the object's mesh
@@ -538,7 +540,7 @@ class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 			r, obj = add_model(os.path.normpath(self.filepath), name)
 			if r:
 				self.report(
-					{"ERROR"}, "The JSON defined is not valid for a Minecraft Java Edition model")
+					{"ERROR"}, "The JSON model is not valid for Minecraft Java Edition")
 				return {'CANCELLED'}
 		except ModelException as e:
 			self.report({"ERROR"}, f"Encountered error: {e}")
@@ -580,7 +582,7 @@ class MCPREP_OT_import_minecraft_model_file(
 			r, obj = add_model(os.path.normpath(self.filepath), filename)
 			if r:
 				self.report(
-					{"ERROR"}, "The JSON defined is not valid for a Minecraft Java Edition model")
+					{"ERROR"}, "The JSON model is not valid for Minecraft Java Edition")
 				return {'CANCELLED'}
 		except ModelException as e:
 			self.report({"ERROR"}, f"Encountered error: {e}")
