@@ -156,7 +156,7 @@ def bAppendLink(directory: str, name: str, toLink: bool, active_layer: bool=True
 		env.log("Using post-2.72 method of append/link", vv_only=True)
 		if toLink:
 			bpy.ops.wm.link(directory=directory, filename=name)
-		elif bv28():
+		else:
 			try:
 				bpy.ops.wm.append(
 					directory=directory,
@@ -165,20 +165,13 @@ def bAppendLink(directory: str, name: str, toLink: bool, active_layer: bool=True
 			except RuntimeError as e:
 				print("bAppendLink", e)
 				return False
-		else:
-			env.log(f"{directory} {name} {active_layer}")
-			try:
-				bpy.ops.wm.append(
-					directory=directory,
-					filename=name,
-					active_layer=active_layer)
-				return True
-			except RuntimeError as e:
-				print("bAppendLink", e)
-				return False
 
 
-def obj_copy(base: bpy.types.Object, context: Optional[Context]=None, vertex_groups: bool=True, modifiers: bool=True) -> bpy.types.Object:
+def obj_copy(
+	base: bpy.types.Object,
+	context: Optional[Context] = None,
+	vertex_groups: bool = True,
+	modifiers: bool = True) -> bpy.types.Object:
 	"""Copy an object's data, vertex groups, and modifiers without operators.
 
 	Input must be a valid object in bpy.data.objects
@@ -320,16 +313,6 @@ def loadTexture(texture: str) -> Image:
 	return data_img
 
 
-def remap_users(old, new) -> Union[int, str]:
-	"""Consistent, general way to remap datablock users."""
-	# Todo: write equivalent function of user_remap for older blender versions
-	try:
-		old.user_remap(new)
-		return 0
-	except:
-		return "not available prior to blender 2.78"
-
-
 def get_objects_conext(context: Context) -> List[bpy.types.Object]:
 	"""Returns list of objects, either from view layer if 2.8 or scene if 2.8"""
 	if bv28():
@@ -347,7 +330,7 @@ def link_selected_objects_to_scene() -> None:
 			obj_link_scene(ob)
 
 
-def open_program(executable: str) -> Union[int ,str]:
+def open_program(executable: str) -> Union[int, str]:
 	# Open an external program from filepath/executbale
 	executable = bpy.path.abspath(executable)
 	env.log(f"Open program request: {executable}")

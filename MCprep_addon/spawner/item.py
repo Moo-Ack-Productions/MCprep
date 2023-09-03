@@ -159,27 +159,11 @@ def spawn_item_from_filepath(
 			size=2,
 			calc_uvs=True,
 			location=(0, 0, 0))
-	elif util.bv28():
-		bpy.ops.mesh.primitive_grid_add(
-			x_subdivisions=height + 1,  # Outter edges count as a subdiv.
-			y_subdivisions=width + 1,  # Outter edges count as a subdiv.
-			size=2,
-			calc_uvs=True,
-			location=(0, 0, 0))
-	elif bpy.app.version < (2, 77):  # Could be 2.76 even.
-		bpy.ops.mesh.primitive_grid_add(
-			x_subdivisions=height + 1,  # Outter edges count as a subdiv.
-			y_subdivisions=width + 1,  # Outter edges count as a subdiv.
-			radius=1,
-			location=(0, 0, 0))
-		bpy.ops.object.mode_set(mode='EDIT')
-		bpy.ops.uv.unwrap()
-		bpy.ops.object.mode_set(mode='OBJECT')
 	else:
 		bpy.ops.mesh.primitive_grid_add(
 			x_subdivisions=height + 1,  # Outter edges count as a subdiv.
 			y_subdivisions=width + 1,  # Outter edges count as a subdiv.
-			radius=1,
+			size=2,
 			calc_uvs=True,
 			location=(0, 0, 0))
 	itm_obj = context.object

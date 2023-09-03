@@ -598,8 +598,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			obj["MCPREP_OBJ_HEADER"] = True
 			obj["MCPREP_OBJ_FILE_TYPE"] = obj_header.texture_type()
 
-		if util.bv28():
-			self.split_world_by_material(context)
+		self.split_world_by_material(context)
 
 		addon_prefs = util.get_user_preferences(context)
 		self.track_exporter = addon_prefs.MCprep_exporter_type  # Soft detect.
