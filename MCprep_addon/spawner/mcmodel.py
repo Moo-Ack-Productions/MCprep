@@ -263,25 +263,6 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int
 	collection = bpy.context.collection
 	view_layer = bpy.context.view_layer
 	
-	# Forcing usage of "fixed" block to meshswap spawner instead
-	# Theses blocks certainly are already in meshswap
-	blocks = ["chest", "banner", "lantern", "campfire"]
-	if env.json_data and obj_name in env.json_data.get("fixed_blocks", blocks) or obj_name in blocks:
-		if os.path.isfile(bpy.path.abspath(bpy.context.scene.meshswap_path)) and bpy.context.scene.meshswap_path.endswith('.blend'):
-			# Make sure meshswap is properly loaded
-			bpy.ops.mcprep.reload_meshswap()
-			if obj_name == "campfire":
-				obj_name = "campfire_log"
-			bpy.ops.object.select_all(action='DESELECT')
-			r = bpy.ops.mcprep.meshswap_spawner(block=obj_name)
-			if r != {'FINISHED'}:
-				return 1, None
-			obj = bpy.context.object
-			return 0, obj
-		else:
-			return 1, None
-		
-		
 	# Called recursively!
 	# Can raise ModelException due to permission or corrupted file data.
 	elements, textures = read_model(bpy.context, model_filepath)
@@ -455,6 +436,10 @@ def update_model_list(context: Context):
 		# Filter out models that can't spawn. Typically those that reference
 		# #fire or the likes in the file.
 		if "template" in name:
+			continue
+		# Filter the fixed_blocks 
+		# Either entity block or block that doesn't good for json
+		if name in env.json_data.get("fixed_blocks", blocks):
 			continue
 		item = scn_props.model_list.add()
 		item.filepath = model
