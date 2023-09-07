@@ -1,6 +1,6 @@
 name: Asset contribution
 description: Submit an asset to include with MCprep
-labels: ["enhancement"]
+labels: ["asset-submission"]
 body:
   - type: markdown
     attributes:
@@ -21,13 +21,11 @@ body:
       label: Quality checks
       description: Please ensure all of the following are true for your asset.
       options:
-        - label: I have used only vanilla textures (or created images that are derived from vanilla textures)
+        - label: I have read, understood, and applied all the conventions of [this page](https://github.com/Moo-Ack-Productions/MCprep/blob/master/docs/asset_standards.md)
           required: true
-        - label: This is a vanilla minecraft asset/mob/effect
+        - label: This file was last saved in blender 2.80 (for backwards compatibility)
           required: true
-        - label: I have verified my asset has the correct scale (1 Blender unit = 1 meter), and the scale has been applied (control+a, scale)
-          required: true
-        - label: If my asset includes a rig, I certified there is a "root" or "main" bone, and the rig object name ends with the name ".arma" or ".rig" to work well with MCprep
+        - label: This is a vanilla minecraft asset/mob/effect, and uses only vanilla textures
           required: true
         - label: I am the sole creator of this rig, other than any textures by Mojang. Any custom textures I created myself.
           required: true
