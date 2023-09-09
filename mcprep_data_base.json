@@ -103,6 +103,26 @@
 	"Strider",
 	"Warden"
 ],
+"unspawnable_for_now": [
+	"banner",
+	"bed",
+	"bell",
+	"brewing_stand",
+	"cauldron",
+	"chest",
+	"double_chest",
+	"ender_chest",
+	"enchanting_table",
+	"end_portal",
+	"hopper",
+	"moving_piston",
+	"piston",
+	"scaffolding",
+	"shulker_box",
+	"sunflower",
+	"water_still",
+	"water"
+],
 "make_real": [
 	"chest",
 	"chest_double"]
