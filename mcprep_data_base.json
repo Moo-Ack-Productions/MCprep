@@ -103,7 +103,7 @@
 	"Strider",
 	"Warden"
 ],
-"fixed_blocks": [
+"unspawnable_for_now": [
 	"banner",
 	"bed",
 	"bell",
@@ -120,7 +120,8 @@
 	"scaffolding",
 	"shulker_box",
 	"sunflower",
-	"water_still"
+	"water_still",
+	"water"
 ],
 "make_real": [
 	"chest",

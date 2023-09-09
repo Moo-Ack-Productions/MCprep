@@ -1148,8 +1148,8 @@ def generate_base_material(
 			links = mat.node_tree.links 
 			for n in nodes:
 				if n.bl_idname == 'ShaderNodeBsdfPrincipled':
-					links.new(node_diff.outputs[0], principled.inputs[0])
-					links.new(node_diff.outputs[1], principled.inputs["Alpha"])
+					links.new(node_diff.outputs[0], n.inputs[0])
+					links.new(node_diff.outputs[1], n.inputs["Alpha"])
 					break
 			
 			env.log("Added blank texture node")

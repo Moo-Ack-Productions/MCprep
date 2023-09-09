@@ -114,7 +114,7 @@ def add_material(name: str="material", path: str="", use_name: bool= False) -> O
 	# Create the base material node tree setup
 	mat, err = generate.generate_base_material(bpy.context, name, path, False)
 	if mat is None and err:
-	  env.log("Failed to fetch any generated material")
+		env.log("Failed to fetch any generated material")
 		return None
 	
 	passes = generate.get_textures(mat)
@@ -437,9 +437,10 @@ def update_model_list(context: Context):
 		# #fire or the likes in the file.
 		if "template" in name:
 			continue
-		# Filter the fixed_blocks 
+		# Filter the "unspawnable_for_now"
 		# Either entity block or block that doesn't good for json
-		if name in env.json_data.get("fixed_blocks", blocks):
+		blocks = env.json_data.get("unspawnable_for_now", ["bed", "chest", "banner", "campfire"])
+		if name in blocks:
 			continue
 		item = scn_props.model_list.add()
 		item.filepath = model
@@ -525,7 +526,7 @@ class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 			r, obj = add_model(os.path.normpath(self.filepath), name)
 			if r:
 				self.report(
-					{"ERROR"}, "The JSON model is not valid for Minecraft Java Edition")
+					{"ERROR"}, "The JSON model does not contain any geometry elements")
 				return {'CANCELLED'}
 		except ModelException as e:
 			self.report({"ERROR"}, f"Encountered error: {e}")
@@ -567,7 +568,7 @@ class MCPREP_OT_import_minecraft_model_file(
 			r, obj = add_model(os.path.normpath(self.filepath), filename)
 			if r:
 				self.report(
-					{"ERROR"}, "The JSON model is not valid for Minecraft Java Edition")
+					{"ERROR"}, "The JSON model does not contain any geometry elements")
 				return {'CANCELLED'}
 		except ModelException as e:
 			self.report({"ERROR"}, f"Encountered error: {e}")
