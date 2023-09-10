@@ -246,13 +246,13 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 
 			if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 				options = generate.PrepOptions(
-					passes=passes,
-					use_reflections=self.useReflections,
-					use_principled=self.usePrincipledShader,
-					only_solid=self.makeSolid,
-					pack_format=self.packFormat,
-					use_emission_nodes=self.useEmission,
-					use_emission=False  # This is for an option set in matprep_cycles
+					passes, 
+					self.useReflections, 
+					self.usePrincipledShader, 
+					self.makeSolid, 
+					generate.PackFormatself.packFormat.upper(), 
+					self.useEmission, 
+					False # This is for an option set in matprep_cycles
 				)
 				res = generate.matprep_cycles(
 					mat=mat,
@@ -556,8 +556,9 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 				"File not found! Reset the resource pack under advanced "
 				"settings (return arrow icon) and press reload materials"))
 			return {'CANCELLED'}
-		mat, err = self.generate_base_material(
-			context, mat_name, self.filepath)
+		# Create the base material node tree setup
+		mat, err = generate.generate_base_material(
+			context, mat_name, self.filepath, self.useExtraMaps)
 		if mat is None and err:
 			self.report({"ERROR"}, err)
 			return {'CANCELLED'}
@@ -589,34 +590,6 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 		self.track_param = context.scene.render.engine
 		return {'FINISHED'}
 
-	def generate_base_material(self, context, name, path):
-		"""Generate a base material from name and active resource pack"""
-		image = bpy.data.images.load(path, check_existing=True)
-		mat = bpy.data.materials.new(name=name)
-
-		engine = context.scene.render.engine
-		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
-			# need to create at least one texture node first, then the rest works
-			mat.use_nodes = True
-			nodes = mat.node_tree.nodes
-			node_diff = generate.create_node(nodes, 'ShaderNodeTexImage', image=image)
-			node_diff["MCPREP_diffuse"] = True
-
-			# Initialize extra passes as well
-			node_spec = generate.create_node(nodes, 'ShaderNodeTexImage')
-			node_spec["MCPREP_specular"] = True
-			node_nrm = generate.create_node(nodes, 'ShaderNodeTexImage')
-			node_nrm["MCPREP_normal"] = True
-
-			env.log("Added blank texture node")
-
-
-			# now use standard method to update textures
-			generate.set_cycles_texture(image, mat, self.useExtraMaps)
-		else:
-			return None, "Only Cycles and Eevee supported"
-
-		return mat, None
 
 	def update_material(self, context, mat):
 		"""Update the initially created material"""

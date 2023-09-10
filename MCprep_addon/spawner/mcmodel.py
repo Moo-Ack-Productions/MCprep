@@ -21,7 +21,7 @@ import json
 from mathutils import Vector
 from math import sin, cos, radians
 from pathlib import Path
-from typing import Dict, Optional, Tuple, Union, Sequence
+from typing import Dict, Optional, Tuple, Union, Sequence, List
 
 import bpy
 import bmesh
@@ -48,7 +48,7 @@ class ModelException(Exception):
 
 
 def rotate_around(
-	d: float, pos: VectorType, origin: VectorType, axis:str='z', offset: VectorType=[8, 0, 8], scale: VectorType=[0.063, 0.063, 0.063]) -> VectorType:
+	d: float, pos: VectorType, origin: VectorType, axis:str='z', offset: VectorType=[8, 0, 8], scale: VectorType=[0.0625, 0.0625, 0.0625]) -> VectorType:
 	r = -radians(d)
 	axis_i = ord(axis) - 120  # 'x'=0, 'y'=1, 'z'=2
 	a = pos[(1 + axis_i) % 3]
@@ -69,60 +69,80 @@ def rotate_around(
 		(new_pos[2] - offset[2]) * scale[2],
 		(new_pos[1] - offset[1]) * scale[1]
 	))
-
-
+	
 def add_element(
-	elm_from: VectorType=[0, 0, 0],
-	elm_to: VectorType=[16, 16, 16],
-	rot_origin: VectorType=[8, 8, 8],
-	rot_axis: str='y',
-	rot_angle: float=0) -> list:
-	"""Calculates and defines the verts, edge, and faces that to create."""
-	verts = [
-		rotate_around(
-			rot_angle, [elm_from[0], elm_to[1], elm_from[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_to[0], elm_to[1], elm_from[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_to[0], elm_from[1], elm_from[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_from[0], elm_from[1], elm_from[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_from[0], elm_to[1], elm_to[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_to[0], elm_to[1], elm_to[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_to[0], elm_from[1], elm_to[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_from[0], elm_from[1], elm_to[2]], rot_origin, rot_axis),
-	]
+		elm_from: VectorType=[0, 0, 0],
+		elm_to: VectorType=[16, 16, 16],
+		rot_origin: VectorType=[8, 8, 8],
+		rot_axis: str='y',
+		rot_angle: float=0) -> list:
+		"""Calculates and defines the verts, edge, and faces that to create."""
+		verts = [
+			rotate_around(
+				rot_angle, [elm_from[0], elm_to[1], elm_from[2]], rot_origin, rot_axis),
+			rotate_around(
+				rot_angle, [elm_to[0], elm_to[1], elm_from[2]], rot_origin, rot_axis),
+			rotate_around(
+				rot_angle, [elm_to[0], elm_from[1], elm_from[2]], rot_origin, rot_axis),
+			rotate_around(
+				rot_angle, [elm_from[0], elm_from[1], elm_from[2]], rot_origin, rot_axis),
+			rotate_around(
+				rot_angle, [elm_from[0], elm_to[1], elm_to[2]], rot_origin, rot_axis),
+			rotate_around(
+				rot_angle, [elm_to[0], elm_to[1], elm_to[2]], rot_origin, rot_axis),
+			rotate_around(
+				rot_angle, [elm_to[0], elm_from[1], elm_to[2]], rot_origin, rot_axis),
+			rotate_around(
+				rot_angle, [elm_from[0], elm_from[1], elm_to[2]], rot_origin, rot_axis),
+		]
+	
+		edges = []
+		faces = [
+			[0, 1, 2, 3], # north
+			[5, 4, 7, 6], # south
+			[1, 0, 4, 5], # up
+			[7, 6, 2, 3], # down
+			[4, 0, 3, 7], # west
+			[1, 5, 6, 2]] # east
 
-	edges = []
-	faces = [
-		[0, 1, 2, 3],
-		[5, 4, 7, 6],
-		[1, 0, 4, 5],
-		[7, 6, 2, 3],
-		[4, 0, 3, 7],
-		[1, 5, 6, 2]]
+		return verts, edges, faces
 
-	return [verts, edges, faces]
-
-
-def add_material(name: str="material", path: str="") -> Material:
+def add_material(name: str="material", path: str="", use_name: bool= False) -> Optional[Material]:
 	"""Creates a simple material with an image texture from path."""
-	cur_mats = list(bpy.data.materials)
-	res = bpy.ops.mcprep.load_material(filepath=path, skipUsage=True)
-	if res != {'FINISHED'}:
-		env.log("Failed to generate material as specified")
-	post_mats = list(bpy.data.materials)
-
-	new_mats = list(set(post_mats) - set(cur_mats))
-	if not new_mats:
+	engine = bpy.context.scene.render.engine
+	
+	# Create the base material node tree setup
+	mat, err = generate.generate_base_material(bpy.context, name, path, False)
+	if mat is None and err:
 		env.log("Failed to fetch any generated material")
 		return None
+	
+	passes = generate.get_textures(mat)
+	# In most case Minecraft JSON material 
+	# do not use PBR passes, so set it to None
+	for pass_name in passes:
+		if pass_name != "diffuse":
+			passes[pass_name] = None
+	# Prep material
+	# Halt if no diffuse image found
+	if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+		options = generate.PrepOptions(
+			passes=passes, 
+			use_reflections=False, 
+			use_principled=True, 
+			only_solid=False, 
+			pack_format=generate.PackFormat.SIMPLE, 
+			use_emission_nodes=False, 
+			use_emission=False # This is for an option set in matprep_cycles
+		)
+		res = generate.matprep_cycles(
+			mat=mat,
+			options=options
+		)
+	
+	if use_name:
+		mat.name = name
 
-	mat = new_mats[0]
 	return mat
 
 
@@ -238,13 +258,20 @@ def read_model(context: Context, model_filepath: Path) -> Tuple[Element, Texture
 	return elements, textures
 
 
-def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> bpy.types.Object:
+def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> Tuple[int, bpy.types.Object]:
 	"""Primary function for generating a model from json file."""
-	mesh = bpy.data.meshes.new(obj_name)  # add a new mesh
-	obj = bpy.data.objects.new(obj_name, mesh)  # add a new object using the mesh
-
 	collection = bpy.context.collection
 	view_layer = bpy.context.view_layer
+	
+	# Called recursively!
+	# Can raise ModelException due to permission or corrupted file data.
+	elements, textures = read_model(bpy.context, model_filepath)
+	
+	if elements is None:
+		return 1, None
+	
+	mesh = bpy.data.meshes.new(obj_name)  # add a new mesh
+	obj = bpy.data.objects.new(obj_name, mesh)  # add a new object using the mesh
 	collection.objects.link(obj)  # put the object into the scene (link)
 	view_layer.objects.active = obj  # set as the active object in the scene
 	obj.select_set(True)  # select object
@@ -254,34 +281,28 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> bpy.types
 	mesh.uv_layers.new()
 	uv_layer = bm.loops.layers.uv.verify()
 
-	# Called recursively!
-	# Can raise ModelException due to permission or corrupted file data.
-	elements, textures = read_model(bpy.context, model_filepath)
-
 	materials = []
 	if textures:
+		particle = textures.get("particle")
 		for img in textures:
 			if img != "particle":
 				tex_pth = locate_image(bpy.context, textures, img, model_filepath)
-				mat = add_material(f"{obj_name}_{img}", tex_pth)
-				obj.data.materials.append(mat)
-				materials.append(f"#{img}")
+				mat = add_material(f"{obj_name}_{img}", tex_pth, use_name=False)
+				obj_mats = obj.data.materials
+				if not f"#{img}" in materials:
+					obj_mats.append(mat)
+					materials.append(f"#{img}")
 
-	if elements is None:
-		elements = [
-			{'from': [0, 0, 0], 'to':[0, 0, 0]}]  # temp default elements
 
 	for e in elements:
 		rotation = e.get("rotation")
 		if rotation is None:
 			# rotation default
 			rotation = {"angle": 0, "axis": "y", "origin": [8, 8, 8]}
-
 		element = add_element(
 			e['from'], e['to'], rotation['origin'], rotation['axis'], rotation['angle'])
 		verts = [bm.verts.new(v) for v in element[0]]  # add a new vert
 		uvs = [[1, 1], [0, 1], [0, 0], [1, 0]]
-		# face directions defaults
 		face_dir = ["north", "south", "up", "down", "west", "east"]
 		faces = e.get("faces")
 		for i in range(len(element[2])):
@@ -293,12 +314,8 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> bpy.types
 			d_face = faces.get(face_dir[i])
 			if not d_face:
 				continue
-
-			face = bm.faces.new(
-				(verts[f[0]], verts[f[1]], verts[f[2]], verts[f[3]])
-			)
-			face.normal_update()
-
+			
+			face_mat = d_face.get("texture")
 			# uv can be rotated 0, 90, 180, or 270 degrees
 			uv_rot = d_face.get("rotation")
 			if uv_rot is None:
@@ -310,8 +327,16 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> bpy.types
 
 			uv_coords = d_face.get("uv")  # in the format [x1, y1, x2, y2]
 			if uv_coords is None:
-				uv_coords = [0, 0, 16, 16]
-
+				uv_coords = [0, 0, 16, 16] 
+				# Cake and cake slices don't store the UV keys
+				# in the JSON model, which causes issues. This
+				# workaround this fixes those texture issues
+				if "cake" in obj_name:
+					if face_mat == "#top":
+						uv_coords = [e['to'][0], e['to'][2], e['from'][0], e['from'][2]]
+					if "side" in face_mat:
+						uv_coords = [e['to'][0], -e['to'][1], e['from'][0], -e['from'][2]]
+				
 			# uv in the model is between 0 to 16 regardless of resolution,
 			# in blender its 0 to 1 the y-axis is inverted when compared to
 			# blender uvs, which is why it is subtracted from 1, essentially
@@ -322,21 +347,30 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> bpy.types
 				[uv_coords[0] / 16, 1 - (uv_coords[3] / 16)],  # [x1, y2]
 				[uv_coords[2] / 16, 1 - (uv_coords[3] / 16)]   # [x2, y2]
 			]
-
+			
+			face = bm.faces.new(
+				(verts[f[0]], verts[f[1]], verts[f[2]], verts[f[3]])
+			)
+			
+			face.normal_update()
 			for j in range(len(face.loops)):
 				# uv coords order is determened by the rotation of the uv,
 				# e.g. if the uv is rotated by 180 degrees, the first index
 				# will be 2 then 3, 0, 1.
 				face.loops[j][uv_layer].uv = uvs[(j + uv_idx) % len(uvs)]
 
-			face_mat = d_face.get("texture")
+			# Assign the material on face
 			if face_mat is not None and face_mat in materials:
 				face.material_index = materials.index(face_mat)
+			is_first = False
 
+	# Quick way to clean the model, hopefully it doesn't cause any UV issues
+	bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.01)
+	
 	# make the bmesh the object's mesh
 	bm.to_mesh(mesh)
 	bm.free()
-	return obj
+	return 0, obj
 
 
 # -----------------------------------------------------------------------------
@@ -402,6 +436,11 @@ def update_model_list(context: Context):
 		# Filter out models that can't spawn. Typically those that reference
 		# #fire or the likes in the file.
 		if "template" in name:
+			continue
+		# Filter the "unspawnable_for_now"
+		# Either entity block or block that doesn't good for json
+		blocks = env.json_data.get("unspawnable_for_now", ["bed", "chest", "banner", "campfire"])
+		if name in blocks:
 			continue
 		item = scn_props.model_list.add()
 		item.filepath = model
@@ -484,7 +523,11 @@ class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 			return {'CANCELLED'}
 
 		try:
-			obj = add_model(os.path.normpath(self.filepath), name)
+			r, obj = add_model(os.path.normpath(self.filepath), name)
+			if r:
+				self.report(
+					{"ERROR"}, "The JSON model does not contain any geometry elements")
+				return {'CANCELLED'}
 		except ModelException as e:
 			self.report({"ERROR"}, f"Encountered error: {e}")
 			return {'CANCELLED'}
@@ -522,7 +565,11 @@ class MCPREP_OT_import_minecraft_model_file(
 			return {'CANCELLED'}
 
 		try:
-			obj = add_model(os.path.normpath(self.filepath), filename)
+			r, obj = add_model(os.path.normpath(self.filepath), filename)
+			if r:
+				self.report(
+					{"ERROR"}, "The JSON model does not contain any geometry elements")
+				return {'CANCELLED'}
 		except ModelException as e:
 			self.report({"ERROR"}, f"Encountered error: {e}")
 			return {'CANCELLED'}
