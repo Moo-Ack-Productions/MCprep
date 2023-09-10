@@ -761,6 +761,123 @@ class MCPREP_OT_download_username_list(bpy.types.Operator):
 			self.report({"INFO"}, f"Downloaded {len(user_list)} skins")
 			return {'FINISHED'}
 
+class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
+	"""Load the select material from the active resource pack and prep it"""
+	bl_idname = "mcprep.load_material"
+	bl_label = "Generate material"
+	bl_description = (
+		"Generate and apply the selected material based on active resource pack")
+	bl_options = {'REGISTER', 'UNDO'}
+
+	
+	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
+
+	@classmethod
+	def poll(cls, context):
+		return context.object
+
+	def invoke(self, context, event):
+		return context.window_manager.invoke_props_dialog(
+			self, width=300 * util.ui_scale())
+
+	def draw(self, context):
+		draw_mats_common(self, context)
+
+	track_function = ""
+	track_param = None
+	@tracking.report_error
+	def execute(self, context):
+	  
+		res = loadSkinFile(self, context, self.filepath, self.new_material)
+		if res != 0:
+			return {'CANCELLED'}
+			
+		mat_name = os.path.splitext(os.path.basename(self.filepath))[0]
+		if not os.path.isfile(self.filepath):
+			self.report({"ERROR"}, (
+				"File not found! Reset the resource pack under advanced "
+				"settings (return arrow icon) and press reload materials"))
+			return {'CANCELLED'}
+		mat, err = self.generate_base_material(
+			context, mat_name, self.filepath)
+		if mat is None and err:
+			self.report({"ERROR"}, err)
+			return {'CANCELLED'}
+		elif mat is None:
+			self.report({"ERROR"}, "Failed generate base material")
+			return {'CANCELLED'}
+
+		if not context.object.material_slots:
+			context.object.data.materials.append(mat)  # Auto-creates slot.
+		else:
+			mat_ind = context.object.active_material_index
+			context.object.material_slots[mat_ind].material = mat
+		# Using the above in place of below due to some errors of:
+		# "attribute "active_material" from "Object" is read-only"
+		# context.object.active_material = mat
+
+		# Don't want to generally run prep, as this would affect everything
+		# selected, as opposed to affecting just the new material
+		# bpy.ops.mcprep.prep_materials()
+		# Instead, run the update steps below copied from the MCprep inner loop
+		res, err = self.update_material(context, mat)
+		if res is False and err:
+			self.report({"ERROR"}, err)
+			return {'CANCELLED'}
+		elif res is False:
+			self.report({"ERROR"}, "Failed to prep generated material")
+			return {'CANCELLED'}
+
+		self.track_param = context.scene.render.engine
+		return {'FINISHED'}
+
+	def update_material(self, context, mat):
+		"""Update the initially created material"""
+		if not mat:
+			env.log(f"During prep, found null material: {mat}", vv_only=True)
+			return
+		elif mat.library:
+			return
+
+		engine = context.scene.render.engine
+		passes = generate.get_textures(mat)
+		env.log(f"Load Mat Passes:{passes}", vv_only=True)
+		if not self.useExtraMaps:
+			for pass_name in passes:
+				if pass_name != "diffuse":
+					passes[pass_name] = None
+
+		if self.autoFindMissingTextures:
+			for pass_name in passes:
+				res = generate.replace_missing_texture(passes[pass_name])
+				if res > 0:
+					mat["texture_swapped"] = True  # used to apply saturation
+
+		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+			options = generate.PrepOptions(
+				passes, 
+				self.useReflections, 
+				self.usePrincipledShader, 
+				self.makeSolid, 
+				self.packFormat, 
+				self.useEmission, 
+				False # This is for an option set in matprep_cycles
+			)
+			res = generate.matprep_cycles(
+				mat=mat,
+				options=options
+			)
+		else:
+			return False, "Only Cycles and Eevee supported"
+
+		success = res == 0
+
+		if self.animateTextures:
+			sequences.animate_single_material(
+				mat, context.scene.render.engine)
+
+		return success, None
+
 
 # -----------------------------------------------------------------------------
 # Registration

@@ -46,22 +46,22 @@ else:
 	COLL_ICON = 'GROUP'
 
 class ColorVariation(Enum):
-	WHITE = auto()
-	ORANGE = auto()
-	MAGENTA = auto()
-	LIGHTBLUE = auto()
-	YELLOW = auto()
-	LIME = auto()
-	PINK = auto()
-	GRAY = auto()
-	LIGHTGRAY = auto()
-	CYAN = auto()
-	PURPLE = auto()
-	BLUE = auto()
-	BROWN = auto()
-	GREEN = auto()
-	RED = auto()
-	BLACK = auto()
+	WHITE = 0
+	ORANGE = 1
+	MAGENTA = 2
+	LIGHTBLUE = 3
+	YELLOW = 4
+	LIME = 5
+	PINK = 6
+	GRAY = 7
+	LIGHTGRAY = 8
+	CYAN = 9
+	PURPLE = 10
+	BLUE = 11
+	BROWN = 12
+	GREEN = 13
+	RED = 14
+	BLACK = 15
 	
 class VillagerProfession(Enum):
 	"""Preserve for villager"""
@@ -83,15 +83,31 @@ class VillagerProfession(Enum):
 	MASON = auto()
 	NITWIT = auto()
 	
-class ColorVariationProp():
+class VariationProp():
 	def color_items(self, context):
 		return [(i.value, i.name, i.name) for i in ColorVariation]
 	
-	color_variation = bpy.props.EnumProperty(name="Color Variation", items=color_items)
+	def profession_items(self, context):
+		return [(i.value, i.name, i.name) for i in ColorVariation]
+	
+	def level_items(self, context):
+		return [(i.value, i.name, i.name) for i in ColorVariation]
+	
+	color_variation : bpy.props.EnumProperty(name="Color Variation", items=color_items)
+	# Villagers
+	profession_variation : bpy.props.EnumProperty(name="Villager Profession", items=profession_items)
+	level_variation : bpy.props.EnumProperty(name="Villager Level", items=level_items)
+	region_variation : bpy.props.EnumProperty(name="Villager Region"= items=region_items)
+	undead_variation : bpy.props.EnumProperty(name="Undead Variation")
 
 # -----------------------------------------------------------------------------
 # Reusable functions for spawners
 # -----------------------------------------------------------------------------
+def getmob_type(): 
+  return "foo"
+
+def add_prop(datablock, prop, prop_value):
+  datablock[prop] = prop_value
 
 def has_color(name):
 	"""Return True if has the color in name"""
