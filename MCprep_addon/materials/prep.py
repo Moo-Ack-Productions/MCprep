@@ -619,7 +619,7 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 				use_reflections=self.useReflections,
 				use_principled=self.usePrincipledShader,
 				only_solid=self.makeSolid,
-				pack_format=self.packFormat,
+				pack_format=generate.PackFormat[self.packFormat.upper()],
 				use_emission_nodes=self.useEmission,
 				use_emission=False  # This is for an option set in matprep_cycles
 			)
