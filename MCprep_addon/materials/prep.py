@@ -634,7 +634,7 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 
 		if self.animateTextures:
 			sequences.animate_single_material(
-				mat, context.scene.render.engine, export_location="original")
+				mat, context.scene.render.engine, export_location=sequences.ExportLocation["original"])
 
 		return success, None
 
