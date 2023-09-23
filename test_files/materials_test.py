@@ -230,9 +230,19 @@ class MaterialsTest(unittest.TestCase):
         """Validates generating an image sequence works ok."""
         self._material_sequnece_subtest(operator=False)
 
-    def test_load_material_animated(self):
+    def test_prep_material_animated(self):
         """Validates loading an animated material works ok."""
         self._material_sequnece_subtest(operator=True)
+
+    def _has_animated_tex_node(self, mat) -> bool:
+        any_animated = False
+        for nd in mat.node_tree.nodes:
+            if nd.type != "TEX_IMAGE":
+                continue
+            if nd.image.source == "SEQUENCE":
+                any_animated = True
+                break
+        return any_animated
 
     def _material_sequnece_subtest(self, operator: bool):
         """Validates generating an image sequence works ok."""
@@ -256,9 +266,23 @@ class MaterialsTest(unittest.TestCase):
         if operator is True:
             # Add a mesh to operate on
             bpy.ops.mesh.primitive_plane_add()
+
+            res = bpy.ops.mcprep.load_material(
+                filepath=tiled_img, animateTextures=False)
+            self.assertEqual(res, {'FINISHED'})
+
+            any_animated = self._has_animated_tex_node(
+                bpy.context.object.active_material)
+            self.assertFalse(any_animated, "Should not be initially animated")
+
             res = bpy.ops.mcprep.load_material(
                 filepath=tiled_img, animateTextures=True)
             self.assertEqual(res, {'FINISHED'})
+            any_animated = self._has_animated_tex_node(
+                bpy.context.object.active_material)
+            self._debug_save_file_state()
+            self.assertTrue(any_animated, "Affirm animated material applied")
+
         else:
             res, err = sequences.generate_material_sequence(
                 source_path=fake_orig_img,
@@ -267,16 +291,12 @@ class MaterialsTest(unittest.TestCase):
                 export_location="original",
                 clear_cache=True)
 
-        gen_files = [img for img in os.listdir(result_dir)
-                     if img.endswith(".png")]
-        self.assertTrue(os.path.isdir(result_dir),
-                        "Output directory does not exist")
-        shutil.rmtree(result_dir)
-        self.assertTrue(gen_files, "No images generated")
-
-        if operator is True:
-            self.assertEqual(res, {'FINISHED'})
-        else:
+            gen_files = [img for img in os.listdir(result_dir)
+                         if img.endswith(".png")]
+            self.assertTrue(os.path.isdir(result_dir),
+                            "Output directory does not exist")
+            shutil.rmtree(result_dir)
+            self.assertTrue(gen_files, "No images generated")
             self.assertIsNone(err, "Generate materials had an error")
             self.assertTrue(
                 res,
