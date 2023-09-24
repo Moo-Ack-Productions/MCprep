@@ -246,13 +246,13 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 
 			if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 				options = generate.PrepOptions(
-					passes, 
-					self.useReflections, 
-					self.usePrincipledShader, 
-					self.makeSolid, 
-					generate.PackFormatself.packFormat.upper(), 
-					self.useEmission, 
-					False # This is for an option set in matprep_cycles
+					passes,
+					self.useReflections,
+					self.usePrincipledShader,
+					self.makeSolid,
+					generate.PackFormat[self.packFormat.upper()],
+					self.useEmission,
+					False  # This is for an option set in matprep_cycles
 				)
 				res = generate.matprep_cycles(
 					mat=mat,
@@ -270,7 +270,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 				sequences.animate_single_material(
 					mat,
 					context.scene.render.engine,
-					export_location="original")
+					export_location=sequences.ExportLocation.ORIGINAL)
 
 		# Sync materials.
 		if self.syncMaterials is True:
@@ -389,16 +389,16 @@ class MCPREP_OT_swap_texture_pack(
 	bl_options = {'REGISTER', 'UNDO'}
 
 	filter_glob: bpy.props.StringProperty(
-		default="", 
+		default="",
 		options={"HIDDEN"})
 	use_filter_folder = True
 	fileselectparams = "use_filter_blender"
 	filepath: bpy.props.StringProperty(subtype="DIR_PATH")
 	filter_image: bpy.props.BoolProperty(
-		default=True, 
+		default=True,
 		options={"HIDDEN", "SKIP_SAVE"})
 	filter_folder: bpy.props.BoolProperty(
-		default=True, 
+		default=True,
 		options={"HIDDEN", "SKIP_SAVE"})
 	prepMaterials: bpy.props.BoolProperty(
 		name="Prep materials",
@@ -406,7 +406,7 @@ class MCPREP_OT_swap_texture_pack(
 		default=False,
 	)
 	skipUsage: bpy.props.BoolProperty(
-		default=False, 
+		default=False,
 		options={"HIDDEN"})
 
 	@classmethod
@@ -437,7 +437,7 @@ class MCPREP_OT_swap_texture_pack(
 			col.prop(self, "syncMaterials")
 			col.prop(self, "improveUiSettings")
 			col.prop(self, "combineMaterials")
-	
+
 	track_function = "texture_pack"
 	track_param = None
 	track_exporter = None
@@ -484,7 +484,7 @@ class MCPREP_OT_swap_texture_pack(
 				sequences.animate_single_material(
 					mat,
 					context.scene.render.engine,
-					export_location="original")
+					export_location=sequences.ExportLocation.ORIGINAL)
 			# may be a double call if was animated tex
 			generate.set_saturation_material(mat)
 
@@ -619,7 +619,7 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 				use_reflections=self.useReflections,
 				use_principled=self.usePrincipledShader,
 				only_solid=self.makeSolid,
-				pack_format=self.packFormat,
+				pack_format=generate.PackFormat[self.packFormat.upper()],
 				use_emission_nodes=self.useEmission,
 				use_emission=False  # This is for an option set in matprep_cycles
 			)
@@ -634,7 +634,9 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 
 		if self.animateTextures:
 			sequences.animate_single_material(
-				mat, context.scene.render.engine, export_location="original")
+				mat,
+				context.scene.render.engine,
+				export_location=sequences.ExportLocation.ORIGINAL)
 
 		return success, None
 
