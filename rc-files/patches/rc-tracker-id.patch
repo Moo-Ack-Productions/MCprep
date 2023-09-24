@@ -1,0 +1,13 @@
+diff --git a/MCprep_addon/tracking.py b/MCprep_addon/tracking.py
+index d3020d4..120185d 100644
+--- a/MCprep_addon/tracking.py
++++ b/MCprep_addon/tracking.py
+@@ -54,7 +54,7 @@ except Exception as err:
+ # global vars
+ # -----------------------------------------------------------------------------
+ 
+-IDNAME = "mcprep"
++IDNAME = "mcprep-rc"
+ 
+ # max data/string lengths to match server-side validation,
+ # if exceeded, request will return denied (no data written)
