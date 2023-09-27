@@ -226,6 +226,25 @@ class MaterialsTest(unittest.TestCase):
         self.assertEqual(
             missing_images, 0, "Should have 0 unloaded passes")
 
+    def test_load_material(self):
+        """Test the load material operators and related resets"""
+        bpy.ops.mcprep.reload_materials()
+
+        # add object
+        bpy.ops.mesh.primitive_cube_add()
+
+        scn_props = bpy.context.scene.mcprep_props
+        itm = scn_props.material_list[scn_props.material_list_index]
+        path = itm.path
+        bpy.ops.mcprep.load_material(filepath=path)
+
+        # validate that the loaded material has a name matching current list
+        mat = bpy.context.object.active_material
+        scn_props = bpy.context.scene.mcprep_props
+        mat_item = scn_props.material_list[scn_props.material_list_index]
+        self.assertTrue(mat_item.name in mat.name,
+                        f"Material name not loaded {mat.name}")
+
     def test_generate_material_sequence(self):
         """Validates generating an image sequence works ok."""
         self._material_sequnece_subtest(operator=False)
