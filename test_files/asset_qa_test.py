@@ -133,9 +133,6 @@ class AssetQaTest(unittest.TestCase):
         it needs to check against, but it's possible it can be unstable. Exit
         early to override if needed.
         """
-        if bpy.app.version < (2, 81) or bpy.app.version >= (4, 0):
-            self.skipTest("Disabled due to consistent crashing")
-            return
         basepath = os.path.join("MCprep_addon", "MCprep_resources", "rigs")
         basepath = os.path.abspath(basepath)  # relative to the dev git folder
 

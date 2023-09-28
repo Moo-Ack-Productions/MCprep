@@ -315,9 +315,7 @@ def loadTexture(texture: str) -> Image:
 
 def get_objects_conext(context: Context) -> List[bpy.types.Object]:
 	"""Returns list of objects, either from view layer if 2.8 or scene if 2.8"""
-	if bv28():
-		return context.view_layer.objects
-	return context.scene.objects
+	return context.view_layer.objects
 
 
 def link_selected_objects_to_scene() -> None:
@@ -428,14 +426,11 @@ def addGroupInstance(group_name: str, loc: Tuple, select: bool=True) -> bpy.type
 
 	scene = bpy.context.scene
 	ob = bpy.data.objects.new(group_name, None)
-	if bv28():
-		ob.instance_type = 'COLLECTION'
-		ob.instance_collection = collections().get(group_name)
-		scene.collection.objects.link(ob)  # links to scene collection
-	else:
-		ob.dupli_type = 'GROUP'
-		ob.dupli_group = collections().get(group_name)
-		scene.objects.link(ob)
+
+	ob.instance_type = 'COLLECTION'
+	ob.instance_collection = collections().get(group_name)
+	scene.collection.objects.link(ob)  # links to scene collection
+
 	ob.location = loc
 	select_set(ob, select)
 	return ob
@@ -758,18 +753,13 @@ def matmul(v1: Union[Vector, Matrix], v2: Union[Vector, Matrix], v3: Optional[Un
 
 	This is a workaround for the syntax that otherwise could be used a @ b.
 	"""
-	if bv28():
-		# does not exist pre 2.7<#?>, syntax error
-		mtm = getattr(operator, "matmul")
-		if v3:
-			return mtm(v1, mtm(v2, v3))
-		return mtm(v1, v2)
+	mtm = getattr(operator, "matmul")
 	if v3:
-		return v1 * v2 * v3
-	return v1 * v2
+		return mtm(v1, mtm(v2, v3))
+	return mtm(v1, v2)
 
 
-def scene_update(context: Optional[Context]=None) -> None:
+def scene_update(context: Optional[Context] = None) -> None:
 	"""Update scene in cross compatible way, to update desp graph"""
 	if not context:
 		context = bpy.context
