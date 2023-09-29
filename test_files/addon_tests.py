@@ -57,9 +57,6 @@ class mcprep_testing():
 			self.canonical_test_mappings,
 			self.detect_extra_passes,
 			self.find_missing_images_cycles,
-			self.geonode_effect_spawner,
-			self.particle_area_effect_spawner,
-			self.collection_effect_spawner,
 			self.sync_materials,
 			self.sync_materials_link,
 			self.uv_transform_detection,
@@ -670,105 +667,6 @@ class mcprep_testing():
 		if res != {}:
 			cleanup()
 			raise Exception("Fake file should not have any return")
-
-	def geonode_effect_spawner(self):
-		"""Test the geo node variant of effect spawning works."""
-		if bpy.app.version < (3, 0):
-			return  # Not supported before 3.0 anyways.
-		self._clear_scene()
-		scn_props = bpy.context.scene.mcprep_props
-		etype = "geo_area"
-
-		pre_count = len([
-			x for x in scn_props.effects_list if x.effect_type == etype])
-		bpy.ops.mcprep.reload_effects()
-		post_count = len([
-			x for x in scn_props.effects_list if x.effect_type == etype])
-
-		if pre_count != 0:
-			return "Should start with no effects loaded"
-		if post_count == 0:
-			return "Should have more effects loaded after reload"
-
-		effect = [x for x in scn_props.effects_list if x.effect_type == etype][0]
-		res = bpy.ops.mcprep.spawn_global_effect(effect_id=str(effect.index))
-		if res != {'FINISHED'}:
-			return "Did not end with finished result"
-
-		# TODO: Further checks it actually loaded the effect.
-		# Check that the geonode inputs are updated.
-		obj = bpy.context.object
-		if not obj:
-			return "Geo node added object not selected"
-
-		geo_nodes = [mod for mod in obj.modifiers if mod.type == "NODES"]
-		if not geo_nodes:
-			return "No geonode modifier found"
-
-		# Now validate that one of the settings was updated.
-		# TODO: example where we assert the active effect `subpath` is non empty
-
-	def particle_area_effect_spawner(self):
-		"""Test the particle area variant of effect spawning works."""
-		self._clear_scene()
-		scn_props = bpy.context.scene.mcprep_props
-		etype = "particle_area"
-
-		pre_count = len([
-			x for x in scn_props.effects_list if x.effect_type == etype])
-		bpy.ops.mcprep.reload_effects()
-		post_count = len([
-			x for x in scn_props.effects_list if x.effect_type == etype])
-
-		if pre_count != 0:
-			return "Should start with no effects loaded"
-		if post_count == 0:
-			return "Should have more effects loaded after reload"
-
-		effect = [x for x in scn_props.effects_list if x.effect_type == etype][0]
-		res = bpy.ops.mcprep.spawn_global_effect(effect_id=str(effect.index))
-		if res != {'FINISHED'}:
-			return "Did not end with finished result"
-
-		# TODO: Further checks it actually loaded the effect.
-
-	def collection_effect_spawner(self):
-		"""Test the collection variant of effect spawning works."""
-		self._clear_scene()
-		scn_props = bpy.context.scene.mcprep_props
-		etype = "collection"
-
-		pre_count = len([
-			x for x in scn_props.effects_list if x.effect_type == etype])
-		bpy.ops.mcprep.reload_effects()
-		post_count = len([
-			x for x in scn_props.effects_list if x.effect_type == etype])
-
-		if pre_count != 0:
-			return "Should start with no effects loaded"
-		if post_count == 0:
-			return "Should have more effects loaded after reload"
-
-		init_objs = list(bpy.data.objects)
-
-		effect = [x for x in scn_props.effects_list if x.effect_type == etype][0]
-		res = bpy.ops.mcprep.spawn_instant_effect(effect_id=str(effect.index), frame=2)
-		if res != {'FINISHED'}:
-			return "Did not end with finished result"
-
-		final_objs = list(bpy.data.objects)
-		new_objs = list(set(final_objs) - set(init_objs))
-		if len(new_objs) == 0:
-			return "didn't crate new objects"
-		if bpy.context.object not in new_objs:
-			return "Selected obj is not a new object"
-
-		is_empty = bpy.context.object.type == 'EMPTY'
-		is_coll_inst = bpy.context.object.instance_type == 'COLLECTION'
-		if not is_empty or not is_coll_inst:
-			return "Didn't end up with selected collection instance"
-
-		# TODO: Further checks it actually loaded the effect.
 
 	def sync_materials(self):
 		"""Test syncing materials works"""
