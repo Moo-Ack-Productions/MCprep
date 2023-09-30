@@ -194,16 +194,6 @@ class mcprep_testing():
 		# with redirect_stdout(stdout):
 		bpy.ops.wm.read_homefile(app_template="", use_empty=True)
 
-	def _add_character(self):
-		"""Add a rigged character to the scene, specifically Alex"""
-		bpy.ops.mcprep.reload_mobs()
-		# mcmob_type='player/Simple Rig - Boxscape-TheDuckCow.blend:/:Simple Player'
-		# mcmob_type='player/Alex FancyFeet - TheDuckCow & VanguardEnni.blend:/:alex'
-		# Formatting os.path.sep below required for windows support.
-		mcmob_type = 'hostile{}mobs - Rymdnisse.blend:/:silverfish'.format(
-			os.path.sep)
-		bpy.ops.mcprep.mob_spawner(mcmob_type=mcmob_type)
-
 	def _import_jmc2obj_full(self):
 		"""Import the full jmc2obj test set"""
 		testdir = os.path.dirname(__file__)
@@ -248,36 +238,6 @@ class mcprep_testing():
 			img = bpy.data.images.new(name, 16, 16)
 		img_node.image = img
 		return mat, img_node
-
-	def _set_test_mcprep_texturepack_path(self, reset=False):
-		"""Assigns or resets the local texturepack path."""
-		testdir = os.path.dirname(__file__)
-		path = os.path.join(testdir, "test_resource_pack")
-		if not os.path.isdir(path):
-			raise Exception("Failed to set test texturepack path")
-		bpy.context.scene.mcprep_texturepack_path = path
-
-	# Seems that infolog doesn't update in background mode
-	def _get_last_infolog(self):
-		"""Return back the latest info window log"""
-		for txt in bpy.data.texts:
-			bpy.data.texts.remove(txt)
-		_ = bpy.ops.ui.reports_to_textblock()
-		print("DEVVVV get last infolog:")
-		for ln in bpy.data.texts['Recent Reports'].lines:
-			print(ln.body)
-		print("END printlines")
-		return bpy.data.texts['Recent Reports'].lines[-1].body
-
-	def _set_exporter(self, name):
-		"""Sets the exporter name"""
-		# from MCprep.util import get_user_preferences
-		if name not in ['(choose)', 'jmc2obj', 'Mineways']:
-			raise Exception('Invalid exporter set tyep')
-		context = bpy.context
-		if hasattr(context, "preferences"):
-			prefs = context.preferences.addons.get("MCprep_addon", None)
-		prefs.preferences.MCprep_exporter_type = name
 
 	# -----------------------------------------------------------------------------
 	# Operator unit tests
