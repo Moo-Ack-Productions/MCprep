@@ -103,9 +103,12 @@ def main():
         for test_file in suite._tests:
             for test_cls in test_file._tests:
                 for test_function_suite in test_cls:
-                    # TODO: could also check if name matches, then add all here
                     for this_test in test_function_suite._tests:
-                        if this_test._testMethodName == args.test_specific:
+                        # str in format of:
+                        # file_name.ClassName.test_case_name
+                        tst_name_id = this_test.id()
+                        tst_names = tst_name_id.split(".")
+                        if args.test_specific in tst_names:
                             new_suite.addTest(this_test)
                             print("Run only: ", this_test._testMethodName)
         suite = new_suite

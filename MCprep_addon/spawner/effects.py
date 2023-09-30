@@ -435,14 +435,24 @@ def geo_update_params(context: Context, effect: ListEffectsAssets, geo_mod: Node
 		else:
 			center_empty.location = util.get_cursor_location()
 
+	input_list = []
+	input_node = None
+	for nd in geo_mod.node_group.nodes:
+		if nd.type == "GROUP_INPUT":
+			input_node = nd
+			break
+	if input_node is None:
+		raise RuntimeError(f"Geo node has no input group: {effect.name}")
+	input_list = list(input_node.outputs)
+
 	# Cache mapping of names like "Weather Type" to "Input_1" internals.
 	geo_inp_id = {}
-	for inp in geo_mod.node_group.inputs:
+	for inp in input_list:
 		if inp.name in list(geo_fields):
 			geo_inp_id[inp.name] = inp.identifier
 
 	# Now update the final geo node inputs based gathered settings.
-	for inp in geo_mod.node_group.inputs:
+	for inp in input_list:
 		if inp.name in list(geo_fields):
 			value = geo_fields[inp.name]
 			if value == "CAMERA_OBJ":
@@ -450,7 +460,7 @@ def geo_update_params(context: Context, effect: ListEffectsAssets, geo_mod: Node
 				geo_mod[geo_inp_id[inp.name]] = camera
 			elif value == "FOLLOW_OBJ":
 				if not center_empty:
-					print(">> Center empty missing, not in preset!")
+					env.log("Geo Node effects: Center empty missing, not in preset!")
 				else:
 					env.log("Set follow for geonode input", vv_only=True)
 					geo_mod[geo_inp_id[inp.name]] = center_empty
@@ -491,7 +501,8 @@ def geo_fields_from_json(effect: ListEffectsAssets, jpath: Path) -> dict:
 	return geo_fields
 
 
-def get_or_create_plane_mesh(mesh_name: str, uvs: Sequence[Tuple[int,int]]=[]) -> Mesh:
+def get_or_create_plane_mesh(
+	mesh_name: str, uvs: Sequence[Tuple[int, int]] = []) -> Mesh:
 	"""Generate a 1x1 plane with UVs stretched out to ends, cache if exists.
 
 	Arg `uvs` represents the 4 coordinate values clockwise from top left of the

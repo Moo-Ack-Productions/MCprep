@@ -21,6 +21,8 @@ import unittest
 import bpy
 import os
 
+from MCprep_addon.util import nameGeneralize
+
 # TODO: restructure tests to be inside MCprep_addon to support rel imports.
 # from . import test_runner
 RUN_SLOW_TESTS = False
@@ -29,12 +31,12 @@ RUN_SLOW_TESTS = False
 RUN_UI_TESTS = False
 
 
-class UtilTest(unittest.TestCase):
-    """Create tests for the util.py file."""
-
-
 class UtilOperatorsTest(unittest.TestCase):
     """Create tests for the util_operators.py file."""
+
+    @classmethod
+    def setUpClass(cls):
+        bpy.ops.preferences.addon_enable(module="MCprep_addon")
 
     def test_improve_ui(self):
         res = bpy.ops.mcprep.improve_ui()
@@ -62,6 +64,28 @@ class UtilOperatorsTest(unittest.TestCase):
         # with mock.patch("bpy.ops.wm.url_open") as mock_open:
         res = bpy.ops.mcprep.open_help(url="https://theduckcow.com")
         self.assertEqual(res, {"FINISHED"})
+
+    def test_name_generalize(self):
+        """Tests the outputs of the generalize function"""
+
+        test_sets = {
+            "ab": "ab",
+            "table.001": "table",
+            "table.100": "table",
+            "table001": "table001",
+            "fire_0": "fire_0",
+            # "fire_0_0001.png":"fire_0", not current behavior, but desired?
+            "fire_0_0001": "fire_0",
+            "fire_0_0001.001": "fire_0",
+            "fire_layer_1": "fire_layer_1",
+            "cartography_table_side1": "cartography_table_side1"
+        }
+        for key in list(test_sets):
+            with self.subTest(key):
+                res = nameGeneralize(key)
+                self.assertEqual(
+                    res, test_sets[key],
+                    f"{key} converts to {res} and should be {test_sets[key]}")
 
 
 if __name__ == '__main__':

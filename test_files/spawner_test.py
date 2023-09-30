@@ -202,6 +202,93 @@ class EffectsSpawnerTest(BaseSpawnerTest):
 
         # TODO: Further checks it actually loaded the effect.
 
+    @unittest.skipIf(bpy.app.version < (3, 0),
+                     "Geonodes not supported pre 3.0")
+    def test_geonode_effect_spawner(self):
+        scn_props = bpy.context.scene.mcprep_props
+        etype = "geo_area"
+
+        pre_count = len([
+            x for x in scn_props.effects_list if x.effect_type == etype])
+        bpy.ops.mcprep.reload_effects()
+        post_count = len([
+            x for x in scn_props.effects_list if x.effect_type == etype])
+
+        self.assertEqual(pre_count, 0, "Should start with no effects loaded")
+        self.assertGreater(
+            post_count, 0, "Should have more effects loaded after reload")
+
+        effect = [x for x in scn_props.effects_list if x.effect_type == etype][0]
+        res = bpy.ops.mcprep.spawn_global_effect(effect_id=str(effect.index))
+        self.assertEqual(res, {'FINISHED'}, "Did not end with finished result")
+
+        # TODO: Further checks it actually loaded the effect.
+        # Check that the geonode inputs are updated.
+        obj = bpy.context.object
+        self.assertTrue(obj, "Geo node added object not selected")
+
+        geo_nodes = [mod for mod in obj.modifiers if mod.type == "NODES"]
+        self.assertTrue(geo_nodes, "No geonode modifier found")
+
+        # Now validate that one of the settings was updated.
+        # TODO: example where we assert the active effect `subpath` is non empty
+
+    def test_particle_area_effect_spawner(self):
+        """Test the particle area variant of effect spawning works."""
+        scn_props = bpy.context.scene.mcprep_props
+        etype = "particle_area"
+
+        pre_count = len([
+            x for x in scn_props.effects_list if x.effect_type == etype])
+        bpy.ops.mcprep.reload_effects()
+        post_count = len([
+            x for x in scn_props.effects_list if x.effect_type == etype])
+
+        self.assertEqual(pre_count, 0, "Should start with no effects loaded")
+        self.assertGreater(
+            post_count, 0, "Should have more effects loaded after reload")
+
+        effect = [x for x in scn_props.effects_list if x.effect_type == etype][0]
+        res = bpy.ops.mcprep.spawn_global_effect(effect_id=str(effect.index))
+        self.assertEqual(res, {'FINISHED'}, "Did not end with finished result")
+
+        # TODO: Further checks it actually loaded the effect.
+
+    def test_collection_effect_spawner(self):
+        """Test the collection variant of effect spawning works."""
+        scn_props = bpy.context.scene.mcprep_props
+        etype = "collection"
+
+        pre_count = len([
+            x for x in scn_props.effects_list if x.effect_type == etype])
+        bpy.ops.mcprep.reload_effects()
+        post_count = len([
+            x for x in scn_props.effects_list if x.effect_type == etype])
+
+        self.assertEqual(pre_count, 0, "Should start with no effects loaded")
+        self.assertGreater(
+            post_count, 0, "Should have more effects loaded after reload")
+
+        init_objs = list(bpy.data.objects)
+
+        effect = [x for x in scn_props.effects_list if x.effect_type == etype][0]
+        res = bpy.ops.mcprep.spawn_instant_effect(
+            effect_id=str(effect.index), frame=2)
+        self.assertEqual(res, {'FINISHED'}, "Did not end with finished result")
+
+        final_objs = list(bpy.data.objects)
+        new_objs = list(set(final_objs) - set(init_objs))
+        self.assertGreater(len(new_objs), 0, "didn't crate new objects")
+        self.assertTrue(
+            bpy.context.object in new_objs, "Selected obj is not a new object")
+
+        is_empty = bpy.context.object.type == 'EMPTY'
+        is_coll_inst = bpy.context.object.instance_type == 'COLLECTION'
+        self.assertFalse(
+            not is_empty or not is_coll_inst,
+            "Didn't end up with selected collection instance")
+        # TODO: Further checks it actually loaded the effect.
+
 
 class ModelSpawnerTest(BaseSpawnerTest):
     """ModelSpawning-related tests."""

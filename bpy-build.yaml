@@ -14,6 +14,7 @@ install_versions:
   - '2.90'
   - '2.80'
 
+# Run using a command like: bpy-addon-build --during-build dev
 during_build:
   default:
     - [] # Re-enable later: [flake8 --extend-ignore W191 .]

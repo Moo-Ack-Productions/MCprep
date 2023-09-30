@@ -45,11 +45,6 @@ Returns that new copy object.
 
  false returns false unless current Blender is higher than `version`
 
- 
-
-**bv28()**
-
- Check for version is 2.8, sees `min_bv()`
 
 **bv30()**
 
