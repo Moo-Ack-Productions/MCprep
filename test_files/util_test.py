@@ -29,12 +29,12 @@ RUN_SLOW_TESTS = False
 RUN_UI_TESTS = False
 
 
-class UtilTest(unittest.TestCase):
-    """Create tests for the util.py file."""
-
-
 class UtilOperatorsTest(unittest.TestCase):
     """Create tests for the util_operators.py file."""
+
+    @classmethod
+    def setUpClass(cls):
+        bpy.ops.preferences.addon_enable(module="MCprep_addon")
 
     def test_improve_ui(self):
         res = bpy.ops.mcprep.improve_ui()
