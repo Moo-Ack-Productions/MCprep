@@ -81,7 +81,11 @@ updater.addon = "mcprep"
 # Blender version utils
 # -----------------------------------------------------------------------------
 def make_annotations(cls):
-	"""Add annotation attribute to fields to avoid Blender 2.8+ warnings"""
+	"""Add annotation attribute to fields to avoid Blender 2.8+ warnings.
+
+	Deprecated operator as MCprep 3.5 moves to support 2.8+ only and using
+	native python annotations.
+	"""
 	if not hasattr(bpy.app, "version") or bpy.app.version < (2, 80):
 		return cls
 	if bpy.app.version < (2, 93, 0):
@@ -1281,6 +1285,12 @@ def skip_tag_function(self, tag):
 	# 	return True
 	# ---- write any custom code above, return true to disallow version --- #
 
+	# Ignore release candidates
+	skip_if_present = ['rc', 'alpha', 'beta']
+	for skip_name in skip_if_present:
+		if skip_name in tag.get("tag_name", "").lower():
+			return True
+
 	if self.include_branches:
 		for branch in self.include_branch_list:
 			if tag["name"].lower() == branch:
@@ -1357,7 +1367,7 @@ classes = (
 def register(bl_info):
 	"""Registering the operators in this module"""
 	from . import conf
-	updater.verbose = conf.v
+	updater.verbose = conf.env.verbose
 
 	# safer failure in case of issue loading module
 	if updater.error != None:

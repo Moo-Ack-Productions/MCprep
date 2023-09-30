@@ -18,13 +18,12 @@ When it comes to code being reviewed, expect some discussion! If you want to con
 
 ## Keeping MCprep compatible
 
-MCprep is uniquely made stable and functional across a large number of versions of blender. As of April 2022, it still even supports releases of Blender 2.79 while simultaneously supporting Blender 3.1+, and everything in between.
+MCprep is uniquely made stable and functional across a large number of versions of blender. As of April 2022, it still even supports releases of Blender 2.8 while simultaneously supporting Blender 3.5+, and everything in between.
 
 This is largely possible for a few reasons:
 
 1. Automated tests plus an automated installer makes ensures that any changes that break older versions of blender will be caught automatically.
 1. Abstracting API changes vs directly implementing changes. Instead of swapping "group" for "collection" in the change to blender 2.8, we create if/else statements and wrapper functions that fetch the attribute that exists based on the version of blender. Want more info about this? See [the article here](https://theduckcow.com/2019/update-addons-both-blender-28-and-27-support/).
-1. No python annotations. This syntax wasn't supported in old versions of python that came with blender (namely, in Blender 2.7) and so we don't use annotations in this repository. Some workarounds are in place to avoid excessive printouts as a result.
 
 ## Internal Rewrites
 MCprep has a separate branch for internal rewrites based on the dev branch. Sometimes, internal tools are deprecated, and requires features to be changed to reflect those deprecations.
@@ -45,11 +44,33 @@ As above, a critical component of maintaining support and ensuring the wide numb
 
 ### Compile MCprep using scripts
 
-Scripts have been created for Mac OSX (`compile.sh`) and Windows (`compile.bat`) which make it fast to copy the entire addon structure the addon folders for multiple versions of blender. You need to use these scripts, or at the very least validate that they work, as running the automated tests depend on them.
+MCprep uses the [bpy-addon-build](https://github.com/Moo-Ack-Productions/bpy-build) package to build the addon, which makes it fast to copy the entire addon structure the addon folders for multiple versions of blender.
 
-The benefit? You don't have to manually navigate and install zip files in blender for each change you make - just run this script and restart blender. It *is* important you do restart blender after changes, as there can be unintended side effects of trying to reload a plugin.
+The benefit? You don't have to manually navigate and install zip files in blender for each change you make - just run the command and restart blender. It *is* important you do restart blender after changes, as there can be unintended side effects of trying to reload a plugin.
 
-Want to just quickly reload some files after only changing python code (no asset changes)? Mac only: Try running `compile.sh -fast` which will skip copying over the resources folder and skip zipping the addon.
+As a quick start:
+
+```bash
+# Highly recommended, create a local virtual environment (could also define globally)
+python3 -m pip install --user virtualenv
+
+python3 -m pip install --upgrade pip  # Install/upgrade pip
+python3 -m venv ./venv  # Add a local virtual env called `venv`
+
+# Activate that environment
+## On windows:
+.\venv\Scripts\activate
+## On Mac/linux:
+source venv/bin/activate
+
+# Now with the env active, do the pip install (or upgrade)
+pip install --upgrade bpy-addon-build
+
+# Finally, you can compile MCprep using:
+bpy-addon-build --during-build dev # Use dev to use non-prod related resources and tracking.
+```
+
+Moving forward, you can now build the addon for all intended supported versions using: `bpy-addon-build -b dev`
 
 ### Run tests
 
@@ -107,7 +128,7 @@ At the moment, only the project lead (TheDuckCow) should ever mint new releases 
    - Tag is in the form `3.3.1`, no leading `v`.
    - The title however is in the form `MCprep v3.3.0 | ShortName` where version has a leading `v`.
    - Copy the body fo the description from the prior release, and then update the text and splash screen (if a major release). Edit a prior release without making changes to get the raw markdown code, e.g. [from here](https://github.com/TheDuckCow/MCprep/releases/edit/3.3.0).
-1. Run `compile.sh` or `compile.bat` with no fast flag, so it does the full build
+1. Run `bpy-addon-build.py` to build the addon
 1. Run all tests, ideally on two different operating systems. Use the `./run_tests.sh -all` flag to run on all versions of blender
 1. If all tests pass, again DOUBLE CHECK that "dev" = false in conf.py, then
 1. Drag and drop the generated updated zip file onto github.
@@ -122,24 +143,7 @@ At the moment, only the project lead (TheDuckCow) should ever mint new releases 
 
 
 
-## Creating your blender_installs.txt and blender_exects.txt
-
-
-Your `blender_installs.txt` defines where the `compile.sh` (Mac OSX) or `compile.bat` (Windows) script will install MCprep onto your system. It's a directly copy-paste of the folder.
-
-On a mac? The text file will be generated automatically for you if you haven't already created it, based on detected blender installs. Otherwise, just create it manually. It could look like:
-
-```
-/Users/your_username/Library/Application Support/Blender/3.1/scripts/addons
-/Users/your_username/Library/Application Support/Blender/3.0/scripts/addons
-/Users/your_username/Library/Application Support/Blender/2.93/scripts/addons
-/Users/your_username/Library/Application Support/Blender/2.92/scripts/addons
-/Users/your_username/Library/Application Support/Blender/2.90/scripts/addons
-/Users/your_username/Library/Application Support/Blender/2.80/scripts/addons
-/Users/your_username/Library/Application Support/Blender/2.79/scripts/addons
-/Users/your_username/Library/Application Support/Blender/2.78/scripts/addons
-/Users/your_username/Library/Application Support/Blender/2.72/scripts/addons
-```
+## Creating your blender_execs.txt
 
 Your `blender_execs.txt` defines where to find the executables used in the automated testing scripts. Only these executables will be used during automated testing, noting that the testing system only supports blender version 2.8+ (sadly, only manual testing is possible in blender 2.7 with the current setup). It could look like:
 
@@ -160,11 +164,9 @@ Also note that the first line indicates the only version of blender that will be
 
 Support for development and testing should work for both platforms, just be aware the primary development of MCprep is happening on a Mac OSX machine, so the mac-side utility scripts have a few more features than windows:
 
-- Only the mac `compile.sh` script has the `-fast` option to quickly reload python files (it won't copy over the blends, textures, and won't create a new zip file, all of which can be slow)
-- Only the mac `compile.sh` has the feature of auto-detecting local blender executable installs. This is because on windows, there is a lot of variability where blender executables may be placed, so it should just be manually created anyways.
-- Only the mac `run_tests.sh` script has the `-all` optional flag. By default, the mac script will only install the 
+- Only the mac `run_tests.sh` script has the `-all` optional flag. By default, the mac script will only install the first line in the file.
 
-One other detail: MCprep uses git lfs or Large File Storage, to avoid saving binary files in the git history. Some Windows users may run into trouble when first pulling.
+One other detail: MCprep uses Git LFS or Large File Storage, to avoid saving binary files in the git history. Some Windows users may run into trouble when first pulling.
 
 - If using Powershell and you cloned your repo using SSH credentials, try running `start-ssh-agent` before running the clone/pull command (per [comment here](https://github.com/git-lfs/git-lfs/issues/3216#issuecomment-1018304297))
 - Alternatively, try using Git for Windows and its console.
@@ -206,12 +208,48 @@ Add this to a file called .gitmessage, and then execute the following command:
 
 To use for each commit, you can use `git config --local commit.verbose true` to tell Git to perform a verbose commit all the time for just the MCprep repo.
 
-## IDE Support
-If you're using an IDE, it's recommened to install `bpy` as a Python module. In my (StandingPad) experiance, the [fake-bpy package](https://github.com/nutti/fake-bpy-module) seems to be the best.
+## Dependencies
+If you're using an IDE, it's recommened to install `bpy` as a Python module. In our experience, the [fake-bpy package](https://github.com/nutti/fake-bpy-module) seems to be the best.
 
 It's also recommened to use a virtual environment (especially if you're on Linux) as to avoid issues with system wide packages and different versions of `bpy`. [See this for more details](https://realpython.com/python-virtual-environments-a-primer/)
 
-### Creating a Virtual Environment and Setting up `bpy`
+There are 2 methods to do this:
+- Poetry
+- Manualy
+
+Both are listed here.
+
+### With Poetry
+[Poetry](https://python-poetry.org/) is a useful tool that allows easy dependency handling. To quote the website:
+
+>  Python packaging and dependency management made easy 
+
+If you decide to use Poetry, then simply run the following command:
+
+`poetry install`
+
+To enable the virtual environment, run `poetry shell`, then type `exit` when you're done. 
+
+### Manual: Requirements.txt Edition
+First create a virtual environment:
+
+`python3 -m venv mcprep_venv_2.80`
+
+We use the name `mcprep_venv_2.80` to follow MCprep convention. Check the next section if you're curious the why.
+
+To enable:
+
+Windows: `mcprep_venv_<version>\Scripts\activate`
+
+MacOS and Linux: `source mcprep_venv_<version>/bin/activate`
+
+To disable: `deactivate`
+
+Install dependencies:
+
+`python3 -m pip install -r requirements.txt`
+
+### Manual: Setting up `bpy` Manually Edition
 First, we need to come up with a name. For MCprep development, it's recommended to use the following convention:
 `mcprep_venv_<version>`
 
@@ -236,13 +274,5 @@ Next we need to install `fake-bpy`:
 `python3 -m pip install fake-bpy-module-<version>`
 
 If you use PyCharm, you should check the GitHub for [additional instructions](https://github.com/nutti/fake-bpy-module#install-via-pip-package)
-
-### Pylint
-MCprep mostly tries to follow the PEP8 guidelines, so it's also a good idea to install pylsp and flake8 for IDEs.
-
-First, install the 2:
-`python3 -m pip install python-lsp-server flake8`
-
-Then set up your IDE to use pylsp as your Python LSP. This depends on the IDE, so look at the documentation to see how to set your Python LSP for your specific editor.
 
 Now you're ready to do MCprep development

@@ -19,12 +19,14 @@
 import os
 import math
 from pathlib import Path
+from typing import List, Optional
 import shutil
 
 import bpy
+from bpy.types import Context, Camera
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
-from . import conf
+from .conf import env, VectorType
 from . import util
 from . import tracking
 from .materials import generate
@@ -46,7 +48,7 @@ BUILTIN_SPACES = (
 time_obj_cache = None
 
 
-def get_time_object():
+def get_time_object() -> None:
 	"""Returns the time object if present in the file"""
 	global time_obj_cache  # to avoid re parsing every time
 
@@ -77,9 +79,12 @@ class ObjHeaderOptions:
 	"""Wrapper functions to avoid typos causing issues."""
 
 	def __init__(self):
-		self._exporter = None
-		self._file_type = None
-
+		self._exporter: Optional[str] = None
+		self._file_type: Optional[str] = None
+	
+	"""
+	Wrapper functions to avoid typos causing issues
+	"""
 	def set_mineways(self):
 		self._exporter = "Mineways"
 
@@ -108,7 +113,7 @@ class ObjHeaderOptions:
 obj_header = ObjHeaderOptions()
 
 
-def detect_world_exporter(filepath):
+def detect_world_exporter(filepath: Path) -> None:
 	"""Detect whether Mineways or jmc2obj was used, based on prefix info.
 
 	Primary heruistic: if detect Mineways header, assert Mineways, else
@@ -144,7 +149,7 @@ def detect_world_exporter(filepath):
 					obj_header.set_seperated()
 				return
 		except UnicodeDecodeError:
-			print("failed to read first line of obj: " + filepath)
+			print(f"Failed to read first line of obj: {filepath}")
 			return
 		obj_header.set_jmc2obj()
 		# Since this is the default for Jmc2Obj,
@@ -243,6 +248,31 @@ def convert_mtl(filepath):
 	return True
 
 
+def enble_obj_importer() -> Optional[bool]:
+	"""Checks if obj import is avail and tries to activate if not.
+
+	If we fail to enable obj importing, return false. True if enabled, and Non
+	if nothing changed.
+	"""
+	enable_addon = None
+	if util.min_bv((4, 0)):
+		return None  # No longer an addon, native built in.
+	else:
+		in_import_scn = "obj_import" not in dir(bpy.ops.wm)
+		in_wm = ""
+		if not in_import_scn and not in_wm:
+			enable_addon = "io_scene_obj"
+
+	if enable_addon is None:
+		return None
+
+	try:
+		bpy.ops.preferences.addon_enable(module=enable_addon)
+		return True
+	except RuntimeError:
+		return False
+
+
 # -----------------------------------------------------------------------------
 # open mineways/jmc2obj related
 # -----------------------------------------------------------------------------
@@ -255,7 +285,7 @@ class MCPREP_OT_open_jmc2obj(bpy.types.Operator):
 	bl_description = "Open the jmc2obj executbale"
 
 	# poll, and prompt to download if not present w/ tutorial link
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 
@@ -333,7 +363,7 @@ class MCPREP_OT_open_mineways(bpy.types.Operator):
 	bl_description = "Open the Mineways executbale"
 
 	# poll, and prompt to download if not present w/ tutorial link
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 
@@ -416,11 +446,11 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 	bl_label = "Import World"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	filter_glob = bpy.props.StringProperty(
+	filter_glob: bpy.props.StringProperty(
 		default="*.obj;*.mtl",
 		options={'HIDDEN'})
 	fileselectparams = "use_filter_blender"
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 
@@ -444,15 +474,16 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			self.report({"ERROR"}, "You must select a .obj file to import")
 			return {'CANCELLED'}
 
-		if "obj" not in dir(bpy.ops.import_scene):
-			try:
-				bpy.ops.preferences.addon_enable(module="io_scene_obj")
-				self.report(
-					{"INFO"},
-					"FYI: had to enable OBJ imports in user preferences")
-			except RuntimeError:
-				self.report({"ERROR"}, "Built-in OBJ importer could not be enabled")
-				return {'CANCELLED'}
+		res = enble_obj_importer()
+		if res is None:
+			pass
+		elif res is True:
+			self.report(
+				{"INFO"},
+				"FYI: had to enable OBJ imports in user preferences")
+		elif res is False:
+			self.report({"ERROR"}, "Built-in OBJ importer could not be enabled")
+			return {'CANCELLED'}
 
 		# There are a number of bug reports that come from the generic call
 		# of obj importing. If this fails, should notify the user to try again
@@ -567,8 +598,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			obj["MCPREP_OBJ_HEADER"] = True
 			obj["MCPREP_OBJ_FILE_TYPE"] = obj_header.texture_type()
 
-		if util.bv28():
-			self.split_world_by_material(context)
+		self.split_world_by_material(context)
 
 		addon_prefs = util.get_user_preferences(context)
 		self.track_exporter = addon_prefs.MCprep_exporter_type  # Soft detect.
@@ -587,7 +617,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			return
 		obj.name = util.nameGeneralize(mat.name)
 
-	def split_world_by_material(self, context):
+	def split_world_by_material(self, context: Context) -> None:
 		"""2.8-only function, split combined object into parts by material"""
 		world_name = os.path.basename(self.filepath)
 		world_name = os.path.splitext(world_name)[0]
@@ -595,11 +625,9 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		# Create the new world collection
 		prefs = util.get_user_preferences(context)
 		if prefs is not None and prefs.MCprep_exporter_type != '(choose)':
-			name = "{} world: {}".format(
-				prefs.MCprep_exporter_type,
-				world_name)
+			name = f"{prefs.MCprep_exporter_type} world: {world_name}"
 		else:
-			name = "minecraft_world: " + world_name
+			name = f"minecraft_world: {world_name}"
 		worldg = util.collections().new(name=name)
 		context.scene.collection.children.link(worldg)  # Add to outliner.
 
@@ -618,7 +646,7 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 	bl_description = "Prep world render settings to something generally useful"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 
@@ -640,7 +668,7 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 			self.report({'ERROR'}, "Must be cycles, eevee, or blender internal")
 		return {'FINISHED'}
 
-	def prep_world_cycles(self, context):
+	def prep_world_cycles(self, context: Context) -> None:
 		if not context.scene.world or not context.scene.world.use_nodes:
 			context.scene.world.use_nodes = True
 
@@ -658,7 +686,11 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 			world_links.new(skynode.outputs["Color"], background.inputs[0])
 			world_links.new(background.outputs["Background"], output.inputs[0])
 
-		context.scene.world.light_settings.use_ambient_occlusion = False
+		if hasattr(context.scene.world.light_settings, "use_ambient_occlusion"):
+			# pre 4.0
+			context.scene.world.light_settings.use_ambient_occlusion = False
+		else:
+			print("Unable to disbale use_ambient_occlusion")
 
 		if hasattr(context.scene, "cycles"):
 			context.scene.cycles.caustics_reflective = False
@@ -674,7 +706,7 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 			context.scene.cycles.ao_bounces = 2
 			context.scene.cycles.ao_bounces_render = 2
 
-	def prep_world_eevee(self, context):
+	def prep_world_eevee(self, context: Context) -> None:
 		"""Default world settings for Eevee rendering"""
 		if not context.scene.world or not context.scene.world.use_nodes:
 			context.scene.world.use_nodes = True
@@ -705,8 +737,13 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 				background_camera.outputs["Background"], mix_shader.inputs[2])
 			world_links.new(mix_shader.outputs["Shader"], output.inputs[0])
 
-		# is not great
-		context.scene.world.light_settings.use_ambient_occlusion = False
+		# Increase render speeds by disabling ambienet occlusion.
+		if hasattr(context.scene.world.light_settings, "use_ambient_occlusion"):
+			# pre 4.0
+			context.scene.world.light_settings.use_ambient_occlusion = False
+		else:
+			print("Unable to disbale use_ambient_occlusion")
+
 		if hasattr(context.scene, "cycles"):
 			context.scene.cycles.caustics_reflective = False
 			context.scene.cycles.caustics_refractive = False
@@ -745,28 +782,14 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 				sky_used = True
 				break
 		if sky_used:
-			conf.log("MCprep sky being used with atmosphere")
+			env.log("MCprep sky being used with atmosphere")
 			context.scene.world.use_sky_blend = False
 			context.scene.world.horizon_color = (0.00938029, 0.0125943, 0.0140572)
 		else:
-			conf.log("No MCprep sky with atmosphere")
+			env.log("No MCprep sky with atmosphere")
 			context.scene.world.use_sky_blend = True
 			context.scene.world.horizon_color = (0.647705, 0.859927, 0.940392)
 			context.scene.world.zenith_color = (0.0954261, 0.546859, 1)
-
-
-class MCPREP_OT_add_mc_world(bpy.types.Operator):
-	"""Please used the new operator, mcprep.add_mc_sky"""
-	bl_idname = "mcprep.add_mc_world"
-	bl_label = "Create MC World"
-	bl_options = {'REGISTER', 'UNDO'}
-
-	track_function = "world_time"
-	track_param = "Deprecated"
-	@tracking.report_error
-	def execute(self, context):
-		self.report({"ERROR"}, "Use the new operator, mcprep.add_mc_sky")
-		return {'CANCELLED'}
 
 
 class MCPREP_OT_add_mc_sky(bpy.types.Operator):
@@ -775,7 +798,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 	bl_label = "Create MC Sky"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	def enum_options(self, context):
+	def enum_options(self, context: Context) -> List[tuple]:
 		"""Dynamic set of enums to show based on engine"""
 		engine = bpy.context.scene.render.engine
 		enums = []
@@ -802,13 +825,13 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			"Create static sky, with no sun or moon"))
 		return enums
 
-	world_type = bpy.props.EnumProperty(
+	world_type: bpy.props.EnumProperty(
 		name="Sky type",
 		description=(
 			"Decide to improt dynamic (time/hour-controlled) vs static sky "
 			"(daytime only), and the type of sun/moon (if any) to use"),
 		items=enum_options)
-	initial_time = bpy.props.EnumProperty(
+	initial_time: bpy.props.EnumProperty(
 		name="Set time (dynamic only)",
 		description="Set initial time of day, only supported for dynamic sky types",
 		items=(
@@ -818,11 +841,11 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			("0", "Midnight", "Set initial time to 12am"),
 			("6", "Sunrise", "Set initial time to 6am"))
 	)
-	add_clouds = bpy.props.BoolProperty(
+	add_clouds: bpy.props.BoolProperty(
 		name="Add clouds",
 		description="Add in a cloud mesh",
 		default=True)
-	remove_existing_suns = bpy.props.BoolProperty(
+	remove_existing_suns: bpy.props.BoolProperty(
 		name="Remove initial suns",
 		description="Remove any existing sunlamps",
 		default=True)
@@ -890,9 +913,9 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			if not os.path.isfile(blendfile):
 				self.report(
 					{'ERROR'},
-					"Source MCprep world blend file does not exist: " + blendfile)
-				conf.log(
-					"Source MCprep world blend file does not exist: " + blendfile)
+					f"Source MCprep world blend file does not exist: {blendfile}")
+				env.log(
+					f"Source MCprep world blend file does not exist: {blendfile}")
 				return {'CANCELLED'}
 			if wname in bpy.data.worlds:
 				prev_world = bpy.data.worlds[wname]
@@ -924,18 +947,18 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 
 			time_obj = get_time_object()
 			if not time_obj:
-				conf.log(
+				env.log(
 					"TODO: implement create time_obj, parent sun to it & driver setup")
 
 		if self.world_type in ("world_static_mesh", "world_mesh"):
 			if not os.path.isfile(blendfile):
 				self.report(
 					{'ERROR'},
-					"Source MCprep world blend file does not exist: " + blendfile)
-				conf.log(
-					"Source MCprep world blend file does not exist: " + blendfile)
+					f"Source MCprep world blend file does not exist: {blendfile}")
+				env.log(
+					f"Source MCprep world blend file does not exist: {blendfile}")
 				return {'CANCELLED'}
-			resource = blendfile + "/Object"
+			resource = f"{blendfile}/bpy.types.Object"
 
 			util.bAppendLink(resource, "MoonMesh", False)
 			non_empties = [
@@ -992,7 +1015,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 		self.track_param = engine
 		return {'FINISHED'}
 
-	def create_sunlamp(self, context):
+	def create_sunlamp(self, context: Context) -> bpy.types.Object:
 		"""Create new sun lamp from primitives"""
 		if hasattr(bpy.data, "lamps"):  # 2.7
 			newlamp = bpy.data.lamps.new("Sun", "SUN")
@@ -1011,7 +1034,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			obj.use_contact_shadow = True
 		return obj
 
-	def create_dynamic_world(self, context, blendfile, wname):
+	def create_dynamic_world(self, context: Context, blendfile: Path, wname: str) -> List[bpy.types.Object]:
 		"""Setup fpr creating a dynamic world and setting up driver targets"""
 		resource = blendfile + "/World"
 		obj_list = []
@@ -1021,7 +1044,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			try:
 				util.obj_unlink_remove(time_obj_cache, True, context)
 			except Exception as e:
-				print("Error, could not unlink time_obj_cache " + str(time_obj_cache))
+				print(f"Error, could not unlink time_obj_cache {time_obj_cache}")
 				print(e)
 
 		time_obj_cache = None  # force reset to use newer cache object
@@ -1035,7 +1058,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			context.scene.world["mcprep_world"] = True
 		else:
 			self.report({'ERROR'}, "Failed to import new world")
-			conf.log("Failed to import new world")
+			env.log("Failed to import new world")
 
 		# assign sun/moon shader accordingly
 		use_shader = 1 if self.world_type == "world_shader" else 0
@@ -1057,23 +1080,22 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 
 		# if needed: create time object and setup drivers
 		# if not time_obj:
-		#	conf.log("Creating time_obj")
-		#	time_obj = bpy.data.objects.new('MCprep Time Control', None)
-		#	util.obj_link_scene(time_obj, context)
-		#	global time_obj_cache
-		#	time_obj_cache = time_obj
-		#	if hasattr(time_obj, "empty_draw_type"):  # 2.7
-		#		time_obj.empty_draw_type = 'SPHERE'
-		#	else:  # 2.8
-		#		time_obj.empty_display_type = 'SPHERE'
-
+		# 	env.log("Creating time_obj")
+		# 	time_obj = bpy.data.objects.new('MCprep Time Control', None)
+		# 	util.obj_link_scene(time_obj, context)
+		# 	global time_obj_cache
+		# 	time_obj_cache = time_obj
+		# 	if hasattr(time_obj, "empty_draw_type"):  # 2.7
+		# 		time_obj.empty_draw_type = 'SPHERE'
+		# 	else:  # 2.8
+		# 		time_obj.empty_display_type = 'SPHERE'
 		# first, get the driver
 		# if (not world.node_tree.animation_data
-		#		or not world.node_tree.animation_data.drivers
-		#		or not world.node_tree.animation_data.drivers[0].driver):
-		#	conf.log("Could not get driver from imported dynamic world")
-		#	self.report({'WARNING'}, "Could not update driver for dynamic world")
-		#	driver = None
+		# 		or not world.node_tree.animation_data.drivers
+		# 		or not world.node_tree.animation_data.drivers[0].driver):
+		# 	env.log("Could not get driver from imported dynamic world")
+		# 	self.report({'WARNING'}, "Could not update driver for dynamic world")
+		# 	driver = None
 		# else:
 		#	driver = world.node_tree.animation_data.drivers[0].driver
 		# if driver and driver.variables[0].targets[0].id_type == 'OBJECT':
@@ -1090,7 +1112,7 @@ class MCPREP_OT_time_set(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 
 	# subject center to place lighting around
-	time_enum = bpy.props.EnumProperty(
+	time_enum: bpy.props.EnumProperty(
 		name="Time selection",
 		description="Select between the different reflections",
 		items=[
@@ -1104,7 +1126,7 @@ class MCPREP_OT_time_set(bpy.types.Operator):
 			("18000", "Midnight", "Time=18,000, moon at zenish"),
 			("23000", "Sunrise", "Time set day=23,000, sun first visible")
 		])
-	day_offset = bpy.props.IntProperty(
+	day_offset: bpy.props.IntProperty(
 		name="Day offset",
 		description="Offset by number of days (ie +/- 24000*n)",
 		default=0)
@@ -1155,7 +1177,7 @@ class MCPREP_OT_render_helper():
 
 	def cleanup_scene(self):
 		# Clean up
-		conf.log("Cleanup pano rendering")
+		env.log("Cleanup pano rendering")
 		for i in range(len(self.render_queue_cleanup)):
 			util.obj_unlink_remove(self.render_queue_cleanup[i]["camera"], True)
 
@@ -1182,7 +1204,7 @@ class MCPREP_OT_render_helper():
 		if self.open_folder:
 			bpy.ops.mcprep.openfolder(folder=self.filepath)
 
-	def create_panorama_cam(self, name, camera_data, rot, loc):
+	def create_panorama_cam(self, name: str, camera_data: Camera, rot: VectorType, loc: VectorType) -> bpy.types.Object:
 		"""Create a camera"""
 
 		camera = bpy.data.objects.new(name, camera_data)
@@ -1191,12 +1213,12 @@ class MCPREP_OT_render_helper():
 		util.obj_link_scene(camera)
 		return camera
 
-	def cancel_render(self, scene):
-		conf.log("Cancelling pano render queue")
+	def cancel_render(self, scene) -> None:
+		env.log("Cancelling pano render queue")
 		self.render_queue = []
 		self.cleanup_scene()
 
-	def display_current(self, use_rendered=False):
+	def display_current(self, use_rendered: bool=False) -> None:
 		"""Display the most recent image in a window."""
 		if self.rendered_count == 0:
 			bpy.ops.render.view_show("INVOKE_DEFAULT")
@@ -1213,12 +1235,11 @@ class MCPREP_OT_render_helper():
 			return
 
 		if self.rendering:
-			header_text = "Pano render in progress: {}/6 done".format(
-				self.rendered_count)
+			header_text = f"Pano render in progress: {self.rendered_count}/6 done"
 		else:
 			header_text = "Pano render finished"
 
-		conf.log(header_text)
+		env.log(header_text)
 		area.header_text_set(header_text)
 		area.show_menus = False
 
@@ -1248,18 +1269,19 @@ class MCPREP_OT_render_helper():
 			self.prior_frame = self.current_render
 
 		if not self.render_queue:
-			conf.log("Finished pano render queue")
+			env.log("Finished pano render queue")
 			self.cleanup_scene()
 			return
 
 		self.current_render = self.render_queue.pop()
+		file_name = self.current_render["filename"]
 
 		bpy.context.scene.camera = self.current_render["camera"]
 
 		bpy.context.scene.render.filepath = os.path.join(
-			self.filepath, self.current_render["filename"])
+			self.filepath, file_name)
 
-		conf.log("Starting pano render {}".format(self.current_render["filename"]))
+		env.log(f"Starting pano render {file_name}")
 		self.display_current()
 
 		bpy.app.timers.register(
@@ -1269,13 +1291,13 @@ class MCPREP_OT_render_helper():
 render_helper = MCPREP_OT_render_helper()
 
 
-def init_render_timer():
+def init_render_timer() -> None:
 	"""Helper for pano renders to offset the start of the queue from op run."""
-	conf.log("Initial render timer started pano queue")
+	env.log("Initial render timer started pano queue")
 	render_helper.render_next_in_queue(None, None)
 
 
-def render_pano_frame_timer():
+def render_pano_frame_timer() -> None:
 	"""Pano render timer callback, giving a chance to refresh display."""
 	bpy.ops.render.render(
 		'EXEC_DEFAULT', write_still=True, use_viewport=False)
@@ -1288,17 +1310,17 @@ class MCPREP_OT_render_panorama(bpy.types.Operator, ExportHelper):
 	bl_description = "Render Panorama for texture Pack"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	panorama_resolution = bpy.props.IntProperty(
+	panorama_resolution: bpy.props.IntProperty(
 		name="Render resolution",
 		description="The resolution of the output images",
 		default=1024
 	)
-	open_folder = bpy.props.BoolProperty(
+	open_folder: bpy.props.BoolProperty(
 		name="Open folder when done",
 		description="Open the output folder when render completes",
 		default=False)
 
-	filepath = bpy.props.StringProperty(subtype='DIR_PATH')
+	filepath: bpy.props.StringProperty(subtype='DIR_PATH')
 	filename_ext = ""  # Not used, but required by ExportHelper.
 
 	def draw(self, context):
@@ -1381,7 +1403,6 @@ classes = (
 	MCPREP_OT_open_mineways,
 	MCPREP_OT_install_mineways,
 	MCPREP_OT_prep_world,
-	MCPREP_OT_add_mc_world,
 	MCPREP_OT_add_mc_sky,
 	MCPREP_OT_time_set,
 	MCPREP_OT_import_world_split,
@@ -1391,7 +1412,6 @@ classes = (
 
 def register():
 	for cls in classes:
-		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 
 

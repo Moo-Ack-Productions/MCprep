@@ -43,6 +43,7 @@ try:
 	import textwrap
 	import time
 	from datetime import datetime
+	from .conf import env
 except Exception as err:
 	print("[MCPREP Error] Failed tracker module load, invalid import module:")
 	print('\t'+str(err))
@@ -484,18 +485,19 @@ Tracker = Singleton_tracking()
 
 class TRACK_OT_toggle_enable_tracking(bpy.types.Operator):
 	"""Enabled or disable usage tracking"""
-	bl_idname = IDNAME+".toggle_enable_tracking"
+	bl_idname = f"{IDNAME}.toggle_enable_tracking"
 	bl_label = "Toggle opt-in for analytics tracking"
-	bl_description = "Toggle anonymous usage tracking to help the developers. "+\
-			" The only data tracked is what MCprep functions are used, key "+\
-			"blender/addon information, and the timestamp of the addon installation"
+	bl_description = (
+		"Toggle anonymous usage tracking to help the developers. "
+		"The only data tracked is what MCprep functions are used, key blender"
+		"/addon information, and the timestamp of the addon installation")
 	options = {'REGISTER', 'UNDO'}
 
-	tracking = bpy.props.EnumProperty(
-		items = [('toggle', 'Toggle', 'Toggle operator use tracking'),
+	tracking: bpy.props.EnumProperty(
+		items=[('toggle', 'Toggle', 'Toggle operator use tracking'),
 				('enable', 'Enable', 'Enable operator use tracking'),
 				('disable', 'Disable', 'Disable operator use tracking (if already on)')],
-		name = "tracking")
+		name="tracking")
 
 	def execute(self, context):
 		if not VALID_IMPORT:
@@ -543,13 +545,13 @@ class TRACK_OT_popup_report_error(bpy.types.Operator):
 	bl_label = "MCprep Error, press OK below to send this report to developers"
 	bl_description = "Report error to database, add additional comments for context"
 
-	error_report = bpy.props.StringProperty(default="")
-	comment = bpy.props.StringProperty(
+	error_report: bpy.props.StringProperty(default="")
+	comment: bpy.props.StringProperty(
 		default="",
 		maxlen=USER_COMMENT_LENGTH,
 		options={'SKIP_SAVE'})
 
-	action = bpy.props.EnumProperty(
+	action: bpy.props.EnumProperty(
 		items = [('report', 'Send', 'Send the error report to developers, fully anonymous'),
 				('ignore', "Don't send", "Ignore this error report")],
 		)
@@ -611,9 +613,9 @@ class TRACK_OT_popup_report_error(bpy.types.Operator):
 	def execute(self, context):
 		# if in headless mode, skip
 		if bpy.app.background:
-			conf.log("Skip Report logging, running headless")
-			conf.log("Would have reported:")
-			#conf.log(self.error_report)
+			env.log("Skip Report logging, running headless")
+			env.log("Would have reported:")
+			#env.log(self.error_report)
 			raise Exception(self.error_report)
 			return {'CANCELLED'}
 
@@ -861,7 +863,7 @@ def report_error(function):
 		elif hasattr(self, "skipUsage") and self.skipUsage is True:
 			return res  # skip running usage
 		elif VALID_IMPORT is False:
-			conf.log("Skipping usage, VALID_IMPORT is False")
+			env.log("Skipping usage, VALID_IMPORT is False")
 			return
 
 		try:
@@ -884,12 +886,12 @@ def report_error(function):
 			and Tracker._last_request.get("function") == self.track_function
 			and Tracker._last_request.get("time") + Tracker._debounce > time.time()
 			):
-			conf.log("Skipping usage due to debounce")
+			env.log("Skipping usage due to debounce")
 			run_track = False
 
 		# If successful completion, run analytics function if relevant
 		if bpy.app.background and run_track:
-			conf.log("Background mode, would have tracked usage: " + self.track_function)
+			env.log("Background mode, would have tracked usage: " + self.track_function)
 		elif run_track:
 			param = None
 			exporter = None
@@ -924,27 +926,6 @@ def layout_split(layout, factor=0.0, align=False):
 	if not hasattr(bpy.app, "version") or bpy.app.version < (2, 80):
 		return layout.split(percentage=factor, align=align)
 	return layout.split(factor=factor, align=align)
-
-
-def make_annotations(cls):
-	"""Add annotation attribute to class fields to avoid Blender 2.8 warnings"""
-	if not hasattr(bpy.app, "version") or bpy.app.version < (2, 80):
-		return cls
-	if bpy.app.version < (2, 93, 0):
-		bl_props = {
-			k: v for k, v in cls.__dict__.items() if isinstance(v, tuple)}
-	else:
-		bl_props = {
-			k: v for k, v in cls.__dict__.items()
-			if isinstance(v, bpy.props._PropertyDeferred)}
-	if bl_props:
-		if '__annotations__' not in cls.__dict__:
-			setattr(cls, '__annotations__', {})
-		annotations = cls.__dict__['__annotations__']
-		for k, v in bl_props.items():
-			annotations[k] = v
-			delattr(cls, k)
-	return cls
 
 
 classes = (
@@ -999,7 +980,7 @@ def register(bl_info):
 
 	# used to define which server source, not just if's below
 	if VALID_IMPORT:
-		Tracker.dev = conf.dev # True or False
+		Tracker.dev = env.dev_build # True or False
 	else:
 		Tracker.dev = False
 
@@ -1015,7 +996,6 @@ def register(bl_info):
 		Tracker.tracking_enabled = True # User accepted on download
 
 	for cls in classes:
-		make_annotations(cls)
 		bpy.utils.register_class(cls)
 
 	# register install

@@ -17,10 +17,12 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import os
+from typing import Dict, List
 
 import bpy
 
-from .. import conf
+from bpy.types import Context
+from ..conf import env, Entity
 from .. import util
 from .. import tracking
 
@@ -28,14 +30,14 @@ from . import spawn_util
 
 
 # -----------------------------------------------------------------------------
-# Mesh swap functions
+# Entity spawn functions
 # -----------------------------------------------------------------------------
 
 entity_cache = {}
 entity_cache_path = None
 
 
-def get_entity_cache(context, clear=False):
+def get_entity_cache(context: Context, clear: bool=False) -> Dict[str, List[str]]:
 	"""Load collections from entity spawning lib if not cached, return key vars."""
 	global entity_cache
 	global entity_cache_path  # Used to auto-clear path if bpy prop changed.
@@ -53,10 +55,10 @@ def get_entity_cache(context, clear=False):
 	# Note: Only using groups, not objects, for entities.
 	entity_cache = {"groups": [], "objects": []}
 	if not os.path.isfile(entity_path):
-		conf.log("Entity path not found")
+		env.log("Entity path not found")
 		return entity_cache
 	if not entity_path.lower().endswith('.blend'):
-		conf.log("Entity path must be a .blend file")
+		env.log("Entity path must be a .blend file")
 		return entity_cache
 
 	with bpy.data.libraries.load(entity_path) as (data_from, _):
@@ -65,20 +67,20 @@ def get_entity_cache(context, clear=False):
 	return entity_cache
 
 
-def getEntityList(context):
+def getEntityList(context: Context) -> List[Entity]:
 	"""Only used for UI drawing of enum menus, full list."""
 
 	# may redraw too many times, perhaps have flag
 	if not context.scene.mcprep_props.entity_list:
 		updateEntityList(context)
 	return [
-		(itm.entity, itm.name.title(), "Place {}".format(itm.name))
+		(itm.entity, itm.name.title(), f"Place {itm.name}")
 		for itm in context.scene.mcprep_props.entity_list]
 
 
-def update_entity_path(self, context):
+def update_entity_path(self, context: Context) -> None:
 	"""for UI list path callback"""
-	conf.log("Updating entity path", vv_only=True)
+	env.log("Updating entity path", vv_only=True)
 	if not context.scene.entity_path.lower().endswith('.blend'):
 		print("Entity file is not a .blend, and should be")
 	if not os.path.isfile(bpy.path.abspath(context.scene.entity_path)):
@@ -86,7 +88,7 @@ def update_entity_path(self, context):
 	updateEntityList(context)
 
 
-def updateEntityList(context):
+def updateEntityList(context: Context) -> None:
 	"""Update the entity list"""
 	entity_file = bpy.path.abspath(context.scene.entity_path)
 	if not os.path.isfile(entity_file):
@@ -104,8 +106,8 @@ def updateEntityList(context):
 			continue
 		if util.nameGeneralize(name).lower() in temp_entity_list:
 			continue
-		description = "Place {x} entity".format(x=name)
-		entity_list.append((prefix + name, name.title(), description))
+		description = f"Place {name} entity"
+		entity_list.append((f"{prefix}{name}", name.title(), description))
 		temp_entity_list.append(util.nameGeneralize(name).lower())
 
 	# sort the list alphabetically by name
@@ -124,16 +126,8 @@ def updateEntityList(context):
 		item.description = itm[2]
 
 
-class face_struct():
-	"""Structure class for preprocessed faces of a mesh"""
-	def __init__(self, normal_coord, global_coord, local_coord):
-		self.n = normal_coord
-		self.g = global_coord
-		self.l = local_coord
-
-
 # -----------------------------------------------------------------------------
-# Mesh swap functions
+# Entity spawn operators
 # -----------------------------------------------------------------------------
 
 
@@ -159,17 +153,11 @@ class MCPREP_OT_entity_spawner(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 
 	# properties, will appear in redo-last menu
-	def swap_enum(self, context):
+	def swap_enum(self, context: Context) -> List[tuple]:
 		return getEntityList(context)
 
-	entity = bpy.props.EnumProperty(items=swap_enum, name="Entity")
-	append_layer = bpy.props.IntProperty(
-		name="Append layer",
-		default=20,
-		min=0,
-		max=20,
-		description="Set the layer for appending groups, 0 means same as active layers")
-	relocation = bpy.props.EnumProperty(
+	entity: bpy.props.EnumProperty(items=swap_enum, name="Entity")
+	relocation: bpy.props.EnumProperty(
 		items=[
 			('Cursor', 'Cursor', 'Move the rig to the cursor'),
 			('Clear', 'Origin', 'Move the rig to the origin'),
@@ -177,18 +165,18 @@ class MCPREP_OT_entity_spawner(bpy.types.Operator):
 				'Offset the root bone to cursor while leaving the rest pose '
 				'at the origin'))],
 		name="Relocation")
-	clearPose = bpy.props.BoolProperty(
+	clearPose: bpy.props.BoolProperty(
 		name="Clear Pose",
 		description="Clear the pose to rest position",
 		default=True)
-	prep_materials = bpy.props.BoolProperty(
+	prep_materials: bpy.props.BoolProperty(
 		name="Prep materials (will reset nodes)",
 		description=(
 			"Prep materials of the added rig, will replace cycles node groups "
 			"with default"),
 		default=True)
 
-	skipUsage = bpy.props.BoolProperty(
+	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
 
@@ -256,7 +244,6 @@ classes = (
 
 def register():
 	for cls in classes:
-		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 
 	global entity_cache

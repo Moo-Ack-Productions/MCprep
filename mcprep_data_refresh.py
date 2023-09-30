@@ -1,4 +1,3 @@
-#!/opt/homebrew/bin/python3
 # Tool to pull down material names from jmc2obj and Mineways
 
 import json

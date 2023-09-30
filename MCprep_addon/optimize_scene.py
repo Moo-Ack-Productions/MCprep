@@ -18,7 +18,9 @@
 
 
 import bpy
+from bpy.types import Context, UILayout, Node
 import addon_utils
+
 from . import util
 from .materials import generate
 
@@ -46,40 +48,40 @@ class MCprepOptimizerProperties(bpy.types.PropertyGroup):
 		]
 		return itms
 
-	caustics_bool = bpy.props.BoolProperty(
+	caustics_bool: bpy.props.BoolProperty(
 		name="Caustics (slower)",
 		default=False,
 		description="If checked allows cautics to be enabled"
 	)
-	motion_blur_bool = bpy.props.BoolProperty(
+	motion_blur_bool: bpy.props.BoolProperty(
 		name="Motion Blur (slower)",
 		default=False,
 		description="If checked allows motion blur to be enabled"
 	)
-	scene_brightness = bpy.props.EnumProperty(
+	scene_brightness: bpy.props.EnumProperty(
 		name="",
 		description="Brightness of the scene: Affects how the optimizer adjusts sampling",
 		items=scene_brightness
 	)
-	quality_vs_speed = bpy.props.BoolProperty(
+	quality_vs_speed: bpy.props.BoolProperty(
 		name="Optimize scene for quality: Makes the optimizer adjust settings in a less \"destructive\" way",
 		default=True
 	)
-	simplify = bpy.props.BoolProperty(
+	simplify: bpy.props.BoolProperty(
 		name="Simplify the viewport: Reduces subdivisions to 0. Only disable if any assets will break when using this",
 		default=True
 	)
-	scrambling_unsafe = bpy.props.BoolProperty(
+	scrambling_unsafe: bpy.props.BoolProperty(
 		name="Automatic Scrambling Distance: Can cause artifacts when rendering",
 		default=False
 	)
-	preview_scrambling = bpy.props.BoolProperty(
+	preview_scrambling: bpy.props.BoolProperty(
 		name="Preview Scrambling in the viewport",
 		default=True
 	)
 
 
-def panel_draw(context, element):
+def panel_draw(context: Context, element: UILayout):
 	box = element.box()
 	col = box.column()
 	engine = context.scene.render.engine
@@ -115,7 +117,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 	bl_label = "Optimize Scene"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	def __init__(self):
+	def __init__(self) -> None:
 		# Sampling Settings.
 		self.samples = bpy.context.scene.cycles.samples # We will be doing some minor adjustments to the sample count
 		self.minimum_samples = None
@@ -148,7 +150,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		self.preview_scrambling = None
 		self.scrambling_multiplier = MIN_SCRAMBLING_MULTIPLIER
 	
-	def is_vol(self, context, node):
+	def is_vol(self, context: Context, node: Node) -> None:
 		density_socket = node.inputs["Density"] # Grab the density
 		node_name = util.nameGeneralize(node.name).rstrip()  # Get the name (who knew this could be used on nodes?)
 		# Sometimes there may be something linked to the density but it's fine to treat it as a homogeneous volume
@@ -172,7 +174,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 
 		print(self.homogenous_volumes, " ", self.not_homogenous_volumes)
 
-	def is_pricipled(self, context, mat_type, node):
+	def is_pricipled(self, context: Context, mat_type: str, node: Node) -> None:
 		if mat_type == "reflective":
 			roughness_socket = node.inputs["Roughness"]
 			if not roughness_socket.is_linked and roughness_socket.default_value >= 0.2:
@@ -404,7 +406,6 @@ classes = (
 
 def register():
 	for cls in classes:
-		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
 
 	bpy.types.Scene.optimizer_props = bpy.props.PointerProperty(
