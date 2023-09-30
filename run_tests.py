@@ -81,7 +81,7 @@ def main():
         if ind > 0 and not (run_all or run_specific):
             continue  # Only run the first test unless specified
         if not os.path.exists(binary):
-            print(f"Bledner EXE not found: {binary}")
+            print(f"Blender EXE not found: {binary}")
             continue
         cmd = [binary,
                "--background",

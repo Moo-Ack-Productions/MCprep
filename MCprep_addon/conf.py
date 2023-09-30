@@ -74,10 +74,6 @@ class MCprepEnv:
 
 		self.dev_file: Path = Path(os.path.dirname(__file__), "mcprep_dev.txt")
 
-		# if new update file found from install, replace old one with new
-		if self.json_path_update.exists():
-			self.json_path_update.replace(self.json_path)
-
 		self.last_check_for_updated = 0
 
 		# Check to see if there's a text file for a dev build. If so,
@@ -127,6 +123,16 @@ class MCprepEnv:
 		# that no reading has occurred. If lib not found, will update to [].
 		# If ever changing the resource pack, should also reset to None.
 		self.material_sync_cache = []
+
+	def update_json_dat_path(self):
+		"""If new update file found from install, replace old one with new.
+
+		Should be called as part of register, as otherwise this renaming will
+		trigger the renaming of the source file in git history when running
+		tests.
+		"""
+		if self.json_path_update.exists():
+			self.json_path_update.replace(self.json_path)
 
 	# -----------------------------------------------------------------------------
 	# ICONS INIT
@@ -406,6 +412,7 @@ def register():
 		# the addon was disabled once (or more) and then re-enabled, while
 		# avoiding a double call to init() on the first time load.
 		env = MCprepEnv()
+		env.update_json_dat_path()
 
 
 def unregister():
