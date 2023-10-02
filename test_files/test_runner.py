@@ -123,20 +123,22 @@ def main():
     fails = [res[0].id().split(".")[-1] for res in results.failures]
     skipped = [res[0].id().split(".")[-1] for res in results.skipped]
 
+    errors = ";".join(errs + fails).replace(",", " ")
     with open("test_results.csv", 'a') as csv:
-        errors = ";".join(errs + fails).replace(",", " ")
-        if errors == "":
-            errors = "No errors"
+        err_txt = "No errors" if errors == "" else errors
         csv.write("{},{},{},{},{},{}\r\n".format(
             str(bpy.app.version).replace(",", "."),
             "all_tests" if not args.test_specific else args.test_specific,
             results.testsRun - len(skipped),
             len(skipped),
             len(results.errors) + len(results.failures),
-            errors,
+            err_txt,
         ))
     print("Wrote out test results.")
-    sys.exit()
+    if errors:
+        sys.exit(1)
+    else:
+        sys.exit(0)
 
 
 if __name__ == '__main__':
