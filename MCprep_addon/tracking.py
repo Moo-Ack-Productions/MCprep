@@ -433,28 +433,33 @@ class Singleton_tracking(object):
 			else:
 				valid_tracker = True
 
-		if not valid_tracker:
+		if os.path.isfile(self._tracker_idbackup):
+			with open(self._tracker_idbackup) as data_file:
+				idbackup = json.load(data_file)
 
-			if os.path.isfile(self._tracker_idbackup):
-				with open(self._tracker_idbackup) as data_file:
-					idbackup = json.load(data_file)
+			bu_id = idbackup.get("IDNAME")
+			if bu_id in SKIP_IDS:
+				if self._verbose:
+					print(f"{self._addon}: Skipping blocked ID list")
 
-				bu_id = idbackup.get("IDNAME")
-				if bu_id in SKIP_IDS:
-					if self._verbose:
-						print(f"{self._addon}: Skipping blocked ID list")
-
+				if valid_tracker is True:
+					# If the backup id is bad, but the local id is good, just
+					# re-use the child (and immediately re-create backup).
+					_json["install_date"] = idbackup["date"]
+					os.remove(self._tracker_idbackup)  # Will be re-generated.
+					self.json = _json
+					Tracker.save_tracker_idbackup()
+				else:
 					# Still count as a reinstall
 					_json["status"] = "re-install"
 					_json["install_date"] = idbackup["date"]
 
-				elif bu_id is not None:
-					print("Detected this scenario???")
-					if self._verbose:
-						print(f"{self._addon}: Reinstall, getting IDNAME")
-					_json["install_id"] = idbackup["IDNAME"]
-					_json["status"] = "re-install"
-					_json["install_date"] = idbackup["date"]
+			elif not valid_tracker and bu_id is not None:
+				if self._verbose:
+					print(f"{self._addon}: Reinstall, getting IDNAME")
+				_json["install_id"] = idbackup["IDNAME"]
+				_json["status"] = "re-install"
+				_json["install_date"] = idbackup["date"]
 
 			self.json = _json
 			self.save_tracker_json()
