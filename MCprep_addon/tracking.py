@@ -16,6 +16,11 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+# critical to at least load these
+import os
+import bpy
+
+
 # safe importing, due to rogue python libraries being missing or invalid
 # in bad installs cases (if the rest of the addon works, don't make it
 # fail to work because of this module)
@@ -24,13 +29,9 @@ VALID_IMPORT = True
 # Request timeout (total request time may still be longer)
 TIMEOUT = 60
 
-# critical to at least load these
-import os
-import bpy
 
 # remaining, wrap in safe-importing
 try:
-	from . import conf
 	from . import util
 	from .addon_updater import Updater as updater
 	import re
@@ -46,7 +47,7 @@ try:
 	from .conf import env
 except Exception as err:
 	print("[MCPREP Error] Failed tracker module load, invalid import module:")
-	print('\t'+str(err))
+	print(f"\t{err}")
 	VALID_IMPORT = False
 
 
@@ -58,9 +59,10 @@ IDNAME = "mcprep"
 
 # max data/string lengths to match server-side validation,
 # if exceeded, request will return denied (no data written)
-SHORT_FIELD_MAX = 64-1
-USER_COMMENT_LENGTH = 512-1
-ERROR_STRING_LENGTH = 1024-1
+SHORT_FIELD_MAX = 64 - 1
+USER_COMMENT_LENGTH = 512 - 1
+ERROR_STRING_LENGTH = 1024 - 1
+
 
 # -----------------------------------------------------------------------------
 # primary class implementation
@@ -87,9 +89,9 @@ class Singleton_tracking(object):
 		self._verbose = False
 		self._version = ""
 		self.json = {}
-		self._httpclient_fallback = None # set to True/False after first req
-		self._last_request = {} # used to debounce sequential requests
-		self._debounce = 5 # seconds to avoid duplicative requests
+		self._httpclient_fallback = None  # set to True/False after first req
+		self._last_request = {}  # used to debounce sequential requests
+		self._debounce = 5  # seconds to avoid duplicative requests
 		self._feature_set = 0  # Supported addon features (e.g. experimental)
 
 	# -------------------------------------------------------------------------
@@ -99,11 +101,12 @@ class Singleton_tracking(object):
 	@property
 	def blender_version(self):
 		return self._blender_version
+
 	@blender_version.setter
 	def blender_version(self, value):
 		if value is None:
 			self._blender_version = "unknown"
-		elif type(value) != type((1,2,3)):
+		elif not isinstance(value, tuple):
 			raise Exception("blender_version must be a tuple")
 		else:
 			self._blender_version = str(value)
@@ -111,18 +114,20 @@ class Singleton_tracking(object):
 	@property
 	def language(self):
 		return self._language
+
 	@language.setter
 	def language(self, value):
 		if value is None:
 			self._language = "None"
-		elif type(value) != type("string"):
-			raise Exception("language must be a string")
+		elif not isinstance(value, str):
+			raise Exception(f"language must be a string: {value}, {type(value)}")
 		else:
 			self._language = self.string_trunc(value)
 
 	@property
 	def tracking_enabled(self):
 		return self._tracking_enabled
+
 	@tracking_enabled.setter
 	def tracking_enabled(self, value):
 		self._tracking_enabled = bool(value)
@@ -131,16 +136,18 @@ class Singleton_tracking(object):
 	@property
 	def verbose(self):
 		return self._verbose
+
 	@verbose.setter
 	def verbose(self, value):
 		try:
 			self._verbose = bool(value)
-		except:
-			raise ValueError("Verbose must be a boolean value")
+		except Exception as e:
+			raise ValueError("Verbose must be a boolean value") from e
 
 	@property
 	def appurl(self):
 		return self._appurl
+
 	@appurl.setter
 	def appurl(self, value):
 		if value[-1] == "/":
@@ -150,36 +157,40 @@ class Singleton_tracking(object):
 	@property
 	def failsafe(self):
 		return self._failsafe
+
 	@failsafe.setter
 	def failsafe(self, value):
 		try:
 			self._failsafe = bool(value)
-		except:
-			raise ValueError("failsafe must be a boolean value")
+		except Exception as e:
+			raise ValueError("failsafe must be a boolean value") from e
 
 	@property
 	def dev(self):
 		return self._dev
+
 	@dev.setter
 	def dev(self, value):
 		try:
 			self._dev = bool(value)
-		except:
-			raise ValueError("background must be a boolean value")
+		except Exception as e:
+			raise ValueError("background must be a boolean value") from e
 
 	@property
 	def background(self):
 		return self._background
+
 	@background.setter
 	def background(self, value):
 		try:
 			self._background = bool(value)
-		except:
-			raise ValueError("background must be a boolean value")
+		except Exception as e:
+			raise ValueError("background must be a boolean value") from e
 
 	@property
 	def version(self):
 		return self._version
+
 	@version.setter
 	def version(self, value):
 		self._version = value
@@ -187,6 +198,7 @@ class Singleton_tracking(object):
 	@property
 	def addon(self):
 		return self._addon
+
 	@addon.setter
 	def addon(self, value):
 		self._addon = value
@@ -194,11 +206,12 @@ class Singleton_tracking(object):
 	@property
 	def platform(self):
 		return self._platform
+
 	@platform.setter
 	def platform(self, value):
 		if value is None:
 			self._platform = "None"
-		elif type(value) != type("string"):
+		elif not isinstance(value, str):
 			raise Exception("platform must be a string")
 		else:
 			self._platform = self.string_trunc(value)
@@ -207,6 +220,7 @@ class Singleton_tracking(object):
 	def feature_set(self):
 		values = ["", "supported", "experimental"]
 		return values[self._feature_set]
+
 	@feature_set.setter
 	def feature_set(self, value):
 		if not value:
@@ -240,9 +254,9 @@ class Singleton_tracking(object):
 	def get_platform_details(self):
 		"""Return OS related information."""
 		try:
-			res = platform.system()+":"+platform.release()
+			res = f"{platform.system()}:{platform.release()}"
 			if len(res) > SHORT_FIELD_MAX:
-				res = res[:SHORT_FIELD_MAX-1] + "|"
+				res = res[:SHORT_FIELD_MAX - 1] + "|"
 		except Exception as err:
 			print("Error getting platform info: " + str(err))
 			return "unknown:unknown"
@@ -260,10 +274,13 @@ class Singleton_tracking(object):
 		self._blender_version = str(blender_version)
 		self.language = language
 
-		self._tracker_idbackup = os.path.join(os.path.dirname(__file__),
-							os.pardir,self._addon+"_trackerid.json")
-		self._tracker_json = os.path.join(os.path.dirname(__file__),
-							self._addon+"_tracker.json")
+		self._tracker_idbackup = os.path.join(
+			os.path.dirname(__file__),
+			os.pardir,
+			self._addon + "_trackerid.json")
+		self._tracker_json = os.path.join(
+			os.path.dirname(__file__),
+			self._addon + "_tracker.json")
 
 		# create the local file
 		# push into BG push update info if true
@@ -282,12 +299,11 @@ class Singleton_tracking(object):
 			return self.raw_request(method, path, payload, callback)
 		else:
 			# if self._verbose: print("Starting background thread for track call")
-			bg_thread = threading.Thread(target=self.raw_request, args=(method, path, payload, callback))
+			bg_thread = threading.Thread(
+				target=self.raw_request, args=(method, path, payload, callback))
 			bg_thread.daemon = True
-			#self._bg_threads.append(bg_thread)
 			bg_thread.start()
 			return "Thread launched"
-
 
 	def raw_request(self, method, path, payload, callback=None):
 		"""Raw connection request, background or foreground.
@@ -304,7 +320,7 @@ class Singleton_tracking(object):
 			try:
 				resp = self._raw_request_mod_requests(method, path, payload)
 				self._httpclient_fallback = False
-			except:
+			except Exception:
 				resp = self._raw_request_mod_http(method, path, payload)
 				self._httpclient_fallback = True
 		elif self._httpclient_fallback is False:
@@ -314,7 +330,7 @@ class Singleton_tracking(object):
 
 		if callback is not None:
 			if self._verbose:
-				print(self._addon+": Running callback")
+				print(self._addon + ": Running callback")
 			callback(resp)
 		return resp
 
@@ -360,11 +376,11 @@ class Singleton_tracking(object):
 		try:
 			connection.connect()
 			if self.verbose:
-				print(self._addon + ": Connection made to "+str(path))
+				print(f"{self._addon}: Connection made to {path}")
 		except Exception as err:
-			print(self._addon + ": Connection failed, intended report destination: "+str(path))
-			print("Error: "+str(err))
-			return {'status':'NO_CONNECTION'}
+			print(f"{self._addon}: Connection failed to: {path}")
+			print(f"Error: {err}")
+			return {'status': 'NO_CONNECTION'}
 
 		if method in ("POST", "PUT"):
 			connection.request(method, path, payload)
@@ -390,22 +406,22 @@ class Singleton_tracking(object):
 			with open(self._tracker_json) as data_file:
 				self.json = json.load(data_file)
 				if self._verbose:
-					print(self._addon+": Read in json settings from tracker file")
+					print(f"{self._addon}: Read in json settings from tracker file")
 		else:
 			# set data structure
 			self.json = {
-				"install_date":None,
-				"install_id":None,
-				"enable_tracking":False,
-				"status":None,
-				"metadata":{}
+				"install_date": None,
+				"install_id": None,
+				"enable_tracking": False,
+				"status": None,
+				"metadata": {}
 			}
 
 			if os.path.isfile(self._tracker_idbackup):
 				with open(self._tracker_idbackup) as data_file:
 					idbackup = json.load(data_file)
 					if self._verbose:
-						print(self._addon+": Reinstall, getting IDNAME")
+						print(f"{self._addon}: Reinstall, getting IDNAME")
 					if "IDNAME" in idbackup:
 						self.json["install_id"] = idbackup["IDNAME"]
 						self.json["status"] = "re-install"
@@ -426,7 +442,7 @@ class Singleton_tracking(object):
 		outf.write(data_out)
 		outf.close()
 		if self._verbose:
-			print(self._addon+": Wrote out json settings to file")
+			print(f"{self._addon}: Wrote out json settings to file")
 
 	def save_tracker_idbackup(self):
 		"""Save copy of the ID file to parent folder location, for detecting
@@ -435,15 +451,17 @@ class Singleton_tracking(object):
 			return
 		jpath = self._tracker_idbackup
 
-		if "install_id" in self.json and self.json["install_id"] != None:
+		if "install_id" in self.json and self.json["install_id"] is not None:
 			outf = open(jpath, 'w')
-			idbackup = {"IDNAME":self.json["install_id"],
-						"date":self.json["install_date"]}
-			data_out = json.dumps(idbackup,indent=4)
+			idbackup = {
+				"IDNAME": self.json["install_id"],
+				"date": self.json["install_date"]}
+			data_out = json.dumps(idbackup, indent=4)
 			outf.write(data_out)
 			outf.close()
 			if self._verbose:
-				print(self._addon+": Wrote out backup settings to file, with the contents:")
+				print(
+					f"{self._addon}: Wrote out backup settings to file, with the contents:")
 				print(idbackup)
 
 	def remove_indentifiable_information(self, report):
@@ -460,12 +478,12 @@ class Singleton_tracking(object):
 				str(report))
 		except Exception as err:
 			print("Error occured while removing info: {}".format(err))
-			return "[pii] "+str(report)
+			return f"[pii] {report}"
 
 	def string_trunc(self, value):
 		"""Function which caps max string length."""
 		ret = str(value)
-		if len(ret)>SHORT_FIELD_MAX:
+		if len(ret) > SHORT_FIELD_MAX:
 			ret = ret[:SHORT_FIELD_MAX]
 		return ret
 
@@ -494,9 +512,10 @@ class TRACK_OT_toggle_enable_tracking(bpy.types.Operator):
 	options = {'REGISTER', 'UNDO'}
 
 	tracking: bpy.props.EnumProperty(
-		items=[('toggle', 'Toggle', 'Toggle operator use tracking'),
-				('enable', 'Enable', 'Enable operator use tracking'),
-				('disable', 'Disable', 'Disable operator use tracking (if already on)')],
+		items=[
+			('toggle', 'Toggle', 'Toggle operator use tracking'),
+			('enable', 'Enable', 'Enable operator use tracking'),
+			('disable', 'Disable', 'Disable operator use tracking (if already on)')],
 		name="tracking")
 
 	def execute(self, context):
@@ -513,8 +532,8 @@ class TRACK_OT_toggle_enable_tracking(bpy.types.Operator):
 
 
 class TRACK_OT_popup_feedback(bpy.types.Operator):
-	bl_idname = IDNAME+".popup_feedback"
-	bl_label = "Thanks for using {}!".format(IDNAME)
+	bl_idname = f"{IDNAME}.popup_feedback"
+	bl_label = f"Thanks for using {IDNAME}!"
 	bl_description = "Take a survey to give feedback about the addon"
 	options = {'REGISTER', 'UNDO'}
 
@@ -526,7 +545,7 @@ class TRACK_OT_popup_feedback(bpy.types.Operator):
 
 		self.layout.split()
 		col = self.layout.column()
-		col.alignment='CENTER'
+		col.alignment = 'CENTER'
 		col.scale_y = 0.7
 		col.label(text="Want to help out even more?")
 		col.label(text="Press OK below to open the MCprep survey")
@@ -541,7 +560,7 @@ class TRACK_OT_popup_feedback(bpy.types.Operator):
 
 
 class TRACK_OT_popup_report_error(bpy.types.Operator):
-	bl_idname = IDNAME+".report_error"
+	bl_idname = f"{IDNAME}.report_error"
 	bl_label = "MCprep Error, press OK below to send this report to developers"
 	bl_description = "Report error to database, add additional comments for context"
 
@@ -552,16 +571,17 @@ class TRACK_OT_popup_report_error(bpy.types.Operator):
 		options={'SKIP_SAVE'})
 
 	action: bpy.props.EnumProperty(
-		items = [('report', 'Send', 'Send the error report to developers, fully anonymous'),
-				('ignore', "Don't send", "Ignore this error report")],
-		)
+		items=[
+			('report', 'Send', 'Send the error report to developers, fully anonymous'),
+			('ignore', "Don't send", "Ignore this error report")],
+	)
 
 	def invoke(self, context, event):
 		width = 500 * util.ui_scale()
 		return context.window_manager.invoke_props_dialog(self, width=width)
 
 	def draw_header(self, context):
-		self.layout.label(text="", icon="ERROR") # doesn't work/add to draw
+		self.layout.label(text="", icon="ERROR")  # doesn't work/add to draw
 
 	def draw(self, context):
 		layout = self.layout
@@ -570,7 +590,7 @@ class TRACK_OT_popup_report_error(bpy.types.Operator):
 		box = col.box()
 		boxcol = box.column()
 		boxcol.scale_y = 0.7
-		if self.error_report=="":
+		if self.error_report == "":
 			box.label(text=" # no error code identified # ")
 		else:
 			width = 500
@@ -578,26 +598,27 @@ class TRACK_OT_popup_report_error(bpy.types.Operator):
 			tot_ln = 0
 			max_ln = 10
 			for ln in report_lines:
-				sub_lns = textwrap.fill(ln, width-30)
+				sub_lns = textwrap.fill(ln, width - 30)
 				spl = sub_lns.split("\n")
-				for i,s in enumerate(spl):
+				for i, s in enumerate(spl):
 					boxcol.label(text=s)
-					tot_ln+=1
-					if tot_ln==max_ln: break
-				if tot_ln==max_ln: break
-		boxcol.label(text="."*500)
+					tot_ln += 1
+					if tot_ln == max_ln:
+						break
+				if tot_ln == max_ln:
+					break
+		boxcol.label(text="." * 500)
 		# boxcol.label(text="System & addon information:")
-		sysinfo="Blender version: {}\nMCprep version: {}\nOS: {}\n MCprep install identifier: {}".format(
-				Tracker.blender_version,
-				Tracker.version,
-				Tracker.platform,
-				Tracker.json["install_id"],
-		)
+		sysinfo = (
+			f"Blender version: {Tracker.blender_version}\n"
+			f"MCprep version: {Tracker.version}\n"
+			f"OS: {Tracker.platform}\n"
+			f"MCprep install identifier: {Tracker.json['install_id']}")
 		for ln in sysinfo.split("\n"):
 			boxcol.label(text=ln)
 
 		col.label(text="(Optional) Describe what you were trying to do when the error occured:")
-		col.prop(self,"comment",text="")
+		col.prop(self, "comment", text="")
 
 		row = col.row(align=True)
 		split = layout_split(layout, factor=0.6)
@@ -605,9 +626,10 @@ class TRACK_OT_popup_report_error(bpy.types.Operator):
 		spcol.label(text="Select 'Send' then press OK to share report")
 		split_two = layout_split(split, factor=0.4)
 		spcol_two = split_two.row(align=True)
-		spcol_two.prop(self,"action",text="")
+		spcol_two.prop(self, "action", text="")
 		spcol_two = split_two.row(align=True)
-		p = spcol_two.operator("wm.url_open", text="How is this used?", icon="QUESTION")
+		p = spcol_two.operator(
+			"wm.url_open", text="How is this used?", icon="QUESTION")
 		p.url = "https://theduckcow.com/dev/blender/mcprep/reporting-errors/"
 
 	def execute(self, context):
@@ -615,7 +637,6 @@ class TRACK_OT_popup_report_error(bpy.types.Operator):
 		if bpy.app.background:
 			env.log("Skip Report logging, running headless")
 			env.log("Would have reported:")
-			#env.log(self.error_report)
 			raise Exception(self.error_report)
 			return {'CANCELLED'}
 
@@ -623,16 +644,16 @@ class TRACK_OT_popup_report_error(bpy.types.Operator):
 			self.report({"ERROR"}, "Invalid import, all reporting disabled.")
 			return {'CANCELLED'}
 
-		if self.action=="ignore":
+		if self.action == "ignore":
 			return {"FINISHED"}
 		# also do followup callback for hey, check here for issues or support?
-		report = {"error":self.error_report,"user_comment":self.comment}
+		report = {"error": self.error_report, "user_comment": self.comment}
 		if self.action == 'report':
 			res = logError(report)
 			if Tracker.verbose:
 				print("Logged user report, with server response:")
 				print(res)
-			self.report({"INFO"},"Thanks for sharing the report")
+			self.report({"INFO"}, "Thanks for sharing the report")
 
 		return {'FINISHED'}
 
@@ -702,7 +723,7 @@ def trackInstalled(background=None):
 	if Tracker.failsafe is True:
 		try:
 			runInstall(background)
-		except:
+		except Exception:
 			pass
 	else:
 		runInstall(background)
@@ -746,7 +767,7 @@ def trackUsage(function, param=None, exporter=None, background=None):
 	if Tracker.failsafe is True:
 		try:
 			runUsage(background)
-		except:
+		except Exception:
 			pass
 	else:
 		runUsage(background)
@@ -808,7 +829,7 @@ def logError(report, background=None):
 	if Tracker.failsafe is True:
 		try:
 			runError(background)
-		except:
+		except Exception:
 			pass
 	else:
 		runError(background)
@@ -828,7 +849,7 @@ def report_error(function):
 			Tracker._handling_error = False
 			res = function(self, context)
 			Tracker._handling_error = False
-		except:
+		except Exception:
 			err = traceback.format_exc()
 			print(err)  # Always print raw traceback.
 
@@ -847,8 +868,8 @@ def report_error(function):
 				if err[ind] in ["\n", "\r"]:
 					nth_newline += 1
 				if nth_newline == 3:
-					if len(err) > ind+1:
-						err = err[ind+1:]
+					if len(err) > ind + 1:
+						err = err[ind + 1:]
 					break
 
 			# Prevent recusrive popups for errors if operators call other
@@ -858,7 +879,7 @@ def report_error(function):
 				bpy.ops.mcprep.report_error('INVOKE_DEFAULT', error_report=err)
 			return {'CANCELLED'}
 
-		if res=={'CANCELLED'}:
+		if res == {'CANCELLED'}:
 			return res  # cancelled, so skip running usage
 		elif hasattr(self, "skipUsage") and self.skipUsage is True:
 			return res  # skip running usage
@@ -868,9 +889,9 @@ def report_error(function):
 
 		try:
 			wrapper_safe_handler(self)
-		except:
+		except Exception:
 			err = traceback.format_exc()
-			print("Error while reporting usage for "+str(self.track_function))
+			print(f"Error while reporting usage for {self.track_function}")
 			print(err)
 
 		return res
@@ -902,9 +923,9 @@ def report_error(function):
 
 			try:
 				trackUsage(self.track_function, param=param, exporter=exporter)
-			except:
+			except Exception:
 				err = traceback.format_exc()
-				print("Error while reporting usage for "+str(self.track_function))
+				print(f"Error while reporting usage for {self.track_function}")
 				print(err)
 
 			# always update the last request gone through
@@ -969,10 +990,10 @@ def register(bl_info):
 
 	try:
 		Tracker.initialize(
-			appurl = "https://mcprep-1aa04.firebaseio.com/",
-			version = str(bl_info["version"]),
-			language = language,
-			blender_version = bversion)
+			appurl="https://mcprep-1aa04.firebaseio.com/",
+			version=str(bl_info["version"]),
+			language=language,
+			blender_version=bversion)
 	except Exception as err:
 		err = traceback.format_exc()
 		print(err)
@@ -980,20 +1001,20 @@ def register(bl_info):
 
 	# used to define which server source, not just if's below
 	if VALID_IMPORT:
-		Tracker.dev = env.dev_build # True or False
+		Tracker.dev = env.dev_build  # True or False
 	else:
 		Tracker.dev = False
 
 	if Tracker.dev is True:
 		Tracker.verbose = True
-		Tracker.background = True # test either way
-		Tracker.failsafe = False # test either way
-		Tracker.tracking_enabled = True # enabled automatically for testing
+		Tracker.background = True  # test either way
+		Tracker.failsafe = False  # test either way
+		Tracker.tracking_enabled = True  # enabled automatically for testing
 	else:
 		Tracker.verbose = False
 		Tracker.background = True
 		Tracker.failsafe = True
-		Tracker.tracking_enabled = True # User accepted on download
+		Tracker.tracking_enabled = True  # User accepted on download
 
 	for cls in classes:
 		bpy.utils.register_class(cls)
