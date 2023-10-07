@@ -670,7 +670,7 @@ class TRACK_OT_popup_report_error(bpy.types.Operator):
 		if bpy.app.background:
 			env.log("Skip Report logging, running headless")
 			env.log("Would have reported:")
-			raise Exception(self.error_report)
+			raise RuntimeError(self.error_report)
 			return {'CANCELLED'}
 
 		if not VALID_IMPORT:
@@ -806,8 +806,11 @@ def trackUsage(function, param=None, exporter=None, background=None):
 		runUsage(background)
 
 
-def logError(report, background=None):
-	"""Send error report to database."""
+def logError(report: dict, background=None):
+	"""Send error report to database.
+
+	report: structure like {"error": str, "user_comment": str}
+	"""
 	if not VALID_IMPORT:
 		return
 
@@ -825,15 +828,10 @@ def logError(report, background=None):
 		else:
 			location = "/1/log/user_report.json"
 
-		# extract details
-		if "user_comment" in report:
-			user_comment = report["user_comment"]
-		else:
-			user_comment = ""
-		if "error" in report:
-			error = report["error"]
-		else:
-			error = ""
+		# Extract details
+		user_comment = report.get("user_comment", "")
+		error = report.get("error", None)
+		if error is None:
 			print("No error passed through")
 			return
 
@@ -977,8 +975,6 @@ def report_error(function):
 
 def layout_split(layout, factor=0.0, align=False):
 	"""Intermediate method for pre and post blender 2.8 split UI function"""
-	if not hasattr(bpy.app, "version") or bpy.app.version < (2, 80):
-		return layout.split(percentage=factor, align=align)
 	return layout.split(factor=factor, align=align)
 
 
