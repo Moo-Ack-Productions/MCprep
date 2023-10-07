@@ -29,6 +29,11 @@ VALID_IMPORT = True
 # Request timeout (total request time may still be longer)
 TIMEOUT = 60
 
+# Ids with known analytical problems, such as clobbered-together installs.
+# If we see any of these IDs in local json files, still treat as a re-install
+# but replace the ID with the new one received.
+SKIP_IDS = ["-Nb8TgbvAoxHrnEe1WFy"]
+
 
 # remaining, wrap in safe-importing
 try:
@@ -402,35 +407,63 @@ class Singleton_tracking(object):
 		if self._tracker_json is None:
 			raise ValueError("tracker_json is not defined")
 
+		# Placeholder struc before saving to class
+		_json = {
+			"install_date": None,
+			"install_id": None,
+			"enable_tracking": False,
+			"status": None,
+			"metadata": {}
+		}
+
+		valid_tracker = False
 		if os.path.isfile(self._tracker_json) is True:
 			with open(self._tracker_json) as data_file:
-				self.json = json.load(data_file)
+				jdata = json.load(data_file)
+
+			_json = jdata
+			if self._verbose:
+				print(f"{self._addon}: Read in json settings from tracker file")
+			if jdata.get("install_id") in SKIP_IDS:
+				valid_tracker = False
+				_json["install_id"] = None
+				_json["status"] = "invalid_id"
 				if self._verbose:
-					print(f"{self._addon}: Read in json settings from tracker file")
-		else:
-			# set data structure
-			self.json = {
-				"install_date": None,
-				"install_id": None,
-				"enable_tracking": False,
-				"status": None,
-				"metadata": {}
-			}
+					print(f"{self._addon}: Skip ID detected, treat as new")
+			else:
+				valid_tracker = True
+
+		if not valid_tracker:
 
 			if os.path.isfile(self._tracker_idbackup):
 				with open(self._tracker_idbackup) as data_file:
 					idbackup = json.load(data_file)
+
+				bu_id = idbackup.get("IDNAME")
+				if bu_id in SKIP_IDS:
+					if self._verbose:
+						print(f"{self._addon}: Skipping blocked ID list")
+
+					# Still count as a reinstall
+					_json["status"] = "re-install"
+					_json["install_date"] = idbackup["date"]
+
+				elif bu_id is not None:
+					print("Detected this scenario???")
 					if self._verbose:
 						print(f"{self._addon}: Reinstall, getting IDNAME")
-					if "IDNAME" in idbackup:
-						self.json["install_id"] = idbackup["IDNAME"]
-						self.json["status"] = "re-install"
-						self.json["install_date"] = idbackup["date"]
+					_json["install_id"] = idbackup["IDNAME"]
+					_json["status"] = "re-install"
+					_json["install_date"] = idbackup["date"]
 
+			self.json = _json
 			self.save_tracker_json()
+		else:
+			# Tracker was valid, so just load it.
+			self.json = _json
 
-		# update any other properties if necessary from json
-		self._tracking_enabled = self.json["enable_tracking"]
+		# Update any other properties if necessary from json
+		self._tracking_enabled = self.json.get("enable_tracking", False)
 
 	def save_tracker_json(self):
 		"""Save out current state of the tracker json to file."""
@@ -669,7 +702,7 @@ def trackInstalled(background=None):
 		return
 
 	# if already installed, skip
-	if Tracker.json["status"] is None and Tracker.json["install_id"] is not None:
+	if not Tracker.json.get("status") and Tracker.json.get("install_id"):
 		return
 
 	if Tracker.verbose:
@@ -687,7 +720,7 @@ def trackInstalled(background=None):
 			location = "/1/track/install.json"
 
 		# capture re-installs/other status events
-		if Tracker.json["status"] is None:
+		if Tracker.json.get("status") is None:
 			status = "New install"
 		else:
 			status = Tracker.json["status"]
@@ -703,7 +736,7 @@ def trackInstalled(background=None):
 			"status": Tracker.string_trunc(status),
 			"platform": Tracker.platform,
 			"language": Tracker.language,
-			"ID": str(Tracker.json["install_id"])
+			"ID": str(Tracker.json.get("install_id", ""))
 		})
 
 		_ = Tracker.request('POST', location, payload, background, callback)
