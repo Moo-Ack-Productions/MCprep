@@ -1983,7 +1983,18 @@ class McprepProps(bpy.types.PropertyGroup):
 	effects_list: bpy.props.CollectionProperty(type=spawn_util.ListEffectsAssets)
 	effects_list_index: bpy.props.IntProperty(default=0)
 
-
+class MCprepWindowManager(PropertyGroup):
+	
+	
+	@classmethod
+	def register(cls):
+		bpy.types.WindowManager.mcprep = bpy.props.PointerProperty(type=cls)
+	
+	@classmethod
+	def unregister(cls):
+		del bpy.types.WindowManager.mcprep
+		
+		
 # -----------------------------------------------------------------------------
 # Register functions
 # -----------------------------------------------------------------------------
@@ -1992,6 +2003,7 @@ class McprepProps(bpy.types.PropertyGroup):
 classes = (
 	McprepPreference,
 	McprepProps,
+	MCprepWindowManager,
 	MCPREP_MT_mob_spawner,
 	MCPREP_MT_meshswap_place,
 	MCPREP_MT_item_spawn,

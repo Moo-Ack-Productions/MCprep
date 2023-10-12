@@ -686,6 +686,24 @@ class MCPREP_OT_spawn_mob_with_skin(bpy.types.Operator):
 
 		return {'FINISHED'}
 
+class MCPREP_OT_swap_skin_variant(bpy.types.Operator):
+	"""Apply the active UIlist skin to select characters"""
+	bl_idname = "mcprep.swap_skin variant"
+	bl_label = "Apply skin"
+	bl_description = "Swap the mobs variant"
+	bl_options = {'REGISTER', 'UNDO'}
+	
+	def invoke(self, context, event):
+		return context.window_manager.invoke_props_dialog(
+			self, width=300 * util.ui_scale())
+	
+	def draw(self, context: Context):
+		obj = context.obj
+	
+	def check_villager_case(self, materials):
+		for mat in materials:
+			
+
 
 class MCPREP_OT_download_username_list(bpy.types.Operator):
 	"""Apply the active UIlist skin to select characters"""

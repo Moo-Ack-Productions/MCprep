@@ -811,13 +811,16 @@ def move_assets_to_excluded_layer(context: Context, collections: List[Collection
 		initial_view_coll.collection.children.unlink(grp)
 		
 def set_prop(id_block: ID, key: str, value: Any, **kwargs: Dict[str, Any]):
-	"""Create or set the properties"""
+	"""Create or set the properties
+		3.0 got more functionalities
+	"""
 	id_block[key] = value
-	id_props = id_block.id_properties_ui(key)
-	id_props.update(**kwargs)
-	overrides = kwargs.get("overridable_library")
-	if overrides != None:
-		id_block.property_overridable_library_set(f'["{key}"]', overrides)
+	if bv30():
+		id_props = id_block.id_properties_ui(key)
+		id_props.update(**kwargs)
+		overrides = kwargs.get("overridable_library", True)
+		if overrides != None:
+			id_block.property_overridable_library_set(f'["{key}"]', overrides)
 
 def is_no_prep(mat: Material):
 	"""Check is material has no prep properties 
