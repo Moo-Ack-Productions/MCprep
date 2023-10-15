@@ -494,7 +494,7 @@ class MCPREP_OT_swap_texture_pack(
 			generate.set_saturation_material(mat)
 
 		if self.prepMaterials:
-			self.prep_mat()
+			self.prep_mat(context)
 
 		if invalid_uv:
 			self.report({'ERROR'}, (
