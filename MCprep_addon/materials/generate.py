@@ -30,10 +30,18 @@ from ..conf import env, Form
 
 AnimatedTex = Dict[str, int]
 
-class PackFormat(Enum):
-	SIMPLE = 0
-	SEUS = 1
-	SPECULAR = 2
+class DocEnum(Enum):
+	def __new__(cls, value, doc=""):
+		self = object.__new__(cls)  # calling super().__new__(value) here would fail
+		self._value_ = value
+		if doc != "":
+			self.__doc__ = doc
+		return self
+    
+class PackFormat(DocEnum):
+	SIMPLE = 0, "Use a simple shader setup with no PBR or emission falloff."
+	SEUS = 1, "Sets the pack format to Specular."
+	SPECULAR = 2, "Sets the pack format to SEUS."
 
 # -----------------------------------------------------------------------------
 # Material prep and generation functions (no registration)
