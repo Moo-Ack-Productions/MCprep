@@ -118,7 +118,7 @@ class TrackingTest(unittest.TestCase):
         good_idb = "-GOODID_B"
         bad_id = "-BAD"
 
-        tracking.SKIP_IDS.append(bad_id)
+        tracking.INVALID_IDS.append(bad_id)
 
         test_cases = [
             # struc of: new_install_id, local_id, parent_id

@@ -32,7 +32,8 @@ TIMEOUT = 60
 # Ids with known analytical problems, such as clobbered-together installs.
 # If we see any of these IDs in local json files, still treat as a re-install
 # but replace the ID with the new one received.
-SKIP_IDS = ["-Nb8TgbvAoxHrnEe1WFy"]
+# See example: https://github.com/Moo-Ack-Productions/MCprep/issues/491
+INVALID_IDS = ["-Nb8TgbvAoxHrnEe1WFy"]
 
 
 # remaining, wrap in safe-importing
@@ -424,12 +425,12 @@ class Singleton_tracking(object):
 			_json = jdata
 			if self._verbose:
 				print(f"{self._addon}: Read in json settings from tracker file")
-			if jdata.get("install_id") in SKIP_IDS:
+			if jdata.get("install_id") in INVALID_IDS:
 				valid_tracker = False
 				_json["install_id"] = None
 				_json["status"] = "invalid_id"
 				if self._verbose:
-					print(f"{self._addon}: Skip ID detected, treat as new")
+					print(f"{self._addon}: Invalid ID detected, treat as new")
 			else:
 				valid_tracker = True
 
@@ -438,9 +439,9 @@ class Singleton_tracking(object):
 				idbackup = json.load(data_file)
 
 			bu_id = idbackup.get("IDNAME")
-			if bu_id in SKIP_IDS:
+			if bu_id in INVALID_IDS:
 				if self._verbose:
-					print(f"{self._addon}: Skipping blocked ID list")
+					print(f"{self._addon}: Skipping Invalid ID")
 
 				if valid_tracker is True:
 					# If the backup id is bad, but the local id is good, just
