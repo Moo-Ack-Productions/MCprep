@@ -396,11 +396,11 @@ def set_cycles_texture(image: Image, material: Material, extra_passes: bool=Fals
 
 		# check to see nodes and their respective pre-named field,
 		# saved as an attribute on the node
-		if "MCPREP_diffuse" in node.name:
+		if "MCPREP_diffuse" in node:
 			node.image = image
 			node.mute = False
 			node.hide = False
-		elif "MCPREP_normal" in node.name and node.type == 'TEX_IMAGE':
+		elif "MCPREP_normal" in node and node.type == 'TEX_IMAGE':
 			if "normal" in img_sets:
 				new_img = util.loadTexture(img_sets["normal"])
 				node.image = new_img
@@ -415,7 +415,7 @@ def set_cycles_texture(image: Image, material: Material, extra_passes: bool=Fals
 				# normal_map = node.outputs[0].links[0].to_node
 				# principled = ...
 
-		elif "MCPREP_specular" in node.name and node.type == 'TEX_IMAGE':
+		elif "MCPREP_specular" in node and node.type == 'TEX_IMAGE':
 			if "specular" in img_sets:
 				new_img = util.loadTexture(img_sets["specular"])
 				node.image = new_img
@@ -425,7 +425,11 @@ def set_cycles_texture(image: Image, material: Material, extra_passes: bool=Fals
 			else:
 				node.mute = True
 				node.hide = True
-
+			
+		# Unlike the other names, this one
+		# is set with the Name option in the
+		# Blender UI, and thus is mapped to 
+		# node.name and not node itself
 		elif "MCPREP_SKIN_SWAP" in node.name and node.type == "TEX_IMAGE":
 			node.image = image
 			node.mute = False
