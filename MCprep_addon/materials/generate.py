@@ -351,19 +351,19 @@ def set_texture_pack(material: Material, folder: Path, use_extra_passes: bool) -
 	return 1
 
 
-def assert_textures_on_materials(image: Image, materials: List[Material]) -> int:
+def assert_textures_on_materials(image: Image, materials: List[Material], legacy_skin_swap_behavior: bool=False) -> int:
 	"""Called for any texture changing, e.g. skin, input a list of material and
 	an already loaded image datablock."""
 	# TODO: Add option to search for or ignore/remove extra maps (normal, etc)
 	count = 0
 	for mat in materials:
-		status = set_cycles_texture(image, mat)
+		status = set_cycles_texture(image, mat, legacy_skin_swap_behavior)
 		if status:
 			count += 1
 	return count
 
 
-def set_cycles_texture(image: Image, material: Material, extra_passes: bool=False) -> bool:
+def set_cycles_texture(image: Image, material: Material, extra_passes: bool=False, legacy_skin_swap_behavior: bool=False) -> bool:
 	"""
 	Used by skin swap and assiging missing textures or tex swapping.
 	Args:
@@ -426,7 +426,12 @@ def set_cycles_texture(image: Image, material: Material, extra_passes: bool=Fals
 				node.mute = True
 				node.hide = True
 
-		elif node.type == "TEX_IMAGE":
+		elif "MCPREP_SKIN_SWAP" in node and node.type == "TEX_IMAGE":
+			node.image = image
+			node.mute = False
+			node.hide = False
+
+		elif node.type == "TEX_IMAGE" and legacy_skin_swap_behavior is True:
 			# assume all unlabeled texture nodes should be the diffuse pass
 			node["MCPREP_diffuse"] = True  # annotate node for future reference
 			node.image = image

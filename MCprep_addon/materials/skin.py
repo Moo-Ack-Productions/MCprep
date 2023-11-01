@@ -99,7 +99,7 @@ def handler_skins_load(scene):
 		env.log("Didn't run skin reloading callback", vv_only=True)
 
 
-def loadSkinFile(self, context: Context, filepath: Path, new_material: bool=False):
+def loadSkinFile(self, context: Context, filepath: Path, new_material: bool=False, legacy_skin_swap_behavior: bool=False):
 	if not os.path.isfile(filepath):
 		self.report({'ERROR'}, f"Image file not found: {filepath}")
 		return 1
@@ -121,7 +121,7 @@ def loadSkinFile(self, context: Context, filepath: Path, new_material: bool=Fals
 		self.report(
 			{'WARNING'}, "Skinswap skipped {} linked objects".format(skipped))
 
-	status = generate.assert_textures_on_materials(image, mats)
+	status = generate.assert_textures_on_materials(image, mats, legacy_skin_swap_behavior)
 	if status is False:
 		self.report({'ERROR'}, "No image textures found to update")
 		return 1
@@ -363,13 +363,17 @@ class MCPREP_OT_swap_skin_from_file(bpy.types.Operator, ImportHelper):
 		name="New Material",
 		description="Create a new material instead of overwriting existing one",
 		default=True)
+	legacy_skin_swap_behavior: bpy.props.BoolProperty(
+		name="Use Legacy Skin Swap Behavior",
+		description="Swap textures in all image nodes that exist on the selected material; will be deprecated in the next release",
+		default=False)
 	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	track_function = "skin"
 	track_param = "file import"
 	@tracking.report_error
 	def execute(self, context):
-		res = loadSkinFile(self, context, self.filepath, self.new_material)
+		res = loadSkinFile(self, context, self.filepath, self.new_material, self.legacy_skin_swap_behavior)
 		if res != 0:
 			return {'CANCELLED'}
 
@@ -391,6 +395,10 @@ class MCPREP_OT_apply_skin(bpy.types.Operator):
 		name="New Material",
 		description="Create a new material instead of overwriting existing one",
 		default=True)
+	legacy_skin_swap_behavior: bpy.props.BoolProperty(
+		name="Use Legacy Skin Swap Behavior",
+		description="Swap textures in all image nodes that exist on the selected material; will be deprecated in the next release",
+		default=False)
 	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
@@ -399,7 +407,7 @@ class MCPREP_OT_apply_skin(bpy.types.Operator):
 	track_param = "ui list"
 	@tracking.report_error
 	def execute(self, context):
-		res = loadSkinFile(self, context, self.filepath, self.new_material)
+		res = loadSkinFile(self, context, self.filepath, self.new_material, self.legacy_skin_swap_behavior)
 		if res != 0:
 			return {'CANCELLED'}
 
@@ -431,6 +439,10 @@ class MCPREP_OT_apply_username_skin(bpy.types.Operator):
 			"If an older skin layout (pre Minecraft 1.8) is detected, convert "
 			"to new format (with clothing layers)"),
 		default=True)
+	legacy_skin_swap_behavior: bpy.props.BoolProperty(
+		name="Use Legacy Skin Swap Behavior",
+		description="Swap textures in all image nodes that exist on the selected material; will be deprecated in the next release",
+		default=False)
 	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	def invoke(self, context, event):
@@ -463,7 +475,7 @@ class MCPREP_OT_apply_username_skin(bpy.types.Operator):
 				return {'CANCELLED'}
 
 			# Now load the skin
-			res = loadSkinFile(self, context, saveloc, self.new_material)
+			res = loadSkinFile(self, context, saveloc, self.new_material, self.legacy_skin_swap_behavior)
 			if res != 0:
 				return {'CANCELLED'}
 			bpy.ops.mcprep.reload_skins()
@@ -471,7 +483,7 @@ class MCPREP_OT_apply_username_skin(bpy.types.Operator):
 		else:
 			env.log("Reusing downloaded skin")
 			ind = skins.index(user_ref)
-			res = loadSkinFile(self, context, paths[ind], self.new_material)
+			res = loadSkinFile(self, context, paths[ind], self.new_material, self.legacy_skin_swap_behavior)
 			if res != 0:
 				return {'CANCELLED'}
 			return {'FINISHED'}
