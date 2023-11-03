@@ -430,7 +430,7 @@ def set_cycles_texture(image: Image, material: Material, extra_passes: bool=Fals
 		# is set with the Name option in the
 		# Blender UI, and thus is mapped to 
 		# node.name and not node itself
-		elif "MCPREP_SKIN_SWAP" in node.name and node.type == "TEX_IMAGE":
+		elif util.nameGeneralize(node.name) == "MCPREP_SKIN_SWAP" and node.type == "TEX_IMAGE":
 			node.image = image
 			node.mute = False
 			node.hide = False
