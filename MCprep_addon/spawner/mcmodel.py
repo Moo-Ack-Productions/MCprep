@@ -378,7 +378,8 @@ def add_model(
 				face.material_index = materials.index(face_mat)
 
 	# Quick way to clean the model, hopefully it doesn't cause any UV issues
-	bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.01)
+	if not textures.get("overlay"):
+		bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.01)
 
 	# make the bmesh the object's mesh
 	bm.to_mesh(mesh)
