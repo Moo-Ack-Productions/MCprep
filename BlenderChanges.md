@@ -92,8 +92,8 @@ None that concern MCprep.
     - `MeshUVLoop` is deprecated. **Removed in Blender 4.0**
         - `data` remains emulated, but with a performance penalty
 
-# [Blender 3.6 (IN DEVELOPMENT)](https://wiki.blender.org/wiki/Reference/Release_Notes/3.6/Python_API)
-Nothing that concerns MCprep for now.
+# [Blender 3.6](https://wiki.blender.org/wiki/Reference/Release_Notes/3.6/Python_API)
+Nothing that concerns MCprep
 
 # [Blender 4.0 (IN DEVELOPMENT)](https://wiki.blender.org/wiki/Reference/Release_Notes/4.0/Python_API)
 ## Deprecated
@@ -104,3 +104,12 @@ Nothing that concerned MCprep for now.
     - The node's Python name is `ShaderNodeBsdfAnisotropic`
 - `MeshUVLoop` removed
 - Passing context into operators removed
+- Principled BSDF has been completely rewritten, including sockets
+    - Subsurface -> Subsurface Weight
+    - Subsurface Color removed, use Base Color instead
+    - Specular -> Specular IOR Level
+    - Specular Tint changed from float to color
+    - Transmission -> Transmission Weight
+    - Coat -> Coat Weight
+    - Sheen -> Sheen Weight
+    - Emission -> Emission Color
