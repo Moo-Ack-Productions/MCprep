@@ -1,3 +1,4 @@
+#!/bin/bash
 source venv/bin/activate
 
 RED='\033[0;31m'
@@ -58,7 +59,7 @@ then
       echo ""
 else
       echo "Commit new updates to mapping file before release:"
-      echo $ANY_DIFF
+      echo "$ANY_DIFF"
       exit
 fi
 
@@ -74,7 +75,7 @@ ls build/MCprep_addon.zip
 
 echo ""
 echo "Current live tags online:"
-echo $(git tag -l)
+git tag -l
 
 echo ""
 # Extract the numbers between parentheses, replace comma and space with period
@@ -82,16 +83,18 @@ BASE_VER=$(grep "\"version\":" MCprep_addon/__init__.py | awk -F"[()]" '{print $
 NEW_TAG="${BASE_VER}"
 
 echo -e "Current __init__ version: ${GREEN}${NEW_TAG}${NC}"
-read -p "Continue (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
+read -p -r "Continue (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
 
 NEW_NAME="MCprep_addon_$NEW_TAG.zip"
 mv build/MCprep_addon.zip "build/$NEW_NAME"
+
+exit 0
 
 # Make the tags
 echo ""
 echo "Generating tags and DRAFT release on github"
 # use --generate-notes to auto generate release notes (edit for public changelog)
-gh release create $NEW_TAG \
+gh release create "$NEW_TAG" \
     --draft \
     --generate-notes \
     -t "v${BASE_VER} | (Update)" \
