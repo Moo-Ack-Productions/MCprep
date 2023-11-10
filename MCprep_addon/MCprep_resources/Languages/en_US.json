@@ -1,5 +1,6 @@
 {
-  "language" : "en_US",
+  "language" : "English (United States)",
+  "locale" : "en_US",
   "translation" : {
     "world_imports_header" : "World Imports",
     "world_exporter_header" : "World exporter",
@@ -8,6 +9,7 @@
     "mcprep_prep_materials" : "Prep Materials",
     "obj_incompatible_textureswap" : "OBJ incompatible with textureswap",
     "meshswap" : "Mesh Swap",
+    "select_exporter" : "Select exporter!",
     "ui_already_improved" : "(UI already improved)",
     "ui_improve" : "Improve UI",
     "cycles_optimizer" : "Cycles Optimizer",
@@ -54,10 +56,17 @@
     "reload_mobs" : "Reload mobs",
     "meshswap_blend" : "Meshswap file must be a .blend",
     "reset_meshswap_path" : "Reset meshswap path",
-    "meshswap_file_not_found" : "Meshswap file not found",
     "no_blocks_loaded" : "No blocks loaded",
     "place" : "Place: ",
     "place_block" : "Place block",
-    "meshswap_file" : "Meshswap file"
+    "meshswap_file" : "Meshswap file",
+    "item_from_texture" : "Generate items from textures",
+    "no_items_loaded" : "No items loaded",
+    "place_item" : "Place item",
+    "import_entities" : "Import pre-rigged entities",
+    "entity_blend" : "Entity file must be a .blend",
+    "entity_file_not_found_error" : "Entity file not found",
+    "reset_entity_path" : "Reset entity path",
+    "spawn_entity" : "Spawn Entity"
   }
 }

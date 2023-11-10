@@ -19,7 +19,8 @@
 import json
 import os
 from pathlib import Path
-from typing import List, Dict
+from typing import Dict, Tuple
+from . import translate_enum as te
 import bpy
 from bpy.utils.previews import ImagePreviewCollection
 
@@ -63,6 +64,7 @@ except:
 # -----------------------------------------------------------------------------
 
 MCPREP_RESOURCES: Path = Path(os.path.dirname(__file__), "MCprep_resources")
+MCPREP_LANGUAGE = Tuple[str, Dict[str, str]]
 
 class MCprepEnv:
 	def __init__(self):
@@ -74,7 +76,7 @@ class MCprepEnv:
 		self.dev_file: Path = Path(os.path.dirname(__file__), "mcprep_dev.txt")
 
 		self.languages_folder: Path = MCPREP_RESOURCES / Path("Languages")
-		self.languages: Dict[str, Dict[str, str]] = {}
+		self.languages: Dict[str, MCPREP_LANGUAGE] = {}
 
 		# if new update file found from install, replace old one with new
 		if self.json_path_update.exists():
@@ -109,11 +111,12 @@ class MCprepEnv:
 
 						# If "languages" does not exist in the 
 						# JSON file, then ignore and continue on
-						if "language" not in language_data or "translation" not in language_data:
+						if "locale" not in language_data or "translation" \
+						not in language_data or "language" not in language_data:
 							continue 
 						
 						# Set the language data
-						self.languages[language_data["language"]] = language_data["translation"]
+						self.languages[language_data["locale"]] = (language_data["language"],language_data["translation"])
 
 		print(self.languages)
 
@@ -237,14 +240,14 @@ class MCprepEnv:
 			traceback.print_stack()
 	
 	# This function is to map String IDs with actual strings
-	def translate_str(self, str_id: str, default_language: str='en_US') -> str:
-		language = bpy.app.translations.locale
-		if language not in self.languages:
-			language = default_language
-		if str_id not in self.languages[language]:
-			language = default_language
-		if str_id in self.languages[language]:
-			return self.languages[language][str_id]
+	def translate_str(self, str_id: te.TranslateKeys, default_locale: str='en_US') -> str:
+		locale = bpy.app.translations.locale
+		if locale not in self.languages:
+			locale = default_locale
+		if str_id not in self.languages[locale][1]:
+			locale = default_locale
+		if str_id in self.languages[locale][1]:
+			return self.languages[locale][1][str_id.value]
 		return "Err"
 
 
