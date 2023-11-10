@@ -18,8 +18,10 @@
 
 
 import bpy
+from bpy.types import Context
 
 import time
+from typing import Dict, List, Tuple
 
 from ..conf import env
 from . import generate
@@ -31,7 +33,7 @@ from .. import util
 # UV functions
 # -----------------------------------------------------------------------------
 
-def get_uv_bounds_per_material(obj):
+def get_uv_bounds_per_material(obj: bpy.types.Object) -> Dict[str, list]:
 	"""Return the maximum uv bounds per object, split per material
 
 	Returns:
@@ -83,7 +85,7 @@ def get_uv_bounds_per_material(obj):
 	return res
 
 
-def detect_invalid_uvs_from_objs(obj_list):
+def detect_invalid_uvs_from_objs(obj_list: List[bpy.types.Object]) -> Tuple[bool, List[bpy.types.Object]]:
 	"""Detect all-in one combined images from concentrated UV layouts.
 
 	Returns:
@@ -122,7 +124,7 @@ def detect_invalid_uvs_from_objs(obj_list):
 			invalid_objects.append(obj)
 	t1 = time.time()
 	t_diff = t1 - t0  # round to .1s
-	env.log("UV check took {}s".format(t_diff), vv_only=True)
+	env.log(f"UV check took {t_diff}s", vv_only=True)
 	return invalid, invalid_objects
 
 
@@ -142,13 +144,13 @@ class MCPREP_OT_scale_uv(bpy.types.Operator):
 	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	@classmethod
-	def poll(cls, context):
+	def poll(cls, context: Context):
 		return context.mode == 'EDIT_MESH' or (
 			context.mode == 'OBJECT' and context.object)
 
 	track_function = "scale_uv"
 	@tracking.report_error
-	def execute(self, context):
+	def execute(self, context: Context):
 
 		# INITIAL WIP
 		"""
@@ -158,10 +160,10 @@ class MCPREP_OT_scale_uv(bpy.types.Operator):
 		uvs = ob.data.uv_layers[0].data
 		matchingVertIndex = list(chain.from_iterable(polyIndices))
 		# example, matching list of uv coord and 3dVert coord:
-		uvs_XY = [i.uv for i in Object.data.uv_layers[0].data]
-		vertXYZ= [v.co for v in Object.data.vertices]
+		uvs_XY = [i.uv for i in bpy.types.Object.data.uv_layers[0].data]
+		vertXYZ= [v.co for v in bpy.types.Object.data.vertices]
 		matchingVertIndex = list(chain.from_iterable(
-			[p.vertices for p in Object.data.polygons]))
+			[p.vertices for p in bpy.types.Object.data.polygons]))
 		# and now, the coord to pair with uv coord:
 		matchingVertsCoord = [vertsXYZ[i] for i in matchingVertIndex]
 		"""
@@ -187,7 +189,7 @@ class MCPREP_OT_scale_uv(bpy.types.Operator):
 
 		if ret is not None:
 			self.report({'ERROR'}, ret)
-			env.log("Error, " + ret)
+			env.log(f"Error, {ret}")
 			return {'CANCELLED'}
 
 		return {'FINISHED'}
@@ -250,12 +252,12 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	@classmethod
-	def poll(cls, context):
+	def poll(cls, context: Context):
 		return context.mode == 'EDIT_MESH'
 
 	track_function = "alpha_faces"
 	@tracking.report_error
-	def execute(self, context):
+	def execute(self, context: Context):
 
 		ob = context.object
 		if ob is None:
@@ -309,7 +311,7 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 				continue
 			elif image.channels != 4:
 				textures.append(None)  # no alpha channel anyways
-				env.log("No alpha channel for: " + image.name)
+				env.log(f"No alpha channel for: {image.name}")
 				continue
 			textures.append(image)
 		data = [None for tex in textures]
@@ -362,17 +364,16 @@ class MCPREP_OT_select_alpha_faces(bpy.types.Operator):
 							asum += data[fnd][image.size[1] * row + col]
 							acount += 1
 						except IndexError as err:
-							print("Index error while parsing col {}, row {}: {}".format(
-								col, row, err))
+							print(f"Index error while parsing col {col}, row {row}: {err}")
 
 			if acount == 0:
 				acount = 1
 			ratio = float(asum) / float(acount)
 			if ratio < float(threshold):
-				print("\t{} - Below threshold, select".format(ratio))
+				print(f"\t{ratio} - Below threshold, select")
 				f.select = True
 			else:
-				print("\t{} - above thresh, NO select".format(ratio))
+				print(f"\t{ratio} - above thresh, NO select")
 				f.select = False
 		return
 

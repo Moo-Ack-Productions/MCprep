@@ -21,13 +21,13 @@ import os
 
 import bpy
 from bpy_extras.io_utils import ImportHelper
+from bpy.types import Context
 
 from . import generate
 from . import sequences
+from . import uv_tools
 from .. import tracking
 from .. import util
-from . import uv_tools
-
 from ..conf import env
 
 # -----------------------------------------------------------------------------
@@ -45,14 +45,13 @@ class McprepMaterialProps():
 	def pack_formats(self, context):
 		"""Blender version-dependant format for cycles/eevee material formats."""
 		itms = []
-		if util.bv28():
-			itms.append((
-				"simple", "Simple (no PBR)",
-				"Use a simple shader setup with no PBR or emission falloff."))
+		itms.append((
+			"simple", "Simple (no PBR)",
+			"Use a simple shader setup with no PBR or emission falloff."))
 		itms.append(("specular", "Specular", "Sets the pack format to Specular."))
 		itms.append(("seus", "SEUS", "Sets the pack format to SEUS."))
 		return itms
-	
+
 	animateTextures: bpy.props.BoolProperty(
 		name="Animate textures (may be slow first time)",
 		description=(
@@ -127,7 +126,7 @@ class McprepMaterialProps():
 	)
 
 
-def draw_mats_common(self, context):
+def draw_mats_common(self, context: Context) -> None:
 	row = self.layout.row()
 	col = row.column()
 	engine = context.scene.render.engine
@@ -247,13 +246,13 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 
 			if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 				options = generate.PrepOptions(
-					passes, 
-					self.useReflections, 
-					self.usePrincipledShader, 
-					self.makeSolid, 
-					self.packFormat, 
-					self.useEmission, 
-					False # This is for an option set in matprep_cycles
+					passes,
+					self.useReflections,
+					self.usePrincipledShader,
+					self.makeSolid,
+					generate.PackFormat[self.packFormat.upper()],
+					self.useEmission,
+					False  # This is for an option set in matprep_cycles
 				)
 				res = generate.matprep_cycles(
 					mat=mat,
@@ -269,7 +268,9 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 
 			if self.animateTextures:
 				sequences.animate_single_material(
-					mat, context.scene.render.engine)
+					mat,
+					context.scene.render.engine,
+					export_location=sequences.ExportLocation.ORIGINAL)
 
 		# Sync materials.
 		if self.syncMaterials is True:
@@ -285,7 +286,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 			try:
 				bpy.ops.mcprep.improve_ui()
 			except RuntimeError as err:
-				print("Failed to improve UI with error: " + str(err))
+				print(f"Failed to improve UI with error: {err}")
 
 		if self.optimizeScene and engine == 'CYCLES':
 			bpy.ops.mcprep.optimize_scene()
@@ -295,14 +296,14 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 		elif count_lib_skipped > 0:
 			self.report(
 				{"INFO"},
-				"Modified {} materials, skipped {} linked ones.".format(
-					count, count_lib_skipped))
+				f"Modified {count} materials, skipped {count_lib_skipped} linked ones.")
 		elif count > 0:
-			self.report({"INFO"}, "Modified " + str(count) + " materials")
+			self.report({"INFO"}, f"Modified  {count} materials")
 		else:
 			self.report(
 				{"ERROR"},
-				"Nothing modified, be sure you selected objects with existing materials!")
+				"Nothing modified, be sure you selected objects with existing materials!"
+			)
 
 		addon_prefs = util.get_user_preferences(context)
 		self.track_param = context.scene.render.engine
@@ -389,23 +390,24 @@ class MCPREP_OT_swap_texture_pack(
 
 	filter_glob: bpy.props.StringProperty(
 		default="",
-		options={'HIDDEN'})
+		options={"HIDDEN"})
 	use_filter_folder = True
 	fileselectparams = "use_filter_blender"
-	filepath: bpy.props.StringProperty(subtype='DIR_PATH')
+	filepath: bpy.props.StringProperty(subtype="DIR_PATH")
 	filter_image: bpy.props.BoolProperty(
 		default=True,
-		options={'HIDDEN', 'SKIP_SAVE'})
+		options={"HIDDEN", "SKIP_SAVE"})
 	filter_folder: bpy.props.BoolProperty(
 		default=True,
-		options={'HIDDEN', 'SKIP_SAVE'})
+		options={"HIDDEN", "SKIP_SAVE"})
 	prepMaterials: bpy.props.BoolProperty(
 		name="Prep materials",
 		description="Runs prep materials after texture swap to regenerate materials",
-		default=False)
+		default=False,
+	)
 	skipUsage: bpy.props.BoolProperty(
 		default=False,
-		options={'HIDDEN'})
+		options={"HIDDEN"})
 
 	@classmethod
 	def poll(cls, context):
@@ -439,6 +441,7 @@ class MCPREP_OT_swap_texture_pack(
 	track_function = "texture_pack"
 	track_param = None
 	track_exporter = None
+
 	@tracking.report_error
 	def execute(self, context):
 		addon_prefs = util.get_user_preferences(context)
@@ -447,7 +450,7 @@ class MCPREP_OT_swap_texture_pack(
 		folder = self.filepath
 		if os.path.isfile(bpy.path.abspath(folder)):
 			folder = os.path.dirname(folder)
-		env.log("Folder: " + folder)
+		env.log(f"Folder: {folder}")
 
 		if not os.path.isdir(bpy.path.abspath(folder)):
 			self.report({'ERROR'}, "Selected folder does not exist")
@@ -472,14 +475,16 @@ class MCPREP_OT_swap_texture_pack(
 		# set the scene's folder for the texturepack being swapped
 		context.scene.mcprep_texturepack_path = folder
 
-		env.log("Materials detected: " + str(len(mat_list)))
+		env.log(f"Materials detected: {len(mat_list)}")
 		res = 0
 		for mat in mat_list:
 			self.preprocess_material(mat)
 			res += generate.set_texture_pack(mat, folder, self.useExtraMaps)
 			if self.animateTextures:
 				sequences.animate_single_material(
-					mat, context.scene.render.engine)
+					mat,
+					context.scene.render.engine,
+					export_location=sequences.ExportLocation.ORIGINAL)
 			# may be a double call if was animated tex
 			generate.set_saturation_material(mat)
 
@@ -505,7 +510,7 @@ class MCPREP_OT_swap_texture_pack(
 			env.log("Detected scaledd UV's, incompatible with swap textures")
 			env.log([ob.name for ob in affected_objs], vv_only=True)
 		else:
-			self.report({'INFO'}, "{} materials affected".format(res))
+			self.report({'INFO'}, f"{res} materials affected")
 		self.track_param = context.scene.render.engine
 		return {'FINISHED'}
 
@@ -551,8 +556,9 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 				"File not found! Reset the resource pack under advanced "
 				"settings (return arrow icon) and press reload materials"))
 			return {'CANCELLED'}
-		mat, err = self.generate_base_material(
-			context, mat_name, self.filepath)
+		# Create the base material node tree setup
+		mat, err = generate.generate_base_material(
+			context, mat_name, self.filepath, self.useExtraMaps)
 		if mat is None and err:
 			self.report({"ERROR"}, err)
 			return {'CANCELLED'}
@@ -584,45 +590,18 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 		self.track_param = context.scene.render.engine
 		return {'FINISHED'}
 
-	def generate_base_material(self, context, name, path):
-		"""Generate a base material from name and active resource pack"""
-		image = bpy.data.images.load(path, check_existing=True)
-		mat = bpy.data.materials.new(name=name)
-
-		engine = context.scene.render.engine
-		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
-			# need to create at least one texture node first, then the rest works
-			mat.use_nodes = True
-			nodes = mat.node_tree.nodes
-			node_diff = generate.create_node(nodes, 'ShaderNodeTexImage', image=image)
-			node_diff["MCPREP_diffuse"] = True
-
-			# Initialize extra passes as well
-			node_spec = generate.create_node(nodes, 'ShaderNodeTexImage')
-			node_spec["MCPREP_specular"] = True
-			node_nrm = generate.create_node(nodes, 'ShaderNodeTexImage')
-			node_nrm["MCPREP_normal"] = True
-
-			env.log("Added blank texture node")
-
-			# now use standard method to update textures
-			generate.set_cycles_texture(image, mat, self.useExtraMaps)
-		else:
-			return None, "Only Cycles and Eevee supported"
-
-		return mat, None
 
 	def update_material(self, context, mat):
 		"""Update the initially created material"""
 		if not mat:
-			env.log("During prep, found null material:" + str(mat), vv_only=True)
+			env.log(f"During prep, found null material: {mat}", vv_only=True)
 			return
 		elif mat.library:
 			return
 
 		engine = context.scene.render.engine
 		passes = generate.get_textures(mat)
-		env.log("Load Mat Passes:" + str(passes), vv_only=True)
+		env.log(f"Load Mat Passes:{passes}", vv_only=True)
 		if not self.useExtraMaps:
 			for pass_name in passes:
 				if pass_name != "diffuse":
@@ -636,13 +615,13 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 
 		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 			options = generate.PrepOptions(
-				passes, 
-				self.useReflections, 
-				self.usePrincipledShader, 
-				self.makeSolid, 
-				self.packFormat, 
-				self.useEmission, 
-				False # This is for an option set in matprep_cycles
+				passes=passes,
+				use_reflections=self.useReflections,
+				use_principled=self.usePrincipledShader,
+				only_solid=self.makeSolid,
+				pack_format=generate.PackFormat[self.packFormat.upper()],
+				use_emission_nodes=self.useEmission,
+				use_emission=False  # This is for an option set in matprep_cycles
 			)
 			res = generate.matprep_cycles(
 				mat=mat,
@@ -655,7 +634,9 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 
 		if self.animateTextures:
 			sequences.animate_single_material(
-				mat, context.scene.render.engine)
+				mat,
+				context.scene.render.engine,
+				export_location=sequences.ExportLocation.ORIGINAL)
 
 		return success, None
 

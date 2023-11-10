@@ -6,9 +6,14 @@ MCprep_addon/mcprep_addon_updater/MCprep_addon_updater_status.json
 blender_execs.txt
 blender_installs.txt
 build
-test_results.tsv
+test_results.csv
 debug_save_state.blend1
 MCprep_addon/MCprep_resources/resourcepacks/mcprep_default/materials.blend1
 mcprep_venv_*
 .cache
 .python-version
+venv/
+MCprep_addon/MCprep_resources/
+*.sublime-*
+MCprep_addon/import_bridge/conf
+MCprep_addon/import_bridge/nbt

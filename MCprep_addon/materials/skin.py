@@ -17,12 +17,16 @@
 # ##### END GPL LICENSE BLOCK #####
 
 
-import bpy
 import os
-from bpy_extras.io_utils import ImportHelper
+from pathlib import Path
+from typing import Optional, List, Tuple
 import shutil
 import urllib.request
+
+import bpy
+from bpy_extras.io_utils import ImportHelper
 from bpy.app.handlers import persistent
+from bpy.types import Context, Image, Material
 
 from . import generate
 from .. import tracking
@@ -35,7 +39,7 @@ from ..conf import env
 # -----------------------------------------------------------------------------
 
 
-def reloadSkinList(context):
+def reloadSkinList(context: Context):
 	"""Reload the skins in the directory for UI list"""
 
 	skinfolder = context.scene.mcprep_skin_path
@@ -51,7 +55,7 @@ def reloadSkinList(context):
 	for path in files:
 		if path.split(".")[-1].lower() not in ["png", "jpg", "jpeg", "tiff"]:
 			continue
-		skinlist.append((path, "{x} skin".format(x=path)))
+		skinlist.append((path, f"{path} skin"))
 
 	skinlist = sorted(skinlist, key=lambda x: x[0].lower())
 
@@ -70,7 +74,7 @@ def reloadSkinList(context):
 		item.name = skin
 
 
-def update_skin_path(self, context):
+def update_skin_path(self, context: Context):
 	"""For UI list path callback"""
 	env.log("Updating rig path", vv_only=True)
 	reloadSkinList(context)
@@ -95,9 +99,9 @@ def handler_skins_load(scene):
 		env.log("Didn't run skin reloading callback", vv_only=True)
 
 
-def loadSkinFile(self, context, filepath, new_material=False):
+def loadSkinFile(self, context: Context, filepath: Path, new_material: bool=False):
 	if not os.path.isfile(filepath):
-		self.report({'ERROR'}, "Image file not found")
+		self.report({'ERROR'}, f"Image file not found: {filepath}")
 		return 1
 		# special message for library linking?
 
@@ -124,9 +128,6 @@ def loadSkinFile(self, context, filepath, new_material=False):
 	else:
 		pass
 
-	if not util.bv28():
-		setUVimage(context.selected_objects, image)
-
 	# TODO: adjust the UVs if appropriate, and fix eyes
 	if image.size[0] != 0 and image.size[1] / image.size[0] != 1:
 		self.report({'INFO'}, "Skin swapper works best on 1.8 skins")
@@ -134,14 +135,14 @@ def loadSkinFile(self, context, filepath, new_material=False):
 	return 0
 
 
-def convert_skin_layout(image_file):
+def convert_skin_layout(image_file: Path) -> bool:
 	"""Convert skin to 1.8+ layout if old format detected
 
 	Could be improved using numpy, but avoiding the dependency.
 	"""
 
 	if not os.path.isfile(image_file):
-		env.log("Error! Image file does not exist: " + image_file)
+		env.log(f"Error! Image file does not exist: {image_file}")
 		return False
 
 	img = bpy.data.images.load(image_file)
@@ -220,7 +221,7 @@ def convert_skin_layout(image_file):
 		return False
 
 
-def getMatsFromSelected(selected, new_material=False):
+def getMatsFromSelected(selected: List[bpy.types.Object], new_material: bool=False) -> Tuple[List[Material], List[bpy.types.Object]]:
 	"""Get materials; if new material provided, ensure material slot is added
 
 	Used by skin swapping, to either update existing material or create new one
@@ -266,6 +267,7 @@ def getMatsFromSelected(selected, new_material=False):
 					slot.material = mat_ret[mat_list.index(slot.material)]
 
 	# if internal, also ensure textures are made unique per new mat
+	# TODO Remove 2.7
 	engine = bpy.context.scene.render.engine
 	if new_material and (engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME'):
 		for m in mat_ret:
@@ -277,27 +279,13 @@ def getMatsFromSelected(selected, new_material=False):
 	return mat_ret, linked_objs
 
 
-def setUVimage(objs, image):
-	"""Set image for each face for viewport displaying (2.7 only)"""
-	for obj in objs:
-		if obj.type != "MESH":
-			continue
-		if not hasattr(obj.data, "uv_textures"):
-			env.log("Called setUVimage on object with no uv_textures, 2.8?")
-			return
-		if obj.data.uv_textures.active is None:
-			continue
-		for uv_face in obj.data.uv_textures.active.data:
-			uv_face.image = image
-
-
-def download_user(self, context, username):
+def download_user(self, context: Context, username: str) -> Optional[Path]:
 	"""Download user skin from online.
 
 	Reusable function from within two common operators for downloading skin.
 	Example link: http://minotar.net/skin/theduckcow
 	"""
-	env.log("Downloading skin: " + username)
+	env.log(f"Downloading skin: {username}")
 
 	src_link = "http://minotar.net/skin/"
 	saveloc = os.path.join(
@@ -306,8 +294,8 @@ def download_user(self, context, username):
 
 	try:
 		if env.very_verbose:
-			print("Download starting with url: " + src_link + username.lower())
-			print("to save location: " + saveloc)
+			print(f"Download starting with url: {src_link} - {username.lower()}")
+			print(f"to save location: {saveloc}")
 		urllib.request.urlretrieve(src_link + username.lower(), saveloc)
 	except urllib.error.HTTPError as e:
 		print(e)
@@ -318,8 +306,8 @@ def download_user(self, context, username):
 		self.report({"ERROR"}, "URL error, check internet connection")
 		return None
 	except Exception as e:
-		print("Error occured while downloading skin: " + str(e))
-		self.report({"ERROR"}, "Error occured while downloading skin: " + str(e))
+		print(f"Error occured while downloading skin: {e}")
+		self.report({"ERROR"}, f"Error occured while downloading skin: {e}")
 		return None
 
 	# convert to 1.8 skin as needed (double height)
@@ -464,9 +452,11 @@ class MCPREP_OT_apply_username_skin(bpy.types.Operator):
 			self.report({"ERROR"}, "Invalid username")
 			return {'CANCELLED'}
 
+		user_ref = self.username.lower() + ".png"
+
 		skins = [str(skin[0]).lower() for skin in env.skin_list]
 		paths = [skin[1] for skin in env.skin_list]
-		if self.username.lower() not in skins or not self.skip_redownload:
+		if user_ref not in skins or not self.skip_redownload:
 			# Do the download
 			saveloc = download_user(self, context, self.username)
 			if not saveloc:
@@ -480,8 +470,8 @@ class MCPREP_OT_apply_username_skin(bpy.types.Operator):
 			return {'FINISHED'}
 		else:
 			env.log("Reusing downloaded skin")
-			ind = skins.index(self.username.lower())
-			res = loadSkinFile(self, context, paths[ind][1], self.new_material)
+			ind = skins.index(user_ref)
+			res = loadSkinFile(self, context, paths[ind], self.new_material)
 			if res != 0:
 				return {'CANCELLED'}
 			return {'FINISHED'}
@@ -574,8 +564,7 @@ class MCPREP_OT_remove_skin(bpy.types.Operator):
 		skin_path = env.skin_list[context.scene.mcprep_skins_list_index]
 		col = self.layout.column()
 		col.scale_y = 0.7
-		col.label(text="Warning, will delete file {} from".format(
-			os.path.basename(skin_path[0])))
+		col.label(text=f"Warning, will delete file {os.path.basename(skin_path[0])} from")
 		col.label(text=os.path.dirname(skin_path[-1]))
 
 	@tracking.report_error
@@ -601,7 +590,7 @@ class MCPREP_OT_remove_skin(bpy.types.Operator):
 			context.scene.mcprep_skins_list_index = len(env.skin_list) - 1
 
 		# in future, select multiple
-		self.report({"INFO"}, "Removed " + bpy.path.basename(file))
+		self.report({"INFO"}, f"Removed {bpy.path.basename(file)}")
 
 		return {'FINISHED'}
 
@@ -751,11 +740,10 @@ class MCPREP_OT_download_username_list(bpy.types.Operator):
 		elif issue_skins and len(issue_skins) < len(user_list):
 			self.report(
 				{"WARNING"},
-				"Could not download {} of {} skins, see console".format(
-					len(issue_skins), len(user_list)))
+				f"Could not download {len(issue_skins)} of {len(user_list)} skins, see console")
 			return {'FINISHED'}
 		else:
-			self.report({"INFO"}, "Downloaded {} skins".format(len(user_list)))
+			self.report({"INFO"}, f"Downloaded {len(user_list)} skins")
 			return {'FINISHED'}
 
 

@@ -18,20 +18,22 @@
 
 
 import os
+from typing import Union, Tuple
+from pathlib import Path
 
 import bpy
 from bpy.app.handlers import persistent
+from bpy.types import Context, Material
 
 from . import generate
 from ..conf import env
 from .. import tracking
 from .. import util
 
-from ..conf import env
-
 # -----------------------------------------------------------------------------
 # Utilities
 # -----------------------------------------------------------------------------
+
 
 @persistent
 def clear_sync_cache(scene):
@@ -39,13 +41,13 @@ def clear_sync_cache(scene):
 	env.material_sync_cache = None
 
 
-def get_sync_blend(context):
+def get_sync_blend(context: Context) -> Path:
 	"""Return the sync blend file path that might exist, based on active pack"""
 	resource_pack = bpy.path.abspath(context.scene.mcprep_texturepack_path)
 	return os.path.join(resource_pack, "materials.blend")
 
 
-def reload_material_sync_library(context):
+def reload_material_sync_library(context: Context) -> None:
 	"""Reloads the library and cache"""
 	sync_file = get_sync_blend(context)
 	if not os.path.isfile(sync_file):
@@ -57,7 +59,7 @@ def reload_material_sync_library(context):
 	env.log("Updated sync cache", vv_only=True)
 
 
-def material_in_sync_library(mat_name, context):
+def material_in_sync_library(mat_name: str, context: Context) -> bool:
 	"""Returns true if the material is in the sync mat library blend file"""
 	if env.material_sync_cache is None:
 		reload_material_sync_library(context)
@@ -68,7 +70,7 @@ def material_in_sync_library(mat_name, context):
 	return False
 
 
-def sync_material(context, source_mat, sync_mat_name, link, replace):
+def sync_material(context: Context, source_mat: Material, sync_mat_name: str, link: bool, replace: bool) -> Tuple[bool, Union[bool, str, None]]:
 	"""If found, load and apply the material found in a library.
 
 	Args:
@@ -94,14 +96,10 @@ def sync_material(context, source_mat, sync_mat_name, link, replace):
 
 	imported = set(bpy.data.materials[:]) - set(init_mats)
 	if not imported:
-		return 0, "Could not import {}".format(import_name)
+		return 0, f"Could not import {import_name}"
 	new_material = list(imported)[0]
 
-	# 2.78+ only, else silent failure
-	res = util.remap_users(source_mat, new_material)
-	if res != 0:
-		# try a fallback where we at least go over the selected objects
-		return 0, res
+	source_mat.user_remap(new_material)
 	if replace is True:
 		bpy.data.materials.remove(source_mat)
 
@@ -147,7 +145,7 @@ class MCPREP_OT_sync_materials(bpy.types.Operator):
 		sync_file = get_sync_blend(context)
 		if not os.path.isfile(sync_file):
 			if not self.skipUsage:
-				self.report({'ERROR'}, "Sync file not found: " + sync_file)
+				self.report({'ERROR'}, "Sync file not found: {sync_file}")
 			return {'CANCELLED'}
 
 		if sync_file == bpy.data.filepath:
@@ -198,7 +196,7 @@ class MCPREP_OT_sync_materials(bpy.types.Operator):
 				last_err = err
 
 		if last_err:
-			env.log("Most recent error during sync:" + str(last_err))
+			env.log(f"Most recent error during sync:{last_err}")
 
 		# Re-establish initial state, as append material clears selections
 		for obj in inital_selection:
@@ -218,7 +216,38 @@ class MCPREP_OT_sync_materials(bpy.types.Operator):
 		elif modified == 1:
 			self.report({'INFO'}, "Synced 1 material")
 		else:
-			self.report({'INFO'}, "Synced {} materials".format(modified))
+			self.report({'INFO'}, f"Synced {modified} materials")
+		return {'FINISHED'}
+
+
+class MCPREP_OT_edit_sync_materials_file(bpy.types.Operator):
+	"""Open the the file used fo syncrhonization."""
+	bl_idname = "mcprep.edit_sync_materials_file"
+	bl_label = "Edit sync file"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	track_function = "edit_sync_materials"
+	track_param = None
+	@tracking.report_error
+	def execute(self, context):
+		file = get_sync_blend(context)
+		if not bpy.data.is_saved:
+			self.report({'ERROR'}, "Save your blend file first")
+			return {'CANCELLED'}
+
+		# Will open without saving or prompting!
+		# TODO: Perform action more similar to the asset browser, which opens
+		# a new instance of blender.
+		if os.path.isfile(file):
+			bpy.ops.wm.open_mainfile(filepath=file)
+		else:
+			# Open and save a new sync file instead.
+			bpy.ops.wm.read_homefile(use_empty=True)
+
+			# Set the local resource pack to match this generated file.
+			bpy.context.scene.mcprep_texturepack_path = "//"
+
+			bpy.ops.wm.save_as_mainfile(filepath=file)
 		return {'FINISHED'}
 
 

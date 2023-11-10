@@ -18,14 +18,18 @@
 
 import os
 import re
+from typing import List, Optional
+from pathlib import Path
 
 import bpy
+from bpy.types import Context, Collection, BlendDataLibraries
 
 from ..conf import env
 from .. import util
 from .. import tracking
 from . import mobs
 from . import effects
+
 
 # Top-level names used for inclusion or exclusions when filtering through
 # collections in blend files for spawners: mobs, meshswap, and entities.
@@ -34,20 +38,17 @@ SKIP_COLL = "mcskip"  # Used for geometry and particle skips too.
 SKIP_COLL_LEGACY = "noimport"  # Supporting older MCprep Meshswap lib.
 
 # Icon backwards compatibility.
-if util.bv30():
-	COLL_ICON = 'OUTLINER_COLLECTION'
-elif util.bv28():
-	COLL_ICON = 'COLLECTION_NEW'
-else:
-	COLL_ICON = 'GROUP'
+COLL_ICON = 'OUTLINER_COLLECTION' if util.bv30() else 'COLLECTION_NEW'
+
 
 # -----------------------------------------------------------------------------
 # Reusable functions for spawners
 # -----------------------------------------------------------------------------
 
 
-def filter_collections(data_from):
-	"""Generalized way to prefilter collections in a blend file.
+def filter_collections(data_from: BlendDataLibraries) -> List[str]:
+	""" TODO 2.7 groups 
+	Generalized way to prefilter collections in a blend file.
 
 	Enforces the awareness of inclusion and exlcusion collection names, and
 	some hard coded cases to always ignore.
@@ -80,10 +81,10 @@ def filter_collections(data_from):
 
 		short = name.replace(" ", "").replace("-", "").replace("_", "")
 		if SKIP_COLL in short.lower():
-			env.log("Skipping collection: " + name)
+			env.log(f"Skipping collection: {name}")
 			continue
 		if SKIP_COLL_LEGACY in short.lower():
-			env.log("Skipping legacy collection: " + name)
+			env.log(f"Skipping legacy collection: {name}")
 			continue
 		elif INCLUDE_COLL in name.lower():
 			any_mcprep = True
@@ -91,13 +92,12 @@ def filter_collections(data_from):
 		all_names.append(name)
 
 	if any_mcprep:
-		env.log("Filtered from {} down to {} MCprep collections".format(
-			len(all_names), len(mcprep_names)))
+		env.log(f"Filtered from {len(all_names)} down to {len(mcprep_names)} MCprep collections")
 		all_names = mcprep_names
 	return all_names
 
 
-def check_blend_eligible(this_file, all_files):
+def check_blend_eligible(this_file: Path, all_files: List[Path]) -> bool:
 	"""Returns true if this_file is the BEST blend file variant for this rig.
 
 	Created to better support older blender versions without having to
@@ -192,7 +192,7 @@ def check_blend_eligible(this_file, all_files):
 	return latest_allowed != this_file
 
 
-def attemptScriptLoad(path):
+def attemptScriptLoad(path: Path) -> None:
 	"""Search for script that matches name of the blend file"""
 
 	# TODO: should also look into the blend if appropriate
@@ -202,8 +202,7 @@ def attemptScriptLoad(path):
 	path = path[:-5] + "py"
 
 	if os.path.basename(path) in [txt.name for txt in bpy.data.texts]:
-		env.log("Script {} already imported, not importing a new one".format(
-			os.path.basename(path)))
+		env.log(f"Script {os.path.basename(path)} already imported, not importing a new one")
 		return
 
 	if not os.path.isfile(path):
@@ -227,7 +226,7 @@ def attemptScriptLoad(path):
 	text.use_module = True
 
 
-def fix_armature_target(self, context, new_objs, src_coll):
+def fix_armature_target(self, context: Context, new_objs: List[bpy.types.Object], src_coll: Collection) -> None:
 	"""Addresses 2.8 bug where make real might not update armature source"""
 
 	src_armas = [
@@ -262,16 +261,16 @@ def fix_armature_target(self, context, new_objs, src_coll):
 				new_target.animation_data_create()
 				new_target.animation_data.action = old_target.animation_data.action
 				env.log(
-					"Updated animation of armature for instance of " + src_coll.name)
+					f"Updated animation of armature for instance of {src_coll.name}")
 
 			if mod.object in new_objs:
 				continue  # Was already the new object target for modifier.
 			mod.object = new_target
 			env.log(
-				"Updated target of armature for instance of " + src_coll.name)
+				f"Updated target of armature for instance of {src_coll.name}")
 
 
-def prep_collection(self, context, name, pre_groups):
+def prep_collection(self, context: Context, name: str, pre_groups: List[Collection]) -> Optional[Collection]:
 	"""Prep the imported collection, ran only if newly imported (not cached)"""
 
 	# Group method first, move append to according layer
@@ -322,7 +321,7 @@ def prep_collection(self, context, name, pre_groups):
 	return group
 
 
-def get_rig_from_objects(objects):
+def get_rig_from_objects(objects: List[bpy.types.Object]) -> bpy.types.Object:
 	"""From a list of objects, return the the primary rig (best guess)"""
 	prox_obj = None
 	for obj in objects:
@@ -338,11 +337,11 @@ def get_rig_from_objects(objects):
 	return prox_obj
 
 
-def offset_root_bone(context, armature):
+def offset_root_bone(context: Context, armature: bpy.types.Object) -> bool:
 	"""Used to offset bone to world location (cursor)"""
 	env.log("Attempting offset root")
 	set_bone = False
-	lower_bones = [bone.name.lower() for bone in armature.pose.bones]
+	lower_bones: List[str] = [bone.name.lower() for bone in armature.pose.bones]
 	lower_name = None
 	for name in ["main", "root", "base", "master"]:
 		if name in lower_bones:
@@ -356,7 +355,7 @@ def offset_root_bone(context, armature):
 			continue
 		bone.location = util.matmul(
 			bone.bone.matrix.inverted(),
-			util.get_cuser_location(context),
+			util.get_cursor_location(context),
 			armature.matrix_world.inverted()
 		)
 
@@ -365,7 +364,7 @@ def offset_root_bone(context, armature):
 	return set_bone
 
 
-def load_linked(self, context, path, name):
+def load_linked(self, context: Context, path: str, name: str) -> None:
 	"""Process for loading mob or entity via linked library.
 
 	Used by mob spawner when chosing to link instead of append.
@@ -374,10 +373,10 @@ def load_linked(self, context, path, name):
 	path = bpy.path.abspath(path)
 	act = None
 	if hasattr(bpy.data, "groups"):
-		res = util.bAppendLink(path + '/Group', name, True)
+		res = util.bAppendLink(f"{path}/Group", name, True)
 		act = context.object  # assumption of object after linking, 2.7 only
 	elif hasattr(bpy.data, "collections"):
-		res = util.bAppendLink(path + '/Collection', name, True)
+		res = util.bAppendLink(f"{path}/Collection", name, True)
 		if len(context.selected_objects) > 0:
 			act = context.selected_objects[0]  # better for 2.8
 		else:
@@ -399,8 +398,7 @@ def load_linked(self, context, path, name):
 	# 	act = context.selected_objects[0] # better for 2.8
 	# elif context.object:
 	# 	act = context.object  # assumption of object after linking
-	env.log("Identified new obj as: {}".format(
-		act), vv_only=True)
+	env.log(f"Identified new obj as: {act}", vv_only=True)
 
 	if not act:
 		self.report({'ERROR'}, "Could not grab linked in object if any.")
@@ -451,7 +449,7 @@ def load_linked(self, context, path, name):
 		# but not clear how this happens
 		print("WARNING: Assigned fallback gl of (0,0,0)")
 		gl = (0, 0, 0)
-	# cl = util.get_cuser_location(context)
+	# cl = util.get_cursor_location(context)
 
 	if self.relocation == "Offset":
 		# do the offset stuff, set active etc
@@ -477,7 +475,7 @@ def load_linked(self, context, path, name):
 				{'INFO'}, "This addon works better when the root bone's name is 'MAIN'")
 
 
-def load_append(self, context, path, name):
+def load_append(self, context: Context, path: Path, name: str) -> None:
 	"""Append an entire collection/group into this blend file and fix armature.
 
 	Used for both mob spawning and entity spawning with appropriate handling
@@ -506,7 +504,7 @@ def load_append(self, context, path, name):
 	else:
 		raise Exception("No Group or Collection bpy API endpoint")
 
-	env.log(os.path.join(path, subpath) + ', ' + name)
+	env.log(f"{os.path.join(path, subpath)}, {name}")
 	pregroups = list(util.collections())
 	res = util.bAppendLink(os.path.join(path, subpath), name, False)
 	postgroups = list(util.collections())
@@ -534,8 +532,7 @@ def load_append(self, context, path, name):
 				# group is a subcollection of another name.
 				grp_added = grp
 
-	env.log("Identified collection/group {} as the primary imported".format(
-		grp_added), vv_only=True)
+	env.log(f"Identified collection/group {grp_added} as the primary imported", vv_only=True)
 
 	# if rig not centered in original file, assume its group is
 	if hasattr(grp_added, "dupli_offset"):  # 2.7
@@ -545,30 +542,22 @@ def load_append(self, context, path, name):
 	else:
 		env.log("Warning, could not set offset for group; null type?")
 		gl = (0, 0, 0)
-	cl = util.get_cuser_location(context)
+	cl = util.get_cursor_location(context)
 
 	# For some reason, adding group objects on its own doesn't work
 	all_objects = context.selected_objects
 	addedObjs = [ob for ob in grp_added.objects]
 	for ob in all_objects:
 		if ob not in addedObjs:
-			env.log("This obj not in group {}: {}".format(
-				grp_added.name, ob.name))
+			env.log(f"This obj not in group {grp_added.name}: {ob.name}")
 			# removes things like random bone shapes pulled in,
 			# without deleting them, just unlinking them from the scene
 			util.obj_unlink_remove(ob, False, context)
 
-	if not util.bv28():
-		grp_added.name = "reload-blend-to-remove-this-empty-group"
-		for obj in grp_added.objects:
-			grp_added.objects.unlink(obj)
-			util.select_set(obj, True)
-		grp_added.user_clear()
-	else:
-		for obj in grp_added.objects:
-			if obj not in context.view_layer.objects[:]:
-				continue
-			util.select_set(obj, True)
+	for obj in grp_added.objects:
+		if obj not in context.view_layer.objects[:]:
+			continue
+		util.select_set(obj, True)
 
 	# try:
 	# 	util.collections().remove(grp_added)
@@ -580,11 +569,11 @@ def load_append(self, context, path, name):
 		env.log("Could not get rig object")
 		self.report({'WARNING'}, "No armatures found!")
 	else:
-		env.log("Using object as primary rig: " + rig_obj.name)
+		env.log(f"Using object as primary rig: {rig_obj.name}")
 		try:
 			util.set_active_object(context, rig_obj)
 		except RuntimeError:
-			env.log("Failed to set {} as active".format(rig_obj))
+			env.log(f"Failed to set {rig_obj} as active")
 			rig_obj = None
 
 	if rig_obj and self.clearPose or rig_obj and self.relocation == "Offset":
@@ -593,7 +582,7 @@ def load_append(self, context, path, name):
 		try:
 			bpy.ops.object.mode_set(mode='POSE')
 		except Exception as e:
-			self.report({'ERROR'}, "Failed to enter pose mode: " + str(e))
+			self.report({'ERROR'}, f"Failed to enter pose mode: {e}")
 			print("Failed to enter pose mode, see logs")
 			print("Exception: ", str(e))
 			print(bpy.context.object)
@@ -714,7 +703,7 @@ class MCPREP_OT_prompt_reset_spawners(bpy.types.Operator):
 class MCPREP_UL_mob(bpy.types.UIList):
 	"""For mob asset listing UIList drawing"""
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
-		icon = "mob-{}".format(set.index)
+		icon = f"mob-{set.index}"
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
 			if not env.use_icons:
 				layout.label(text=set.name)
@@ -768,7 +757,7 @@ class MCPREP_UL_model(bpy.types.UIList):
 class MCPREP_UL_item(bpy.types.UIList):
 	"""For item asset listing UIList drawing"""
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
-		icon = "item-{}".format(set.index)
+		icon = f"item-{set.index}"
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
 			if not env.use_icons:
 				layout.label(text=set.name)
@@ -792,7 +781,7 @@ class MCPREP_UL_item(bpy.types.UIList):
 class MCPREP_UL_effects(bpy.types.UIList):
 	"""For effects asset listing UIList drawing"""
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
-		icon = "effects-{}".format(set.index)
+		icon = f"effects-{set.index}"
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
 
 			# Add icons based on the type of effect.
@@ -825,7 +814,7 @@ class MCPREP_UL_effects(bpy.types.UIList):
 class MCPREP_UL_material(bpy.types.UIList):
 	"""For material library UIList drawing"""
 	def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
-		icon = "material-{}".format(set.index)
+		icon = f"material-{set.index}"
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
 			if not env.use_icons:
 				layout.label(text=set.name)

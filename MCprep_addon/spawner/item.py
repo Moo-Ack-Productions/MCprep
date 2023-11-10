@@ -16,16 +16,19 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from pathlib import Path
+from typing import Optional, Tuple
+import mathutils
 import os
 
 import bpy
+from bpy.types import Context
 from bpy_extras.io_utils import ImportHelper
-import mathutils
 
 from .. import util
 from .. import tracking
 from ..conf import env
-from ..materials import generate 
+from ..materials import generate
 try:
 	import bpy.utils.previews
 except ImportError:
@@ -36,7 +39,7 @@ except ImportError:
 # -----------------------------------------------------------------------------
 
 
-def reload_items(context):
+def reload_items(context: Context) -> None:
 	"""Reload the items UI list for spawning"""
 
 	mcprep_props = context.scene.mcprep_props
@@ -84,7 +87,7 @@ def reload_items(context):
 		basename = os.path.splitext(os.path.basename(item_file))[0]
 		asset = mcprep_props.item_list.add()
 		asset.name = basename.replace("_", " ")
-		asset.description = "Spawn one " + basename
+		asset.description = f"Spawn one {basename}"
 		asset.path = item_file
 		asset.index = i
 
@@ -92,14 +95,16 @@ def reload_items(context):
 		if not env.use_icons or env.preview_collections["items"] == "":
 			continue
 		env.preview_collections["items"].load(
-			"item-{}".format(i), item_file, 'IMAGE')
+			f"item-{i}", item_file, 'IMAGE')
 
 	if mcprep_props.item_list_index >= len(mcprep_props.item_list):
 		mcprep_props.item_list_index = len(mcprep_props.item_list) - 1
 
 
 def spawn_item_from_filepath(
-	context, path, max_pixels, thickness, threshold, transparency):
+		context: Context, path: Path, 
+		max_pixels: int, thickness: float, threshold: float, transparency: bool
+	) -> Tuple[Optional[bpy.types.Object], Optional[str]]:
 	"""Reusable function for generating an item from an image filepath
 
 	Arguments
@@ -154,27 +159,11 @@ def spawn_item_from_filepath(
 			size=2,
 			calc_uvs=True,
 			location=(0, 0, 0))
-	elif util.bv28():
-		bpy.ops.mesh.primitive_grid_add(
-			x_subdivisions=height + 1,  # Outter edges count as a subdiv.
-			y_subdivisions=width + 1,  # Outter edges count as a subdiv.
-			size=2,
-			calc_uvs=True,
-			location=(0, 0, 0))
-	elif bpy.app.version < (2, 77):  # Could be 2.76 even.
-		bpy.ops.mesh.primitive_grid_add(
-			x_subdivisions=height + 1,  # Outter edges count as a subdiv.
-			y_subdivisions=width + 1,  # Outter edges count as a subdiv.
-			radius=1,
-			location=(0, 0, 0))
-		bpy.ops.object.mode_set(mode='EDIT')
-		bpy.ops.uv.unwrap()
-		bpy.ops.object.mode_set(mode='OBJECT')
 	else:
 		bpy.ops.mesh.primitive_grid_add(
 			x_subdivisions=height + 1,  # Outter edges count as a subdiv.
 			y_subdivisions=width + 1,  # Outter edges count as a subdiv.
-			radius=1,
+			size=2,
 			calc_uvs=True,
 			location=(0, 0, 0))
 	itm_obj = context.object
@@ -225,7 +214,7 @@ def spawn_item_from_filepath(
 		bpy.ops.mesh.delete(type='FACE')
 		bpy.ops.object.mode_set(mode='OBJECT')
 
-	itm_obj.location = util.get_cuser_location(context)
+	itm_obj.location = util.get_cursor_location(context)
 
 	# Material and Textures.
 	# TODO: use the generate functions here instead
@@ -343,7 +332,7 @@ class ItemSpawnBase():
 		pose_active = context.mode == 'POSE' and context.active_bone
 		return context.mode == 'OBJECT' or pose_active
 
-	def spawn_item_execution(self, context):
+	def spawn_item_execution(self, context: Context):
 		"""Common execution for both spawn item from filepath and list."""
 		if context.mode == 'POSE' and context.active_bone:
 			spawn_in_pose = True
