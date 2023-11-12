@@ -369,7 +369,7 @@ def add_model(
 			face.normal_update()
 			
 			# Give slight offset by normal for overlay geometry
-			if textures.get("overlay"):
+			if face_mat == "#overlay":
 				bmesh.ops.translate(bm, verts=face.verts,
 						    vec=0.05 * face.normal)
 
