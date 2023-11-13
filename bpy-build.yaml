@@ -4,6 +4,7 @@ build_name: MCprep_addon
 install_versions:
   - '/usr/local/blender-3.3.9-linux-x64/3.3/scripts/addons/'
 
+# Run using a command like: bpy-addon-build --during-build dev
 during_build:
   dev:
     - create_file("mcprep_dev.txt")

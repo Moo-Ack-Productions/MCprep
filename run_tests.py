@@ -37,6 +37,7 @@ from typing import List
 import argparse
 import os
 import subprocess
+import sys
 import time
 
 
@@ -75,13 +76,14 @@ def main():
 
     # Loop over all binaries and run tests.
     t0 = time.time()
+    any_failures = False
     for ind, binary in enumerate(blender_execs):
         run_all = args.all_execs is True
         run_specific = args.version is not None
         if ind > 0 and not (run_all or run_specific):
             continue  # Only run the first test unless specified
         if not os.path.exists(binary):
-            print(f"Bledner EXE not found: {binary}")
+            print(f"Blender EXE not found: {binary}")
             continue
         cmd = [binary,
                "--background",
@@ -94,14 +96,22 @@ def main():
             cmd.extend(["-t", args.test_specific])
         if args.version is not None:
             cmd.extend(["-v", args.version])
-        output = subprocess.check_output(cmd)
+        # output = subprocess.check_output(cmd)
+        child = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        output = child.communicate()[0]
         print(output.decode("utf-8"))
+
+        # Detect if there was at least 1+ failure/error, to pass to exit code.
+        if child.returncode != 0:
+            any_failures = True
 
     t1 = time.time()
 
     output_results()
     round_s = round(t1 - t0)
-    print(f"tests took {round_s}s to run")
+    exit_code = 1 if any_failures else 0
+    print(f"tests took {round_s}s to run, ending with code {exit_code}")
+    sys.exit(exit_code)
 
 
 def get_args():
