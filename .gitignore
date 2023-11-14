@@ -17,3 +17,4 @@ MCprep_addon/MCprep_resources/
 *.sublime-*
 MCprep_addon/import_bridge/conf
 MCprep_addon/import_bridge/nbt
+bpy-build.yaml
