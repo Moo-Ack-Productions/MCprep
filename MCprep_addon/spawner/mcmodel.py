@@ -371,7 +371,7 @@ def add_model(
 			# Give slight offset by normal for overlay geometry
 			if face_mat == "#overlay":
 				bmesh.ops.translate(bm, verts=face.verts,
-						    vec=0.05 * face.normal)
+						    vec=0.02 * face.normal)
 
 			for j in range(len(face.loops)):
 				# uv coords order is determened by the rotation of the uv,
@@ -386,7 +386,7 @@ def add_model(
 	# Quick way to clean the model, hopefully it doesn't cause any UV issues
 	# Ignore model has overlay geometry, causing issue
 	if not textures.get("overlay"):
-		bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.01)
+		bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.005)
 
 	# make the bmesh the object's mesh
 	bm.to_mesh(mesh)
