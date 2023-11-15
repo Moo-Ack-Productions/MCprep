@@ -18,12 +18,6 @@ if [ "$BRANCH" != "master" ]; then
     exit
 fi
 
-# TODO(TheDuckCow): Perform check when we have an automated way to set prod env.
-# if [[ `git status --porcelain` ]]; then
-#   echo "There are uncommited changes, ending"
-#   exit
-# fi
-
 git pull --quiet
 echo ""
 echo "Current status (should be empty!)"
@@ -51,7 +45,10 @@ git checkout test_files/test_data/mineways_test_separated_1_15_2.mtl
 
 python mcprep_data_refresh.py -auto
 
-git status
+if [[ `git status --porcelain` ]]; then
+  echo "There are uncommited changes, ending"
+  exit
+fi
 
 ANY_DIFF=$(git diff MCprep_addon/MCprep_resources/mcprep_data_update.json)
 if [ -z "$ANY_DIFF" ]
@@ -74,8 +71,8 @@ bpy-addon-build # No --during-build dev to make it prod.
 ls build/MCprep_addon.zip
 
 echo ""
-echo "Current live tags online:"
-git tag -l
+echo "Last 5 live tags online:"
+git tag -l | tail -5
 
 echo ""
 # Extract the numbers between parentheses, replace comma and space with period
@@ -83,12 +80,10 @@ BASE_VER=$(grep "\"version\":" MCprep_addon/__init__.py | awk -F"[()]" '{print $
 NEW_TAG="${BASE_VER}"
 
 echo -e "Current __init__ version: ${GREEN}${NEW_TAG}${NC}"
-read -p -r "Continue (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
+read -p "Continue (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
 
 NEW_NAME="MCprep_addon_$NEW_TAG.zip"
 mv build/MCprep_addon.zip "build/$NEW_NAME"
-
-exit 0
 
 # Make the tags
 echo ""
