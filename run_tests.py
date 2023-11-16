@@ -190,7 +190,7 @@ def remove_tracker_files():
     """Ensure local tracker files are NEVER left around after tests."""
     git_dir = os.path.dirname(__file__)
     jfile = "mcprep_addon_tracker.json"
-    jpath = os.path.join(git_dir, jfile)
+    jpath = os.path.join(git_dir, "MCprep_addon", jfile)
     par_jfile = "mcprep_addon_trackerid.json"
     par_jpath = os.path.join(git_dir, par_jfile)
 
