@@ -107,6 +107,9 @@ def main():
 
     t1 = time.time()
 
+    # Especially ensure tracker files are removed after tests complete.
+    remove_tracker_files()
+
     output_results()
     round_s = round(t1 - t0)
     exit_code = 1 if any_failures else 0
@@ -181,6 +184,25 @@ def output_results():
             print(tabline)
             if idx == 0:
                 print(SPACER)
+
+
+def remove_tracker_files():
+    """Ensure local tracker files are NEVER left around after tests."""
+    git_dir = os.path.dirname(__file__)
+    jfile = "mcprep_addon_tracker.json"
+    jpath = os.path.join(git_dir, jfile)
+    par_jfile = "mcprep_addon_trackerid.json"
+    par_jpath = os.path.join(git_dir, par_jfile)
+
+    has_jpath = os.path.isfile(jpath)
+    has_par_jpath = os.path.isfile(par_jpath)
+
+    if has_jpath:
+        print("Removing: ", jpath)
+        os.remove(jpath)
+    if has_par_jpath:
+        print("Removing: ", par_jpath)
+        os.remove(par_jpath)
 
 
 if __name__ == "__main__":
