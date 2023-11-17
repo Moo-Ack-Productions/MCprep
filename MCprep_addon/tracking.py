@@ -33,7 +33,7 @@ TIMEOUT = 60
 # If we see any of these IDs in local json files, still treat as a re-install
 # but replace the ID with the new one received.
 # See example: https://github.com/Moo-Ack-Productions/MCprep/issues/491
-INVALID_IDS = ["-Nb8TgbvAoxHrnEe1WFy"]
+INVALID_IDS = ["-Nb8TgbvAoxHrnEe1WFy", "-Ng7l5P8EuGMBycEwWPQ"]
 
 
 # remaining, wrap in safe-importing

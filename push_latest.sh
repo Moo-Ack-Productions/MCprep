@@ -23,6 +23,7 @@ echo ""
 echo "Current status (should be empty!)"
 git status
 
+
 echo "Running tests"
 python run_tests.py -a
 if [ $? -eq 0 ]; then
@@ -65,6 +66,9 @@ fi
 # Validate and build the release.
 # -----------------------------------------------------------------------------
 
+echo "Force remove trcaker files, in case they are left over"
+rm MCprep_addon/mcprep_addon_tracker.json
+rm mcprep_addon_trackerid.json
 
 echo "Building prod addon..."
 bpy-addon-build # No --during-build dev to make it prod.
