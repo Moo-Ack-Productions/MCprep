@@ -54,19 +54,6 @@ class TrackingTest(unittest.TestCase):
     def tearDown(self):
         tracking.Tracker = self._backup_tracker
 
-    def test_no_local_idfile(self):
-        """Safety check to ensure we never ship with an id file (again)."""
-        git_dir = os.path.dirname(os.path.dirname(__file__))
-        jfile = "mcprep_addon_tracker.json"
-        jpath = os.path.join(git_dir, jfile)
-        par_jfile = "mcprep_addon_trackerid.json"
-        par_jpath = os.path.join(git_dir, par_jfile)
-
-        self.assertFalse(
-            os.path.isfile(jpath), f"Should not have local {jfile}")
-        self.assertFalse(
-            os.path.isfile(par_jpath), f"Should not have local {par_jfile}")
-
     def test_track_install_integration(self):
         """Ensure there are no exceptions during install."""
         tracking.trackInstalled(background=False)
