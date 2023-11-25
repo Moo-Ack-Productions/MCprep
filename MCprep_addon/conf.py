@@ -30,6 +30,8 @@ from bpy.utils.previews import ImagePreviewCollection
 # TYPING UTILITIES
 # -----------------------------------------------------------------------------
 
+# Upper supported Blender version
+UPPER_BV_CAP = (4, 0, 0)
 
 class Form(enum.Enum):
 	"""Texture or world import interpretation, for mapping or other needs."""
@@ -75,6 +77,7 @@ class MCprepEnv:
 		self.dev_file: Path = Path(os.path.dirname(__file__), "mcprep_dev.txt")
 
 		self.last_check_for_updated = 0
+		self.valid_environment: bool = True
 
 		# Check to see if there's a text file for a dev build. If so,
 		if self.dev_file.exists():
@@ -123,6 +126,11 @@ class MCprepEnv:
 		# that no reading has occurred. If lib not found, will update to [].
 		# If ever changing the resource pack, should also reset to None.
 		self.material_sync_cache = []
+
+		# Implement a hard cap for Blender versions
+		if hasattr(bpy.app, "version"):
+			if bpy.app.version > UPPER_BV_CAP:
+				self.valid_environment = False
 
 	def update_json_dat_path(self):
 		"""If new update file found from install, replace old one with new.
