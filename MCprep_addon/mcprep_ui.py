@@ -108,10 +108,20 @@ def upper_bv_layout(layout):
 	alert_row.label(text="Your Blender version is above")
 	alert_row = col.row()
 	alert_row.alert = True
-	alert_row.label(text="the supported range. No support")
+	alert_row.label(text="the range tested with this version.")
 	alert_row = col.row()
 	alert_row.alert = True
-	alert_row.label(text="will be provided!")
+	alert_row.label(text="Please report any issues")
+	alert_row = col.row()
+	alert_row.alert = True
+	alert_row.label(text="that occur!")
+
+	alert_row = col.row()
+	alert_row.alert = True
+	alert_row.operator(
+				"wm.url_open", text="Report a Bug!"
+			).url = "https://github.com/Moo-Ack-Productions/MCprep/issues/new?assignees=&labels=user-troubleshoot&projects=&template=Bug-Report.yml"
+
 
 # -----------------------------------------------------------------------------
 # UI class functions
