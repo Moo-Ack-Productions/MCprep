@@ -16,4 +16,4 @@ install_versions:
   - 2.8
 
 build_actions:
-  dev: "dev.py"
+  dev: "action-scripts/dev.py"
