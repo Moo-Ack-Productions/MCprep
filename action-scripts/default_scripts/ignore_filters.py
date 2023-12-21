@@ -5,3 +5,4 @@ def main():
     for i in IGNORE_FILTERS:
         for p in Path(".").glob(i):
             p.unlink()
+            print(f"Ignore Filter: Deleted {p}!")
