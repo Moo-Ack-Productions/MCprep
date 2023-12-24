@@ -814,8 +814,10 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		icon = "TRIA_DOWN" if scn_props.show_settings_optimizer else "TRIA_RIGHT"
 		row.prop(
 			scn_props, "show_settings_optimizer",
-			text="Cycles Optimizer", icon=icon)
+			text="Cycles Optimizer (Deprecated)", icon=icon)
 		if scn_props.show_settings_optimizer:
+			row = col.row(align=True)
+			row.label(text="The Cycles optimizer will be removed in 3.6!")
 			row = col.row(align=True)
 			optimize_scene.panel_draw(context, row)
 

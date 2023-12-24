@@ -107,7 +107,7 @@ def panel_draw(context: Context, element: UILayout):
 		col.label(text="")
 		subrow = col.row()
 		subrow.scale_y = 1.5
-		subrow.operator("mcprep.optimize_scene", text="Optimize Scene")
+		subrow.operator("mcprep.optimize_scene", text="Optimize Scene (Deprecated)")
 	else:
 		col.label(text="Cycles Only :C")
 
