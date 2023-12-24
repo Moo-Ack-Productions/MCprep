@@ -16,6 +16,27 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+# Note from Mahid Sheikh, December 24th, 2023
+# 
+# The MCprep optimizer is to be deprecated in MCprep 3.5.2, and 
+# removed in MCprep 3.6. This is for the following reasons:
+# - Extremely buggy algorithm
+#	- There's been times where MCprep has set the max bounces 
+#     to 80 or higher, because of the way the algorithm assumes
+#	  the scene's properties.
+#
+#	- The algorithm was made to work around the hardware I assumed
+#	  a regular user would have (based on what I've seen on Minecraft
+#	  animation servers), which means no actual scene profiling, just
+#	  assumptions of how the scene could turn out based on materials.
+#
+# - Not caught up with modern Cycles improvements
+#	- This was written when Cycles X was still in development. Today, 
+#	  Cycles has massively improved, and Cycles X is the default, but
+#	  the optimizer hasn't changed at all.
+#
+# - Better tools exist for automatic optimization, though nothing 
+#	beats manual optimization
 
 import bpy
 from bpy.types import Context, UILayout, Node
