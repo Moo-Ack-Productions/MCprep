@@ -16,5 +16,7 @@ install_versions:
   - 2.8
 
 build_actions:
-  default: "action-scripts/default.py"
-  dev: "action-scripts/dev.py"
+  default: 
+    script: "action-scripts/default.py"
+  dev: 
+    script: "action-scripts/dev.py"
