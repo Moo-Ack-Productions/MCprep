@@ -5,4 +5,4 @@ def main():
     for i in IGNORE_FILTERS:
         for p in Path(".").glob(i):
             p.unlink()
-            print(f"Ignore Filter: Deleted {p}!")
+            print(f"Ignore Filter: Deleted {p}! Please remove it from the addon directory")
