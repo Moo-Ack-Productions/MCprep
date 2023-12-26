@@ -590,7 +590,6 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 		self.track_param = context.scene.render.engine
 		return {'FINISHED'}
 
-
 	def update_material(self, context, mat):
 		"""Update the initially created material"""
 		if not mat:
