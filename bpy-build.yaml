@@ -18,7 +18,9 @@ install_versions:
 build_actions:
   default: 
     script: "action-scripts/default.py"
+    ignore_filters:
+      - "mcprep_addon_tracker.json"
   dev: 
     script: "action-scripts/dev.py"
-    filters: 
+    ignore_filters: 
       - "*.blend"
