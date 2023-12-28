@@ -201,7 +201,10 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 			if not roughness_socket.is_linked and roughness_socket.default_value >= 0.2:
 				self.glossy = self.glossy - 1 if self.glossy > 2 else 2
 		elif mat_type == "glass":
-			transmission_socket = node.inputs["Transmission"]
+			if "Transmission" in node.inputs:  # pre 4.0 way
+				transmission_socket = node.inputs["Transmission"]
+			else:  # Blender 4.0+
+				transmission_socket = node.inputs["Transmission Weight"]
 			if not transmission_socket.is_linked and transmission_socket.default_value >= 0:
 				self.transmissive = self.transmissive - 2 if self.transmissive > 1 else 2
 
