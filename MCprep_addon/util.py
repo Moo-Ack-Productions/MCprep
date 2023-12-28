@@ -557,31 +557,13 @@ def natural_sort(elements: list) -> list:
 	return sorted(elements, key=alphanum_key)
 
 # -----------------------------------------------------------------------------
-# Cross blender 2.7 and 2.8 functions
+# Utility functions
+#
+# These funtions originally were created for the purpose of 
+# maintaining compatibility with Blender 2.7x and 2.8+. With 
+# MCprep 3.5 however, these moved from compatibility functions to 
+# utility functions that make the developer experience better.
 # -----------------------------------------------------------------------------
-
-
-def make_annotations(cls):
-	"""Add annotation attribute to class fields to avoid Blender 2.8 warnings"""
-	env.deprecation_warning()
-	if not hasattr(bpy.app, "version") or bpy.app.version < (2, 80):
-		return cls
-	if bpy.app.version < (2, 93, 0):
-		bl_props = {
-			k: v for k, v in cls.__dict__.items() if isinstance(v, tuple)}
-	else:
-		bl_props = {
-			k: v for k, v in cls.__dict__.items()
-			if isinstance(v, bpy.props._PropertyDeferred)}
-	if bl_props:
-		if '__annotations__' not in cls.__dict__:
-			setattr(cls, '__annotations__', {})
-		annotations = cls.__dict__['__annotations__']
-		for k, v in bl_props.items():
-			annotations[k] = v
-			delattr(cls, k)
-	return cls
-
 
 def layout_split(layout: UILayout, factor:float =0.0, align: bool=False) -> UILayout:
 	""" TODO remove 2.7
