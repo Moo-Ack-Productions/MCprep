@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Union, Tuple, List, Dict
 import enum
 import os
+import gettext
 
 import bpy
 from bpy.utils.previews import ImagePreviewCollection
@@ -73,6 +74,7 @@ class MCprepEnv:
 		self.json_path_update: Path = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data_update.json")
 
 		self.dev_file: Path = Path(os.path.dirname(__file__), "mcprep_dev.txt")
+		self.languages_folder: Path = Path(os.path.dirname(__file__), "MCprep_resources", "Languages")
 
 		self.last_check_for_updated = 0
 
@@ -123,6 +125,13 @@ class MCprepEnv:
 		# that no reading has occurred. If lib not found, will update to [].
 		# If ever changing the resource pack, should also reset to None.
 		self.material_sync_cache = []
+		
+		# i18n using Python's gettext module
+		self.en_i18 = gettext.translation("mcprep", self.languages_folder, fallback=True, languages=['en'])
+
+		# We've made this a part of the env class 
+		# since it's probably better in the long run
+		self._ = self.en_i18.gettext
 
 	def update_json_dat_path(self):
 		"""If new update file found from install, replace old one with new.
