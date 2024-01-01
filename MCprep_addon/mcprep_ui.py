@@ -745,7 +745,7 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		split = layout.split()
 		col = split.column(align=True)
 		row = col.row()
-		row.label(text=env._("World exporter")))
+		row.label(text=env._("World exporter"))
 		row.operator(
 			"mcprep.open_help", text="", icon="QUESTION", emboss=False
 		).url = "https://theduckcow.com/dev/blender/mcprep/mcprep-minecraft-world-imports/"
