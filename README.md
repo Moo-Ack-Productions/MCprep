@@ -11,7 +11,7 @@ MCprep is an addon dedicated to speeding up the workflow of Minecraft animators 
 ## Installing MCprep
 ### Click the link below and download the .zip file (re-zip if auto-unzipped into a folder necessary), install into blender (2.80 through 3.5 supported)
 
-**Note: It is assumed you have a valid, legal copy of Minecraft. Moo-Ack! Productions reserves the right to deny support if one is found to use a pirated copy of Minecraft**
+**Note: MCprep is developed with the assumption that our users have a valid, legal copy of Minecraft. As such, Moo-Ack! Productions reserves the right to deny support if one is found to use a pirated copy of Minecraft**
 
 [![Install MCprep](/visuals/mcprep_download.png)](https://theduckcow.com/dev/blender/mcprep-download/)
 
