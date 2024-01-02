@@ -335,7 +335,8 @@ def matprep_cycles(mat: Material, options: PrepOptions) -> Optional[bool]:
 	return res
 
 
-def set_texture_pack(material: Material, folder: Path, use_extra_passes: bool) -> bool:
+def set_texture_pack(
+	material: Material, folder: Path, use_extra_passes: bool) -> bool:
 	"""Replace existing material's image with texture pack's.
 
 	Run through and check for each if counterpart material exists, then
@@ -347,29 +348,43 @@ def set_texture_pack(material: Material, folder: Path, use_extra_passes: bool) -
 		return 0
 
 	image_data = util.loadTexture(image)
-	_ = set_cycles_texture(image_data, material, True)
+	_ = set_cycles_texture(
+		image_data, material, use_extra_passes=use_extra_passes)
 	return 1
 
 
-def assert_textures_on_materials(image: Image, materials: List[Material], legacy_skin_swap_behavior: bool=False) -> int:
-	"""Called for any texture changing, e.g. skin, input a list of material and
-	an already loaded image datablock."""
-	# TODO: Add option to search for or ignore/remove extra maps (normal, etc)
+def assert_textures_on_materials(
+	image: Image,
+	materials: List[Material],
+	extra_passes: bool = False,
+	swap_all_imgs: bool = True) -> int:
+	"""Sets and returns number og modified textures across input mats.
+
+	Called for any texture changing, e.g. skin, input a list of material and
+	an already loaded image datablock.
+	"""
 	count = 0
 	for mat in materials:
-		status = set_cycles_texture(image, mat, legacy_skin_swap_behavior)
+		status = set_cycles_texture(
+			image, mat, extra_passes=extra_passes, swap_all_imgs=swap_all_imgs)
 		if status:
 			count += 1
 	return count
 
 
-def set_cycles_texture(image: Image, material: Material, extra_passes: bool=False, legacy_skin_swap_behavior: bool=False) -> bool:
-	"""
+def set_cycles_texture(
+	image: Image,
+	material: Material,
+	extra_passes: bool = False,
+	swap_all_imgs: bool = True) -> bool:
+	"""Assigns
+
 	Used by skin swap and assiging missing textures or tex swapping.
 	Args:
 		image: already loaded image datablock
 		material: existing material datablock
 		extra_passes: whether to include or hard exclude non diffuse passes
+		swap_all_imgs: whether to force swap all images, or only do selectively
 	"""
 	env.log(f"Setting cycles texture for img: {image.name} mat: {material.name}")
 	if material.node_tree is None:
@@ -392,15 +407,15 @@ def set_cycles_texture(image: Image, material: Material, extra_passes: bool=Fals
 			node.hide = not is_grayscale
 			env.log(" mix_rgb to saturate texture")
 
-		# if node.type != "TEX_IMAGE": continue
-
 		# check to see nodes and their respective pre-named field,
 		# saved as an attribute on the node
-		if "MCPREP_diffuse" in node:
+		if node.type != 'TEX_IMAGE':
+			continue
+		elif "MCPREP_diffuse" in node:
 			node.image = image
 			node.mute = False
 			node.hide = False
-		elif "MCPREP_normal" in node and node.type == 'TEX_IMAGE':
+		elif "MCPREP_normal" in node:
 			if "normal" in img_sets:
 				new_img = util.loadTexture(img_sets["normal"])
 				node.image = new_img
@@ -415,7 +430,7 @@ def set_cycles_texture(image: Image, material: Material, extra_passes: bool=Fals
 				# normal_map = node.outputs[0].links[0].to_node
 				# principled = ...
 
-		elif "MCPREP_specular" in node and node.type == 'TEX_IMAGE':
+		elif "MCPREP_specular" in node:
 			if "specular" in img_sets:
 				new_img = util.loadTexture(img_sets["specular"])
 				node.image = new_img
@@ -425,17 +440,15 @@ def set_cycles_texture(image: Image, material: Material, extra_passes: bool=Fals
 			else:
 				node.mute = True
 				node.hide = True
-			
-		# Unlike the other names, this one
-		# is set with the Name option in the
-		# Blender UI, and thus is mapped to 
-		# node.name and not node itself
-		elif util.nameGeneralize(node.name) == "MCPREP_SKIN_SWAP" and node.type == "TEX_IMAGE":
+
+		# Unlike the other names, this one is set with the Name option in the
+		# Blender UI, and thus is mapped to node.name and not node itself
+		elif util.nameGeneralize(node.name) == "MCPREP_SKIN_SWAP":
 			node.image = image
 			node.mute = False
 			node.hide = False
 
-		elif node.type == "TEX_IMAGE" and legacy_skin_swap_behavior is True:
+		elif swap_all_imgs is True:
 			# assume all unlabeled texture nodes should be the diffuse pass
 			node["MCPREP_diffuse"] = True  # annotate node for future reference
 			node.image = image
@@ -1127,54 +1140,57 @@ def texgen_seus(mat: Material, passes: Dict[str, Image], nodeInputs: List, use_r
 	# nodeTexDisp["MCPREP_disp"] = True
 	nodeTexDiff.image = image_diff
 
+
 def generate_base_material(
-	context: Context, name: str, 
-	path: Union[Path, str], useExtraMaps: bool
+	context: Context,
+	name: str,
+	path: Union[Path, str],
+	useExtraMaps: bool
 ) -> Tuple[Optional[Material], Optional[str]]:
-		"""Generate a base material from name and active resource pack"""
-		try:
-			image = bpy.data.images.load(path, check_existing=True)
-		except: # if Image is not found
-			image = None
-		mat = bpy.data.materials.new(name=name)
+	"""Generate a base material from name and active resource pack"""
+	try:
+		image = bpy.data.images.load(path, check_existing=True)
+	except Exception:  # if Image is not found
+		image = None
+	mat = bpy.data.materials.new(name=name)
 
-		engine = context.scene.render.engine
-		if engine in ['CYCLES','BLENDER_EEVEE']:
-			# need to create at least one texture node first, then the rest works
-			mat.use_nodes = True
-			nodes = mat.node_tree.nodes
-			node_diff = create_node(
-				nodes, 'ShaderNodeTexImage', 
-				name="Diffuse Texture",
-				label="Diffuse Texture", 
-				location=(-380, 140),
-				interpolation='Closest', 
-				image=image
-			)
-			node_diff["MCPREP_diffuse"] = True
+	engine = context.scene.render.engine
+	if engine in ['CYCLES', 'BLENDER_EEVEE']:
+		# need to create at least one texture node first, then the rest works
+		mat.use_nodes = True
+		nodes = mat.node_tree.nodes
+		node_diff = create_node(
+			nodes, 'ShaderNodeTexImage',
+			name="Diffuse Texture",
+			label="Diffuse Texture",
+			location=(-380, 140),
+			interpolation='Closest',
+			image=image
+		)
+		node_diff["MCPREP_diffuse"] = True
 
-			# The offset and link diffuse is for default no texture setup
-			links = mat.node_tree.links 
-			for n in nodes:
-				if n.bl_idname == 'ShaderNodeBsdfPrincipled':
-					links.new(node_diff.outputs[0], n.inputs[0])
-					links.new(node_diff.outputs[1], n.inputs["Alpha"])
-					break
-			
-			env.log("Added blank texture node")
-			# Initialize extra passes as well
-			if image:
-				node_spec = create_node(nodes, 'ShaderNodeTexImage')
-				node_spec["MCPREP_specular"] = True
-				node_nrm = create_node(nodes, 'ShaderNodeTexImage')
-				node_nrm["MCPREP_normal"] = True
-				# now use standard method to update textures
-				set_cycles_texture(image, mat, useExtraMaps)
-			
-		else:
-			return None, "Only Cycles and Eevee supported"
+		# The offset and link diffuse is for default no texture setup
+		links = mat.node_tree.links
+		for n in nodes:
+			if n.bl_idname == 'ShaderNodeBsdfPrincipled':
+				links.new(node_diff.outputs[0], n.inputs[0])
+				links.new(node_diff.outputs[1], n.inputs["Alpha"])
+				break
 
-		return mat, None
+		env.log("Added blank texture node")
+		# Initialize extra passes as well
+		if image:
+			node_spec = create_node(nodes, 'ShaderNodeTexImage')
+			node_spec["MCPREP_specular"] = True
+			node_nrm = create_node(nodes, 'ShaderNodeTexImage')
+			node_nrm["MCPREP_normal"] = True
+			# now use standard method to update textures
+			set_cycles_texture(image, mat, extra_passes=useExtraMaps)
+
+	else:
+		return None, "Only Cycles and Eevee supported"
+
+	return mat, None
 
 
 def matgen_cycles_simple(mat: Material, options: PrepOptions) -> Optional[bool]:
