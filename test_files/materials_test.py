@@ -840,7 +840,38 @@ class MaterialsTest(unittest.TestCase):
         self.assertTrue(
             is_file, f"File for loaded image does not exist: {post_path}")
 
-        # TODO: Example running with animateTextures too
+    def test_replace_missing_images_animated(self):
+        """Ensure example of sugar_cane.png.001 is accounted for."""
+        mat, node = self._create_canon_mat("lava_flow")
+        self.assertEqual(node.image.source, "FILE",
+                         "Initial material should be a single image")
+
+        bpy.ops.mesh.primitive_plane_add()
+        bpy.context.object.active_material = mat
+
+        tmp_dir = tempfile.gettempdir()
+        tmp_image = os.path.join(tmp_dir, "lava_flow.png")
+        shutil.copyfile(node.image.filepath, tmp_image)  # leave orig intact
+
+        node.image = None  # remove the image from block
+        mat.name = "lava_flow.png"
+        if node.image:
+            os.remove(tmp_image)
+            self.fail("failed to setup test, image block still assigned")
+
+        bpy.ops.mcprep.replace_missing_textures(animateTextures=True)
+        post_path = node.image.filepath
+        is_file = os.path.isfile(node.image.filepath)
+        os.remove(tmp_image)
+
+        self.assertTrue(
+            node.image, "Failed to load new image within mat named .png.001")
+        self.assertTrue(post_path, "No image loaded for " + mat.name)
+        self.assertTrue(
+            is_file, f"File for loaded image does not exist: {post_path}")
+        # check that the image is animated in the end, with multiple files
+        self.assertEqual(node.image.source, "SEQUENCE",
+                         "Ensure updated material is an image sequence")
 
 
 if __name__ == '__main__':

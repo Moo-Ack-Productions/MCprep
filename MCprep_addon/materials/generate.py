@@ -1244,7 +1244,7 @@ def matgen_cycles_simple(mat: Material, options: PrepOptions) -> Optional[bool]:
 	# Set values.
 	# Specular causes issues with how blocks look, so let's disable it.
 	nodeSaturateMix.inputs[saturateMixIn[0]].default_value = 1.0
-	principled.inputs["Specular"].default_value = 0
+	principled.inputs["Specular IOR Level" if util.min_bv((4, 0, 0)) else "Specular"].default_value = 0
 
 	# Connect nodes.
 	links.new(nodeTexDiff.outputs[0], nodeSaturateMix.inputs[saturateMixIn[1]])
@@ -1271,7 +1271,7 @@ def matgen_cycles_simple(mat: Material, options: PrepOptions) -> Optional[bool]:
 			principled.inputs['Emission Strength'].default_value = 1
 		links.new(
 			nodeSaturateMix.outputs[saturateMixOut[0]],
-			principled.inputs["Emission"])
+			principled.inputs["Emission Color" if util.min_bv((4, 0, 0)) else "Emission"])
 
 	# reapply animation data if any to generated nodes
 	apply_texture_animation_pass_settings(mat, animated_data)
@@ -1399,7 +1399,7 @@ def matgen_cycles_principled(mat: Material, options: PrepOptions) -> Optional[bo
 		[nodeMixEmit.inputs[0]],
 		[principled.inputs["Roughness"]],
 		[principled.inputs["Metallic"]],
-		[principled.inputs["Specular"]],
+		[principled.inputs["Specular IOR Level" if util.min_bv((4, 0, 0)) else "Specular"]],
 		[principled.inputs["Normal"]]]
 	
 	if not options.use_emission_nodes:
