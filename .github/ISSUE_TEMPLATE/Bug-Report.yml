@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to fill out this bug report for MCprep! We just need some info. Check here for more info: https://github.com/TheDuckCow/MCprep/issues/322. Please note that if you are looking for general help with Blender itself or a related problem like Mineways, you are better off joining the official [MCprep discord](https://discord.gg/mb8hBUC).
+        Thanks for taking the time to fill out this bug report for MCprep! We just need some info. Check here for more info: https://github.com/TheDuckCow/MCprep/issues/322. Please note that if you are looking for general help with Blender itself or a related problem like Mineways, you are better off joining the official [MCprep discord](https://discord.gg/mb8hBUC). **Note that support will not be provided if you're found to have an illegal copy of Minecraft!**
 
   - type: checkboxes
     id: after-restart
