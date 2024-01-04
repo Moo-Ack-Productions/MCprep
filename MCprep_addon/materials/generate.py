@@ -657,6 +657,7 @@ def is_image_grayscale(image: Image) -> bool:
 		return None
 	env.log(f"Checking image for grayscale {image.name}", vv_only=True)
 	if 'grayscale' in image:  # cache
+		env.log(f"\tGrayscale cached {image['grayscale']}", vv_only=True)
 		return image['grayscale']
 	if not image.pixels:
 		env.log("Not an image / no pixels", vv_only=True)
@@ -714,7 +715,7 @@ def is_image_grayscale(image: Image) -> bool:
 		bpy.data.images.remove(imgcp)
 
 	image['grayscale'] = is_grayscale  # set cache
-	env.log(f"Image not grayscale: {image.name}", vv_only=True)
+	env.log(f"Image grayscale: {image.name}: {is_grayscale}", vv_only=True)
 	return is_grayscale
 
 

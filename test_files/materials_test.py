@@ -329,6 +329,7 @@ class MaterialsTest(unittest.TestCase):
         """Checks the desaturate images are recognized as such."""
         should_saturate = {
             # Sample of canonically grayscale textures.
+            "grass": True,
             "grass_block_top": True,
             "acacia_leaves": True,
             "redstone_dust_line0": True,
@@ -638,7 +639,8 @@ class MaterialsTest(unittest.TestCase):
             ".emit": ".emit",
         }
         jmc_to_canon = {
-            "grass": "grass",
+            "grass": "colormap/grass",
+            "grass_block_top": "grass_block_top",
             "mushroom_red": "red_mushroom",
             # "slime": "slime_block",  # KNOWN jmc, need to address
         }
