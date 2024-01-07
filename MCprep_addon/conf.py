@@ -18,7 +18,8 @@
 
 from mathutils import Vector
 from pathlib import Path
-from typing import Union, Tuple, List, Dict
+from typing import Optional, Union, Tuple, List, Dict
+from dataclasses import dataclass
 import enum
 import os
 
@@ -207,6 +208,54 @@ class MCprepEnv:
 			self.log("Deprecation Warning: This will be removed in MCprep 3.5.1!")
 			traceback.print_stack()
 
+class ErrorType(enum.Enum):
+	"""
+	All error types
+
+	Attributes
+	------------
+	FILE_NOT_FOUND:
+		File was not found
+	"""
+	FILE_NOT_FOUND = enum.auto()
+
+@dataclass
+class MCprepError(object):
+	"""
+	Object that is returned when 
+	an error occurs. This is meant
+	to give more information to the 
+	caller so that a better error 
+	message can be made
+
+	Attributes
+	------------
+	msg: Optional[str]
+		Error message. This is optional
+		as the caller may want to use
+		their own error message based
+		on the context
+	
+	err_type: ErrorType
+		The error type; unique for each
+		type of error
+
+	line: int
+		Line the exception object was 
+		created on. The preferred method 
+		to do this is to use currentframe 
+		and getframeinfo from the inspect 
+		module
+
+	file: str
+		Path of file the exception object
+		was created in. The preferred way 
+		to get this is __file__
+	"""
+	msg: Optional[str]
+	err_type: ErrorType
+	line: int 
+	file: str
 
 env = MCprepEnv()
 
