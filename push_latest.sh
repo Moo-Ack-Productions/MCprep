@@ -48,7 +48,7 @@ python mcprep_data_refresh.py -auto
 
 if [[ `git status --porcelain` ]]; then
   echo "There are uncommited changes, ending"
-  exit
+  # exit # TODO: Enforce in future directly.
 fi
 
 ANY_DIFF=$(git diff MCprep_addon/MCprep_resources/mcprep_data_update.json)
