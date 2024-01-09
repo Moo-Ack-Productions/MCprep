@@ -26,6 +26,7 @@ import unittest
 import bpy
 from bpy.types import Material
 
+from MCprep_addon import util
 from MCprep_addon.materials import generate
 from MCprep_addon.materials import sequences
 from MCprep_addon.materials.generate import find_additional_passes
@@ -874,6 +875,48 @@ class MaterialsTest(unittest.TestCase):
         # check that the image is animated in the end, with multiple files
         self.assertEqual(node.image.source, "SEQUENCE",
                          "Ensure updated material is an image sequence")
+
+    def test_swap_texture_pack(self):
+        """End to end test of swap texture pack."""
+        self._set_test_mcprep_texturepack_path()
+        new_mat, _ = self._create_canon_mat("diamond_ore", test_pack=True)
+
+        bpy.ops.mesh.primitive_plane_add()
+        obj = bpy.context.object
+        obj.active_material = new_mat
+        self.assertIsNotNone(obj.active_material, "Material should be applied")
+
+        # Ensure if no texture pack selected, it fails.
+        addon_prefs = util.get_user_preferences(bpy.context)
+        addon_prefs.MCprep_exporter_type = "(choose)"
+        with self.assertRaises(RuntimeError):
+            res = bpy.ops.mcprep.swap_texture_pack(
+                filepath=bpy.context.scene.mcprep_texturepack_path)
+
+        # Now run in scenario where a valid selection is made.
+        with self.subTest("jmc2obj_noprep"):
+            addon_prefs.MCprep_exporter_type = "jmc2obj"
+            res = bpy.ops.mcprep.swap_texture_pack(
+                filepath=bpy.context.scene.mcprep_texturepack_path,
+                prepMaterials=False)
+            self.assertTrue(res, {"FINISHED"})
+
+        # And again with prep materials on
+        with self.subTest("jmc2obj_withprep"):
+            res = bpy.ops.mcprep.swap_texture_pack(
+                filepath=bpy.context.scene.mcprep_texturepack_path,
+                prepMaterials=True)
+            self.assertTrue(res, {"FINISHED"})
+
+        # And for good coverage, let's do an example for mineways
+        with self.subTest("Mineways_withprep"):
+            new_mat, _ = self._create_canon_mat("diamond_ore", test_pack=True)
+            obj.active_material = new_mat
+            addon_prefs.MCprep_exporter_type = "Mineways"
+            res = bpy.ops.mcprep.swap_texture_pack(
+                filepath=bpy.context.scene.mcprep_texturepack_path,
+                prepMaterials=True)
+            self.assertTrue(res, {"FINISHED"})
 
 
 if __name__ == '__main__':
