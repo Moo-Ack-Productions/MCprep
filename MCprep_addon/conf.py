@@ -69,7 +69,7 @@ except:
 class MCprepEnv:
 	def __init__(self):
 		self.data = None
-		self.json_data = None
+		self.json_data: Optional[Dict] = None
 		self.json_path: Path = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data.json")
 		self.json_path_update: Path = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data_update.json")
 
@@ -207,6 +207,38 @@ class MCprepEnv:
 			import traceback
 			self.log("Deprecation Warning: This will be removed in MCprep 3.5.1!")
 			traceback.print_stack()
+
+	def current_line_and_file(self) -> Tuple[int, str]:
+		"""
+		Wrapper to get the current line number and file path for
+		MCprepError.
+
+		This function can not return an MCprepError value as doing
+		so would be more complicated for the caller. As such, if 
+		this fails, we return values -1 and "UNKNOWN LOCATION" to 
+		indicate that we do not know the line number or file path 
+		the error occured on.
+
+		Returns:
+			- If success: Tuple[int, str] representing the current 
+			line and file path 
+
+			- If fail: (-1, "UNKNOWN LOCATION")
+		"""
+		from inspect import currentframe, getframeinfo
+		cur_frame = currentframe()
+		# currentframe can return a None value
+		# in certain cases
+		if cur_frame:
+			# Get the previous frame since the
+			# current frame is made for this function,
+			# not the function/code that called 
+			# this function
+			prev_frame = cur_frame.f_back
+			if prev_frame:
+				frame_info = getframeinfo(prev_frame)
+				return frame_info.lineno, frame_info.filename
+		return -1, "UNKNOWN LOCATION"
 
 @dataclass
 class MCprepError(object):

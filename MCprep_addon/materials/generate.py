@@ -419,9 +419,12 @@ def set_cycles_texture(
 			if "normal" in img_sets:
 				new_img = util.loadTexture(img_sets["normal"])
 				node.image = new_img
-				util.apply_colorspace(node, 'Non-Color')
 				node.mute = False
 				node.hide = False
+				
+				res = util.apply_noncolor_data(node)
+				if res is not None:
+					env.log(f"TypeError on {res.line} in {res.file}: {res.err_type}")
 			else:
 				node.mute = True
 				node.hide = True
@@ -436,7 +439,9 @@ def set_cycles_texture(
 				node.image = new_img
 				node.mute = False
 				node.hide = False
-				util.apply_colorspace(node, 'Non-Color')
+				res = util.apply_noncolor_data(node)
+				if res is not None:
+					env.log(f"TypeError on {res.line} in {res.file}: {res.err_type}")
 			else:
 				node.mute = True
 				node.hide = True
@@ -971,8 +976,12 @@ def texgen_specular(mat: Material, passes: Dict[str, Image], nodeInputs: List, u
 		nodeNormal.mute = True
 
 	# Update to use non-color data for spec and normal
-	util.apply_colorspace(nodeTexSpec, 'Non-Color')
-	util.apply_colorspace(nodeTexNorm, 'Non-Color')
+	res = util.apply_noncolor_data(nodeTexSpec)
+	if res is not None:
+		env.log(f"TypeError on {res.line} in {res.file}: {res.err_type}")
+	res = util.apply_noncolor_data(nodeTexNorm)
+	if res is not None:
+		env.log(f"TypeError on {res.line} in {res.file}: {res.err_type}")
 
 	# Graystyle Blending
 	if not checklist(canon, "desaturated"):
@@ -1113,8 +1122,12 @@ def texgen_seus(mat: Material, passes: Dict[str, Image], nodeInputs: List, use_r
 		nodeNormal.mute = True
 
 	# Update to use non-color data for spec and normal
-	util.apply_colorspace(nodeTexSpec, 'Non-Color')
-	util.apply_colorspace(nodeTexNorm, 'Non-Color')
+	res = util.apply_noncolor_data(nodeTexSpec)
+	if res is not None:
+		env.log(f"TypeError on {res.line} in {res.file}: {res.err_type}")
+	res = util.apply_noncolor_data(nodeTexNorm)
+	if res is not None:
+		env.log(f"TypeError on {res.line} in {res.file}: {res.err_type}")
 
 	# Graystyle Blending
 	if not checklist(canon, "desaturated"):
@@ -1795,7 +1808,9 @@ def matgen_special_water(mat: Material, passes: Dict[str, Image]) -> Optional[bo
 	links.new(nodeNormal.outputs[0], nodeGlass.inputs[3])
 
 	# Normal update
-	util.apply_colorspace(nodeTexNorm, 'Non-Color')
+	res = util.apply_noncolor_data(nodeTexNorm)
+	if res is not None:
+		env.log(f"TypeError on {res.line} in {res.file}: {res.err_type}")
 	if image_norm:
 		nodeTexNorm.image = image_norm
 		nodeTexNorm.mute = False
@@ -1929,7 +1944,9 @@ def matgen_special_glass(mat: Material, passes: Dict[str, Image]) -> Optional[bo
 	links.new(nodeNormal.outputs[0], nodeDiff.inputs[2])
 
 	# Normal update
-	util.apply_colorspace(nodeTexNorm, 'Non-Color')
+	res = util.apply_noncolor_data(nodeTexNorm)
+	if res is not None:
+		env.log(f"TypeError on {res.line} in {res.file}: {res.err_type}")
 	if image_norm:
 		nodeTexNorm.image = image_norm
 		nodeTexNorm.mute = False
