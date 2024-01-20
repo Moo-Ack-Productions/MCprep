@@ -208,17 +208,6 @@ class MCprepEnv:
 			self.log("Deprecation Warning: This will be removed in MCprep 3.5.1!")
 			traceback.print_stack()
 
-class ErrorType(enum.Enum):
-	"""
-	All error types
-
-	Attributes
-	------------
-	FILE_NOT_FOUND:
-		File was not found
-	"""
-	FILE_NOT_FOUND = enum.auto()
-
 @dataclass
 class MCprepError(object):
 	"""
@@ -230,15 +219,10 @@ class MCprepError(object):
 
 	Attributes
 	------------
-	msg: Optional[str]
-		Error message. This is optional
-		as the caller may want to use
-		their own error message based
-		on the context
-	
-	err_type: ErrorType
-		The error type; unique for each
-		type of error
+	err_type: BaseException
+		The error type; uses standard 
+		Python exceptions
+		
 
 	line: int
 		Line the exception object was 
@@ -253,7 +237,7 @@ class MCprepError(object):
 		to get this is __file__
 	"""
 	msg: Optional[str]
-	err_type: ErrorType
+	err_type: BaseException
 	line: int 
 	file: str
 
