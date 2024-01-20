@@ -236,7 +236,6 @@ class MCprepError(object):
 		was created in. The preferred way 
 		to get this is __file__
 	"""
-	msg: Optional[str]
 	err_type: BaseException
 	line: int 
 	file: str
