@@ -31,6 +31,7 @@ from bpy.types import Context, Image, Material
 from . import generate
 from .. import tracking
 from .. import util
+from .spawner import spawn_util
 
 from ..conf import env
 
@@ -135,6 +136,40 @@ def loadSkinFile(self, context: Context, filepath: Path, new_material: bool=Fals
 	if image.size[0] != 0 and image.size[1] / image.size[0] != 1:
 		self.report({'INFO'}, "Skin swapper works best on 1.8 skins")
 		return 0
+	return 0
+
+def loadVariantFile(self, context: Context, filepath: Path, new_material: bool=False):
+	if not os.path.isfile(filepath):
+		self.report({'ERROR'}, "Image file not found")
+		return 1
+		# special message for library linking?
+
+	# always create a new image block, even if the name already existed
+	image = util.loadTexture(filepath)
+
+	if image.channels == 0:
+		self.report({'ERROR'}, "Failed to properly load image")
+		return 1
+
+	mats, skipped = getMatsFromSelected(context.selected_objects, new_material)
+	if not mats:
+		self.report({'ERROR'}, "No materials found to update")
+		# special message for library linking?
+		return 1
+	if skipped > 0:
+		self.report(
+			{'WARNING'}, "Skinswap skipped {} linked objects".format(skipped))
+
+	status = generate.assert_textures_on_materials(image, mats)
+	if status is False:
+		self.report({'ERROR'}, "No image textures found to update")
+		return 1
+	else:
+		pass
+
+	if not util.bv28():
+		setUVimage(context.selected_objects, image)
+
 	return 0
 
 
@@ -686,7 +721,7 @@ class MCPREP_OT_spawn_mob_with_skin(bpy.types.Operator):
 
 		return {'FINISHED'}
 
-class MCPREP_OT_swap_skin_variant(bpy.types.Operator):
+class MCPREP_OT_swap_skin_variant(bpy.types.Operator, spawn_util.VariationProp):
 	"""Apply the active UIlist skin to select characters"""
 	bl_idname = "mcprep.swap_skin variant"
 	bl_label = "Apply skin"
@@ -698,12 +733,43 @@ class MCPREP_OT_swap_skin_variant(bpy.types.Operator):
 			self, width=300 * util.ui_scale())
 	
 	def draw(self, context: Context):
-		obj = context.obj
+		layout = self.layout
+		self.draw_ui(context, layout)
 	
-	def check_villager_case(self, materials):
-		for mat in materials:
-			
+	def doTextureSwap(self, context: Context):
+		obj = context.object
+		mats, skipped = getMatsFromSelected(obj, False)
+		mobtype = obj.get("MCPREP_MOBTYPE", "CUSTOM")
+		if mobtype == "Villager":
+			doVillager(mats)
+		elif mobtype == "Zombie":
+			pass
+		elif mobtype == "Skeleton":
+			pass
+		elif mobtype == "Pigman":
+			pass
+		elif mobtype == "Hoglin":
+			pass
+		elif mobtype in ("Allay", "Vex"):
+			pass
+		else:
+			pass
 
+	def doVillager(self, materials: List[Material]):
+		for mat in materials:
+			if mat.get("MCPREP_VILLAGER_PROFESSION"):
+				image = util.loadTexture(filepath)
+				proStat = generate.assert_textures_on_materials(image, mats)
+			if mat.get("MCPREP_VILLAGER_BIOME"):
+				image = util.loadTexture(filepath)
+				biomeStat = generate.assert_textures_on_materials(image, mats)
+			if mat.get("MCPREP_VILLAGER_LEVEL"):
+				image = util.loadTexture(filepath)
+				levelStat = generate.assert_textures_on_materials(image, mats)
+			if not all([proStat, biomeStat, levelStat]):
+				self.report({'ERROR'}, "Something wrong happen during swap variant texture")
+			else:
+				pass
 
 class MCPREP_OT_download_username_list(bpy.types.Operator):
 	"""Apply the active UIlist skin to select characters"""

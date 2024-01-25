@@ -45,90 +45,88 @@ elif util.bv28():
 else:
 	COLL_ICON = 'GROUP'
 
-class ColorVariation(Enum):
-	WHITE = 0
-	ORANGE = 1
-	MAGENTA = 2
-	LIGHTBLUE = 3
-	YELLOW = 4
-	LIME = 5
-	PINK = 6
-	GRAY = 7
-	LIGHTGRAY = 8
-	CYAN = 9
-	PURPLE = 10
-	BLUE = 11
-	BROWN = 12
-	GREEN = 13
-	RED = 14
-	BLACK = 15
-	
-class VillagerProfession(Enum):
-	"""Preserve for villager"""
-	ARMORER = 0
-	BUTCHER = 1
-	CARTOGRAPHER = 2
-	CLERIC = 3
-	FARMER = 4
-	FISHERMAN = 5
-	FLETCHER = 6
-	LEATHERWORKER = 7
-	LIBRARIAN = 8
-	MASON = 9
-	NITWIT = 10
-	SHEPHERD = 11
-	TOOLSMITH = 12
-	WEAPONSMITH = 13
-	WANDER = 14 # Wandering Trader is not a villager 
-	
-class VillagerBiome(Enum):
-	PLAINS = 0 # Favour plains as default then alphabet
-	DESERT = 1
-	JUNGLE = 2
-	SAVANNA = 3
-	SNOWY = 4
-	Swamp = 5
-	Taiga = 6
-	
-class VillagerLevel(Enum):
-	NOVICE = 0 # Stone
-	APPRENTICE = 1 # Iron
-	JOURNEYMAN = 2 # Gold
-	EXPERT = 3 # Emerald
-	MASTER = 4 # Diamond
-	
-class ZombieVariation(Enum):
-	DEFAULT = 0
-	HUSK = 1
-	DROWN = 2
-	
-class SkeletonVariation(Enum):
-	DEFAULT = 0
-	WITHER = 1
-	
-	
 class VariationProp:
 	def color_items(self):
-		"""Color variation"""
-		return [(i.value, i.name, i.name) for i in ColorVariation]
+		"""Color variation in ID order"""
+		items = [
+			('WHITE', "White", ""),
+			('ORANGE', "Orange", ""),
+			('MAGENTA', "Magenta", ""),
+			('LIGHTBLUE', "Light Blue", ""),
+			('YELLOW', "Yellow", ""),
+			('LIME', "Lime", ""),
+			('PINK', "Pink", ""),
+			('GRAY', "Gray", ""), 
+			('LIGHTGRAY', "Light Gray", ""),
+			('CYAN', "Cyan", ""),
+			('PURPLE', "Purple", ""),
+			('BLUE', "Blue", ""),
+			('BROWN', "Brown", ""),
+			('GREEN', "Green", ""),
+			('RED', "Red", ""),
+			('BLACK', "Black", ""),
+		]
+		return items
 	
 	def profession_items(self):
 		"""Villager Professional"""
-		return [(i.value, i.name, i.name) for i in VillagerProfession]
+		items = [
+			('ARMORER', "Armorer", ""),
+			('BUTCHER', "Butcher", ""),
+			('CARTOGRAPHER', "Cartographer", ""),
+			('CLERIC', "Cleric", ""),
+			('FARMER', "Farmer", ""),
+			('FISHERMAN', "Fisherman", ""),
+			('FLETCHER', "FLETCHER", ""),
+			('LEATHERWORKER', "Leatherworker", ""),
+			('LIBRARIAN', "Librarian", ""),
+			('MASON', "Mason", ""),
+			('NITWIT', "Nitwit", ""),
+			('SHEPHERD', "Shepherd", ""),
+			('TOOLSMITH', "Toolsmith", ""),
+			('WEAPONSMITH', "Weaponsmith", ""),
+			('WANDER', "Wandering", ""), # Wandering Trader is not a villager but leave it there, illagers could be in the list too (witch?)
+		]
+		return items
 	
 	def level_items(self):
-		"""Villager Level method"""
-		return [(i.value, i.name, i.name) for i in VillagerLevel]
+		"""Villager Level """
+		items = [
+			('NOVICE', "NOVICE", ""), # Stone
+			('APPRENTICE', "Apprentice", ""), # Iron
+			('JOURNEYMAN', "Journeyman", ""), # Gold
+			('EXPERT', "Expert", ""), # Emerald
+			('MASTER', "Master", ""), # Diamond
+		]
+		return items
 	
 	def biome_items(self):
-		return [(i.value, i.name, i.name) for i in VillagerBiome]
-		
+		items = [
+			('DESERT', "Desert", ""),
+			('JUNGLE', "Jungle", ""),
+			('PLAINS', "Plains", ""),
+			('SAVANNA', "Savanna", ""),
+			('SNOWY', "Snowy", ""),
+			('SWAMP', "Swamp", ""),
+			('TAIGA', "Taiga", ""),
+		]
+		return items
+	
 	def zombie_items(self):
-		return [(i.value, i.name, i.name) for i in VillagerBiome]
-		
+		items = [
+			('DEFAULT', "Default", ""),
+			('DROWN', "Drown", "")
+			('HUSK', "Husk", ""),
+		]
+		return items
+	
 	def skeleton_items(self):
-		return [(i.value, i.name, i.name) for i in SkeletonVariation]
-		
+		items = [
+			('DEFAULT', "Default", ""),
+			('STRAY', "Stray", ""),
+			('WITHER', "Wither", ""),
+		]
+		return items
 	
 	color_variation: bpy.props.EnumProperty(name="Color Variation", items=color_items)
 	# Villagers
@@ -137,7 +135,7 @@ class VariationProp:
 	biome_variation: bpy.props.EnumProperty(name="Villager Biome", items=biome_items)
 	zombie_variation: bpy.props.EnumProperty(name="Zombie Variation", items=zombie_items)
 	skeleton_variation: bpy.props.EnumProperty(name="Skeleton Variation", items=skeleton_items)
-	is_zombiefied: BoolProperty(name="Is Zombiefied")
+	is_zombiefied: BoolProperty(name="Is Zombiefied") # Use this for Allay-Vex 
 	
 	def draw_ui(self, context: Context, layout: UILayout):
 		obj = context.object
@@ -152,16 +150,19 @@ class VariationProp:
 		elif mob_type == "Skeleton":
 			layout.prop(self, "skeleton_variation")
 		
-		if mob_type in ["Villager", "Piglin", "Pigman", "Hoglin", "Allay"]
+		if mob_type in ["Villager", "Piglin", "Pigman", "Hoglin", "Allay", "Vex"]
 			text = "Is Vex" if mob_type == "Allay" else "Is Zombified"
 			layout.prop(self, "is_zombiefied", text=text)
 
 # -----------------------------------------------------------------------------
 # Reusable functions for spawners
 # -----------------------------------------------------------------------------
-def getmob_type(obj: Object): 
-  return obj.get("MCPREP_RIGTYPE")
-
+def getmob_type(obj: bpy.types.Object):
+  """ Get mob type from rig
+  args
+    obj: Armature Object
+  """
+  return obj.get("MCPREP_RIGTYPE", "Custom")
 
 def has_color(name):
 	"""Return True if has the color in name"""
