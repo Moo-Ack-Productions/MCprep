@@ -18,7 +18,8 @@
 
 from mathutils import Vector
 from pathlib import Path
-from typing import Union, Tuple, List, Dict
+from typing import Optional, Union, Tuple, List, Dict
+from dataclasses import dataclass
 import enum
 import os
 import gettext
@@ -216,6 +217,37 @@ class MCprepEnv:
 			self.log("Deprecation Warning: This will be removed in MCprep 3.5.1!")
 			traceback.print_stack()
 
+@dataclass
+class MCprepError(object):
+	"""
+	Object that is returned when 
+	an error occurs. This is meant
+	to give more information to the 
+	caller so that a better error 
+	message can be made
+
+	Attributes
+	------------
+	err_type: BaseException
+		The error type; uses standard 
+		Python exceptions
+		
+
+	line: int
+		Line the exception object was 
+		created on. The preferred method 
+		to do this is to use currentframe 
+		and getframeinfo from the inspect 
+		module
+
+	file: str
+		Path of file the exception object
+		was created in. The preferred way 
+		to get this is __file__
+	"""
+	err_type: BaseException
+	line: int 
+	file: str
 
 env = MCprepEnv()
 
