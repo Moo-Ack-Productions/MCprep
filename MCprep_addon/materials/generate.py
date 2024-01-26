@@ -349,7 +349,7 @@ def set_texture_pack(
 
 	image_data = util.loadTexture(image)
 	_ = set_cycles_texture(
-		image_data, material, use_extra_passes=use_extra_passes)
+		image_data, material, extra_passes=use_extra_passes)
 	return 1
 
 
