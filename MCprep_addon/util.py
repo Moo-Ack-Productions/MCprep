@@ -66,9 +66,7 @@ def apply_noncolor_data(node: Node) -> Optional[MCprepError]:
 	if not node.image:
 		env.log("Node has no image applied yet, cannot change colorspace")
 	
-	# While earlier versions of 2.8 used a different 
-	# attribute name for colorspace, MCprep officially 
-	# supports the full 2.8 release at a minimum (as of 3.5)
+	# Blender 2.8+
 	if hasattr(node.image, "colorspace_settings"):
 		# Avoid hard-coding values into the 
 		# code so that users with non-standard
