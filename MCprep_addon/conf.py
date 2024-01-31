@@ -19,6 +19,7 @@
 from mathutils import Vector
 from pathlib import Path
 from typing import Optional, Union, Tuple, List, Dict
+import inspect
 from dataclasses import dataclass
 import enum
 import os
@@ -225,10 +226,9 @@ class MCprepEnv:
 
 			- If fail: (-1, "UNKNOWN LOCATION")
 		"""
-		from inspect import currentframe, getframeinfo
-		cur_frame = currentframe()
 		# currentframe can return a None value
 		# in certain cases
+		cur_frame = inspect.currentframe()
 		if cur_frame:
 			# Get the previous frame since the
 			# current frame is made for this function,
@@ -236,7 +236,7 @@ class MCprepEnv:
 			# this function
 			prev_frame = cur_frame.f_back
 			if prev_frame:
-				frame_info = getframeinfo(prev_frame)
+				frame_info = inspect.getframeinfo(prev_frame)
 				return frame_info.lineno, frame_info.filename
 		return -1, "UNKNOWN LOCATION"
 
