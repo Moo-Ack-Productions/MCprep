@@ -54,6 +54,12 @@ VectorType = Union[Tuple[float, float, float], Vector]
 Skin = Tuple[str, Path]
 Entity = Tuple[str, str, str]
 
+# Represents an unknown location 
+# for MCprepError. Given a global 
+# constant to make it easier to use
+# and check for
+UNKNOWN_LOCATION = (-1, "UNKNOWN LOCATION")
+
 # check if custom preview icons available
 try:
 	import bpy.utils.previews
@@ -229,16 +235,19 @@ class MCprepEnv:
 		# currentframe can return a None value
 		# in certain cases
 		cur_frame = inspect.currentframe()
-		if cur_frame:
-			# Get the previous frame since the
-			# current frame is made for this function,
-			# not the function/code that called 
-			# this function
-			prev_frame = cur_frame.f_back
-			if prev_frame:
-				frame_info = inspect.getframeinfo(prev_frame)
-				return frame_info.lineno, frame_info.filename
-		return -1, "UNKNOWN LOCATION"
+		if not cur_frame:
+			return UNKNOWN_LOCATION
+		
+		# Get the previous frame since the
+		# current frame is made for this function,
+		# not the function/code that called 
+		# this function
+		prev_frame = cur_frame.f_back
+		if not prev_frame:
+			return UNKNOWN_LOCATION
+
+		frame_info = inspect.getframeinfo(prev_frame)
+		return frame_info.lineno, frame_info.filename
 
 @dataclass
 class MCprepError(object):
