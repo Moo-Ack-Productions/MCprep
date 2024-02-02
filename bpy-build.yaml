@@ -20,5 +20,3 @@ build_actions:
     script: "action-scripts/default.py"
   dev: 
     script: "action-scripts/dev.py"
-    ignore_filters: 
-      - "*.blend"
