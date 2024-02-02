@@ -67,7 +67,7 @@ source venv/bin/activate
 pip install --upgrade bpy-addon-build
 
 # Finally, you can compile MCprep using:
-bpy-addon-build --during-build dev # Use dev to use non-prod related resources and tracking.
+bab -b dev # Use dev to use non-prod related resources and tracking.
 ```
 
 Moving forward, you can now build the addon for all intended supported versions using: `bpy-addon-build -b dev`

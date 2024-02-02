@@ -10,7 +10,7 @@ readme = "README.md"
 python = "^3.7"
 fake-bpy-module-2-80 = "^20230117"
 flake8 = "^5.0.4"
-bpy-addon-build = ">=0.1.8,<0.3.0"
+bpy-addon-build = ">=0.3.0"
 
 [build-system]
 requires = ["poetry-core"]
