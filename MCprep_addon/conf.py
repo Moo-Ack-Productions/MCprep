@@ -128,11 +128,17 @@ class MCprepEnv:
 		self.material_sync_cache = []
 		
 		# i18n using Python's gettext module
-		self.en_i18 = gettext.translation("mcprep", self.languages_folder, fallback=True, languages=['en'])
+		#
+		# This uses the language set by the user
+		# in Blender's settings
+		self.i18 = gettext.translation("mcprep", 
+								 self.languages_folder, 
+								 fallback=True,
+								 languages=[bpy.context.preferences.view.language])
 
 		# We've made this a part of the env class 
 		# since it's probably better in the long run
-		self._ = self.en_i18.gettext
+		self._ = self.i18.gettext
 
 	def update_json_dat_path(self):
 		"""If new update file found from install, replace old one with new.
