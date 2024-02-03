@@ -137,7 +137,10 @@ class MCprepEnv:
 	
 	# This allows us to translate strings on the fly
 	def _(self, msg: str):
-		return self.languages[bpy.context.preferences.view.language].gettext(msg)
+		if bpy.context.preferences.view.language:
+			return self.languages[bpy.context.preferences.view.language].gettext(msg)
+		else:
+			return self.languages["en_US"].gettext(msg)
 
 	def update_json_dat_path(self):
 		"""If new update file found from install, replace old one with new.
