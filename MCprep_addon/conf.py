@@ -136,7 +136,7 @@ class MCprepEnv:
 									 languages=[language.name])
 	
 	# This allows us to translate strings on the fly
-	def _(self, msg: str):
+	def _(self, msg: str) -> str:
 		if bpy.context.preferences.view.language in self.languages:
 			return self.languages[bpy.context.preferences.view.language].gettext(msg)
 		else:
