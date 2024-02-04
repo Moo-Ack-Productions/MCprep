@@ -1,5 +1,3 @@
-Guide to translate MCprep
-
 # Translation Guidelines
 To make sure translations are up to par with the standards we hold on the MCprep repo, all translators must follow these guidelines.
 1. No AI for translations, such as Google Translate, ChatGPT, etc. AI translations are unreliable, differ massively in terms of quality between different languages, and don't take context properly into account. 
