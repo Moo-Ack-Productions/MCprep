@@ -106,9 +106,9 @@ def restart_layout(layout):
 
 class MCPREP_MT_mob_spawner(bpy.types.Menu):
 	"""Shift-A menu in the 3D view"""
-	bl_label = "Mob Spawner"
+	bl_label = env._("Mob Spawner")
 	bl_idname = "MCPREP_MT_mob_spawner"
-	bl_description = "Menu for placing in the shift-A add object menu"
+	bl_description = env._("Menu for placing in the shift-A add object menu")
 
 	def draw(self, context):
 		layout = self.layout
@@ -147,7 +147,7 @@ class MCPREP_MT_mob_spawner(bpy.types.Menu):
 
 class MCPREP_MT_meshswap_place(bpy.types.Menu):
 	"""Menu for all the meshswap objects"""
-	bl_label = "Meshswap Objects"
+	bl_label = env._("Meshswap Objects")
 	bl_idname = "MCPREP_MT_meshswap_place"
 
 	def draw(self, context):
@@ -176,7 +176,7 @@ class MCPREP_MT_meshswap_place(bpy.types.Menu):
 
 class MCPREP_MT_item_spawn(bpy.types.Menu):
 	"""Menu for loaded item spawners"""
-	bl_label = "Item Spawner"
+	bl_label = env._("Item Spawner")
 	bl_idname = "MCPREP_MT_item_spawn"
 
 	def draw(self, context):
@@ -199,7 +199,7 @@ class MCPREP_MT_item_spawn(bpy.types.Menu):
 
 class MCPREP_MT_effect_spawn(bpy.types.Menu):
 	"""Menu for loaded effect spawners"""
-	bl_label = "Effects Spawner"
+	bl_label = env._("Effects Spawner")
 	bl_idname = "MCPREP_MT_effect_spawn"
 
 	def draw(self, context):
@@ -242,7 +242,7 @@ class MCPREP_MT_effect_spawn(bpy.types.Menu):
 
 class MCPREP_MT_entity_spawn(bpy.types.Menu):
 	"""Menu for loaded entity spawners"""
-	bl_label = "Entity Spawner"
+	bl_label = env._("Entity Spawner")
 	bl_idname = "MCPREP_MT_entity_spawn"
 
 	def draw(self, context):
@@ -265,7 +265,7 @@ class MCPREP_MT_entity_spawn(bpy.types.Menu):
 
 class MCPREP_MT_model_spawn(bpy.types.Menu):
 	"""Menu for loaded model spawners"""
-	bl_label = "Model Spawner"
+	bl_label = env._("Model Spawner")
 	bl_idname = "MCPREP_MT_model_spawn"
 
 	def draw(self, context):
@@ -722,7 +722,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 
 class MCPREP_PT_world_imports(bpy.types.Panel):
 	"""World importing related settings and tools"""
-	bl_label = "World Imports"
+	bl_label = env._("World Imports")
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'UI'
 	# bl_context = "objectmode"
@@ -877,7 +877,7 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 
 class MCPREP_PT_bridge(bpy.types.Panel):
 	"""MCprep panel for directly importing and reloading minecraft saves"""
-	bl_label = "World Bridge"
+	bl_label = env._("World Bridge")
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'UI'
 	bl_context = "objectmode"
@@ -894,7 +894,7 @@ class MCPREP_PT_bridge(bpy.types.Panel):
 
 class MCPREP_PT_world_tools(bpy.types.Panel):
 	"""World settings and tools"""
-	bl_label = "World Tools"
+	bl_label = env._("World Tools")
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'UI'	
 	bl_category = "MCprep"
@@ -949,7 +949,7 @@ class MCPREP_PT_world_tools(bpy.types.Panel):
 
 class MCPREP_PT_skins(bpy.types.Panel):
 	"""MCprep panel for skin swapping"""
-	bl_label = "Skin Swapper"
+	bl_label = env._("Skin Swapper")
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'UI'
 	bl_category = "MCprep"
@@ -1061,7 +1061,7 @@ class MCPREP_PT_skins(bpy.types.Panel):
 
 class MCPREP_PT_materials(bpy.types.Panel):
 	"""MCprep panel for materials"""
-	bl_label = "MCprep materials"
+	bl_label = env._("MCprep materials")
 	bl_space_type = "PROPERTIES"
 	bl_region_type = 'WINDOW'
 	bl_context = "material"
@@ -1109,7 +1109,7 @@ class MCPREP_PT_materials(bpy.types.Panel):
 
 class MCPREP_PT_materials_subsettings(bpy.types.Panel):
 	"""MCprep panel for advanced material settings and functions"""
-	bl_label = "Advanced"
+	bl_label = env._("Advanced")
 	bl_parent_id = "MCPREP_PT_materials"
 	bl_space_type = "PROPERTIES"
 	bl_region_type = 'WINDOW'
@@ -1669,7 +1669,7 @@ def effects_spawner(self, context: Context) -> None:
 
 class MCPREP_PT_spawn(bpy.types.Panel):
 	"""MCprep panel for mob spawning"""
-	bl_label = "Spawner"
+	bl_label = env._("Spawner")
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'UI'
 	bl_category = "MCprep"
@@ -1688,7 +1688,7 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 
 class MCPREP_PT_mob_spawner(bpy.types.Panel):
 	"""MCprep panel for mob spawning"""
-	bl_label = "Mob spawner"
+	bl_label = env._("Mob spawner")
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'UI'	
@@ -1716,7 +1716,7 @@ class MCPREP_PT_mob_spawner(bpy.types.Panel):
 
 class MCPREP_PT_model_spawner(bpy.types.Panel):
 	"""MCprep panel for model/block spawning"""
-	bl_label = "Block (model) spawner"
+	bl_label = env._("Block (model) spawner")
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'UI'
@@ -1744,7 +1744,7 @@ class MCPREP_PT_model_spawner(bpy.types.Panel):
 
 class MCPREP_PT_item_spawner(bpy.types.Panel):
 	"""MCprep panel for item spawning"""
-	bl_label = "Item spawner"
+	bl_label = env._("Item spawner")
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'UI'
@@ -1773,7 +1773,7 @@ class MCPREP_PT_item_spawner(bpy.types.Panel):
 
 class MCPREP_PT_effects_spawner(bpy.types.Panel):
 	"""MCprep panel for effects spawning"""
-	bl_label = "Effects + weather"
+	bl_label = env._("Effects + weather")
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'UI'
@@ -1801,7 +1801,7 @@ class MCPREP_PT_effects_spawner(bpy.types.Panel):
 
 class MCPREP_PT_entity_spawner(bpy.types.Panel):
 	"""MCprep panel for entity spawning"""
-	bl_label = "Entity spawner"
+	bl_label = env._("Entity spawner")
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'UI'
@@ -1829,7 +1829,7 @@ class MCPREP_PT_entity_spawner(bpy.types.Panel):
 
 class MCPREP_PT_meshswap_spawner(bpy.types.Panel):
 	"""MCprep panel for meshswap spawning"""
-	bl_label = "Meshswap spawner"
+	bl_label = env._("Meshswap spawner")
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'UI'
