@@ -19,6 +19,7 @@
 from mathutils import Vector
 from pathlib import Path
 from typing import Optional, Union, Tuple, List, Dict
+import inspect
 from dataclasses import dataclass
 import enum
 import os
@@ -54,6 +55,12 @@ VectorType = Union[Tuple[float, float, float], Vector]
 Skin = Tuple[str, Path]
 Entity = Tuple[str, str, str]
 
+# Represents an unknown location 
+# for MCprepError. Given a global 
+# constant to make it easier to use
+# and check for
+UNKNOWN_LOCATION = (-1, "UNKNOWN LOCATION")
+
 # check if custom preview icons available
 try:
 	import bpy.utils.previews
@@ -70,7 +77,7 @@ except:
 class MCprepEnv:
 	def __init__(self):
 		self.data = None
-		self.json_data = None
+		self.json_data: Optional[Dict] = None
 		self.json_path: Path = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data.json")
 		self.json_path_update: Path = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data_update.json")
 
@@ -224,6 +231,40 @@ class MCprepEnv:
 			import traceback
 			self.log("Deprecation Warning: This will be removed in MCprep 3.5.1!")
 			traceback.print_stack()
+
+	def current_line_and_file(self) -> Tuple[int, str]:
+		"""
+		Wrapper to get the current line number and file path for
+		MCprepError.
+
+		This function can not return an MCprepError value as doing
+		so would be more complicated for the caller. As such, if 
+		this fails, we return values -1 and "UNKNOWN LOCATION" to 
+		indicate that we do not know the line number or file path 
+		the error occured on.
+
+		Returns:
+			- If success: Tuple[int, str] representing the current 
+			line and file path 
+
+			- If fail: (-1, "UNKNOWN LOCATION")
+		"""
+		# currentframe can return a None value
+		# in certain cases
+		cur_frame = inspect.currentframe()
+		if not cur_frame:
+			return UNKNOWN_LOCATION
+		
+		# Get the previous frame since the
+		# current frame is made for this function,
+		# not the function/code that called 
+		# this function
+		prev_frame = cur_frame.f_back
+		if not prev_frame:
+			return UNKNOWN_LOCATION
+
+		frame_info = inspect.getframeinfo(prev_frame)
+		return frame_info.lineno, frame_info.filename
 
 @dataclass
 class MCprepError(object):

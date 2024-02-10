@@ -4407,5 +4407,10 @@
 		"sunflower",
 		"water_still",
 		"water"
+	],
+	"non_color_options" : [
+		"Non-Color",
+		"Non-Colour Data",
+		"NONE"
 	]
 }

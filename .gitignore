@@ -1,6 +1,7 @@
 .DS_Store
 *.blend
 __pycache__
+.mypy_cache
 MCprep_addon/mcprep_addon_tracker.json
 MCprep_addon/mcprep_addon_updater/MCprep_addon_updater_status.json
 blender_execs.txt

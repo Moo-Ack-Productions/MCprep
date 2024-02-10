@@ -41,7 +41,7 @@ import sys
 import time
 
 
-COMPILE_CMD = ["bpy-addon-build", "--during-build", "dev"]
+COMPILE_CMD = ["bab", "-b", "dev"]
 DATA_CMD = ["python", "mcprep_data_refresh.py", "-auto"]  # TODO, include in build
 DCC_EXES = "blender_execs.txt"
 TEST_RUNNER = os.path.join("test_files", "test_runner.py")
