@@ -53,6 +53,7 @@ Lines that begin with `msgid` are the original strings, those remain untouched. 
 In general, we recommend using a PO editor such as [PoEdit](https://poedit.net). These editors make it easier to translate.
 
 5. Compile the PO file to an MO file. There's several ways to do this:
+  - **Recommended**: Build MCprep using BpyBuild. Instructions can be found on [CONTRIBUTING.md](https://github.com/Moo-Ack-Productions/MCprep/blob/dev/CONTRIBUTING.md)
   - Websites such as `https://po2mo.net`
   - Command line tools such as `msgfmt`
   - PO editors like PoEdit
