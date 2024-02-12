@@ -18,7 +18,4 @@ layout.label(text=env._("Hello World!"))
 find ./MCprep_addon -iname "*.py" | xargs xgettext --keyword="env._" --from-code utf-8 -o MCprep_addon/MCprep_resources/Languages/mcprep.pot
 ```
 
-- PO files should be compiled to MO files on release. On Linux, this can be done with the following command for each locale:
-```
-msgfmt mcprep.po -o mcprep.mo
-```
+- By default, BpyBuild should automatically generate `translate.py` and all `mcprep.mo` files at build time.
