@@ -1,5 +1,6 @@
 .DS_Store
 *.blend
+*.mo
 __pycache__
 .mypy_cache
 MCprep_addon/mcprep_addon_tracker.json
