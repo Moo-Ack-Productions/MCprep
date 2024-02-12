@@ -83,6 +83,7 @@ class MCprepEnv:
 
 		self.dev_file: Path = Path(os.path.dirname(__file__), "mcprep_dev.txt")
 		self.languages_folder: Path = Path(os.path.dirname(__file__), "MCprep_resources", "Languages")
+		self.translations: Path = Path(os.path.dirname(__file__), "translations.py")
 
 		self.last_check_for_updated = 0
 
@@ -139,7 +140,7 @@ class MCprepEnv:
 		# i18n using Python's gettext module
 		#
 		# This only runs if translations.py does not exist
-		if not os.path.exists("translations.py"):
+		if not self.translations.exists():
 			self.languages: dict[str, gettext.NullTranslations] = {}
 			for language in self.languages_folder.iterdir():
 				self.languages[language.name] = gettext.translation("mcprep", 
