@@ -1,3 +1,8 @@
+# Copyright (c) 2024 Mahid Sheikh. All Rights Reserved.
+#
+# This compiles all PO files in MCprep_resources/Languages
+# to MO files that are used as a fallback for Python gettext.
+
 from pathlib import Path
 import polib
 
