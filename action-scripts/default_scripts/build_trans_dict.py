@@ -12,7 +12,7 @@
 
 from pathlib import Path
 from typing import Dict, Tuple
-import polib
+from libs import polib
 import pprint
 
 translation_dict: Dict[str, Dict[Tuple[str, str], str]] = {}
