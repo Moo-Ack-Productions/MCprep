@@ -4,7 +4,7 @@
 # to MO files that are used as a fallback for Python gettext.
 
 from pathlib import Path
-from libs import polib
+import polib
 
 def main() -> None:
     print("Building MO files...")
