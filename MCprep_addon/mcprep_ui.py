@@ -25,7 +25,6 @@ from bpy.types import Context, UILayout
 
 # addon imports
 from . import addon_updater_ops
-from . import optimize_scene
 from . import tracking
 from . import util
 from . import world_tools
@@ -808,18 +807,6 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		else:
 			col.operator(
 				"mcprep.improve_ui", text=env._("Improve UI"), icon='SETTINGS')
-
-		# Optimizer Panel (only for blender 2.80+)
-		row = col.row(align=True)
-		icon = "TRIA_DOWN" if scn_props.show_settings_optimizer else "TRIA_RIGHT"
-		row.prop(
-			scn_props, "show_settings_optimizer",
-			text=env._("Cycles Optimizer"), icon=icon)
-		if scn_props.show_settings_optimizer:
-			row = col.row(align=True)
-			row.label(text="The Cycles optimizer will be removed in 3.6!")
-			row = col.row(align=True)
-			optimize_scene.panel_draw(context, row)
 
 		# Advanced settings.
 		row = col.row(align=True)
@@ -1928,10 +1915,6 @@ class McprepProps(bpy.types.PropertyGroup):
 		default=False)
 	show_settings_skin: bpy.props.BoolProperty(
 		name="show skin settings",
-		description="Show extra MCprep panel settings",
-		default=False)
-	show_settings_optimizer: bpy.props.BoolProperty(
-		name="show optimizer settings",
 		description="Show extra MCprep panel settings",
 		default=False)
 	show_settings_spawner: bpy.props.BoolProperty(
