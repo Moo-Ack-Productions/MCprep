@@ -18,4 +18,6 @@ layout.label(text=env._("Hello World!"))
 find ./MCprep_addon -iname "*.py" | xargs xgettext --keyword="env._" --from-code utf-8 -o MCprep_addon/MCprep_resources/Languages/mcprep.pot
 ```
 
-- By default, BpyBuild should automatically generate `translate.py` and all `mcprep.mo` files at build time.
+- BpyBuild will automatically generate `translate.py` and all `mcprep.mo` files at build time, provided the `translate` option is passed at build time. 
+  - Production builds: `bab -b translate`
+  - Dev builds: `bab -b dev translate`
