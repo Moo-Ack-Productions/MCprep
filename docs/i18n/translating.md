@@ -3,8 +3,6 @@ To make sure translations are up to par with the standards we hold on the MCprep
 1. No AI for translations, such as Google Translate, ChatGPT, etc. AI translations are unreliable, differ massively in terms of quality between different languages, and don't take context properly into account. 
 2. All translations must be confirmed by a regular user who knows the language in question. This is so we can verify that the translation is up to par.
 
-Failure to follow these guidelines may prevent one from being able to contribute translations for MCprep in the future.
-
 In addition, the following should be kept in mind:
 - Not everything needs to be translated at once. If you're unsure of how to translate something, skip it.
 - Translations should be close to the original strings in length. However, if this is not possible, then bring it up in a GitHub Issue.
