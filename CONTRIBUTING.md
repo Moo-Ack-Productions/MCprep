@@ -54,8 +54,8 @@ As a quick start:
 # Highly recommended, create a local virtual environment (could also define globally)
 python3 -m pip install --user virtualenv
 
-python3 -m pip install --upgrade pip  # Install/upgrade pip
 python3 -m venv ./venv  # Add a local virtual env called `venv`
+python3 -m pip install --upgrade pip  # Install/upgrade pip
 
 # Activate that environment
 ## On windows:
@@ -63,11 +63,15 @@ python3 -m venv ./venv  # Add a local virtual env called `venv`
 ## On Mac/linux:
 source venv/bin/activate
 
+pip install -r requirements.txt
+
 # Now with the env active, do the pip install (or upgrade)
 pip install --upgrade bpy-addon-build
 
 # Finally, you can compile MCprep using:
 bab -b dev # Use dev to use non-prod related resources and tracking.
+bab -b dev translate # Dev, with translations
+bab -b translate # For production
 ```
 
 Moving forward, you can now build the addon for all intended supported versions using: `bpy-addon-build -b dev`
