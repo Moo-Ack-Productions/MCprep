@@ -1,5 +1,6 @@
 .DS_Store
 *.blend
+*.mo
 __pycache__
 .mypy_cache
 MCprep_addon/mcprep_addon_tracker.json
@@ -14,7 +15,7 @@ mcprep_venv_*
 .cache
 .python-version
 venv/
-MCprep_addon/MCprep_resources/
+.venv/
 *.sublime-*
 MCprep_addon/import_bridge/conf
 MCprep_addon/import_bridge/nbt

@@ -1,3 +1,4 @@
 bpy-addon-build>=0.3.0
 fake-bpy-module-2.80==20230117
 flake8==5.0.4
+polib==1.2.0

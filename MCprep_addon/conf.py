@@ -23,6 +23,7 @@ import inspect
 from dataclasses import dataclass
 import enum
 import os
+import gettext
 
 import bpy
 from bpy.utils.previews import ImagePreviewCollection
@@ -81,6 +82,8 @@ class MCprepEnv:
 		self.json_path_update: Path = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data_update.json")
 
 		self.dev_file: Path = Path(os.path.dirname(__file__), "mcprep_dev.txt")
+		self.languages_folder: Path = Path(os.path.dirname(__file__), "MCprep_resources", "Languages")
+		self.translations: Path = Path(os.path.dirname(__file__), "translations.py")
 
 		self.last_check_for_updated = 0
 
@@ -131,6 +134,30 @@ class MCprepEnv:
 		# that no reading has occurred. If lib not found, will update to [].
 		# If ever changing the resource pack, should also reset to None.
 		self.material_sync_cache = []
+	
+		# Whether we use PO files directly or use the converted form
+		self.use_direct_i18n = False
+		# i18n using Python's gettext module
+		#
+		# This only runs if translations.py does not exist
+		if not self.translations.exists():
+			self.languages: dict[str, gettext.NullTranslations] = {}
+			for language in self.languages_folder.iterdir():
+				self.languages[language.name] = gettext.translation("mcprep", 
+										 self.languages_folder, 
+										 fallback=True,
+										 languages=[language.name])
+			self.use_direct_i18n = True
+			self.log("Loaded direct i18n!")
+	
+	# This allows us to translate strings on the fly
+	def _(self, msg: str) -> str:
+		if not self.use_direct_i18n:
+			return msg
+		if bpy.context.preferences.view.language in self.languages:
+			return self.languages[bpy.context.preferences.view.language].gettext(msg)
+		else:
+			return self.languages["en_US"].gettext(msg)
 
 	def update_json_dat_path(self):
 		"""If new update file found from install, replace old one with new.

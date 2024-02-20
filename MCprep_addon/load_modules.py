@@ -142,7 +142,6 @@ if "generate" in locals():
 else:
 	from .materials import generate
 
-
 # Only include those with a register function, which is not all
 module_list = (
 	conf,
@@ -167,6 +166,10 @@ module_list = (
 
 
 def register(bl_info):
+	if not conf.env.use_direct_i18n:
+		from . import translations
+		bpy.app.translations.register(__name__, translations.MCPREP_TRANSLATIONS)
+
 	tracking.register(bl_info)
 	for mod in module_list:
 		mod.register()
@@ -181,6 +184,7 @@ def register(bl_info):
 	conf.env.log("MCprep: Very Verbose is enabled", vv_only=True)
 
 
+
 def unregister(bl_info):
 	for mod in reversed(module_list):
 		mod.unregister()
@@ -190,3 +194,5 @@ def unregister(bl_info):
 
 	# addon updater code and configurations
 	addon_updater_ops.unregister()
+	if not conf.env.use_direct_i18n:
+		bpy.app.translations.unregister(__name__)
