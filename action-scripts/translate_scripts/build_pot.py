@@ -52,19 +52,20 @@ def main():
             visitor = TranslateCallVisitor()
             visitor.visit(root)
             if len(visitor.keys):
-                extracted_strings[str(p)] = visitor.keys
+                extracted_strings[f"MCprep_addon/{str(p)}"] = visitor.keys
     
     po = polib.POFile()
     po.metadata = {
-        'Project-Id-Version': '1.0',
-        'Report-Msgid-Bugs-To': 'you@example.com',
-        'POT-Creation-Date': '2007-10-18 14:00+0100',
-        'PO-Revision-Date': '2007-10-18 14:00+0100',
-        'Last-Translator': 'you <you@example.com>',
-        'Language-Team': 'English <yourteam@example.com>',
-        'MIME-Version': '1.0',
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Content-Transfer-Encoding': '8bit',
+        "Project-Id-Version": "PACKAGE VERSION",
+        "Report-Msgid-Bugs-To": "",
+        "POT-Creation-Date": "2024-02-19 23:42-0600",
+        "PO-Revision-Date": "YEAR-MO-DA HO:MI+ZONE",
+        "Last-Translator": "FULL NAME <EMAIL@ADDRESS>",
+        "Language-Team": "LANGUAGE <LL@li.org>",
+        "Language": "",
+        "MIME-Version": "1.0",
+        "Content-Type": "text/plain; charset=CHARSET",
+        "Content-Transfer-Encoding": "8bit",
     }
     for file, keys in extracted_strings.items():
         for msgid, lineno in keys.items():
