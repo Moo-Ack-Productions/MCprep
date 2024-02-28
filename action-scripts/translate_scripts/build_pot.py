@@ -43,6 +43,7 @@ class TranslateCallVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
 def main():
+    print("Building POT...")
     path = Path(".")
     extracted_strings = {}
     for p in path.rglob("*.py"):
@@ -74,3 +75,6 @@ def main():
             )
             po.append(entry)
             po.save("mcprep.pot")
+
+if __name__ == "__main__":
+    main()
