@@ -26,7 +26,7 @@ import bpy
 from bpy.types import Context, Camera
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
-from .conf import env, VectorType
+from .conf import MCprepError, env, VectorType
 from . import util
 from . import tracking
 from .materials import generate
@@ -157,7 +157,7 @@ def detect_world_exporter(filepath: Path) -> None:
 		obj_header.set_seperated()
 
 
-def convert_mtl(filepath):
+def convert_mtl(filepath) -> Optional[MCprepError]:
 	"""Convert the MTL file if we're not using one of Blender's built in
 	colorspaces
 
@@ -170,7 +170,8 @@ def convert_mtl(filepath):
 	- Add a header at the end
 
 	Returns:
-		True if success or skipped, False if failed, or None if skipped
+		- None if successful or skipped
+		- MCprepError if failed (may return with message)
 	"""
 	# Check if the MTL exists. If not, then check if it
 	# uses underscores. If still not, then return False
@@ -180,7 +181,8 @@ def convert_mtl(filepath):
 		if mtl_underscores.exists():
 			mtl = mtl_underscores
 		else:
-			return False
+			line, file = env.current_line_and_file()
+			return MCprepError(FileNotFoundError(), line, file)
 
 	lines = None
 	copied_file = None
@@ -190,8 +192,9 @@ def convert_mtl(filepath):
 			lines = mtl_file.readlines()
 	except Exception as e:
 		print(e)
-		return False
-	
+		line, file = env.current_line_and_file()
+		return MCprepError(e, line, file, "Could not read file!")
+
 	# This checks to see if the user is using a built-in colorspace or if none of the lines have map_d. If so
 	# then ignore this file and return None
 	if bpy.context.scene.view_settings.view_transform in BUILTIN_SPACES or not any("map_d" in s for s in lines):
@@ -215,10 +218,11 @@ def convert_mtl(filepath):
 			print("Header " + str(header))
 			copied_file = shutil.copy2(mtl, original_mtl_path.absolute())
 		else:
-			return True
+			return None
 	except Exception as e:
 		print(e)
-		return False
+		line, file = env.current_line_and_file()
+		return MCprepError(e, line, file)
 
 	# In this section, we go over each line
 	# and check to see if it begins with map_d. If
@@ -231,7 +235,8 @@ def convert_mtl(filepath):
 					lines[index] = "# " + line
 	except Exception as e:
 		print(e)
-		return False
+		line, file = env.current_line_and_file()
+		return MCprepError(e, line, file, "Could not read file!")
 
 	# This needs to be seperate since it involves writing
 	try:
@@ -243,9 +248,10 @@ def convert_mtl(filepath):
 	except Exception as e:
 		print(e)
 		shutil.copy2(copied_file, mtl)
-		return False
+		line, file = env.current_line_and_file()
+		return MCprepError(e, line, file)
 
-	return True
+	return None
 
 
 def enble_obj_importer() -> Optional[bool]:
@@ -503,10 +509,13 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		# First let's convert the MTL if needed
 		conv_res = convert_mtl(self.filepath)
 		try:
-			if conv_res is None:
-				pass  # skipped, no issue anyways.
-			elif conv_res is False:
-				self.report({"WARNING"}, "MTL conversion failed!")
+			if isinstance(conv_res, MCprepError):
+				if isinstance(conv_res.err_type, FileNotFoundError):
+					self.report({"WARNING"}, "MTL not found!")
+				elif conv_res.msg is not None:
+					self.report({"WARNING"}, conv_res.msg)
+				else:
+					self.report({"WARNING"}, conv_res.err_type)
 
 			res = None
 			if util.min_bv((3, 5)):
