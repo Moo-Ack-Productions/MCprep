@@ -303,10 +303,16 @@ class MCprepError(object):
 		Path of file the exception object
 		was created in. The preferred way 
 		to get this is __file__
+
+	msg: Optional[str]
+		Optional message to display for an 
+		exception. Use this if the exception 
+		type may not be so clear cut
 	"""
 	err_type: BaseException
 	line: int 
 	file: str
+	msg: Optional[str] = None
 
 env = MCprepEnv()
 
