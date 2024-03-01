@@ -316,13 +316,14 @@ class MCPREP_OT_open_jmc2obj(bpy.types.Operator):
 	def execute(self, context):
 		addon_prefs = util.get_user_preferences(context)
 		res = util.open_program(addon_prefs.open_jmc2obj_path)
-
-		if res == -1:
-			bpy.ops.mcprep.install_jmc2obj('INVOKE_DEFAULT')
-			return {'CANCELLED'}
-		elif res != 0:
-			self.report({'ERROR'}, str(res))
-			return {'CANCELLED'}
+		
+		if isinstance(res, MCprepError):
+			if isinstance(res.err_type, FileNotFoundError):
+				bpy.ops.mcprep.install_jmc2obj('INVOKE_DEFAULT')
+				return {'CANCELLED'}
+			else:
+				self.report({'ERROR'}, res.msg)
+				return {'CANCELLED'}
 		else:
 			self.report({'INFO'}, "jmc2obj should open soon")
 		return {'FINISHED'}
@@ -396,14 +397,16 @@ class MCPREP_OT_open_mineways(bpy.types.Operator):
 		if os.path.isfile(addon_prefs.open_mineways_path):
 			res = util.open_program(addon_prefs.open_mineways_path)
 		else:
-			res = -1
-
-		if res == -1:
-			bpy.ops.mcprep.install_mineways('INVOKE_DEFAULT')
-			return {'CANCELLED'}
-		elif res != 0:
-			self.report({'ERROR'}, str(res))
-			return {'CANCELLED'}
+			# Doesn't matter here, it's a dummy value
+			res = MCprepError(FileNotFoundError(), -1, "")
+		
+		if isinstance(res, MCprepError):
+			if isinstance(res.err_type, FileNotFoundError):
+				bpy.ops.mcprep.install_mineways('INVOKE_DEFAULT')
+				return {'CANCELLED'}
+			else:
+				self.report({'ERROR'}, res.msg)
+				return {'CANCELLED'}
 		else:
 			self.report({'INFO'}, "Mineways should open soon")
 		return {'FINISHED'}
