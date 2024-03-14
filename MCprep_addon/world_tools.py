@@ -16,17 +16,18 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+import enum
 import os
 import math
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Union
 import shutil
 
 import bpy
 from bpy.types import Context, Camera
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
-from .conf import env, VectorType
+from .conf import MCprepError, env, VectorType
 from . import util
 from . import tracking
 from .materials import generate
@@ -157,7 +158,7 @@ def detect_world_exporter(filepath: Path) -> None:
 		obj_header.set_seperated()
 
 
-def convert_mtl(filepath):
+def convert_mtl(filepath) -> Optional[MCprepError]:
 	"""Convert the MTL file if we're not using one of Blender's built in
 	colorspaces
 
@@ -170,7 +171,8 @@ def convert_mtl(filepath):
 	- Add a header at the end
 
 	Returns:
-		True if success or skipped, False if failed, or None if skipped
+		- None if successful or skipped
+		- MCprepError if failed (may return with message)
 	"""
 	# Check if the MTL exists. If not, then check if it
 	# uses underscores. If still not, then return False
@@ -180,7 +182,8 @@ def convert_mtl(filepath):
 		if mtl_underscores.exists():
 			mtl = mtl_underscores
 		else:
-			return False
+			line, file = env.current_line_and_file()
+			return MCprepError(FileNotFoundError(), line, file)
 
 	lines = None
 	copied_file = None
@@ -190,8 +193,9 @@ def convert_mtl(filepath):
 			lines = mtl_file.readlines()
 	except Exception as e:
 		print(e)
-		return False
-	
+		line, file = env.current_line_and_file()
+		return MCprepError(e, line, file, "Could not read file!")
+
 	# This checks to see if the user is using a built-in colorspace or if none of the lines have map_d. If so
 	# then ignore this file and return None
 	if bpy.context.scene.view_settings.view_transform in BUILTIN_SPACES or not any("map_d" in s for s in lines):
@@ -215,10 +219,11 @@ def convert_mtl(filepath):
 			print("Header " + str(header))
 			copied_file = shutil.copy2(mtl, original_mtl_path.absolute())
 		else:
-			return True
+			return None
 	except Exception as e:
 		print(e)
-		return False
+		line, file = env.current_line_and_file()
+		return MCprepError(e, line, file)
 
 	# In this section, we go over each line
 	# and check to see if it begins with map_d. If
@@ -231,7 +236,8 @@ def convert_mtl(filepath):
 					lines[index] = "# " + line
 	except Exception as e:
 		print(e)
-		return False
+		line, file = env.current_line_and_file()
+		return MCprepError(e, line, file, "Could not read file!")
 
 	# This needs to be seperate since it involves writing
 	try:
@@ -243,20 +249,34 @@ def convert_mtl(filepath):
 	except Exception as e:
 		print(e)
 		shutil.copy2(copied_file, mtl)
-		return False
+		line, file = env.current_line_and_file()
+		return MCprepError(e, line, file)
 
-	return True
+	return None
 
+class OBJImportCode(enum.Enum):
+	"""
+	This represents the state of the 
+	OBJ import addon in pre-4.0 versions
+	of Blender
+	"""
+	ALREADY_ENABLED = 0
+	DISABLED = 1
 
-def enble_obj_importer() -> Optional[bool]:
-	"""Checks if obj import is avail and tries to activate if not.
+def enable_obj_importer() -> Union[OBJImportCode, MCprepError]:
+	"""
+	Checks if the obj import addon (pre-Blender 4.0) is enabled,
+	and enable it if it isn't enabled.
 
-	If we fail to enable obj importing, return false. True if enabled, and Non
-	if nothing changed.
+	Returns:
+		- OBJImportCode.ALREADY_ENABLED if either enabled already or 
+		  the user is using Blender 4.0.
+		- OBJImportCode.DISABLED if the addon had to be enabled.
+		- MCprepError with a message if the addon could not be enabled.
 	"""
 	enable_addon = None
 	if util.min_bv((4, 0)):
-		return None  # No longer an addon, native built in.
+		return OBJImportCode.ALREADY_ENABLED # No longer an addon, native built in.
 	else:
 		in_import_scn = "obj_import" not in dir(bpy.ops.wm)
 		in_wm = ""
@@ -264,13 +284,14 @@ def enble_obj_importer() -> Optional[bool]:
 			enable_addon = "io_scene_obj"
 
 	if enable_addon is None:
-		return None
+		return OBJImportCode.ALREADY_ENABLED
 
 	try:
 		bpy.ops.preferences.addon_enable(module=enable_addon)
-		return True
+		return OBJImportCode.DISABLED
 	except RuntimeError:
-		return False
+		line, file = env.current_line_and_file()
+		return MCprepError(Exception(), line, file, "Could not enable the Built-in OBJ importer!")
 
 
 # -----------------------------------------------------------------------------
@@ -295,13 +316,14 @@ class MCPREP_OT_open_jmc2obj(bpy.types.Operator):
 	def execute(self, context):
 		addon_prefs = util.get_user_preferences(context)
 		res = util.open_program(addon_prefs.open_jmc2obj_path)
-
-		if res == -1:
-			bpy.ops.mcprep.install_jmc2obj('INVOKE_DEFAULT')
-			return {'CANCELLED'}
-		elif res != 0:
-			self.report({'ERROR'}, str(res))
-			return {'CANCELLED'}
+		
+		if isinstance(res, MCprepError):
+			if isinstance(res.err_type, FileNotFoundError):
+				bpy.ops.mcprep.install_jmc2obj('INVOKE_DEFAULT')
+				return {'CANCELLED'}
+			else:
+				self.report({'ERROR'}, res.msg)
+				return {'CANCELLED'}
 		else:
 			self.report({'INFO'}, "jmc2obj should open soon")
 		return {'FINISHED'}
@@ -375,14 +397,16 @@ class MCPREP_OT_open_mineways(bpy.types.Operator):
 		if os.path.isfile(addon_prefs.open_mineways_path):
 			res = util.open_program(addon_prefs.open_mineways_path)
 		else:
-			res = -1
-
-		if res == -1:
-			bpy.ops.mcprep.install_mineways('INVOKE_DEFAULT')
-			return {'CANCELLED'}
-		elif res != 0:
-			self.report({'ERROR'}, str(res))
-			return {'CANCELLED'}
+			# Doesn't matter here, it's a dummy value
+			res = MCprepError(FileNotFoundError(), -1, "")
+		
+		if isinstance(res, MCprepError):
+			if isinstance(res.err_type, FileNotFoundError):
+				bpy.ops.mcprep.install_mineways('INVOKE_DEFAULT')
+				return {'CANCELLED'}
+			else:
+				self.report({'ERROR'}, res.msg)
+				return {'CANCELLED'}
 		else:
 			self.report({'INFO'}, "Mineways should open soon")
 		return {'FINISHED'}
@@ -474,15 +498,15 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			self.report({"ERROR"}, "You must select a .obj file to import")
 			return {'CANCELLED'}
 
-		res = enble_obj_importer()
-		if res is None:
+		res = enable_obj_importer()
+		if res is OBJImportCode.ALREADY_ENABLED:
 			pass
-		elif res is True:
+		elif res is OBJImportCode.DISABLED:
 			self.report(
 				{"INFO"},
 				"FYI: had to enable OBJ imports in user preferences")
-		elif res is False:
-			self.report({"ERROR"}, "Built-in OBJ importer could not be enabled")
+		elif isinstance(res, MCprepError):
+			self.report({"ERROR"}, res.msg)
 			return {'CANCELLED'}
 
 		# There are a number of bug reports that come from the generic call
@@ -503,10 +527,13 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		# First let's convert the MTL if needed
 		conv_res = convert_mtl(self.filepath)
 		try:
-			if conv_res is None:
-				pass  # skipped, no issue anyways.
-			elif conv_res is False:
-				self.report({"WARNING"}, "MTL conversion failed!")
+			if isinstance(conv_res, MCprepError):
+				if isinstance(conv_res.err_type, FileNotFoundError):
+					self.report({"WARNING"}, "MTL not found!")
+				elif conv_res.msg is not None:
+					self.report({"WARNING"}, conv_res.msg)
+				else:
+					self.report({"WARNING"}, conv_res.err_type)
 
 			res = None
 			if util.min_bv((3, 5)):
@@ -662,10 +689,8 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 			self.prep_world_cycles(context)
 		elif engine == 'BLENDER_EEVEE':
 			self.prep_world_eevee(context)
-		elif engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
-			self.prep_world_internal(context)
 		else:
-			self.report({'ERROR'}, "Must be cycles, eevee, or blender internal")
+			self.report({'ERROR'}, "Must be Cycles or EEVEE")
 		return {'FINISHED'}
 
 	def prep_world_cycles(self, context: Context) -> None:
@@ -756,41 +781,7 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 
 		# Renders faster at a (minor?) cost of the image output
 		# TODO: given the output change, consider make a bool toggle for this
-		bpy.context.scene.render.use_simplify = True
-
-	def prep_world_internal(self, context):
-		# check for any suns with the sky setting on;
-		if not context.scene.world:
-			return
-		context.scene.world.use_nodes = False
-		context.scene.world.horizon_color = (0.00938029, 0.0125943, 0.0140572)
-		context.scene.world.light_settings.use_ambient_occlusion = True
-		context.scene.world.light_settings.ao_blend_type = 'MULTIPLY'
-		context.scene.world.light_settings.ao_factor = 0.1
-		context.scene.world.light_settings.use_environment_light = True
-		context.scene.world.light_settings.environment_energy = 0.05
-		context.scene.render.use_shadows = True
-		context.scene.render.use_raytrace = True
-		context.scene.render.use_textures = True
-
-		# check for any sunlamps with sky setting
-		sky_used = False
-		for lamp in context.scene.objects:
-			if lamp.type not in ("LAMP", "LIGHT") or lamp.data.type != "SUN":
-				continue
-			if lamp.data.sky.use_sky:
-				sky_used = True
-				break
-		if sky_used:
-			env.log("MCprep sky being used with atmosphere")
-			context.scene.world.use_sky_blend = False
-			context.scene.world.horizon_color = (0.00938029, 0.0125943, 0.0140572)
-		else:
-			env.log("No MCprep sky with atmosphere")
-			context.scene.world.use_sky_blend = True
-			context.scene.world.horizon_color = (0.647705, 0.859927, 0.940392)
-			context.scene.world.zenith_color = (0.0954261, 0.546859, 1)
-
+		bpy.context.scene.render.use_simplify = True	
 
 class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 	"""Add sun lamp and time of day (dynamic) driver, setup sky with sun and moon"""
@@ -802,7 +793,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 		"""Dynamic set of enums to show based on engine"""
 		engine = bpy.context.scene.render.engine
 		enums = []
-		if bpy.app.version >= (2, 77) and engine in ("CYCLES", "BLENDER_EEVEE"):
+		if engine in ("CYCLES", "BLENDER_EEVEE"):
 			enums.append((
 				"world_shader",
 				"Dynamic sky + shader sun/moon",
@@ -896,17 +887,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 		if self.world_type in ("world_static_mesh", "world_static_only"):
 			# Create world dynamically (previous, simpler implementation)
 			new_sun = self.create_sunlamp(context)
-			new_objs.append(new_sun)
-
-			if engine in ('BLENDER_RENDER', 'BLENDER_GAME'):
-				world = context.scene.world
-				if not world:
-					world = bpy.data.worlds.new("MCprep World")
-					context.scene.world = world
-				new_sun.data.shadow_method = 'RAY_SHADOW'
-				new_sun.data.shadow_soft_size = 0.5
-				world.use_sky_blend = False
-				world.horizon_color = (0.00938029, 0.0125943, 0.0140572)
+			new_objs.append(new_sun)	
 			bpy.ops.mcprep.world(skipUsage=True)  # do rest of sky setup
 
 		elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
@@ -920,35 +901,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			if wname in bpy.data.worlds:
 				prev_world = bpy.data.worlds[wname]
 				prev_world.name = "-old"
-			new_objs += self.create_dynamic_world(context, blendfile, wname)
-
-		elif engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
-			# dynamic world using built-in sun sky and atmosphere
-			new_sun = self.create_sunlamp(context)
-			new_objs.append(new_sun)
-			new_sun.data.shadow_method = 'RAY_SHADOW'
-			new_sun.data.shadow_soft_size = 0.5
-
-			world = context.scene.world
-			if not world:
-				world = bpy.data.worlds.new("MCprep World")
-				context.scene.world = world
-			world.use_sky_blend = False
-			world.horizon_color = (0.00938029, 0.0125943, 0.0140572)
-
-			# be sure to turn off all other sun lamps with atmosphere set
-			new_sun.data.sky.use_sky = True  # use sun orientation settings if BI
-			for lamp in context.scene.objects:
-				if lamp.type not in ("LAMP", "LIGHT") or lamp.data.type != "SUN":
-					continue
-				if lamp == new_sun:
-					continue
-				lamp.data.sky.use_sky = False
-
-			time_obj = get_time_object()
-			if not time_obj:
-				env.log(
-					"TODO: implement create time_obj, parent sun to it & driver setup")
+			new_objs += self.create_dynamic_world(context, blendfile, wname)	
 
 		if self.world_type in ("world_static_mesh", "world_mesh"):
 			if not os.path.isfile(blendfile):
@@ -1017,10 +970,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 
 	def create_sunlamp(self, context: Context) -> bpy.types.Object:
 		"""Create new sun lamp from primitives"""
-		if hasattr(bpy.data, "lamps"):  # 2.7
-			newlamp = bpy.data.lamps.new("Sun", "SUN")
-		else:  # 2.8
-			newlamp = bpy.data.lights.new("Sun", "SUN")
+		newlamp = bpy.data.lights.new("Sun", "SUN")
 		obj = bpy.data.objects.new("Sunlamp", newlamp)
 		obj.location = (0, 0, 20)
 		obj.rotation_euler[0] = 0.481711
