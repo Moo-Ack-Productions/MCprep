@@ -94,8 +94,8 @@ def parse_common_header(header_lines: list[str]) -> CommonMCOBJ:
 
     # Keys whose values are tuples
     TUPLE_PARSE_INT = [
-        "exported_bounds_min",
-        "exported_bounds_max",
+        "export_bounds_min",
+        "export_bounds_max",
     ]
 
     TUPLE_PARSE_FLOAT = [
