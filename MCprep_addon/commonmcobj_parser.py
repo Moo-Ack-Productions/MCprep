@@ -24,10 +24,10 @@ class CommonMCOBJ:
     world_path: str 
     
     # Min values of the selection bounding box
-    exported_bounds_min: Tuple[int, int, int]
+    export_bounds_min: Tuple[int, int, int]
     
     # Max values of the selection bounding box
-    exported_bounds_max: Tuple[int, int, int]
+    export_bounds_max: Tuple[int, int, int]
     
     # Offset from (0, 0, 0)
     export_offset: Tuple[float, float, float]
