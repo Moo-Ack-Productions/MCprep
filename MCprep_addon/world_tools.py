@@ -172,6 +172,9 @@ def get_exporter(context: Context) -> Optional[WorldExporter]:
 		- None otherwise
 	"""
 	obj = context.active_object
+	if not obj:
+		return None
+
 	if "COMMONMCOBJ_HEADER" in obj:
 		if obj["exporter"] in EXPORTER_MAPPING:
 			return EXPORTER_MAPPING[obj["exporter"]]
