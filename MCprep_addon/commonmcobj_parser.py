@@ -158,14 +158,13 @@ def parse_header(f: TextIO) -> Optional[CommonMCOBJ]:
         - CommonMCOBJ object if header exists
         - None otherwise
     """
-    lines = f.readlines()
 
     header: List[str] = []
     found_header = False
     
     # Read in the header
-    for l in lines:
-        tl = " ".join(l.split())
+    for l in f:
+        tl = " ".join(l.rstrip().split())
         if tl == "# COMMON_MC_OBJ_START":
             header.append(tl)
             found_header = True 
