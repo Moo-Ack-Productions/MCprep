@@ -18,6 +18,7 @@
 
 
 import os
+from MCprep_addon import world_tools
 
 import bpy
 from bpy_extras.io_utils import ImportHelper
@@ -305,9 +306,10 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 				"Nothing modified, be sure you selected objects with existing materials!"
 			)
 
-		addon_prefs = util.get_user_preferences(context)
 		self.track_param = context.scene.render.engine
-		self.track_exporter = addon_prefs.MCprep_exporter_type
+		# TODO: Rework exporter tracking
+		# addon_prefs = util.get_user_preferences(context)
+		# self.track_exporter = addon_prefs.MCprep_exporter_type
 		return {'FINISHED'}
 
 
@@ -411,8 +413,7 @@ class MCPREP_OT_swap_texture_pack(
 
 	@classmethod
 	def poll(cls, context):
-		addon_prefs = util.get_user_preferences(context)
-		if addon_prefs.MCprep_exporter_type != "(choose)":
+		if world_tools.get_exporter(context) != world_tools.WorldExporter.Unknown:
 			return util.is_atlas_export(context)
 		return False
 
@@ -470,7 +471,8 @@ class MCPREP_OT_swap_texture_pack(
 		_ = generate.detect_form(mat_list)
 		invalid_uv, affected_objs = uv_tools.detect_invalid_uvs_from_objs(obj_list)
 
-		self.track_exporter = addon_prefs.MCprep_exporter_type
+		# TODO: Rework exporter tracking
+		# self.track_exporter = addon_prefs.MCprep_exporter_type
 
 		# set the scene's folder for the texturepack being swapped
 		context.scene.mcprep_texturepack_path = folder
