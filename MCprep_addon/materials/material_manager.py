@@ -26,7 +26,7 @@ from . import sequences
 from .. import tracking
 from .. import util
 
-from ..conf import env
+from ..conf import MCprepError, env
 
 
 # -----------------------------------------------------------------------------
@@ -440,8 +440,11 @@ class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 		env.log(f"Loading from texpack for {mat.name}", vv_only=True)
 		canon, _ = generate.get_mc_canonical_name(mat.name)
 		image_path = generate.find_from_texturepack(canon)
-		if not image_path or not os.path.isfile(image_path):
-			env.log(f"Find missing images: No source file found for {mat.name}")
+		if isinstance(image_path, MCprepError):
+			if image_path.msg:
+				env.log(image_path.msg)
+			else:
+				env.log(f"Find missing images: No source file found for {mat.name}")
 			return False
 
 		# even if images of same name already exist, load new block

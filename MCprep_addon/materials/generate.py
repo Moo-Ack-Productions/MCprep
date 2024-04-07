@@ -356,7 +356,9 @@ def set_texture_pack(
 	"""
 	mc_name, _ = get_mc_canonical_name(material.name)
 	image = find_from_texturepack(mc_name, folder)
-	if image is None:
+	if isinstance(image, MCprepError):
+		if image.msg:
+			env.log(image.msg)
 		return 0
 
 	image_data = util.loadTexture(image)
@@ -649,7 +651,9 @@ def replace_missing_texture(image: Image) -> bool:
 	canon, _ = get_mc_canonical_name(name)
 	# TODO: detect for pass structure like normal and still look for right pass
 	image_path = find_from_texturepack(canon)
-	if not image_path:
+	if isinstance(image_path, MCprepError):
+		if image_path.msg:
+			env.log(image_path.msg)
 		return False
 	image.filepath = image_path
 	# image.reload() # not needed?
