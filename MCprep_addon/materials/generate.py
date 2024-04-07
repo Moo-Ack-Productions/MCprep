@@ -216,6 +216,13 @@ def detect_form(materials: List[Material]) -> Optional[Form]:
 
 	Useful for pre-determining elibibility of a function and also for tracking
 	reporting to give sense of how common which exporter is used.
+
+	materials: List[Material]:
+		List of materials to check from 
+
+	Returns:
+		- Form if detected
+		- None if not detected
 	"""
 	jmc2obj = 0
 	mc = 0
