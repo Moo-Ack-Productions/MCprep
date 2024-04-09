@@ -27,6 +27,7 @@ Overall, AI contributions will be treated with the same level of scrutiny as con
 A good rule of thumb is this: if it's a lazy use of AI given the size of the change, then it's not a good use of AI.
 
 Avoid the following:
+- Using AI before having an idea of what change or problem you are solving
 - Becoming dependent on the AI 
 - Using generated code you don't understand
 - Using AI exclusively without manual work 
