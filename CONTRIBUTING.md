@@ -22,6 +22,10 @@ Since 2023, AI (Artificial Intelligence) and LLMs (Large Language Models) have s
 - The developer is able to modify the generated code based on the requests given in review.
 - The code remains mostly human written, with the AI being used to generate boilerplate code or to help with repetitive tasks. 
 
+Overall, AI contributions will be treated with the same level of scrutiny as contributions from humans, with regards to meaningfulness and quality. Contributors should keep in mind what they're doing in the code, and that the change makes sense. For example, throwing a file into an AI with the prompt "Optimize this" will be rejected, as what's being "fixed" isn't clear, and is a lazy change.
+
+A good rule of thumb is this: if it's a lazy use of AI given the size of the change, then it's not a good use of AI.
+
 Avoid the following:
 - Becoming dependent on the AI 
 - Using generated code you don't understand
