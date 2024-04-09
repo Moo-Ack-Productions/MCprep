@@ -16,6 +16,25 @@ Thanks for your interest in helping build and extend this addon! MCprep welcomes
 
 When it comes to code being reviewed, expect some discussion! If you want to contribute code back but you are not done yet, or want advice, go ahead and start your pull request and clarify it's in draft format - maintainers will likely jump in and give some steering advice. It's a good learning opportunity, but if the review process is getting too lengthy for your liking, don't hesitate to let maintainers know and we can take a more pragmatic approach (such as maintainers making the changes they are requesting, but likely at a slower rate).
 
+## Use of AI in Development
+Since 2023, AI (Artificial Intelligence) and LLMs (Large Language Models) have surged in popularity and become more common place in development. AI can be an extremely useful tool for developers, especially when used in conjunction with existing knowledge, but it can also be a hindrance with the regards to the quality of generated code. With these in mind, we allow AI for pull requests with the following conditions:
+- The AI is supplemental to the developer's work, not the other way around.
+- The developer is able to modify the generated code based on the requests given in review.
+- The code remains mostly human written, with the AI being used to generate boilerplate code or to help with repetitive tasks. 
+
+Overall, AI contributions will be treated with the same level of scrutiny as contributions from humans, with regards to meaningfulness and quality. Contributors should keep in mind what they're doing in the code, and that the change makes sense. For example, throwing a file into an AI with the prompt "Optimize this" will be rejected, as what's being "fixed" isn't clear, and is a lazy change.
+
+A good rule of thumb is this: if it's a lazy use of AI given the size of the change, then it's not a good use of AI.
+
+Avoid the following:
+- Using AI before having an idea of what change or problem you are solving
+- Becoming dependent on the AI 
+- Using generated code you don't understand
+- Using AI exclusively without manual work 
+- Etc.
+
+So long as these guidelines are followed, all is good with regards to using AI.
+
 ## Keeping MCprep compatible
 
 MCprep is uniquely made stable and functional across a large number of versions of blender. As of April 2022, it still even supports releases of Blender 2.8 while simultaneously supporting Blender 3.5+, and everything in between.
@@ -24,19 +43,6 @@ This is largely possible for a few reasons:
 
 1. Automated tests plus an automated installer makes ensures that any changes that break older versions of blender will be caught automatically.
 1. Abstracting API changes vs directly implementing changes. Instead of swapping "group" for "collection" in the change to blender 2.8, we create if/else statements and wrapper functions that fetch the attribute that exists based on the version of blender. Want more info about this? See [the article here](https://theduckcow.com/2019/update-addons-both-blender-28-and-27-support/).
-
-## Internal Rewrites
-MCprep has a separate branch for internal rewrites based on the dev branch. Sometimes, internal tools are deprecated, and requires features to be changed to reflect those deprecations.
-
-Developers should not worry about this. If a features uses depracated features, it will be fixed in the next internal rewrite. 
-
-It may be tempting to try and use the `internal-rewrites` branch to write new features. Don't, as pull requests for `internal-rewrites` will only be accepted if they deal with rewriting parts of MCprep itself. Pull requests for new features that only use `internal-rewrites` for the sake of avoiding the use of deprecated features will not be accepted.
-
-Also, when something is deprecated, it will still remain in MCprep for one full version and be removed by the next release. For instance, if during the development of MCprep X a feature is deprecated, then that feature will only be removed officially starting with the development of MCprep Y. Thus, any new features in MCprep X that use a deprecated feature will be fixed in the `internal-rewrites` branch for the development cycle of MCprep Y.
-
-There will also be a pull request for `internal-rewrites` for each devlopment cycle of MCprep. This pull request will contain all newly deprecated and removed features, as well as their replacements. This exists as a heads up to developers so that they know what to expect.
-
-New features go into the `dev` branch, rewriting of old features to account for deprecations go into the `internal-rewrites` branch. When in doubt, simply ask.
 
 ## Compiling and running tests
 
@@ -206,7 +212,7 @@ Here's a template some MCprep developers found that can help (modified for simpl
 Add this to a file called .gitmessage, and then execute the following command:
 `git config --local commit.template /path/to/.gitmessage`
 
-To use for each commit, you can use `git config --local commit.verbose true` to tell Git to perform a verbose commit all the time for just the MCprep repo.
+To use for each commit, you can use `git config --local commit.verbose true` to tell Git to perform a verbose commit all the time for just the MCprep repo. 
 
 ## Dependencies
 If you're using an IDE, it's recommened to install `bpy` as a Python module. In our experience, the [fake-bpy package](https://github.com/nutti/fake-bpy-module) seems to be the best.
