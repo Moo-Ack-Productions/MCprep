@@ -42,7 +42,7 @@ class TranslateCallVisitor(ast.NodeVisitor):
                 self.keys[msgid.value].append(msgid.lineno)
         self.generic_visit(node)
 
-def pre_build():
+def main():
     print("Building POT...")
     path = Path(".")
     extracted_strings = {}
@@ -75,7 +75,7 @@ def pre_build():
                 occurrences=[(file, n) for n in lineno]
             )
             po.append(entry)
-    po.save("MCprep_resources/Languages/mcprep.pot")
+            po.save("MCprep_resources/Languages/mcprep.pot")
 
 if __name__ == "__main__":
-    pre_build()
+    main()
