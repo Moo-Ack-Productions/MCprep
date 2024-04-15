@@ -205,6 +205,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 		engine = context.scene.render.engine
 		count = 0
 		count_lib_skipped = 0
+		count_no_prep = 0
 
 		for mat in mat_list:
 			if not mat:
@@ -212,6 +213,10 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 					"During prep, found null material:" + str(mat), vv_only=True)
 				continue
 
+			elif mat.get("MCPREP_NO_PREP", False):
+				count_no_prep += 1
+				continue
+			
 			elif mat.library:
 				count_lib_skipped += 1
 				continue
@@ -246,13 +251,13 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 
 			if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 				options = generate.PrepOptions(
-					passes,
-					self.useReflections,
-					self.usePrincipledShader,
-					self.makeSolid,
-					generate.PackFormat[self.packFormat.upper()],
-					self.useEmission,
-					False  # This is for an option set in matprep_cycles
+					passes, 
+					self.useReflections, 
+					self.usePrincipledShader, 
+					self.makeSolid, 
+					self.packFormat, 
+					self.useEmission, 
+					False # This is for an option set in matprep_cycles
 				)
 				res = generate.matprep_cycles(
 					mat=mat,
@@ -268,9 +273,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 
 			if self.animateTextures:
 				sequences.animate_single_material(
-					mat,
-					context.scene.render.engine,
-					export_location=sequences.ExportLocation.ORIGINAL)
+					mat, context.scene.render.engine)
 
 		# Sync materials.
 		if self.syncMaterials is True:
@@ -281,7 +284,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 		if self.combineMaterials is True:
 			bpy.ops.mcprep.combine_materials(selection_only=True, skipUsage=True)
 
-		# Improve UI.
+        # Improve UI.
 		if self.improveUiSettings:
 			try:
 				bpy.ops.mcprep.improve_ui()
@@ -291,14 +294,21 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 		if self.optimizeScene and engine == 'CYCLES':
 			bpy.ops.mcprep.optimize_scene()
 
+		has_no_prep = count_no_prep > 0
+		has_lib_skipped = count_lib_skipped > 0
+		has_mat = count > 0
+		
+		_info = {}
+		_info[f"modified {count}"] = has_mat
+		_info[f"skipped {count_lib_skipped} linked"] = has_lib_skipped
+		_info[f"founded {count_no_prep} no prep"] = has_no_prep
+		
+		mat_info = ",".join(k for k,v in _info.items() if v).capitalize()
+		
 		if self.skipUsage is True:
 			pass  # Don't report if a meta-call.
-		elif count_lib_skipped > 0:
-			self.report(
-				{"INFO"},
-				f"Modified {count} materials, skipped {count_lib_skipped} linked ones.")
-		elif count > 0:
-			self.report({"INFO"}, f"Modified  {count} materials")
+		elif has_mat or has_lib_skipped or has_no_prep:
+			self.report({"INFO"}, mat_info) 
 		else:
 			self.report(
 				{"ERROR"},
