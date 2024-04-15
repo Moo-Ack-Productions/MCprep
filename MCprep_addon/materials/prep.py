@@ -212,7 +212,6 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 				env.log(
 					"During prep, found null material:" + str(mat), vv_only=True)
 				continue
-
 			elif mat.get("MCPREP_NO_PREP", False):
 				count_no_prep += 1
 				continue
@@ -268,7 +267,8 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 			else:
 				self.report(
 					{'ERROR'},
-					"Only Cycles and Eevee are supported")
+					"Only Cycles and Eevee are supported"
+				)
 				return {'CANCELLED'}
 
 			if self.animateTextures:
@@ -303,7 +303,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 		_info[f"skipped {count_lib_skipped} linked"] = has_lib_skipped
 		_info[f"founded {count_no_prep} no prep"] = has_no_prep
 		
-		mat_info = ",".join(k for k,v in _info.items() if v).capitalize()
+		mat_info = ", ".join(k for k, v in _info.items() if v).capitalize()
 		
 		if self.skipUsage is True:
 			pass  # Don't report if a meta-call.
