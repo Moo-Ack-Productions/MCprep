@@ -42,6 +42,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List, Optional, Tuple, TextIO
 
+MAX_SUPPORTED_VERSION = 1
+
 class CommonMCOBJTextureType(Enum):
     ATLAS = "ATLAS"
     INDIVIDUAL_TILES = "INDIVIDUAL_TILES"
@@ -87,6 +89,9 @@ class CommonMCOBJ:
     
     # Are blocks split by type?
     has_split_blocks: bool
+    
+    # Original header
+    original_header: Optional[str]
 
 def parse_common_header(header_lines: list[str]) -> CommonMCOBJ:
     """
@@ -122,7 +127,8 @@ def parse_common_header(header_lines: list[str]) -> CommonMCOBJ:
         block_origin_offset=(0, 0, 0),
         z_up=False,
         texture_type=CommonMCOBJTextureType.ATLAS,
-        has_split_blocks=False
+        has_split_blocks=False,
+        original_header=None
     )
     
     # Keys whose values do not need extra processing
@@ -160,29 +166,51 @@ def parse_common_header(header_lines: list[str]) -> CommonMCOBJ:
         key, value = clean_and_extract(line)
 
         if key == "version":
-            header.version = int(value)
+            try:
+                header.version = int(value)
+                if header.version > MAX_SUPPORTED_VERSION:
+                    header.original_header = "\n".join(header_lines)
+            except Exception:
+                pass
 
         elif key == "block_scale":
-            header.block_scale = float(value)
+            try:
+                header.block_scale = float(value)
+            except Exception:
+                pass
 
         elif key == "texture_type":
-            header.texture_type = CommonMCOBJTextureType[value]
+            try:
+                header.texture_type = CommonMCOBJTextureType[value]
+            except Exception:
+                pass
 
         # All of these are parsed the same, with 
         # no parsing need to value
+        #
+        # No keys here will be classed as failed
         elif key in NO_VALUE_PARSE:
             setattr(header, key, value)
 
         # All of these are parsed the same, with 
         # parsing the value to a tuple
         elif key in TUPLE_PARSE_INT:
-            setattr(header, key, tuple(map(int, value[1:-1].split(', '))))
+            try:
+                setattr(header, key, tuple(map(int, value[1:-1].split(', '))))
+            except Exception:
+                pass
 
         elif key in TUPLE_PARSE_FLOAT:
-            setattr(header, key, tuple(map(float, value[1:-1].split(', '))))
+            try:
+                setattr(header, key, tuple(map(float, value[1:-1].split(', '))))
+            except Exception:
+                pass
 
         elif key in BOOLEAN_PARSE:
-            setattr(header, key, value == "true")
+            try:
+                setattr(header, key, value == "true")
+            except Exception:
+                pass
 
     return header
 

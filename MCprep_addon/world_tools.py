@@ -682,10 +682,13 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			if isinstance(header, CommonMCOBJ):
 				obj["COMMONMCOBJ_HEADER"] = True
 				for field in fields(header):
+					if getattr(header, field.name) is None:
+						continue
 					if field.type == CommonMCOBJTextureType:
 						obj[field.name] = getattr(header, field.name).value	
 					else:
 						obj[field.name] = getattr(header, field.name)
+
 			elif isinstance(header, ObjHeaderOptions):
 				obj["MCPREP_OBJ_HEADER"] = True
 				obj["MCPREP_OBJ_FILE_TYPE"] = header.texture_type()
