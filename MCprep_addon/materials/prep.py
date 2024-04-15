@@ -215,7 +215,6 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 			elif mat.get("MCPREP_NO_PREP", False):
 				count_no_prep += 1
 				continue
-			
 			elif mat.library:
 				count_lib_skipped += 1
 				continue
@@ -273,7 +272,9 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 
 			if self.animateTextures:
 				sequences.animate_single_material(
-					mat, context.scene.render.engine)
+					mat,
+					context.scene.render.engine,
+					export_location=sequences.ExportLocation.ORIGINAL)
 
 		# Sync materials.
 		if self.syncMaterials is True:
