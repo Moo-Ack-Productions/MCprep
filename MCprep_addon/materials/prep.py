@@ -250,13 +250,13 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 
 			if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 				options = generate.PrepOptions(
-					passes, 
+					passes,
 					self.useReflections,
 					self.usePrincipledShader,
 					self.makeSolid,
-					self.packFormat,
+					generate.PackFormat[self.packFormat.upper()],
 					self.useEmission,
-					False # This is for an option set in matprep_cycles
+					False  # This is for an option set in matprep_cycles
 				)
 				res = generate.matprep_cycles(
 					mat=mat,
