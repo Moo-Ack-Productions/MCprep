@@ -18,11 +18,15 @@
 
 import os
 import re
-from typing import List, Optional
+from typing import List, Optional, Tuple, Union
 from pathlib import Path
 
 import bpy
-from bpy.types import Context, Collection, BlendDataLibraries
+from bpy.types import (
+	Context, Collection, 
+	BlendDataLibraries,
+	UILayout
+)
 
 from ..conf import env
 from .. import util
@@ -38,15 +42,11 @@ SKIP_COLL = "mcskip"  # Used for geometry and particle skips too.
 SKIP_COLL_LEGACY = "noimport"  # Supporting older MCprep Meshswap lib.
 
 # Icon backwards compatibility.
-if util.bv30():
-	COLL_ICON = 'OUTLINER_COLLECTION'
-elif util.bv28():
-	COLL_ICON = 'COLLECTION_NEW'
-else:
-	COLL_ICON = 'GROUP'
+COLL_ICON = 'OUTLINER_COLLECTION' if util.bv30() else 'COLLECTION_NEW'
+
 
 class VariationProp:
-	def color_items(self):
+	def color_items(self, context: Context) -> List[Tuple[str,str,str]]:
 		"""Color variation in ID order"""
 		items = [
 			('WHITE', "White", ""),
@@ -67,8 +67,8 @@ class VariationProp:
 			('BLACK', "Black", ""),
 		]
 		return items
-	
-	def profession_items(self):
+		
+	def profession_items(self, context: Context) -> List[Tuple[str, str, str]]:
 		"""Villager Professional"""
 		items = [
 			('ARMORER', "Armorer", ""),
@@ -77,7 +77,7 @@ class VariationProp:
 			('CLERIC', "Cleric", ""),
 			('FARMER', "Farmer", ""),
 			('FISHERMAN', "Fisherman", ""),
-			('FLETCHER', "FLETCHER", ""),
+			('FLETCHER', "Fletcher", ""),
 			('LEATHERWORKER', "Leatherworker", ""),
 			('LIBRARIAN', "Librarian", ""),
 			('MASON', "Mason", ""),
@@ -89,10 +89,10 @@ class VariationProp:
 		]
 		return items
 	
-	def level_items(self):
+	def level_items(self, context: Context) -> List[Tuple[str, str, str]]:
 		"""Villager Level """
 		items = [
-			('NOVICE', "NOVICE", ""), # Stone
+			('NOVICE', "Novice", ""), # Stone
 			('APPRENTICE', "Apprentice", ""), # Iron
 			('JOURNEYMAN', "Journeyman", ""), # Gold
 			('EXPERT', "Expert", ""), # Emerald
@@ -100,7 +100,7 @@ class VariationProp:
 		]
 		return items
 	
-	def biome_items(self):
+	def biome_items(self, context: Context) -> List[Tuple[str, str, str]]:
 		items = [
 			('DESERT', "Desert", ""),
 			('JUNGLE', "Jungle", ""),
@@ -112,32 +112,179 @@ class VariationProp:
 		]
 		return items
 	
-	def zombie_items(self):
+	def zombie_items(self, context: Context) -> List[Tuple[str, str, str]]:
 		items = [
 			('DEFAULT', "Default", ""),
-			('DROWN', "Drown", "")
+			('DROWN', "Drown", ""),
 			('HUSK', "Husk", ""),
 		]
 		return items
 	
-	def skeleton_items(self):
+	def skeleton_items(self, context: Context) -> List[Tuple[str, str, str]]:
 		items = [
 			('DEFAULT', "Default", ""),
 			('STRAY', "Stray", ""),
 			('WITHER', "Wither", ""),
+			# ('BOGGED', "Bogged", "") # 1.21 Added new skeleton varia
 		]
 		return items
 	
-	color_variation: bpy.props.EnumProperty(name="Color Variation", items=color_items)
-	# Villagers
-	profession_variation: bpy.props.EnumProperty(name="Villager Profession", items=profession_items)
-	level_variation: bpy.props.EnumProperty(name="Villager Level", items=level_items)
-	biome_variation: bpy.props.EnumProperty(name="Villager Biome", items=biome_items)
+	def axolotl_items(self, context: Context) -> List[Tuple[str, str, str]]:
+		items = [
+			('BLUE', "Blue", ""),
+			('CYAN', "Cyan", ""),
+			('GOLD', "Gold", ""),
+			('LUCY', "Lucy", ""),
+			('WILD', "Wild", ""),
+		]
+		return items
+	
+	def rabbit_items(self, context: Context) -> List[Tuple[str, str, str]]:
+		items = [
+			('BLACK', "Black", ""),
+			('BROWN', "Brown", ""),
+			('CAERBANNOG', "Caerbannog", ""),
+			('GOLD', "Gold", ""),
+			('SALT', "Salt", ""),
+			('TOAST',"Toast", ""),
+			('WHITE', "White", ""),
+			('WHITE_SPLOTCHED',"White splotched", ""),
+		]
+		return items
+	
+	def frog_items(self, context: Context) -> List[Tuple[str, str, str]]:
+		items = [
+			('COLD', "Cold", ""),
+			('TEMPERATE', "Temperate", ""),
+			('WARM', "Warm", ""),
+		]
+		return items
+	
+	def parrot_items(self, context: Context) -> List[Tuple[str, str, str]]:
+		items = [
+			('BLUE', "Blue", ""),
+			('GREEN',"Green", ""),
+			('GREY', "Grey", ""), 
+			('RED_BLUE', "Red blue", ""),
+			('YELLOW_BLUE', "Yellow blue", ""),
+		]
+		return items
+		
+	def llama_items(self, context: Context) -> List[Tuple[str, str, str]]:
+		items = [
+			('BROWN',"Brown", ""),
+			('CREAMY',"Creamy",""),
+			('GRAY', "Gray", ""),
+			('WHITE', "White", ""),
+		]
+		return items
+	
+	def horse_items(self, context: Context) -> List[Tuple[str, str, str]]:
+		items = [
+			('BLACK', "Black", ""),
+			('BROWN', "BROWN", ""),
+			('CHESTNUT', "CHESTNUT", ""),
+			('CREAMY', "CREAMY", ""),
+			('DARK_BROWN', "DARK_BROWN", ""),
+			('GRAY', "GRAY", ""),
+			('ZOMBIE', "ZOMBIE", ""),
+			('SKELETON', "SKELETON", ""),
+		]
+		return items
+		
+	def cat_items(self, context: Context) -> List[Tuple[str, str, str]]:
+		items = [
+			('ALL_BLACK', "All Black",""),
+			('BLACK', "Black", ""),
+			('BRITISH_SHORTHAIR', "British Shorthair", ""),
+			('CALICO', "Calico", ""),
+			('JELLIE', "Jellie", ""),
+			('OCELOT', "Ocelot", ""),
+			('PERSIAN', "Persian", ""),
+			('RAGDOLL', "Ragdoll", ""),
+			('RED', "Red", ""),
+			('SIAMESE', "Siamese", ""),
+			('TABBY', "Tabby", ""),
+			('WHITE', "White", ""),
+			# ('CAT_COLLAR', "", "")
+		]
+		return items
+	
+	def fox_items(self, context: Context) -> List[Tuple[str, str, str]]:
+		items = [
+			('NORMAL', "Normal", ""),
+			('SNOW', "Snow", "")
+		]
+		return items
+	
+	def squid_items(self, context: Context) -> List[Tuple[str, str, str]]:
+		items = [
+			('NORMAL', "Squid", ""),
+			('GLOW', "Glow", "")
+		]
+		return items
+	
+	def tropical_pattern_items(self, context: Context) -> List[Tuple[str, str, str]]:
+		items = [
+			('PATTERN_1', "Pattern 1", ""),
+			('PATTERN_2', "Pattern 2", ""),
+			('PATTERN_3', "Pattern 3", ""),
+			('PATTERN_4', "Pattern 4", ""),
+			('PATTERN_5', "Pattern 5", ""),
+			("PATTERN_6", "Pattern 6", ""),
+		]
+		return items
+	
+	def dog_items(self, context) -> List[Tuple[str, str, str]]:
+		items = [ 
+			# ignore this just placeholder for 1.21 wolf variations
+			('DEF', "def", ""),
+			('DEA', "dea", "")
+		]
+		return items
+	
+	def get_villager_names(self) -> Tuple[str, str, str]:
+		"""Returns profession, profession level, type path in order"""
+		# (adds villager/{}.png to get the texture path, same for zombie_villager/)
+		return f"profession/{self.profession_variation}", f"profession_level/{self.level_variation}", f"type/{self.biome_variation}"
+	
+	def get_squid_name(self) -> str:
+		return self.squid_variation == 'GLOW' if 'glow_squid' else 'squid'
+	
+	def get_fox_name(self) -> Tuple[str, str]:
+		return ("snow_fox", "snow_fox_sleeping") if self.fox_variation == 'SNOW' else ("fox", "fox_sleeping")
+	
+	def get_tropical_name(self) -> str:
+		"""Returns the tropical fish type and pattern"""
+		# (adds fish/{}.png to get the texture path)
+		type = self.tropical_type_variation.lower()
+		pattern = self.tropical_pattern_variation.replace("PATTERN_", "")
+		return f"tropical_{type}_pattern_{pattern}"
+			
+	def get_texture_path(self, mob_type: str, is_zombified: bool = False) -> List[Union[str, Path]]:
+		if mob_type == "Villager":
+			names = self.get_villager_names()
+			return [f"zombie_villager/{t}.png" for t in names] if is_zombified else[f"villager/{t}.png" for t in names]
+		elif mob_type == "Zombie":
+			return [f"zombie/{self.zombie_variation.lower()}.png"]
+		elif mob_type == "Skeleton":
+			return [f"zombie/{self.skeleton_variation.lower()}.png"]
+		elif mob_type == "Allay" or mob_type == "Vex":
+			return [] if self.is_zombiefied or mob_type == "Vex" else []
+			# TODO: Add the rest of the mobs
+			
+	profession_variation: bpy.props.EnumProperty(name="Profession", items=profession_items)
+	level_variation: bpy.props.EnumProperty(name="Level", items=level_items)
+	biome_variation: bpy.props.EnumProperty(name="Biome", items=biome_items)
 	zombie_variation: bpy.props.EnumProperty(name="Zombie Variation", items=zombie_items)
 	skeleton_variation: bpy.props.EnumProperty(name="Skeleton Variation", items=skeleton_items)
-	is_zombiefied: BoolProperty(name="Is Zombiefied") # Use this for Allay-Vex 
+	is_zombiefied: bpy.props.BoolProperty(name="Is Zombiefied")  # Use this for Allay-Vex
+	fox_variation: bpy.props.EnumProperty(items=fox_items)
+	dog_variation: bpy.props.EnumProperty(items=dog_items)
+	cat_variation: bpy.props.EnumProperty(items=cat_items)
 	
-	def draw_ui(self, context: Context, layout: UILayout):
+	def draw_variation_ui(self, context: Context, layout: UILayout):
+		""" Sharable method for drawing"""
 		obj = context.object
 		mob_type = getmob_type(obj)
 		if mob_type in ["Villager", "Trader"]:
@@ -149,24 +296,46 @@ class VariationProp:
 			layout.prop(self, "zombie_variation")
 		elif mob_type == "Skeleton":
 			layout.prop(self, "skeleton_variation")
-		
-		if mob_type in ["Villager", "Piglin", "Pigman", "Hoglin", "Allay", "Vex"]
+		elif mob_type == "Axolotl":
+			layout.prop(self, "axolotl_variation")
+		elif mob_type == "Rabbit":
+			layout.prop(self, "rabbit_variation")
+		elif mob_type == "Frog":
+			layout.prop(self, "frog_variation")
+		elif mob_type == "Parrot":
+			layout.prop(self, "parrot_variation")
+		elif mob_type == "Llama":
+			layout.prop(self, "llama_variation")
+		elif mob_type == "Horse":
+			layout.prop(self, "horse_variation")
+		elif mob_type == "Cat" or mob_type == "Ocelot":
+			layout.prop(self, "cat_variation")
+		elif mob_type == "Dog" or mob_type == "Wolf":
+			layout.prop(self, "dog_variation")
+			
+		counter_variant = ["Villager", "Piglin", "Hoglin", "Allay", "Vex"]
+		if mob_type in counter_variant:
 			text = "Is Vex" if mob_type == "Allay" else "Is Zombified"
 			layout.prop(self, "is_zombiefied", text=text)
+		
+		has_variant = counter_variant + ["Zombie", "Skeleton", "Llama", "Axolotl", "Rabbit", "Llama", "Parrot", "Frog", "Horse", "Cat", "Ocelot"]
+		if mob_type == "Custom" or mob_type not in has_variant:
+			layout.label(text="This mob doesn't has any variant to swap skin yet")
+		elif mob_type == "Player":
+			layout.label(text="Please use Player for this")
 
 # -----------------------------------------------------------------------------
 # Reusable functions for spawners
 # -----------------------------------------------------------------------------
-def getmob_type(obj: bpy.types.Object):
-  """ Get mob type from rig
-  args
-    obj: Armature Object
-  """
-  return obj.get("MCPREP_RIGTYPE", "Custom")
 
-def has_color(name):
-	"""Return True if has the color in name"""
-	return name in ["white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray", "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"]
+
+def getmob_type(rig: bpy.types.Object):
+	""" Get mob type from rig
+	args
+		obj: Armature Object
+	"""
+	return rig.type == 'ARMATURE' and rig.get("MCPREP_MOBTYPE", "Custom")
+
 
 def filter_collections(data_from: BlendDataLibraries) -> List[str]:
 	""" TODO 2.7 groups 
@@ -597,7 +766,6 @@ def load_linked(self, context: Context, path: str, name: str) -> None:
 				{'INFO'}, "This addon works better when the root bone's name is 'MAIN'")
 
 
-# TODO: Add a way to check the version before load_append()
 def load_append(self, context: Context, path: Path, name: str) -> None:
 	"""Append an entire collection/group into this blend file and fix armature.
 
@@ -677,17 +845,10 @@ def load_append(self, context: Context, path: Path, name: str) -> None:
 			# without deleting them, just unlinking them from the scene
 			util.obj_unlink_remove(ob, False, context)
 
-	if not util.bv28():
-		grp_added.name = "reload-blend-to-remove-this-empty-group"
-		for obj in grp_added.objects:
-			grp_added.objects.unlink(obj)
-			util.select_set(obj, True)
-		grp_added.user_clear()
-	else:
-		for obj in grp_added.objects:
-			if obj not in context.view_layer.objects[:]:
-				continue
-			util.select_set(obj, True)
+	for obj in grp_added.objects:
+		if obj not in context.view_layer.objects[:]:
+			continue
+		util.select_set(obj, True)
 
 	# try:
 	# 	util.collections().remove(grp_added)
@@ -756,19 +917,6 @@ def load_append(self, context: Context, path: Path, name: str) -> None:
 	# add the original selection back
 	for objs in sel:
 		util.select_set(objs, True)
-		
-def init_entity_prop(obj: bpy.types.Object, name: str, rig_version = (0,0,0)):
-	""" An utility function for adding attribute to object, armature object rigs, collection"""
-	# Vanilla mobs name or Custom, useful for skinswap villager rig
-	rig_type = obj.get("MCPREP_RIGTYPE")
-	# This will set the current Blender version if not exist
-	rig_version = obj.get("MCPREP_RIGVERS")
-	if rig_type == None:
-		util.set_prop(obj, "MCPREP_RIGTYPE", name)
-	if rig_version == None:
-		util.set_prop(obj, "MCPREP_RIGVERS", rig_version)
-		
-		
 
 # -----------------------------------------------------------------------------
 # class definitions

@@ -337,9 +337,7 @@ def add_model(model_filepath: Path, obj_name: str="MinecraftModel") -> bpy.types
 	bm.to_mesh(mesh)
 	bm.free()
 	
-	# 
-	if has_color(obj.name):
-		
+	# if has_color(obj.name):
 	return obj
 
 

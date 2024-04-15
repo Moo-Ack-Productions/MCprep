@@ -26,14 +26,22 @@ import urllib.request
 import bpy
 from bpy_extras.io_utils import ImportHelper
 from bpy.app.handlers import persistent
-from bpy.types import Context, Image, Material
+from bpy.types import Context, Material
 
 from . import generate
 from .. import tracking
 from .. import util
-from .spawner import spawn_util
+from ..spawner import spawn_util
 
 from ..conf import env
+from .prep import McprepMaterialProps
+
+
+swap_all_imgs_desc = (
+	"Swap textures in all image nodes that exist on the selected \n"
+	"material; if off, will instead seek to only replace the images of \n"
+	"nodes (not image blocks) named MCPREP_SKIN_SWAP"
+)
 
 # -----------------------------------------------------------------------------
 # Support functions
@@ -85,7 +93,7 @@ def handler_skins_enablehack(scene):
 	"""Scene update to auto load skins on load after new file."""
 	try:
 		bpy.app.handlers.scene_update_pre.remove(handler_skins_enablehack)
-	except:
+	except Exception:
 		pass
 	env.log("Triggering Handler_skins_load from first enable", vv_only=True)
 	handler_skins_load(scene)
@@ -96,13 +104,20 @@ def handler_skins_load(scene):
 	try:
 		env.log("Reloading skins", vv_only=True)
 		reloadSkinList(bpy.context)
-	except:
+	except Exception as e:
+		print(e)
 		env.log("Didn't run skin reloading callback", vv_only=True)
 
 
-def loadSkinFile(self, context: Context, filepath: Path, new_material: bool=False):
+def loadSkinFile(
+	self,
+	context: Context,
+	filepath: Path,
+	new_material: bool = False,
+	swap_all_imgs: bool = False) -> int:
+	"""Replaces image textures with target path for use in operator."""
 	if not os.path.isfile(filepath):
-		self.report({'ERROR'}, "Image file not found")
+		self.report({'ERROR'}, f"Image file not found: {filepath}")
 		return 1
 		# special message for library linking?
 
@@ -122,21 +137,20 @@ def loadSkinFile(self, context: Context, filepath: Path, new_material: bool=Fals
 		self.report(
 			{'WARNING'}, "Skinswap skipped {} linked objects".format(skipped))
 
-	status = generate.assert_textures_on_materials(image, mats)
+	status = generate.assert_textures_on_materials(
+		image, mats, swap_all_imgs=swap_all_imgs)
 	if status is False:
 		self.report({'ERROR'}, "No image textures found to update")
 		return 1
 	else:
 		pass
 
-	if not util.bv28():
-		setUVimage(context.selected_objects, image)
-
 	# TODO: adjust the UVs if appropriate, and fix eyes
 	if image.size[0] != 0 and image.size[1] / image.size[0] != 1:
 		self.report({'INFO'}, "Skin swapper works best on 1.8 skins")
 		return 0
 	return 0
+
 
 def loadVariantFile(self, context: Context, filepath: Path, new_material: bool=False):
 	if not os.path.isfile(filepath):
@@ -317,20 +331,6 @@ def getMatsFromSelected(selected: List[bpy.types.Object], new_material: bool=Fal
 	return mat_ret, linked_objs
 
 
-def setUVimage(objs: List[bpy.types.Object], image: Image) -> None:
-	"""Set image for each face for viewport displaying (2.7 only)"""
-	for obj in objs:
-		if obj.type != "MESH":
-			continue
-		if not hasattr(obj.data, "uv_textures"):
-			env.log("Called setUVimage on object with no uv_textures, 2.8?")
-			return
-		if obj.data.uv_textures.active is None:
-			continue
-		for uv_face in obj.data.uv_textures.active.data:
-			uv_face.image = image
-
-
 def download_user(self, context: Context, username: str) -> Optional[Path]:
 	"""Download user skin from online.
 
@@ -372,7 +372,29 @@ def download_user(self, context: Context, username: str) -> Optional[Path]:
 		self.track_param = "username"
 	return saveloc
 
+def check_entity_texture(texture_path: str) -> Optional[Path]:
+	context = bpy.context
+	addon_prefs = util.get_user_preferences(context)
+	active_pack = bpy.path.abspath(context.scene.mcprep_texturepack_path)
+	active_pack = os.path.join(
+		active_pack, "assets", "minecraft", "textures", "entity")
 
+	base_pack = bpy.path.abspath(addon_prefs.custom_texturepack_path)
+	base_pack = os.path.join(
+		base_pack, "assets", "minecraft", "textures", "entity")
+
+	# if not os.path.isdir(active_pack):
+	# 	env.log(f"No models found for active path {active_pack}")
+	# 	return None
+	base_has_textures = os.path.isdir(base_pack)
+
+
+	if base_has_textures:
+		return generate.find_from_texturepack(texture_path)
+	else:
+		env.log(f"Base resource pack has no entity texture folder: {base_pack}")
+		return None
+	
 # -----------------------------------------------------------------------------
 # Operators / UI classes
 # -----------------------------------------------------------------------------
@@ -415,18 +437,22 @@ class MCPREP_OT_swap_skin_from_file(bpy.types.Operator, ImportHelper):
 		name="New Material",
 		description="Create a new material instead of overwriting existing one",
 		default=True)
+	swap_all_imgs: bpy.props.BoolProperty(
+		name="Swap All Images",
+		description=swap_all_imgs_desc,
+		default=True)
 	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	track_function = "skin"
 	track_param = "file import"
 	@tracking.report_error
 	def execute(self, context):
-		res = loadSkinFile(self, context, self.filepath, self.new_material)
+		res = loadSkinFile(
+			self, context, self.filepath, self.new_material, self.swap_all_imgs)
 		if res != 0:
 			return {'CANCELLED'}
 
 		return {'FINISHED'}
-
 
 class MCPREP_OT_apply_skin(bpy.types.Operator):
 	"""Apply the active UIlist skin to select characters"""
@@ -443,6 +469,10 @@ class MCPREP_OT_apply_skin(bpy.types.Operator):
 		name="New Material",
 		description="Create a new material instead of overwriting existing one",
 		default=True)
+	swap_all_imgs: bpy.props.BoolProperty(
+		name="Swap All Images",
+		description=swap_all_imgs_desc,
+		default=True)
 	skipUsage: bpy.props.BoolProperty(
 		default=False,
 		options={'HIDDEN'})
@@ -451,7 +481,8 @@ class MCPREP_OT_apply_skin(bpy.types.Operator):
 	track_param = "ui list"
 	@tracking.report_error
 	def execute(self, context):
-		res = loadSkinFile(self, context, self.filepath, self.new_material)
+		res = loadSkinFile(
+			self, context, self.filepath, self.new_material, self.swap_all_imgs)
 		if res != 0:
 			return {'CANCELLED'}
 
@@ -483,6 +514,10 @@ class MCPREP_OT_apply_username_skin(bpy.types.Operator):
 			"If an older skin layout (pre Minecraft 1.8) is detected, convert "
 			"to new format (with clothing layers)"),
 		default=True)
+	swap_all_imgs: bpy.props.BoolProperty(
+		name="Use Legacy Skin Swap Behavior",
+		description=swap_all_imgs_desc,
+		default=False)
 	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	def invoke(self, context, event):
@@ -504,24 +539,28 @@ class MCPREP_OT_apply_username_skin(bpy.types.Operator):
 			self.report({"ERROR"}, "Invalid username")
 			return {'CANCELLED'}
 
+		user_ref = self.username.lower() + ".png"
+
 		skins = [str(skin[0]).lower() for skin in env.skin_list]
 		paths = [skin[1] for skin in env.skin_list]
-		if self.username.lower() not in skins or not self.skip_redownload:
+		if user_ref not in skins or not self.skip_redownload:
 			# Do the download
 			saveloc = download_user(self, context, self.username)
 			if not saveloc:
 				return {'CANCELLED'}
 
 			# Now load the skin
-			res = loadSkinFile(self, context, saveloc, self.new_material)
+			res = loadSkinFile(
+				self, context, saveloc, self.new_material, self.swap_all_imgs)
 			if res != 0:
 				return {'CANCELLED'}
 			bpy.ops.mcprep.reload_skins()
 			return {'FINISHED'}
 		else:
 			env.log("Reusing downloaded skin")
-			ind = skins.index(self.username.lower())
-			res = loadSkinFile(self, context, paths[ind][1], self.new_material)
+			ind = skins.index(user_ref)
+			res = loadSkinFile(
+				self, context, paths[ind], self.new_material, self.swap_all_imgs)
 			if res != 0:
 				return {'CANCELLED'}
 			return {'FINISHED'}
@@ -614,7 +653,7 @@ class MCPREP_OT_remove_skin(bpy.types.Operator):
 		skin_path = env.skin_list[context.scene.mcprep_skins_list_index]
 		col = self.layout.column()
 		col.scale_y = 0.7
-		col.label(text= f"Warning, will delete file {os.path.basename(skin_path[0])} from")
+		col.label(text=f"Warning, will delete file {os.path.basename(skin_path[0])} from")
 		col.label(text=os.path.dirname(skin_path[-1]))
 
 	@tracking.report_error
@@ -721,51 +760,73 @@ class MCPREP_OT_spawn_mob_with_skin(bpy.types.Operator):
 
 		return {'FINISHED'}
 
+
 class MCPREP_OT_swap_skin_variant(bpy.types.Operator, spawn_util.VariationProp):
 	"""Apply the active UIlist skin to select characters"""
-	bl_idname = "mcprep.swap_skin variant"
-	bl_label = "Apply skin"
+	bl_idname = "mcprep.swap_skin"
+	bl_label = "Swap mob skin"
 	bl_description = "Swap the mobs variant"
 	bl_options = {'REGISTER', 'UNDO'}
 	
-	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(
-			self, width=300 * util.ui_scale())
+	# def invoke(self, context, event):
+	# 	return context.window_manager.invoke_props_dialog(
+	# 		self, width=300 * util.ui_scale())
+
+	# def draw(self, context: Context):
+	# 	layout = self.layout
+	# 	self.draw_variation_ui(context, layout)
 	
-	def draw(self, context: Context):
-		layout = self.layout
-		self.draw_ui(context, layout)
-	
-	def doTextureSwap(self, context: Context):
+	@tracking.report_error
+	def execute(self, context: Context):
 		obj = context.object
+		if obj.type != 'ARMATURE':
+			self.report({'ERROR'}, "Please select an armature")
+			return {'CANCELLED'}
 		mats, skipped = getMatsFromSelected(obj, False)
-		mobtype = obj.get("MCPREP_MOBTYPE", "CUSTOM")
-		if mobtype == "Villager":
-			doVillager(mats)
-		elif mobtype == "Zombie":
+		mob_type = obj.get("MCPREP_mob_type", "Custom")
+		
+		if mob_type == "Custom":
+			self.report({'ERROR'}, "You are not allowed to use on Custom rig")
+			return {'CANCELLED'}
+		
+		texture_paths = self.get_texture_paths(mob_type)
+		name = mob_type.lower().replace(" ", "_")
+		if mob_type == "Villager":
+			self.doVillager(mats, texture_paths)
+		elif mob_type == "Zombie":
+			check_entity_texture(context)
+			if self.zombie_variation in ["ZOMBIE", "HUSK"]:
+				# Using Player model so convert player skin to 1.8 format
+				# loadSkinFile()
+				pass
+			else:
+				# Assign textures materials for drown
+				pass
+		elif mob_type == "Skeleton":
 			pass
-		elif mobtype == "Skeleton":
-			pass
-		elif mobtype == "Pigman":
-			pass
-		elif mobtype == "Hoglin":
-			pass
-		elif mobtype in ("Allay", "Vex"):
-			pass
+		
+		elif mob_type in ("Allay", "Vex"):
+			if mob_type == "Allay":
+				name += "/" + name
+			else:
+				name = "illager"
+			
 		else:
 			pass
+		return {'FINISHED'}
 
-	def doVillager(self, materials: List[Material]):
-		for mat in materials:
-			if mat.get("MCPREP_VILLAGER_PROFESSION"):
-				image = util.loadTexture(filepath)
-				proStat = generate.assert_textures_on_materials(image, mats)
+	def doVillager(self, materials: List[Material], texture_paths: List[str]):
+		""" materials texture path order follows by profession, profession level, type """
+		prof_mat, biome_mat, level_mat = None, None, None
+		if mat[0].get("MCPREP_VILLAGER_PROFESSION"):
+				image = util.loadTexture(texture_paths[0])
+				proStat = generate.assert_textures_on_materials(image, [mat])
 			if mat.get("MCPREP_VILLAGER_BIOME"):
-				image = util.loadTexture(filepath)
-				biomeStat = generate.assert_textures_on_materials(image, mats)
+				image = util.loadTexture(texture_paths[1])
+				biomeStat = generate.assert_textures_on_materials(image, [mat])
 			if mat.get("MCPREP_VILLAGER_LEVEL"):
-				image = util.loadTexture(filepath)
-				levelStat = generate.assert_textures_on_materials(image, mats)
+				image = util.loadTexture(texture_paths[2])
+				levelStat = generate.assert_textures_on_materials(image, [mat])
 			if not all([proStat, biomeStat, levelStat]):
 				self.report({'ERROR'}, "Something wrong happen during swap variant texture")
 			else:
@@ -845,123 +906,6 @@ class MCPREP_OT_download_username_list(bpy.types.Operator):
 			self.report({"INFO"}, f"Downloaded {len(user_list)} skins")
 			return {'FINISHED'}
 
-class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
-	"""Load the select material from the active resource pack and prep it"""
-	bl_idname = "mcprep.load_material"
-	bl_label = "Generate material"
-	bl_description = (
-		"Generate and apply the selected material based on active resource pack")
-	bl_options = {'REGISTER', 'UNDO'}
-
-	
-	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
-
-	@classmethod
-	def poll(cls, context):
-		return context.object
-
-	def invoke(self, context, event):
-		return context.window_manager.invoke_props_dialog(
-			self, width=300 * util.ui_scale())
-
-	def draw(self, context):
-		draw_mats_common(self, context)
-
-	track_function = ""
-	track_param = None
-	@tracking.report_error
-	def execute(self, context):
-	  
-		res = loadSkinFile(self, context, self.filepath, self.new_material)
-		if res != 0:
-			return {'CANCELLED'}
-			
-		mat_name = os.path.splitext(os.path.basename(self.filepath))[0]
-		if not os.path.isfile(self.filepath):
-			self.report({"ERROR"}, (
-				"File not found! Reset the resource pack under advanced "
-				"settings (return arrow icon) and press reload materials"))
-			return {'CANCELLED'}
-		mat, err = self.generate_base_material(
-			context, mat_name, self.filepath)
-		if mat is None and err:
-			self.report({"ERROR"}, err)
-			return {'CANCELLED'}
-		elif mat is None:
-			self.report({"ERROR"}, "Failed generate base material")
-			return {'CANCELLED'}
-
-		if not context.object.material_slots:
-			context.object.data.materials.append(mat)  # Auto-creates slot.
-		else:
-			mat_ind = context.object.active_material_index
-			context.object.material_slots[mat_ind].material = mat
-		# Using the above in place of below due to some errors of:
-		# "attribute "active_material" from "Object" is read-only"
-		# context.object.active_material = mat
-
-		# Don't want to generally run prep, as this would affect everything
-		# selected, as opposed to affecting just the new material
-		# bpy.ops.mcprep.prep_materials()
-		# Instead, run the update steps below copied from the MCprep inner loop
-		res, err = self.update_material(context, mat)
-		if res is False and err:
-			self.report({"ERROR"}, err)
-			return {'CANCELLED'}
-		elif res is False:
-			self.report({"ERROR"}, "Failed to prep generated material")
-			return {'CANCELLED'}
-
-		self.track_param = context.scene.render.engine
-		return {'FINISHED'}
-
-	def update_material(self, context, mat):
-		"""Update the initially created material"""
-		if not mat:
-			env.log(f"During prep, found null material: {mat}", vv_only=True)
-			return
-		elif mat.library:
-			return
-
-		engine = context.scene.render.engine
-		passes = generate.get_textures(mat)
-		env.log(f"Load Mat Passes:{passes}", vv_only=True)
-		if not self.useExtraMaps:
-			for pass_name in passes:
-				if pass_name != "diffuse":
-					passes[pass_name] = None
-
-		if self.autoFindMissingTextures:
-			for pass_name in passes:
-				res = generate.replace_missing_texture(passes[pass_name])
-				if res > 0:
-					mat["texture_swapped"] = True  # used to apply saturation
-
-		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
-			options = generate.PrepOptions(
-				passes, 
-				self.useReflections, 
-				self.usePrincipledShader, 
-				self.makeSolid, 
-				self.packFormat, 
-				self.useEmission, 
-				False # This is for an option set in matprep_cycles
-			)
-			res = generate.matprep_cycles(
-				mat=mat,
-				options=options
-			)
-		else:
-			return False, "Only Cycles and Eevee supported"
-
-		success = res == 0
-
-		if self.animateTextures:
-			sequences.animate_single_material(
-				mat, context.scene.render.engine)
-
-		return success, None
-
 
 # -----------------------------------------------------------------------------
 # Registration
@@ -973,6 +917,7 @@ classes = (
 	ListColl,
 	MCPREP_OT_swap_skin_from_file,
 	MCPREP_OT_apply_skin,
+	MCPREP_OT_swap_skin_variant,
 	MCPREP_OT_apply_username_skin,
 	MCPREP_OT_download_username_list,
 	# MCPREP_OT_skin_fix_eyes,
