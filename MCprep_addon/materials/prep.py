@@ -251,11 +251,11 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 			if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 				options = generate.PrepOptions(
 					passes, 
-					self.useReflections, 
-					self.usePrincipledShader, 
-					self.makeSolid, 
-					self.packFormat, 
-					self.useEmission, 
+					self.useReflections,
+					self.usePrincipledShader,
+					self.makeSolid,
+					self.packFormat,
+					self.useEmission,
 					False # This is for an option set in matprep_cycles
 				)
 				res = generate.matprep_cycles(
@@ -284,7 +284,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 		if self.combineMaterials is True:
 			bpy.ops.mcprep.combine_materials(selection_only=True, skipUsage=True)
 
-        # Improve UI.
+		# Improve UI.
 		if self.improveUiSettings:
 			try:
 				bpy.ops.mcprep.improve_ui()
