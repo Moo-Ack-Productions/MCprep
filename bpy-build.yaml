@@ -22,5 +22,3 @@ build_actions:
     script: "action-scripts/dev.py"
   translate:
     script: "action-scripts/translate.py"
-  build-pot:
-    script: "action-scripts/translate_scripts/build_pot.py"
