@@ -54,7 +54,7 @@ def pre_build(ctx: BabContext):
             visitor = TranslateCallVisitor()
             visitor.visit(root)
             if len(visitor.keys):
-                extracted_strings[f"MCprep_addon/{str(p)}"] = visitor.keys
+                extracted_strings[f"{str(p)}"] = visitor.keys
     
     po = polib.POFile()
     po.metadata = {
