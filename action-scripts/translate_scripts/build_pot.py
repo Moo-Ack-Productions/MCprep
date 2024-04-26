@@ -2,6 +2,8 @@ import ast
 from pathlib import Path
 import polib
 
+from bpy_addon_build.api import BabContext
+
 class TranslateCallVisitor(ast.NodeVisitor):
     def __init__(self):
         self.keys = {}
@@ -42,9 +44,9 @@ class TranslateCallVisitor(ast.NodeVisitor):
                 self.keys[msgid.value].append(msgid.lineno)
         self.generic_visit(node)
 
-def main():
+def pre_build(ctx: BabContext):
     print("Building POT...")
-    path = Path(".")
+    path = Path(ctx.current_path)
     extracted_strings = {}
     for p in path.rglob("*.py"):
         with open(p, 'r') as f:
@@ -75,7 +77,7 @@ def main():
                 occurrences=[(file, n) for n in lineno]
             )
             po.append(entry)
-            po.save("MCprep_resources/Languages/mcprep.pot")
+            po.save(str(ctx.current_path) + "/MCprep_resources/Languages/mcprep.pot")
 
 if __name__ == "__main__":
     main()
