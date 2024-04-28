@@ -151,14 +151,7 @@ def add_area_particle_effect(context: Context, effect: ListEffectsAssets, locati
 	post_systems = list(bpy.data.particles)
 	imported_particles = list(set(post_systems) - set(pre_systems))[0]
 
-	# Assign particles as fake, to avoid being purged after file reload.
-	if hasattr(imported_particles, "instance_object"):
-		# 2.8+
-		if imported_particles.instance_object:
-			imported_particles.instance_object.use_fake_user = True
-	elif imported_particles.dupli_object:
-		# the 2.7x way.
-		imported_particles.dupli_object.use_fake_user = True
+	mark_particles_fake_user(imported_particles)
 
 	# Assign the active object and selection state.
 	for sel_obj in bpy.context.selected_objects:
@@ -202,6 +195,8 @@ def add_collection_effect(context: Context, effect: ListEffectsAssets, location:
 	any particles the collection may be using.
 	"""
 
+	pre_systems = list(bpy.data.particles)
+
 	keyname = f"{effect.name}_frame_{frame}"
 	if keyname in util.collections():
 		coll = util.collections()[keyname]
@@ -211,6 +206,11 @@ def add_collection_effect(context: Context, effect: ListEffectsAssets, location:
 
 		# Update the animation per intended frame.
 		offset_animation_to_frame(coll, frame)
+
+		post_systems = list(bpy.data.particles)
+		imported_particles = list(set(post_systems) - set(pre_systems))
+		for system in imported_particles:
+			mark_particles_fake_user(system)
 
 	# Create the object instance.
 	obj = util.addGroupInstance(coll.name, location)
@@ -435,14 +435,24 @@ def geo_update_params(context: Context, effect: ListEffectsAssets, geo_mod: Node
 		else:
 			center_empty.location = util.get_cursor_location()
 
+	input_list = []
+	input_node = None
+	for nd in geo_mod.node_group.nodes:
+		if nd.type == "GROUP_INPUT":
+			input_node = nd
+			break
+	if input_node is None:
+		raise RuntimeError(f"Geo node has no input group: {effect.name}")
+	input_list = list(input_node.outputs)
+
 	# Cache mapping of names like "Weather Type" to "Input_1" internals.
 	geo_inp_id = {}
-	for inp in geo_mod.node_group.inputs:
+	for inp in input_list:
 		if inp.name in list(geo_fields):
 			geo_inp_id[inp.name] = inp.identifier
 
 	# Now update the final geo node inputs based gathered settings.
-	for inp in geo_mod.node_group.inputs:
+	for inp in input_list:
 		if inp.name in list(geo_fields):
 			value = geo_fields[inp.name]
 			if value == "CAMERA_OBJ":
@@ -450,7 +460,7 @@ def geo_update_params(context: Context, effect: ListEffectsAssets, geo_mod: Node
 				geo_mod[geo_inp_id[inp.name]] = camera
 			elif value == "FOLLOW_OBJ":
 				if not center_empty:
-					print(">> Center empty missing, not in preset!")
+					env.log("Geo Node effects: Center empty missing, not in preset!")
 				else:
 					env.log("Set follow for geonode input", vv_only=True)
 					geo_mod[geo_inp_id[inp.name]] = center_empty
@@ -491,7 +501,8 @@ def geo_fields_from_json(effect: ListEffectsAssets, jpath: Path) -> dict:
 	return geo_fields
 
 
-def get_or_create_plane_mesh(mesh_name: str, uvs: Sequence[Tuple[int,int]]=[]) -> Mesh:
+def get_or_create_plane_mesh(
+	mesh_name: str, uvs: Sequence[Tuple[int, int]] = []) -> Mesh:
 	"""Generate a 1x1 plane with UVs stretched out to ends, cache if exists.
 
 	Arg `uvs` represents the 4 coordinate values clockwise from top left of the
@@ -621,6 +632,15 @@ def apply_particle_settings(
 	obj.show_instancer_for_render = False
 	psystem.settings.render_type = 'COLLECTION'
 	psystem.settings.instance_collection = pcoll
+
+
+def mark_particles_fake_user(particles: bpy.types.ParticleSettings):
+	"""Assigns particle objects as fake users, to avoid blender's cleanup."""
+	if not hasattr(particles, "instance_object"):
+		return
+	print("DID THIS RUN? marking as fake user on: ", particles, "-", particles.instance_object)
+	if particles.instance_object:
+		particles.instance_object.use_fake_user = True
 
 
 def import_animated_coll(

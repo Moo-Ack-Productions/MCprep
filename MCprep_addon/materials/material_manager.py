@@ -421,7 +421,9 @@ class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 				env.log(f"Updated {mat.name}")
 				if self.animateTextures:
 					sequences.animate_single_material(
-						mat, context.scene.render.engine)
+						mat,
+						context.scene.render.engine,
+						export_location=sequences.ExportLocation.ORIGINAL)
 		if count == 0:
 			self.report(
 				{'INFO'},

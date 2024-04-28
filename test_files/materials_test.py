@@ -20,13 +20,18 @@ from typing import Tuple
 import datetime
 import os
 import shutil
+import tempfile
 import unittest
 
 import bpy
 from bpy.types import Material
 
-from MCprep_addon.materials import sequences
+from MCprep_addon import util
 from MCprep_addon.materials import generate
+from MCprep_addon.materials import sequences
+from MCprep_addon.materials.generate import find_additional_passes
+from MCprep_addon.materials.generate import get_mc_canonical_name
+from MCprep_addon.materials.uv_tools import get_uv_bounds_per_material
 
 
 class MaterialsTest(unittest.TestCase):
@@ -226,6 +231,25 @@ class MaterialsTest(unittest.TestCase):
         self.assertEqual(
             missing_images, 0, "Should have 0 unloaded passes")
 
+    def test_load_material(self):
+        """Test the load material operators and related resets"""
+        bpy.ops.mcprep.reload_materials()
+
+        # add object
+        bpy.ops.mesh.primitive_cube_add()
+
+        scn_props = bpy.context.scene.mcprep_props
+        itm = scn_props.material_list[scn_props.material_list_index]
+        path = itm.path
+        bpy.ops.mcprep.load_material(filepath=path)
+
+        # validate that the loaded material has a name matching current list
+        mat = bpy.context.object.active_material
+        scn_props = bpy.context.scene.mcprep_props
+        mat_item = scn_props.material_list[scn_props.material_list_index]
+        self.assertTrue(mat_item.name in mat.name,
+                        f"Material name not loaded {mat.name}")
+
     def test_generate_material_sequence(self):
         """Validates generating an image sequence works ok."""
         self._material_sequnece_subtest(operator=False)
@@ -306,6 +330,7 @@ class MaterialsTest(unittest.TestCase):
         """Checks the desaturate images are recognized as such."""
         should_saturate = {
             # Sample of canonically grayscale textures.
+            "grass": True,
             "grass_block_top": True,
             "acacia_leaves": True,
             "redstone_dust_line0": True,
@@ -484,6 +509,414 @@ class MaterialsTest(unittest.TestCase):
         # test changing skin to file for both above, cycles and internal
         # test changing skin file for both above without, then with,
         #   then without again, normals + spec etc.
+
+    def test_sync_materials(self):
+        """Test syncing materials works"""
+
+        # test empty case
+        res = bpy.ops.mcprep.sync_materials(
+            link=False,
+            replace_materials=False,
+            skipUsage=True)  # track here false to avoid error
+        self.assertEqual(
+            res, {'CANCELLED'}, "Should return cancel in empty scene")
+
+        # test that the base test material is included as shipped
+        bpy.ops.mesh.primitive_plane_add()
+        obj = bpy.context.object
+        obj.select_set(True)
+
+        new_mat = bpy.data.materials.new("mcprep_test")
+        obj.active_material = new_mat
+
+        init_mats = bpy.data.materials[:]
+        init_len = len(bpy.data.materials)
+        res = bpy.ops.mcprep.sync_materials(
+            link=False,
+            replace_materials=False)
+        self.assertEqual(
+            res, {'FINISHED'}, "Should return finished with test file")
+
+        # check there is another material now
+        imported = set(bpy.data.materials[:]) - set(init_mats)
+        post_len = len(bpy.data.materials)
+        self.assertFalse(
+            list(imported)[0].library,
+            "Material linked should not be a library")
+        self.assertEqual(
+            post_len - 1,
+            init_len,
+            "Should have imported specifically one material")
+
+        new_mat.name = "mcprep_test"
+        init_len = len(bpy.data.materials)
+        res = bpy.ops.mcprep.sync_materials(
+            link=False,
+            replace_materials=True)
+        self.assertEqual(res, {'FINISHED'},
+                         "Should return finished with test file (replace)")
+        self.assertEqual(
+            len(bpy.data.materials), init_len,
+            "Number of materials should not have changed with replace")
+
+        # Now test it works with name generalization, stripping .###
+        new_mat.name = "mcprep_test.005"
+        init_mats = bpy.data.materials[:]
+        init_len = len(bpy.data.materials)
+        res = bpy.ops.mcprep.sync_materials(
+            link=False,
+            replace_materials=False)
+        self.assertEqual(res, {'FINISHED'},
+                         "Should return finished with test file")
+
+        # check there is another material now
+        imported = set(bpy.data.materials[:]) - set(init_mats)
+        post_len = len(bpy.data.materials)
+        self.assertTrue(list(imported), "No new materials found")
+        self.assertFalse(
+            list(imported)[0].library,
+            "Material linked should NOT be a library")
+        self.assertEqual(
+            post_len - 1,
+            init_len,
+            "Should have imported specifically one material")
+
+    def test_sync_materials_link(self):
+        """Test syncing materials works"""
+
+        # test that the base test material is included as shipped
+        bpy.ops.mesh.primitive_plane_add()
+        obj = bpy.context.object
+        obj.select_set(True)
+
+        new_mat = bpy.data.materials.new("mcprep_test")
+        obj.active_material = new_mat
+
+        new_mat.name = "mcprep_test"
+        init_mats = bpy.data.materials[:]
+        res = bpy.ops.mcprep.sync_materials(
+            link=True,
+            replace_materials=False)
+        self.assertEqual(res, {'FINISHED'},
+                         "Should return finished with test file (link)")
+        imported = set(bpy.data.materials[:]) - set(init_mats)
+        imported = list(imported)
+        self.assertTrue(imported, "No new material found after linking")
+        self.assertTrue(
+            list(imported)[0].library, "Material linked should be a library")
+
+    def test_uv_transform_detection(self):
+        """Ensure proper detection and transforms for Mineways all-in-one images"""
+        bpy.ops.mesh.primitive_cube_add()
+        bpy.ops.object.editmode_toggle()
+        bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.uv.reset()
+        bpy.ops.object.editmode_toggle()
+        new_mat = bpy.data.materials.new(name="tmp")
+        bpy.context.object.active_material = new_mat
+
+        if not bpy.context.object or not bpy.context.object.active_material:
+            self.fail("Failed set up for uv_transform_detection")
+
+        uv_bounds = get_uv_bounds_per_material(bpy.context.object)
+        mname = bpy.context.object.active_material.name
+        self.assertEqual(
+            uv_bounds, {mname: [0, 1, 0, 1]},
+            "UV transform for default cube should have max bounds")
+
+        bpy.ops.object.editmode_toggle()
+        bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.uv.sphere_project()  # ensures irregular UV map, not bounded
+        bpy.ops.object.editmode_toggle()
+        uv_bounds = get_uv_bounds_per_material(bpy.context.object)
+        self.assertNotEqual(
+            uv_bounds, {mname: [0, 1, 0, 1]},
+            "UV mapping is irregular, should have different min/max")
+
+    def test_canonical_test_mappings(self):
+        """Test some specific mappings to ensure they return correctly."""
+
+        misc = {
+            ".emit": ".emit",
+        }
+        jmc_to_canon = {
+            "grass": "colormap/grass",
+            "grass_block_top": "grass_block_top",
+            "mushroom_red": "red_mushroom",
+            # "slime": "slime_block",  # KNOWN jmc, need to address
+        }
+        mineways_to_canon = {}
+
+        for map_type in [misc, jmc_to_canon, mineways_to_canon]:
+            for key, val in map_type.items():
+                res, mapped = get_mc_canonical_name(key)
+                self.assertEqual(
+                    res, val,
+                    f"{key} should map to {res} ({mapped}, not {val}")
+
+    def detect_extra_passes(self):
+        """Ensure only the correct pbr file matches are found for input file"""
+
+        tmp_dir = tempfile.gettempdir()
+
+        # physically generate these empty files, then delete
+        tmp_files = [
+            "oak_log_top.png",
+            "oak_log_top-s.png",
+            "oak_log_top_n.png",
+            "oak_log.jpg",
+            "oak_log_s.jpg",
+            "oak_log_n.jpeg",
+            "oak_log_disp.jpeg",
+            "stonecutter_saw.tiff",
+            "stonecutter_saw n.tiff"
+        ]
+
+        for tmp in tmp_files:
+            fname = os.path.join(tmp_dir, tmp)
+            with open(fname, 'a'):
+                os.utime(fname)
+
+        def cleanup():
+            """Failsafe delete files before raising error within test method"""
+            for tmp in tmp_files:
+                try:
+                    os.remove(os.path.join(tmp_dir, tmp))
+                except Exception:
+                    pass
+
+        # assert setup was successful
+        for tmp in tmp_files:
+            if os.path.isfile(os.path.join(tmp_dir, tmp)):
+                continue
+            cleanup()
+            self.fail("Failed to generate test empty files")
+
+        # the test cases; input is diffuse, output is the whole dict
+        cases = [
+            {
+                "diffuse": os.path.join(tmp_dir, "oak_log_top.png"),
+                "specular": os.path.join(tmp_dir, "oak_log_top-s.png"),
+                "normal": os.path.join(tmp_dir, "oak_log_top_n.png"),
+            }, {
+                "diffuse": os.path.join(tmp_dir, "oak_log.jpg"),
+                "specular": os.path.join(tmp_dir, "oak_log_s.jpg"),
+                "normal": os.path.join(tmp_dir, "oak_log_n.jpeg"),
+                "displace": os.path.join(tmp_dir, "oak_log_disp.jpeg"),
+            }, {
+                "diffuse": os.path.join(tmp_dir, "stonecutter_saw.tiff"),
+                "normal": os.path.join(tmp_dir, "stonecutter_saw n.tiff"),
+            }
+        ]
+
+        for test in cases:
+            res = find_additional_passes(test["diffuse"])
+            if res != test:
+                cleanup()
+                # for debug readability, basepath everything
+                for itm in res:
+                    res[itm] = os.path.basename(res[itm])
+                for itm in test:
+                    test[itm] = os.path.basename(test[itm])
+                dfse = test["diffuse"]
+                self.fail(
+                    f"Mismatch for set {dfse}: got {res} but expected {test}")
+
+        # test other cases intended to fail
+        res = find_additional_passes(os.path.join(tmp_dir, "not_a_file.png"))
+        cleanup()
+        self.assertEqual(res, {}, "Fake file should not have any return")
+
+    def test_replace_missing_images_fixed(self):
+        """Find missing images from selected materials, cycles.
+
+        Scenarios in which we find new textures
+        One: material is empty with no image block assigned at all, though has
+            image node and material is a canonical name
+        Two: material has image block but the filepath is missing, find it
+        """
+
+        mat, node = self._create_canon_mat("sugar_cane")
+        bpy.ops.mesh.primitive_plane_add()
+        bpy.context.object.active_material = mat
+
+        pre_path = node.image.filepath
+        bpy.ops.mcprep.replace_missing_textures(animateTextures=False)
+        post_path = node.image.filepath
+        self.assertEqual(pre_path, post_path, "Pre/post path should match")
+
+        # now save the texturefile somewhere
+        tmp_dir = tempfile.gettempdir()
+        tmp_image = os.path.join(tmp_dir, "sugar_cane.png")
+        shutil.copyfile(node.image.filepath, tmp_image)  # leave orig intact
+
+        # Test that path is unchanged even when with a non canonical path
+        with self.subTest("non_missing_left_alone"):
+            node.image.filepath = tmp_image
+            if node.image.filepath != tmp_image:
+                os.remove(tmp_image)
+                self.fail("failed to setup test, node path not = " + tmp_image)
+            pre_path = node.image.filepath
+            bpy.ops.mcprep.replace_missing_textures(animateTextures=False)
+            post_path = node.image.filepath
+            if pre_path != post_path:
+                os.remove(tmp_image)
+                self.assertEqual(pre_path, post_path, "Path should not change")
+
+        with self.subTest("missing_resolved"):
+            # Ensure empty node within a canonically named material is fixed
+            pre_path = node.image.filepath
+            node.image = None  # remove the image from block
+
+            if node.image:
+                os.remove(tmp_image)
+                self.fail("failed to setup test, image block still assigned")
+            bpy.ops.mcprep.replace_missing_textures(animateTextures=False)
+            post_path = node.image.filepath
+            if not post_path:
+                os.remove(tmp_image)
+                self.fail("No post path found, should have loaded file")
+            elif post_path == pre_path:
+                os.remove(tmp_image)
+                self.fail("Should have loaded image as new datablock")
+            elif not os.path.isfile(post_path):
+                os.remove(tmp_image)
+                self.fail("New path file does not exist")
+
+    def test_replace_missing_images_moved_blend(self):
+        """Scenario where we save, close, then move the blend file."""
+        tmp_dir = tempfile.gettempdir()
+        mat, node = self._create_canon_mat("sugar_cane")
+        bpy.ops.mesh.primitive_plane_add()
+        bpy.context.object.active_material = mat
+
+        # Then, create the textures locally
+        bpy.ops.file.pack_all()
+        bpy.ops.file.unpack_all(method='USE_LOCAL')
+        unpacked_path = bpy.path.abspath(node.image.filepath)
+
+        # close and open, moving the file in the meantime
+        save_tmp_file = os.path.join(tmp_dir, "tmp_test.blend")
+        os.rename(unpacked_path, unpacked_path + "x")
+        bpy.ops.wm.save_mainfile(filepath=save_tmp_file)
+        bpy.ops.wm.open_mainfile(filepath=save_tmp_file)
+
+        # now run the operator
+        img = bpy.data.images['sugar_cane.png']
+        pre_path = img.filepath
+        if os.path.isfile(pre_path):
+            os.remove(unpacked_path + "x")
+            self.fail("Failed to setup test for save/reopn move")
+
+        bpy.ops.mcprep.replace_missing_textures(animateTextures=False)
+        post_path = img.filepath
+        file_exists = os.path.isfile(post_path)
+        os.remove(unpacked_path + "x")
+        self.assertNotEqual(post_path, pre_path, "Did not change path")
+        self.assertTrue(
+            file_exists,
+            f"File for blend reloaded image does not exist: {post_path}")
+
+    def test_replace_missing_images_name_incremented(self):
+        """Ensure example of sugar_cane.png.001 is accounted for."""
+        mat, node = self._create_canon_mat("sugar_cane")
+        bpy.ops.mesh.primitive_plane_add()
+        bpy.context.object.active_material = mat
+
+        tmp_dir = tempfile.gettempdir()
+        tmp_image = os.path.join(tmp_dir, "sugar_cane.png")
+        shutil.copyfile(node.image.filepath, tmp_image)  # leave orig intact
+
+        node.image = None  # remove the image from block
+        mat.name = "sugar_cane.png.001"
+        if node.image:
+            os.remove(tmp_image)
+            self.fail("failed to setup test, image block still assigned")
+        bpy.ops.mcprep.replace_missing_textures(animateTextures=False)
+        post_path = node.image.filepath
+        is_file = os.path.isfile(node.image.filepath)
+        os.remove(tmp_image)
+
+        self.assertTrue(
+            node.image, "Failed to load new image within mat named .png.001")
+        self.assertTrue(post_path, "No image loaded for " + mat.name)
+        self.assertTrue(
+            is_file, f"File for loaded image does not exist: {post_path}")
+
+    def test_replace_missing_images_animated(self):
+        """Ensure example of sugar_cane.png.001 is accounted for."""
+        mat, node = self._create_canon_mat("lava_flow")
+        self.assertEqual(node.image.source, "FILE",
+                         "Initial material should be a single image")
+
+        bpy.ops.mesh.primitive_plane_add()
+        bpy.context.object.active_material = mat
+
+        tmp_dir = tempfile.gettempdir()
+        tmp_image = os.path.join(tmp_dir, "lava_flow.png")
+        shutil.copyfile(node.image.filepath, tmp_image)  # leave orig intact
+
+        node.image = None  # remove the image from block
+        mat.name = "lava_flow.png"
+        if node.image:
+            os.remove(tmp_image)
+            self.fail("failed to setup test, image block still assigned")
+
+        bpy.ops.mcprep.replace_missing_textures(animateTextures=True)
+        post_path = node.image.filepath
+        is_file = os.path.isfile(node.image.filepath)
+        os.remove(tmp_image)
+
+        self.assertTrue(
+            node.image, "Failed to load new image within mat named .png.001")
+        self.assertTrue(post_path, "No image loaded for " + mat.name)
+        self.assertTrue(
+            is_file, f"File for loaded image does not exist: {post_path}")
+        # check that the image is animated in the end, with multiple files
+        self.assertEqual(node.image.source, "SEQUENCE",
+                         "Ensure updated material is an image sequence")
+
+    def test_swap_texture_pack(self):
+        """End to end test of swap texture pack."""
+        self._set_test_mcprep_texturepack_path()
+        new_mat, _ = self._create_canon_mat("diamond_ore", test_pack=True)
+
+        bpy.ops.mesh.primitive_plane_add()
+        obj = bpy.context.object
+        obj.active_material = new_mat
+        self.assertIsNotNone(obj.active_material, "Material should be applied")
+
+        # Ensure if no texture pack selected, it fails.
+        addon_prefs = util.get_user_preferences(bpy.context)
+        addon_prefs.MCprep_exporter_type = "(choose)"
+        with self.assertRaises(RuntimeError):
+            res = bpy.ops.mcprep.swap_texture_pack(
+                filepath=bpy.context.scene.mcprep_texturepack_path)
+
+        # Now run in scenario where a valid selection is made.
+        with self.subTest("jmc2obj_noprep"):
+            addon_prefs.MCprep_exporter_type = "jmc2obj"
+            res = bpy.ops.mcprep.swap_texture_pack(
+                filepath=bpy.context.scene.mcprep_texturepack_path,
+                prepMaterials=False)
+            self.assertTrue(res, {"FINISHED"})
+
+        # And again with prep materials on
+        with self.subTest("jmc2obj_withprep"):
+            res = bpy.ops.mcprep.swap_texture_pack(
+                filepath=bpy.context.scene.mcprep_texturepack_path,
+                prepMaterials=True)
+            self.assertTrue(res, {"FINISHED"})
+
+        # And for good coverage, let's do an example for mineways
+        with self.subTest("Mineways_withprep"):
+            new_mat, _ = self._create_canon_mat("diamond_ore", test_pack=True)
+            obj.active_material = new_mat
+            addon_prefs.MCprep_exporter_type = "Mineways"
+            res = bpy.ops.mcprep.swap_texture_pack(
+                filepath=bpy.context.scene.mcprep_texturepack_path,
+                prepMaterials=True)
+            self.assertTrue(res, {"FINISHED"})
 
 
 if __name__ == '__main__':

@@ -37,10 +37,11 @@ from typing import List
 import argparse
 import os
 import subprocess
+import sys
 import time
 
 
-COMPILE_CMD = ["bpy-addon-build", "--during-build", "dev"]
+COMPILE_CMD = ["bab", "-b", "dev"]
 DATA_CMD = ["python", "mcprep_data_refresh.py", "-auto"]  # TODO, include in build
 DCC_EXES = "blender_execs.txt"
 TEST_RUNNER = os.path.join("test_files", "test_runner.py")
@@ -75,13 +76,14 @@ def main():
 
     # Loop over all binaries and run tests.
     t0 = time.time()
+    any_failures = False
     for ind, binary in enumerate(blender_execs):
         run_all = args.all_execs is True
         run_specific = args.version is not None
         if ind > 0 and not (run_all or run_specific):
             continue  # Only run the first test unless specified
         if not os.path.exists(binary):
-            print(f"Bledner EXE not found: {binary}")
+            print(f"Blender EXE not found: {binary}")
             continue
         cmd = [binary,
                "--background",
@@ -94,14 +96,25 @@ def main():
             cmd.extend(["-t", args.test_specific])
         if args.version is not None:
             cmd.extend(["-v", args.version])
-        output = subprocess.check_output(cmd)
+        # output = subprocess.check_output(cmd)
+        child = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        output = child.communicate()[0]
         print(output.decode("utf-8"))
+
+        # Detect if there was at least 1+ failure/error, to pass to exit code.
+        if child.returncode != 0:
+            any_failures = True
 
     t1 = time.time()
 
+    # Especially ensure tracker files are removed after tests complete.
+    remove_tracker_files()
+
     output_results()
     round_s = round(t1 - t0)
-    print(f"tests took {round_s}s to run")
+    exit_code = 1 if any_failures else 0
+    print(f"tests took {round_s}s to run, ending with code {exit_code}")
+    sys.exit(exit_code)
 
 
 def get_args():
@@ -171,6 +184,25 @@ def output_results():
             print(tabline)
             if idx == 0:
                 print(SPACER)
+
+
+def remove_tracker_files():
+    """Ensure local tracker files are NEVER left around after tests."""
+    git_dir = os.path.dirname(__file__)
+    jfile = "mcprep_addon_tracker.json"
+    jpath = os.path.join(git_dir, "MCprep_addon", jfile)
+    par_jfile = "mcprep_addon_trackerid.json"
+    par_jpath = os.path.join(git_dir, par_jfile)
+
+    has_jpath = os.path.isfile(jpath)
+    has_par_jpath = os.path.isfile(par_jpath)
+
+    if has_jpath:
+        print("Removing: ", jpath)
+        os.remove(jpath)
+    if has_par_jpath:
+        print("Removing: ", par_jpath)
+        os.remove(par_jpath)
 
 
 if __name__ == "__main__":

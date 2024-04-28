@@ -9,7 +9,9 @@ MCprep Addon
 MCprep is an addon dedicated to speeding up the workflow of Minecraft animators in Blender by automatically fixing up materials and providing other tools such as mob spawing, effects spawning, etc. 
 
 ## Installing MCprep
-### Click the link below and download the .zip file (re-zip if auto-unzipped into a folder necessary), install into blender (2.80 through 3.5 supported)
+### Click the link below and download the .zip file (re-zip if auto-unzipped into a folder necessary), install into blender (2.80 through 4.0 supported)
+
+**Note: To use MCprep with assets, you must have a valid, legal copy of Minecraft to comply with Mojang's terms of service. No support is provided for anyone using MCprep without a valid Minecraft license** Versions of MCprep without the assets are not bound to this requirement
 
 [![Install MCprep](/visuals/mcprep_download.png)](https://theduckcow.com/dev/blender/mcprep-download/)
 
@@ -397,6 +399,8 @@ To edit the materials.blend file for syncing:
   - *Don't see the skin you want?* Click "skin from file" to select one from your machine, or "skin from username" to download and apply a Minecraft user's skin, or go into advanced to Add Skin for future use without immediately applying it.
 - **Step 3:** Press the button that says "Apply [skin name]"
 - **Step 4:** You're done! If the user interface appears to not update, be sure to **check rendered view** (shift+z). Also note the default behavior is to make a *new* material. This way, if you had other characters with the same skin that you don't want changed, those are left alone. You can turn this off in the redo last menu or via F6.
+  - There are some redo-last options to control how skin swapping is done, changing any of these settings will undo and redo the skin swap with the newly applied setting.
+  - If you untick the box to "swap all images", then the operaetor will only swap images of any image texture nodes with the name "MCPREP_SKIN_SWAP" or "MCPREP_diffuse" and leave others alone.
 
 
 ### Load Material:
@@ -505,6 +509,7 @@ There are four different kinds of effects that MCprep supports:
 - **Collection effects:** Simply add new effects to new blend files in the MCprep resources folder: MCprep_resources/effects/collection. The animations are assumed to start at frame one, and offset accordingly when spawned in a scene later.
 - **Image sequence effects:** These are read from the active resource pack's effects folder. Simply place your image sequence of files there and it should load in automatically. Alternatively, point the active resource pack to the parent of another effects resource pack folder (the active resource pack must be pointing to the top level of the resource pack still in order to recognize the folder for image sequence spawning)
 
+See the tutorial here for more details: https://www.youtube.com/watch?v=8xy4nZaneQU
 
 ### Entity Spawner:
 - **Purpose:** To provide quick, one-click importing of pre-rigged entities that are not mobs or blocks
@@ -546,6 +551,9 @@ Under advanced settings, you can change your target entity file to point to anot
 
 
 #### Cycles Optimizer Node Settings
+
+*NOTE: the Cycles Optimizer is deprecated and will be removed in MCprep 3.6*
+
 The Cycles optimizer also comes with it some special node names to control how it interprets certain nodes. They are the following:
 - `MCPREP_HOMOGENOUS_VOLUME`: if applied to a Volume Scatter, Volume Absorption, or Principled Volume node, it is treated as a homogeneous volume 
 - `MCPREP_NOT_HOMOGENOUS_VOLUME`: if applied to a Volume Scatter, Volume Absorption, or Principled Volume node, it is not treated as a homogeneous volume 

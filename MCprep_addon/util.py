@@ -39,7 +39,7 @@ from bpy.types import (
 )
 from mathutils import Vector, Matrix
 
-from .conf import env
+from .conf import MCprepError, env
 
 # Commonly used name for an excluded collection in Blender 2.8+
 SPAWNER_EXCLUDE = "Spawner Exclude"
@@ -48,31 +48,43 @@ SPAWNER_EXCLUDE = "Spawner Exclude"
 # GENERAL SUPPORTING FUNCTIONS (no registration required)
 # -----------------------------------------------------------------------------
 
-
-def apply_colorspace(node: Node, color_enum: Tuple) -> None:
-	"""Apply color space in a cross compatible way, for version and language.
-
-	Use enum nomeclature matching Blender 2.8x Default, not 2.7 or other lang
+def apply_noncolor_data(node: Node) -> Optional[MCprepError]:
 	"""
-	global noncolor_override
-	noncolor_override = None
+	Apply the Non-Color/Generic Data option to the passed
+	node in a way that is cross version compatible, as well as OCIO
+	config compatible in theory.
+	
+	Returns:
+		If success: None
+		If fail: 
+			All cases - MCprepError(TypeError)
+	"""
+	options: List[str] = []
+	if env.json_data:
+		options = env.json_data["non_color_options"]
 
 	if not node.image:
 		env.log("Node has no image applied yet, cannot change colorspace")
-
-	# For later 2.8, fix images color space user
-	if hasattr(node, "color_space"):  # 2.7 and earlier 2.8 versions
-		node.color_space = 'NONE'  # for better interpretation of specmaps
-	elif hasattr(node.image, "colorspace_settings"):  # later 2.8 versions
-		# try default 'Non-color', fall back to best guess 'Non-Colour Data'
-		if color_enum == 'Non-color' and noncolor_override is not None:
-			node.image.colorspace_settings.name = noncolor_override
-		else:
+	
+	# Blender 2.8+
+	if hasattr(node.image, "colorspace_settings"):
+		# Avoid hard-coding values into the 
+		# code so that users with non-standard
+		# setups can add whatever additional 
+		# options are needed for their OCIO
+		# setup
+		for opt in options:
 			try:
-				node.image.colorspace_settings.name = 'Non-Color'
-			except TypeError:
-				node.image.colorspace_settings.name = 'Non-Colour Data'
-				noncolor_override = 'Non-Colour Data'
+				node.image.colorspace_settings.name = opt
+				return None
+			except TypeError:	
+				continue
+	(lineno, file) = env.current_line_and_file()
+	return MCprepError(
+		TypeError("None of the non-color options work, add a new option to mcprep_data.json"),
+		lineno,
+		file
+	)
 
 
 def nameGeneralize(name: str) -> str:
@@ -315,9 +327,7 @@ def loadTexture(texture: str) -> Image:
 
 def get_objects_conext(context: Context) -> List[bpy.types.Object]:
 	"""Returns list of objects, either from view layer if 2.8 or scene if 2.8"""
-	if bv28():
-		return context.view_layer.objects
-	return context.scene.objects
+	return context.view_layer.objects
 
 
 def link_selected_objects_to_scene() -> None:
@@ -428,14 +438,11 @@ def addGroupInstance(group_name: str, loc: Tuple, select: bool=True) -> bpy.type
 
 	scene = bpy.context.scene
 	ob = bpy.data.objects.new(group_name, None)
-	if bv28():
-		ob.instance_type = 'COLLECTION'
-		ob.instance_collection = collections().get(group_name)
-		scene.collection.objects.link(ob)  # links to scene collection
-	else:
-		ob.dupli_type = 'GROUP'
-		ob.dupli_group = collections().get(group_name)
-		scene.objects.link(ob)
+
+	ob.instance_type = 'COLLECTION'
+	ob.instance_collection = collections().get(group_name)
+	scene.collection.objects.link(ob)  # links to scene collection
+
 	ob.location = loc
 	select_set(ob, select)
 	return ob
@@ -458,7 +465,8 @@ def load_mcprep_json() -> bool:
 			"canon_mapping_block": {}
 		},
 		"mob_skip_prep": [],
-		"make_real": []
+		"make_real": [],
+		"non_color_options" : [],
 	}
 	if not os.path.isfile(path):
 		env.log(f"Error, json file does not exist: {path}")
@@ -562,31 +570,13 @@ def natural_sort(elements: list) -> list:
 	return sorted(elements, key=alphanum_key)
 
 # -----------------------------------------------------------------------------
-# Cross blender 2.7 and 2.8 functions
+# Utility functions
+#
+# These funtions originally were created for the purpose of 
+# maintaining compatibility with Blender 2.7x and 2.8+. With 
+# MCprep 3.5 however, these moved from compatibility functions to 
+# utility functions that make the developer experience better.
 # -----------------------------------------------------------------------------
-
-
-def make_annotations(cls):
-	"""Add annotation attribute to class fields to avoid Blender 2.8 warnings"""
-	env.deprecation_warning()
-	if not hasattr(bpy.app, "version") or bpy.app.version < (2, 80):
-		return cls
-	if bpy.app.version < (2, 93, 0):
-		bl_props = {
-			k: v for k, v in cls.__dict__.items() if isinstance(v, tuple)}
-	else:
-		bl_props = {
-			k: v for k, v in cls.__dict__.items()
-			if isinstance(v, bpy.props._PropertyDeferred)}
-	if bl_props:
-		if '__annotations__' not in cls.__dict__:
-			setattr(cls, '__annotations__', {})
-		annotations = cls.__dict__['__annotations__']
-		for k, v in bl_props.items():
-			annotations[k] = v
-			delattr(cls, k)
-	return cls
-
 
 def layout_split(layout: UILayout, factor:float =0.0, align: bool=False) -> UILayout:
 	""" TODO remove 2.7
@@ -758,18 +748,13 @@ def matmul(v1: Union[Vector, Matrix], v2: Union[Vector, Matrix], v3: Optional[Un
 
 	This is a workaround for the syntax that otherwise could be used a @ b.
 	"""
-	if bv28():
-		# does not exist pre 2.7<#?>, syntax error
-		mtm = getattr(operator, "matmul")
-		if v3:
-			return mtm(v1, mtm(v2, v3))
-		return mtm(v1, v2)
+	mtm = getattr(operator, "matmul")
 	if v3:
-		return v1 * v2 * v3
-	return v1 * v2
+		return mtm(v1, mtm(v2, v3))
+	return mtm(v1, v2)
 
 
-def scene_update(context: Optional[Context]=None) -> None:
+def scene_update(context: Optional[Context] = None) -> None:
 	"""Update scene in cross compatible way, to update desp graph"""
 	if not context:
 		context = bpy.context
