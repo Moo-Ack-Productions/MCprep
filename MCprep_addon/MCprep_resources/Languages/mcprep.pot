@@ -1,14 +1,9 @@
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the PACKAGE package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
-#, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: PACKAGE VERSION\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-02-19 23:42-0600\n"
+"Project-Id-Version: 3.6\n"
+"Report-Msgid-Bugs-To: https://github.com/Moo-Ack-Productions/MCprep/issues\n"
+"POT-Creation-Date: 2024-04-27 23:26-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -332,7 +327,6 @@ msgid "Time of day"
 msgstr ""
 
 #: MCprep_addon/mcprep_ui.py:920
-#, python-brace-format
 msgid "{h}:{m}, day {d}"
 msgstr ""
 
