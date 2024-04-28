@@ -1,4 +1,6 @@
 import ast
+from datetime import datetime, tzinfo, timedelta
+import time
 from pathlib import Path
 import polib
 
@@ -44,6 +46,27 @@ class TranslateCallVisitor(ast.NodeVisitor):
                 self.keys[msgid.value].append(msgid.lineno)
         self.generic_visit(node)
 
+MCPREP_VERSION = "3.6"
+MCPREP_ISSUE_TRACKER = "https://github.com/Moo-Ack-Productions/MCprep/issues"
+
+# Copied from here:
+# https://github.com/shibukawa/sphinx/blob/master/sphinx/builders/gettext.py
+timestamp = time.time()
+tzdelta = datetime.fromtimestamp(timestamp) - datetime.utcfromtimestamp(timestamp)
+class LocalTimeZone(tzinfo):
+
+    def __init__(self, *args, **kw):
+        super(LocalTimeZone, self).__init__(*args, **kw)
+        self.tzdelta = tzdelta
+
+    def utcoffset(self, dt):
+        return self.tzdelta
+
+    def dst(self, dt):
+        return timedelta(0)
+
+ltz = LocalTimeZone()
+
 def pre_build(ctx: BabContext):
     print("Building POT...")
     path = Path(ctx.current_path)
@@ -58,9 +81,9 @@ def pre_build(ctx: BabContext):
     
     po = polib.POFile()
     po.metadata = {
-        "Project-Id-Version": "PACKAGE VERSION",
-        "Report-Msgid-Bugs-To": "",
-        "POT-Creation-Date": "2024-02-19 23:42-0600",
+        "Project-Id-Version": MCPREP_VERSION,
+        "Report-Msgid-Bugs-To": MCPREP_ISSUE_TRACKER,
+        "POT-Creation-Date": datetime.fromtimestamp(timestamp, ltz).strftime('%Y-%m-%d %H:%M%z'),
         "PO-Revision-Date": "YEAR-MO-DA HO:MI+ZONE",
         "Last-Translator": "FULL NAME <EMAIL@ADDRESS>",
         "Language-Team": "LANGUAGE <LL@li.org>",
