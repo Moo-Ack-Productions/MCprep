@@ -212,10 +212,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 				env.log(
 					"During prep, found null material:" + str(mat), vv_only=True)
 				continue
-			elif mat.get("MCPREP_NO_PREP", False):
-				count_no_prep += 1
-				continue
-			elif mat.library:
+			elif mat.library or mat.get("MCPREP_NO_PREP", False):
 				count_lib_skipped += 1
 				continue
 
@@ -295,20 +292,20 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 		if self.optimizeScene and engine == 'CYCLES':
 			bpy.ops.mcprep.optimize_scene()
 
-		has_no_prep = count_no_prep > 0
 		has_lib_skipped = count_lib_skipped > 0
 		has_mat = count > 0
 		
-		_info = {}
-		_info[f"modified {count}"] = has_mat
-		_info[f"skipped {count_lib_skipped} linked"] = has_lib_skipped
-		_info[f"founded {count_no_prep} no prep"] = has_no_prep
+		info = []
+		if has_mat:
+			info.append(f"modified {count}")
+		if has_lib_skipped:
+			info.append(f"skipped {count_lib_skipped}")
 		
-		mat_info = ", ".join(k for k, v in _info.items() if v).capitalize()
+		mat_info = ", ".join(x for x in info).capitalize()
 		
 		if self.skipUsage is True:
 			pass  # Don't report if a meta-call.
-		elif has_mat or has_lib_skipped or has_no_prep:
+		elif has_mat or has_lib_skipped:
 			self.report({"INFO"}, mat_info) 
 		else:
 			self.report(
