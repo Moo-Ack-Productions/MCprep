@@ -212,6 +212,44 @@ Add this to a file called .gitmessage, and then execute the following command:
 
 To use for each commit, you can use `git config --local commit.verbose true` to tell Git to perform a verbose commit all the time for just the MCprep repo.
 
+
+## Signing Off Commits
+Signing off of all commits, although not required, is good practice to certify the origin of a change. When you sign off of a commit, you certify that the commit was made in line with the Developer's Certificate of Origin:
+```
+Developer's Certificate of Origin 1.1
+By making a contribution to this project, I certify that:
+
+a. The contribution was created in whole or in part by me and I have the right to submit it under the open source license indicated in the file; or
+b. The contribution is based upon previous work that, to the best of my knowledge, is covered under an appropriate open source license and I have the right under that license to submit that work with modifications, whether created in whole or in part by me, under the same open source license (unless I am permitted to submit under a different license), as indicated in the file; or
+c. The contribution was provided directly to me by some other person who certified (a), (b) or (c) and I have not modified it.
+d I understand and agree that this project and the contribution are public and that a record of the contribution (including all personal information I submit with it, including my sign-off) is maintained indefinitely and may be redistributed consistent with this project or the open source license(s) involved.
+```
+
+If indeed the change was made in line with the Developer's Certificate of Origin, add the following at the end of the commit:
+```
+Signed-off-by: Random J Developer <random@developer.example.org>
+```
+
+**This much be your real name and a working email address.**
+
+If the change was given to you by someone else, and you have permission to contribute it here, that change must be signed off by the person who gave the change to you, and anyone before that (basically a chain of sign offs). Example:
+```
+<commit message and summery by John Doe, who recieved the change from Jane Doe>
+
+Signed-off-by: John Doe <johndoe@email.com>
+Signed-off-by: Jane Doe <janedoe@email.com>
+```
+
+If multiple authors were involved in writing the change, then `Co-developed-by` must be present for both you and any other authors involved in the change. As an example with 2 authors:
+```
+<commit message and summery>
+
+Co-developed-by: John Doe <johndoe@email.com>
+Signed-off-by: John Doe <johndoe@email.com>
+Co-developed-by: Jane Doe <janedoe@email.com>
+Signed-off-by: Jane Doe <janedoe@email.com>
+```
+
 ## Dependencies
 If you're using an IDE, it's recommened to install `bpy` as a Python module. In our experience, the [fake-bpy package](https://github.com/nutti/fake-bpy-module) seems to be the best.
 
