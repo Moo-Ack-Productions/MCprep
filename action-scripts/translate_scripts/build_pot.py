@@ -89,7 +89,7 @@ def pre_build(ctx: BabContext):
         "Language-Team": "LANGUAGE <LL@li.org>",
         "Language": "",
         "MIME-Version": "1.0",
-        "Content-Type": "text/plain; charset=CHARSET",
+        "Content-Type": "text/plain; charset=UTF-8",
         "Content-Transfer-Encoding": "8bit",
     }
     for file, keys in extracted_strings.items():
