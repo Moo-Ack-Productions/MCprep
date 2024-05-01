@@ -17,11 +17,14 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import enum
+from dataclasses import fields
+from enum import Enum, auto
 import os
 import math
 from pathlib import Path
 from typing import List, Optional, Union
 import shutil
+from MCprep_addon.commonmcobj_parser import CommonMCOBJ, CommonMCOBJTextureType, parse_header
 
 import bpy
 from bpy.types import Context, Camera
@@ -80,8 +83,11 @@ class ObjHeaderOptions:
 	"""Wrapper functions to avoid typos causing issues."""
 
 	def __init__(self):
-		self._exporter: Optional[str] = None
-		self._file_type: Optional[str] = None
+		# This assumes all OBJs that aren't from Mineways
+		# and don't have a CommonMCOBJ header are from 
+		# jmc2obj, and use individual tiles for textures
+		self._exporter: Optional[str] = "jmc2obj"
+		self._file_type: Optional[str] = "INDIVIDUAL_TILES"
 	
 	"""
 	Wrapper functions to avoid typos causing issues
@@ -111,51 +117,127 @@ class ObjHeaderOptions:
 		return self._file_type if self._file_type is not None else "NONE"
 
 
-obj_header = ObjHeaderOptions()
+class WorldExporter(Enum):
+	"""
+	Defines all supported exporters
+	with a fallback
+	"""
 
+	# Mineways with CommonMCOBJ
+	Mineways   = auto()
 
-def detect_world_exporter(filepath: Path) -> None:
+	# Jmc2OBJ with CommonMCOBJ
+	Jmc2OBJ    = auto()
+
+	# Cmc2OBJ, the reference 
+	# implementation of CommonMCOBJ
+	#
+	# For the most part, this 
+	# will be treated as 
+	# Unknown as it's not meant
+	# for regular use. The distinct
+	# option exists for testing purposes
+	Cmc2OBJ    = auto()
+
+	# Any untested exporter
+	Unknown	   = auto() 
+	
+	# Mineways before the CommonMCOBJ standard
+	ClassicMW  = auto()
+
+	# jmc2OBJ before the CommonMCOBJ standard
+	ClassicJmc = auto()
+
+EXPORTER_MAPPING = {
+	"mineways"   : WorldExporter.Mineways,
+	"jmc2obj"    : WorldExporter.Jmc2OBJ,
+	"cmc2obj"    : WorldExporter.Cmc2OBJ,
+	"mineways-c" : WorldExporter.ClassicMW,
+	"jmc2obj-c"  : WorldExporter.ClassicJmc
+}
+
+def get_exporter(context: Context) -> Optional[WorldExporter]:
+	"""
+	Return the exporter on the active object if it has 
+	an exporter attribute.
+
+	For maximum backwards compatibility, it'll convert the 
+	explicit options we have in MCprep for world exporters to 
+	WorldExporter enum objects, if the object does not have either
+	the CommonMCOBJ exporter attribute, or if it does not have the 
+	MCPREP_OBJ_EXPORTER attribute added in MCprep 3.6. This backwards
+	compatibility will be removed by default in MCprep 4.0
+
+	Returns:
+		- WorldExporter if the world exporter can be detected
+		- None otherwise
+	"""
+	obj = context.active_object
+	if not obj:
+		return None
+
+	if "COMMONMCOBJ_HEADER" in obj:
+		if obj["exporter"] in EXPORTER_MAPPING:
+			return EXPORTER_MAPPING[obj["exporter"]]
+		else:
+			return WorldExporter.Unknown
+	elif "MCPREP_OBJ_HEADER" in obj:
+		if "MCPREP_OBJ_EXPORTER" in obj:
+			return EXPORTER_MAPPING[obj["MCPREP_OBJ_EXPORTER"]]
+	
+	# This section will be placed behind a legacy 
+	# option in MCprep 4.0, once CommonMCOBJ becomes
+	# more adopted in exporters
+	prefs = util.get_user_preferences(context)
+	if prefs.MCprep_exporter_type == "Mineways":
+		return WorldExporter.ClassicMW
+	elif prefs.MCprep_exporter_type == "jmc2obj":
+		return WorldExporter.ClassicJmc
+	return None
+
+def detect_world_exporter(filepath: Path) -> Union[CommonMCOBJ, ObjHeaderOptions]:
 	"""Detect whether Mineways or jmc2obj was used, based on prefix info.
 
 	Primary heruistic: if detect Mineways header, assert Mineways, else
 	assume jmc2obj. All Mineways exports for a long time have prefix info
 	set in the obj file as comments.
 	"""
+	obj_header = ObjHeaderOptions()
 	with open(filepath, 'r') as obj_fd:
 		try:
-			header = obj_fd.readline()
-			if 'mineways' in header.lower():
-				obj_header.set_mineways()
-				# form of: # Wavefront OBJ file made by Mineways version 5.10...
-				for line in obj_fd:
-					if line.startswith("# File type:"):
-						header = line.rstrip()  # Remove trailing newline
+			cmc_header = parse_header(obj_fd)
+			if cmc_header is not None:
+				return cmc_header
+			else:
+				header = obj_fd.readline()
+				if 'mineways' in header.lower():
+					obj_header.set_mineways()
+					# form of: # Wavefront OBJ file made by Mineways version 5.10...
+					for line in obj_fd:
+						if line.startswith("# File type:"):
+							header = line.rstrip()  # Remove trailing newline
 
-				# The issue here is that Mineways has changed how the header is generated.
-				# As such, we're limited with only a couple of OBJs, some from
-				# 2020 and some from 2023, so we'll assume people are using
-				# an up to date version.
-				atlas = (
-					"# File type: Export all textures to three large images",
-					"# File type: Export full color texture patterns"
-				)
-				tiles = (
-					"# File type: Export tiles for textures to directory textures",
-					"# File type: Export individual textures to directory tex"
-				)
-				print('"{}"'.format(header))
-				if header in atlas:  # If a texture atlas is used
-					obj_header.set_atlas()
-				elif header in tiles:  # If the OBJ uses individual textures
-					obj_header.set_seperated()
-				return
+					# The issue here is that Mineways has changed how the header is generated.
+					# As such, we're limited with only a couple of OBJs, some from
+					# 2020 and some from 2023, so we'll assume people are using
+					# an up to date version.
+					atlas = (
+						"# File type: Export all textures to three large images",
+						"# File type: Export full color texture patterns"
+					)
+					tiles = (
+						"# File type: Export tiles for textures to directory textures",
+						"# File type: Export individual textures to directory tex"
+					)
+					print('"{}"'.format(header))
+					if header in atlas:  # If a texture atlas is used
+						obj_header.set_atlas()
+					elif header in tiles:  # If the OBJ uses individual textures
+						obj_header.set_seperated()
+					return obj_header
 		except UnicodeDecodeError:
 			print(f"Failed to read first line of obj: {filepath}")
-			return
-		obj_header.set_jmc2obj()
-		# Since this is the default for Jmc2Obj,
-		# we'll assume this is what the OBJ is using
-		obj_header.set_seperated()
+		return obj_header
 
 
 def convert_mtl(filepath) -> Optional[MCprepError]:
@@ -618,17 +700,38 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			return {'CANCELLED'}
 
 		prefs = util.get_user_preferences(context)
-		detect_world_exporter(self.filepath)
-		prefs.MCprep_exporter_type = obj_header.exporter()
+		header = detect_world_exporter(Path(self.filepath))
+
+		if isinstance(header, ObjHeaderOptions):
+			prefs.MCprep_exporter_type = header.exporter()
 
 		for obj in context.selected_objects:
-			obj["MCPREP_OBJ_HEADER"] = True
-			obj["MCPREP_OBJ_FILE_TYPE"] = obj_header.texture_type()
+			if isinstance(header, CommonMCOBJ):
+				obj["COMMONMCOBJ_HEADER"] = True
+				for field in fields(header):
+					if getattr(header, field.name) is None:
+						continue
+					if field.type == CommonMCOBJTextureType:
+						obj[field.name] = getattr(header, field.name).value	
+					else:
+						obj[field.name] = getattr(header, field.name)
+
+			elif isinstance(header, ObjHeaderOptions):
+				obj["MCPREP_OBJ_HEADER"] = True
+				obj["MCPREP_OBJ_FILE_TYPE"] = header.texture_type()
+
+				# Future-proofing for MCprep 4.0 when we 
+				# put global exporter options behind a legacy
+				# option and by default use the object for 
+				# getting the exporter
+				obj["MCPREP_OBJ_EXPORTER"] = "mineways-c" if header.exporter() == "Mineways" else "jmc2obj-c"
 
 		self.split_world_by_material(context)
 
-		addon_prefs = util.get_user_preferences(context)
-		self.track_exporter = addon_prefs.MCprep_exporter_type  # Soft detect.
+		# TODO: figure out how we should 
+		# track exporters from here on out
+		# addon_prefs = util.get_user_preferences(context)
+		# self.track_exporter = addon_prefs.MCprep_exporter_type  # Soft detect.
 		return {'FINISHED'}
 
 	def obj_name_to_material(self, obj):

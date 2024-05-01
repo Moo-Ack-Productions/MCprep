@@ -431,8 +431,9 @@ class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 
 		self.report({'INFO'}, f"Updated {count} materials")
 		self.track_param = context.scene.render.engine
-		addon_prefs = util.get_user_preferences(context)
-		self.track_exporter = addon_prefs.MCprep_exporter_type
+		# TODO: Rework exporter tracking
+		# addon_prefs = util.get_user_preferences(context)
+		# self.track_exporter = addon_prefs.MCprep_exporter_type
 		return {'FINISHED'}
 
 	def load_from_texturepack(self, mat):

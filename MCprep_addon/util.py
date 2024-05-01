@@ -26,6 +26,7 @@ import platform
 import random
 import re
 import subprocess
+from MCprep_addon.commonmcobj_parser import CommonMCOBJTextureType
 
 import bpy
 from bpy.types import (
@@ -264,6 +265,12 @@ def is_atlas_export(context: Context) -> bool:
 			if obj["MCPREP_OBJ_FILE_TYPE"] == "ATLAS":
 				file_types["ATLAS"] += 1
 			else:
+				file_types["INDIVIDUAL"] += 1
+		elif "COMMONMCOBJ_HEADER" in obj:
+			tex = CommonMCOBJTextureType[obj["texture_type"]]
+			if tex is CommonMCOBJTextureType.ATLAS:
+				file_types["ATLAS"] += 1
+			elif tex is CommonMCOBJTextureType.INDIVIDUAL_TILES:
 				file_types["INDIVIDUAL"] += 1
 		else:
 			continue
