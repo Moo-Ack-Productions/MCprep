@@ -24,7 +24,7 @@ from pathlib import Path
 import bpy
 from bpy.types import Context, Collection, BlendDataLibraries
 
-from ..conf import env
+from ..conf import MCprepError, env
 from .. import util
 from .. import tracking
 from . import mobs
@@ -372,6 +372,7 @@ def load_linked(self, context: Context, path: str, name: str) -> None:
 
 	path = bpy.path.abspath(path)
 	act = None
+	res = None
 	if hasattr(bpy.data, "groups"):
 		res = util.bAppendLink(f"{path}/Group", name, True)
 		act = context.object  # assumption of object after linking, 2.7 only
@@ -382,10 +383,10 @@ def load_linked(self, context: Context, path: str, name: str) -> None:
 		else:
 			print("Error: Should have had at least one object selected.")
 
-	if res is False:
+	if isinstance(res, MCprepError):
 		# Most likely scenario, path was wrong and raised "not a library".
 		# end and automatically reload assets.
-		self.report({'WARNING'}, "Failed to load asset file")
+		self.report({'WARNING'}, res.msg)
 		bpy.ops.mcprep.prompt_reset_spawners('INVOKE_DEFAULT')
 		return
 

@@ -1065,7 +1065,6 @@ class MCPREP_PT_materials(bpy.types.Panel):
 			return
 
 		row = layout.row()
-		# row.operator("mcprep.create_default_material")
 		split = layout.split()
 		col = split.column(align=True)
 
