@@ -1,12 +1,10 @@
 This list contains all deprecations and removals in every Blender version starting with Blender 3.0. Since Blender 4.0's breaking changes invoked the want for a list of all deprecations and changes, this list is public for addon developers to use.
 
-Note that not all deprecations are listed, just the ones that may affect MCprep or changes that developers should be aware of in general, so please refer to the wiki entries for each version for more information. In addition, for simplicity, this page will only document changes in stable releases of Blender, unless a change has been found in a development version of Blender that needs to be addressed.
+Note that not all deprecations are listed, just the ones that may affect MCprep or changes that developers should be aware of in general, so please refer to the wiki entries for each version for more information.
 
 _For Developers_: The use of any deprecated feature is an automatic bug. Such features should be wrapped around if statements for backwards compatibility if absolutely necesary in older versions.
 
 _For MCprep maintainers_: Any use of a deprecated feature in a pull request should be questioned. If the feature is needed in older versions, then remind developers to use `min_bv`, `bv28` ([Deprecated in MCprep 3.5](https://github.com/TheDuckCow/MCprep/pull/401)), or `bv30`, whichever is more appropriate.
-
-In ascending order:
 
 # [Blender 3.0](https://wiki.blender.org/wiki/Reference/Release_Notes/3.0/Python_API)
 ## Deprecations
@@ -95,11 +93,11 @@ None that concern MCprep.
         - `data` remains emulated, but with a performance penalty
 
 # [Blender 3.6](https://wiki.blender.org/wiki/Reference/Release_Notes/3.6/Python_API)
-None that concern MCprep.
+Nothing that concerns MCprep
 
-# [Blender 4.0](https://wiki.blender.org/wiki/Reference/Release_Notes/4.0/Python_API)
+# [Blender 4.0 (IN DEVELOPMENT)](https://wiki.blender.org/wiki/Reference/Release_Notes/4.0/Python_API)
 ## Deprecated
-None that concern MCprep.
+Nothing that concerned MCprep for now.
 
 ## Breaking Changes
 - Glossy BSDF and Anisotrophic BSDF nodes have been merged. 
@@ -115,16 +113,3 @@ None that concern MCprep.
     - Coat -> Coat Weight
     - Sheen -> Sheen Weight
     - Emission -> Emission Color
-- Possible breakage of rig backwards compatibility (unconfirmed)
-
-# [Blender 4.1](https://wiki.blender.org/wiki/Reference/Release_Notes/4.1/Python_API)
-## Deprecated
-None that concern MCprep.
-
-## Breaking Changes/Additions
-- Python has been upgraded to Python 3.11
-- VFX Reference Platform 2024 support has been added
-- Layout panels to reduce boilerplate for submenus
-- `displacement_method` is under `bpy.types.Material` now
-- Possible breakage of rig backwards compatibility (unconfirmed)
-

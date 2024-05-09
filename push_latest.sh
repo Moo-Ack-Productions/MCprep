@@ -46,21 +46,10 @@ git checkout test_files/test_data/mineways_test_separated_1_15_2.mtl
 
 python mcprep_data_refresh.py -auto
 
-# -----------------------------------------------------------------------------
-# Build releasE with translation updates
-# -----------------------------------------------------------------------------
-
-echo "Force remove trcaker files, in case they are left over"
-rm MCprep_addon/mcprep_addon_tracker.json
-rm mcprep_addon_trackerid.json
-
-echo "Building prod addon..."
-bpy-addon-build -b translate # No --during-build dev to make it prod.
-ls build/MCprep_addon.zip
-
-# -----------------------------------------------------------------------------
-# Cross check no local changes, such as updated translations
-# -----------------------------------------------------------------------------
+if [[ `git status --porcelain` ]]; then
+  echo "There are uncommited changes, ending"
+  # exit # TODO: Enforce in future directly.
+fi
 
 ANY_DIFF=$(git diff MCprep_addon/MCprep_resources/mcprep_data_update.json)
 if [ -z "$ANY_DIFF" ]
@@ -72,14 +61,18 @@ else
       exit
 fi
 
-if [[ `git status --porcelain` ]]; then
-  echo "There are uncommited changes/untracked local files"
-  # exit # TODO: Enforce in future directly.
-fi
 
 # -----------------------------------------------------------------------------
-# Commence release draft
+# Validate and build the release.
 # -----------------------------------------------------------------------------
+
+echo "Force remove trcaker files, in case they are left over"
+rm MCprep_addon/mcprep_addon_tracker.json
+rm mcprep_addon_trackerid.json
+
+echo "Building prod addon..."
+bpy-addon-build # No --during-build dev to make it prod.
+ls build/MCprep_addon.zip
 
 echo ""
 echo "Last 5 live tags online:"
@@ -89,12 +82,6 @@ echo ""
 # Extract the numbers between parentheses, replace comma and space with period
 BASE_VER=$(grep "\"version\":" MCprep_addon/__init__.py | awk -F"[()]" '{print $2}' | tr ',' '.' | tr -d ' ')
 NEW_TAG="${BASE_VER}"
-
-ALL_TAGS=$(git tag -l)
-if [[ $ALL_TAGS == *$NEW_TAG* ]]; then
-    echo "Version $NEW_TAG already exists, need to update __init__.py"
-    exit 1
-fi
 
 echo -e "Current __init__ version: ${GREEN}${NEW_TAG}${NC}"
 read -p "Continue (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1

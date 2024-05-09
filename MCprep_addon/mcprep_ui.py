@@ -25,6 +25,7 @@ from bpy.types import Context, UILayout
 
 # addon imports
 from . import addon_updater_ops
+from . import optimize_scene
 from . import tracking
 from . import util
 from . import world_tools
@@ -94,9 +95,9 @@ def restart_layout(layout):
 	alert_row.alert = True
 	alert_row.operator(
 		"wm.quit_blender",
-		text=env._("Restart blender"),
+		text="Restart blender",
 		icon="ERROR")
-	col.label(text=env._("to complete update"))
+	col.label(text="to complete update")
 
 
 # -----------------------------------------------------------------------------
@@ -105,9 +106,9 @@ def restart_layout(layout):
 
 class MCPREP_MT_mob_spawner(bpy.types.Menu):
 	"""Shift-A menu in the 3D view"""
-	bl_label = env._("Mob Spawner")
+	bl_label = "Mob Spawner"
 	bl_idname = "MCPREP_MT_mob_spawner"
-	bl_description = env._("Menu for placing in the shift-A add object menu")
+	bl_description = "Menu for placing in the shift-A add object menu"
 
 	def draw(self, context):
 		layout = self.layout
@@ -117,7 +118,7 @@ class MCPREP_MT_mob_spawner(bpy.types.Menu):
 		if not scn_props.mob_list_all:
 			row = layout.row()
 			row.operator(
-				"mcprep.reload_mobs", text=env._("Load mobs"), icon=HAND_ICON)
+				"mcprep.reload_mobs", text="Load mobs", icon=HAND_ICON)
 			row.scale_y = 2
 			row.alignment = 'CENTER'
 			return
@@ -146,14 +147,14 @@ class MCPREP_MT_mob_spawner(bpy.types.Menu):
 
 class MCPREP_MT_meshswap_place(bpy.types.Menu):
 	"""Menu for all the meshswap objects"""
-	bl_label = env._("Meshswap Objects")
+	bl_label = "Meshswap Objects"
 	bl_idname = "MCPREP_MT_meshswap_place"
 
 	def draw(self, context):
 		layout = self.layout
 		meshswap_blocks = meshswap.getMeshswapList(context)
 		if not meshswap_blocks:
-			layout.label(text=env._("No meshswap blocks found!"))
+			layout.label(text="No meshswap blocks found!")
 		for blockset in meshswap_blocks:
 			# do some kind of check for if no blocks found
 			icn = "BLANK1"
@@ -175,13 +176,13 @@ class MCPREP_MT_meshswap_place(bpy.types.Menu):
 
 class MCPREP_MT_item_spawn(bpy.types.Menu):
 	"""Menu for loaded item spawners"""
-	bl_label = env._("Item Spawner")
+	bl_label = "Item Spawner"
 	bl_idname = "MCPREP_MT_item_spawn"
 
 	def draw(self, context):
 		layout = self.layout
 		if not context.scene.mcprep_props.item_list:
-			layout.label(text=env._("No items found!"))
+			layout.label(text="No items found!")
 		for item in context.scene.mcprep_props.item_list:
 			icn = f"item-{item.index}"
 			if env.use_icons and icn in env.preview_collections["items"]:
@@ -198,7 +199,7 @@ class MCPREP_MT_item_spawn(bpy.types.Menu):
 
 class MCPREP_MT_effect_spawn(bpy.types.Menu):
 	"""Menu for loaded effect spawners"""
-	bl_label = env._("Effects Spawner")
+	bl_label = "Effects Spawner"
 	bl_idname = "MCPREP_MT_effect_spawn"
 
 	def draw(self, context):
@@ -241,14 +242,14 @@ class MCPREP_MT_effect_spawn(bpy.types.Menu):
 
 class MCPREP_MT_entity_spawn(bpy.types.Menu):
 	"""Menu for loaded entity spawners"""
-	bl_label = env._("Entity Spawner")
+	bl_label = "Entity Spawner"
 	bl_idname = "MCPREP_MT_entity_spawn"
 
 	def draw(self, context):
 		layout = self.layout
 		entity_list = entities.getEntityList(context)
 		if not entity_list:
-			layout.label(text=env._("No entities found!"))
+			layout.label(text="No entities found!")
 		for entity in entity_list:
 			# do some kind of check for if no entities found
 			icn = "BLANK1"
@@ -264,13 +265,13 @@ class MCPREP_MT_entity_spawn(bpy.types.Menu):
 
 class MCPREP_MT_model_spawn(bpy.types.Menu):
 	"""Menu for loaded model spawners"""
-	bl_label = env._("Model Spawner")
+	bl_label = "Model Spawner"
 	bl_idname = "MCPREP_MT_model_spawn"
 
 	def draw(self, context):
 		layout = self.layout
 		if not context.scene.mcprep_props.model_list:
-			layout.label(text=env._("No models found!"))
+			layout.label(text="No models found!")
 		for model in context.scene.mcprep_props.model_list:
 			opr = layout.operator(
 				mcmodel.MCPREP_OT_spawn_minecraft_model.bl_idname,
@@ -310,7 +311,7 @@ class MCPREP_MT_3dview_add(bpy.types.Menu):
 		if not env.loaded_all_spawners and not all_loaded:
 			row = layout.row()
 			row.operator(
-				"mcprep.reload_spawners", text=env._("Load spawners"), icon=HAND_ICON)
+				"mcprep.reload_spawners", text="Load spawners", icon=HAND_ICON)
 			row.scale_y = 2
 			row.alignment = 'CENTER'
 			return
@@ -512,122 +513,122 @@ class McprepPreference(bpy.types.AddonPreferences):
 
 			row = layout.row()
 			row.scale_y = 0.7
-			row.label(text=env._("World Importing & Meshswapping"))
+			row.label(text="World Importing & Meshswapping")
 			box = layout.box()
 			split = util.layout_split(box, factor=factor_width)
 			col = split.column()
-			col.label(text=env._("Default Exporter:"))
+			col.label(text="Default Exporter:")
 			col = split.column()
 			col.prop(self, "MCprep_exporter_type", text="")
 			split = util.layout_split(box, factor=factor_width)
 			col = split.column()
-			col.label(text=env._("jmc2obj executable"))
+			col.label(text="jmc2obj executable")
 			col = split.column()
 			col.prop(self, "open_jmc2obj_path", text="")
 			split = util.layout_split(box, factor=factor_width)
 			col = split.column()
-			col.label(text=env._("Mineways executable"))
+			col.label(text="Mineways executable")
 			col = split.column()
 			col.prop(self, "open_mineways_path", text="")
 			split = util.layout_split(box, factor=factor_width)
 			col = split.column()
-			col.label(text=env._("World OBJ Exports Folder"))
+			col.label(text="World OBJ Exports Folder")
 			col = split.column()
 			col.prop(self, "world_obj_path", text="")
 			split = util.layout_split(box, factor=factor_width)
 			col = split.column()
-			col.label(text=env._("Meshwap assets"))
+			col.label(text="Meshwap assets")
 			col = split.column()
 			col.prop(self, "meshswap_path", text="")
 
 			if not os.path.isfile(bpy.path.abspath(self.meshswap_path)):
 				row = box.row()
-				row.label(text=env._("MeshSwap file not found"), icon="ERROR")
+				row.label(text="MeshSwap file not found", icon="ERROR")
 
 			split = util.layout_split(box, factor=factor_width)
 			col = split.column()
-			col.label(text=env._("Entity assets"))
+			col.label(text="Entity assets")
 
 			col = split.column()
 			col.prop(self, "entity_path", text="")
 			if not os.path.isfile(bpy.path.abspath(self.entity_path)):
 				row = box.row()
-				row.label(text=env._("Entity file not found"), icon="ERROR")
+				row.label(text="Entity file not found", icon="ERROR")
 
 			col = split.column()
 			col.prop(self, "effects_path", text="")
 			if not os.path.isdir(bpy.path.abspath(self.effects_path)):
 				row = box.row()
-				row.label(text=env._("Effects folder not found"), icon="ERROR")
+				row.label(text="Effects folder not found", icon="ERROR")
 
 			row = layout.row()
 			row.scale_y = 0.7
-			row.label(text=env._("Texture / Resource packs"))
+			row.label(text="Texture / Resource packs")
 			box = layout.box()
 			split = util.layout_split(box, factor=factor_width)
 			col = split.column()
-			col.label(text=env._("Texture pack folder"))
+			col.label(text="Texture pack folder")
 			col = split.column()
 			col.prop(self, "custom_texturepack_path", text="")
 			split = util.layout_split(box, factor=factor_width)
 			col = split.column()
-			col.label(text=env._("Install to folder"))
+			col.label(text="Install to folder")
 			# col = split.column()
-			# col.operator("mcprep.skin_swapper", text=env._("Install resource pack"))
+			# col.operator("mcprep.skin_swapper", text="Install resource pack")
 			col = split.column()
-			p = col.operator("mcprep.openfolder", text=env._("Open texture pack folder"))
+			p = col.operator("mcprep.openfolder", text="Open texture pack folder")
 			p.folder = self.custom_texturepack_path
 
 			row = layout.row()
 			row.scale_y = 0.7
-			row.label(text=env._("Mob spawning"))
+			row.label(text="Mob spawning")
 			box = layout.box()
 			split = util.layout_split(box, factor=factor_width)
 			col = split.column()
-			col.label(text=env._("Rig Folder"))
+			col.label(text="Rig Folder")
 			col = split.column()
 			col.prop(self, "mob_path", text="")
 			split = util.layout_split(box, factor=factor_width)
 			col = split.column()
-			col.label(text=env._("Select/install mobs"))
+			col.label(text="Select/install mobs")
 			col = split.column()
 			col.operator(
-				"mcprep.mob_install_menu", text=env._("Install file for mob spawning"))
+				"mcprep.mob_install_menu", text="Install file for mob spawning")
 			col = split.column()
-			p = col.operator("mcprep.openfolder", text=env._("Open rig folder"))
+			p = col.operator("mcprep.openfolder", text="Open rig folder")
 			p.folder = self.mob_path
 
 			row = layout.row()
 			row.scale_y = 0.7
-			row.label(text=env._("Skin swapping"))
+			row.label(text="Skin swapping")
 			box = layout.box()
 			split = util.layout_split(box, factor=factor_width)
 			col = split.column()
-			col.label(text=env._("Skin Folder"))
+			col.label(text="Skin Folder")
 			col = split.column()
 			col.prop(self, "skin_path", text="")
 			split = util.layout_split(box, factor=factor_width)
 			col = split.column()
-			col.label(text=env._("Install skins"))
+			col.label(text="Install skins")
 			col = split.column()
-			col.operator("mcprep.add_skin", text=env._("Install skin file for swapping"))
+			col.operator("mcprep.add_skin", text="Install skin file for swapping")
 			col = split.column()
-			p = col.operator("mcprep.openfolder", text=env._("Open skin folder"))
+			p = col.operator("mcprep.openfolder", text="Open skin folder")
 			p.folder = self.skin_path
 
 			row = layout.row()
 			row.scale_y = 0.7
-			row.label(text=env._("Effects"))
+			row.label(text="Effects")
 			box = layout.box()
 			split = util.layout_split(box, factor=factor_width)
 			col = split.column()
-			col.label(text=env._("Effect folder"))
+			col.label(text="Effect folder")
 			col = split.column()
 			col.prop(self, "effects_path", text="")
 			split = util.layout_split(box, factor=factor_width)
 			col = split.column()
 			col = split.column()
-			p = col.operator("mcprep.openfolder", text=env._("Open effects folder"))
+			p = col.operator("mcprep.openfolder", text="Open effects folder")
 			p.folder = self.effects_path
 
 			# misc settings
@@ -639,18 +640,18 @@ class McprepPreference(bpy.types.AddonPreferences):
 				row = layout.row()
 				box = row.box()
 				box.scale_y = 0.7
-				box.label(text=env._("Using MCprep in experimental mode!"), icon="ERROR")
-				box.label(text=env._("Early access features and requests for feedback"))
-				box.label(text=env._("will be made visible. Thank you for contributing."))
+				box.label(text="Using MCprep in experimental mode!", icon="ERROR")
+				box.label(text="Early access features and requests for feedback")
+				box.label(text="will be made visible. Thank you for contributing.")
 
 		elif self.preferences_tab == "tutorials":
 			layout.label(
-				text=env._("Unsure on how to use the addon? Check out these resources"))
+				text="Unsure on how to use the addon? Check out these resources")
 			row = layout.row()
 			row.scale_y = 2
 			row.operator(
 				"wm.url_open",
-				text=env._("MCprep page for instructions and updates"),
+				text="MCprep page for instructions and updates",
 				icon="WORLD"
 			).url = "https://theduckcow.com/dev/blender/mcprep/"
 
@@ -658,32 +659,32 @@ class McprepPreference(bpy.types.AddonPreferences):
 			row.scale_y = 2
 			row.operator(
 				"wm.url_open",
-				text=env._("Learn MCprep + Blender, 1-minute tutorials"),
+				text="Learn MCprep + Blender, 1-minute tutorials",
 				icon="FILE_MOVIE"
 			).url = "https://bit.ly/MCprepTutorials"
 
 			row = layout.row()
 			row.scale_y = 1.5
 			row.operator(
-				"wm.url_open", text=env._("Import Minecraft worlds")
+				"wm.url_open", text="Import Minecraft worlds"
 			).url = "https://theduckcow.com/dev/blender/mcprep/mcprep-minecraft-world-imports/"
 			row.operator(
-				"wm.url_open", text=env._("Mob (rig) spawning")
+				"wm.url_open", text="Mob (rig) spawning"
 			).url = "https://theduckcow.com/dev/blender/mcprep/mcprep-spawner/"
 			row.operator(
-				"wm.url_open", text=env._("Skin swapping")
+				"wm.url_open", text="Skin swapping"
 			).url = "https://theduckcow.com/dev/blender/mcprep/skin-swapping/"
 
 			row = layout.row()
 			row.scale_y = 1.5
 			row.operator(
-				"wm.url_open", text=env._("jmc2obj/Mineways")
+				"wm.url_open", text="jmc2obj/Mineways"
 			).url = "https://theduckcow.com/dev/blender/mcprep/setup-world-exporters/"
 			row.operator(
-				"wm.url_open", text=env._("World Tools")
+				"wm.url_open", text="World Tools"
 			).url = "https://theduckcow.com/dev/blender/mcprep/world-tools/"
 			row.operator(
-				"wm.url_open", text=env._("Tutorial Series")
+				"wm.url_open", text="Tutorial Series"
 			).url = "https://bit.ly/MCprepTutorials"
 
 		elif self.preferences_tab == "tracker_updater":
@@ -691,7 +692,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 			row = layout.row()
 			box = row.box()
 			brow = box.row()
-			brow.label(text=env._("Anonymous user tracking settings"))
+			brow.label(text="Anonymous user tracking settings")
 
 			brow = box.row()
 			bcol = brow.column()
@@ -700,19 +701,19 @@ class McprepPreference(bpy.types.AddonPreferences):
 			if tracking.Tracker.tracking_enabled is False:
 				bcol.operator(
 					"mcprep.toggle_enable_tracking",
-					text=env._("Opt into anonymous usage tracking"),
+					text="Opt into anonymous usage tracking",
 					icon=OPT_IN)
 			else:
 				bcol.operator(
 					"mcprep.toggle_enable_tracking",
-					text=env._("Opt OUT of anonymous usage tracking"),
+					text="Opt OUT of anonymous usage tracking",
 					icon="CANCEL")
 
 			bcol = brow.column()
-			bcol.label(text=env._("For info on anonymous usage tracking:"))
+			bcol.label(text="For info on anonymous usage tracking:")
 			brow = box.row()
 			bcol.operator(
-				"wm.url_open", text=env._("Open the Privacy Policy")
+				"wm.url_open", text="Open the Privacy Policy"
 			).url = "https://theduckcow.com/privacy-policy"
 
 			# updater draw function
@@ -721,7 +722,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 
 class MCPREP_PT_world_imports(bpy.types.Panel):
 	"""World importing related settings and tools"""
-	bl_label = env._("World Imports")
+	bl_label = "World Imports"
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'UI'
 	# bl_context = "objectmode"
@@ -744,7 +745,7 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		split = layout.split()
 		col = split.column(align=True)
 		row = col.row()
-		row.label(text=env._("World exporter"))
+		row.label(text="World exporter")
 		row.operator(
 			"mcprep.open_help", text="", icon="QUESTION", emboss=False
 		).url = "https://theduckcow.com/dev/blender/mcprep/mcprep-minecraft-world-imports/"
@@ -755,7 +756,7 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		row = col.row(align=True)
 		if addon_prefs.MCprep_exporter_type == "(choose)":
 			row.operator(
-				"mcprep.open_jmc2obj", text=env._("Select exporter!"), icon='ERROR')
+				"mcprep.open_jmc2obj", text="Select exporter!", icon='ERROR')
 			row.enabled = False
 		elif addon_prefs.MCprep_exporter_type == "Mineways":
 			row.operator("mcprep.open_mineways")
@@ -765,25 +766,25 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		wpath = addon_prefs.world_obj_path
 		col.operator(
 			"mcprep.import_world_split",
-			text=env._("OBJ world import")).filepath = wpath
+			text="OBJ world import").filepath = wpath
 
 		split = layout.split()
 		col = split.column(align=True)
-		col.label(text=env._("MCprep tools"))
-		col.operator("mcprep.prep_materials", text=env._("Prep Materials"))
+		col.label(text="MCprep tools")
+		col.operator("mcprep.prep_materials", text="Prep Materials")
 
 		if not util.is_atlas_export(context):
 			row = col.row()
 			row.operator(
 				"mcprep.open_help", text="", icon="QUESTION", emboss=False
 			).url = "https://github.com/TheDuckCow/MCprep/blob/master/docs/common_errors.md#common-error-messages-and-what-they-mean"
-			row.label(text=env._("OBJ incompatible with textureswap"))
+			row.label(text="OBJ incompatible with textureswap")
 		p = col.operator("mcprep.swap_texture_pack")
 		p.filepath = context.scene.mcprep_texturepack_path
 		if context.mode == "OBJECT":
-			col.operator("mcprep.meshswap", text=env._("Mesh Swap"))
+			col.operator("mcprep.meshswap", text="Mesh Swap")
 			if addon_prefs.MCprep_exporter_type == "(choose)":
-				col.label(text=env._("Select exporter!"), icon='ERROR')
+				col.label(text="Select exporter!", icon='ERROR')
 		if context.mode == 'EDIT_MESH':
 			col.operator("mcprep.scale_uv")
 			col.operator("mcprep.select_alpha_faces")
@@ -803,31 +804,43 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			row.enabled = False
 			row.operator(
 				"mcprep.improve_ui",
-				text=env._("(UI already improved)"), icon='SETTINGS')
+				text="(UI already improved)", icon='SETTINGS')
 		else:
 			col.operator(
-				"mcprep.improve_ui", text=env._("Improve UI"), icon='SETTINGS')
+				"mcprep.improve_ui", text="Improve UI", icon='SETTINGS')
+
+		# Optimizer Panel (only for blender 2.80+)
+		row = col.row(align=True)
+		icon = "TRIA_DOWN" if scn_props.show_settings_optimizer else "TRIA_RIGHT"
+		row.prop(
+			scn_props, "show_settings_optimizer",
+			text="Cycles Optimizer (Deprecated)", icon=icon)
+		if scn_props.show_settings_optimizer:
+			row = col.row(align=True)
+			row.label(text="The Cycles optimizer will be removed in 3.6!")
+			row = col.row(align=True)
+			optimize_scene.panel_draw(context, row)
 
 		# Advanced settings.
 		row = col.row(align=True)
 		if not scn_props.show_settings_material:
 			row.prop(
 				scn_props, "show_settings_material",
-				text=env._("Advanced"), icon="TRIA_RIGHT")
+				text="Advanced", icon="TRIA_RIGHT")
 			row.operator(
 				"mcprep.open_preferences",
 				text="", icon="PREFERENCES").tab = "settings"
 		else:
 			row.prop(
 				scn_props, "show_settings_material",
-				text=env._("Advanced"), icon="TRIA_DOWN")
+				text="Advanced", icon="TRIA_DOWN")
 			row.operator(
 				"mcprep.open_preferences",
 				text="", icon="PREFERENCES").tab = "settings"
 			box = col.box()
 			b_row = box.row()
 			b_col = b_row.column(align=False)
-			b_col.label(text=env._("Texture pack folder"))
+			b_col.label(text="Texture pack folder")
 			row = b_col.row(align=True)
 			row.prop(context.scene, "mcprep_texturepack_path", text="")
 			row.operator("mcprep.reset_texture_path", text="", icon=LOAD_FACTORY)
@@ -843,19 +856,19 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			# TODO: operator to make all local, all packed, or set to other location
 			b_col.operator(
 				"mcprep.combine_materials",
-				text=env._("Combine Materials")).selection_only = True
+				text="Combine Materials").selection_only = True
 			if bpy.app.version > (2, 77):
-				b_col.operator("mcprep.combine_images", text=env._("Combine Images"))
+				b_col.operator("mcprep.combine_images", text="Combine Images")
 
-			b_col.label(text=env._("Meshswap source:"))
+			b_col.label(text="Meshswap source:")
 			subrow = b_col.row(align=True)
 			subrow.prop(context.scene, "meshswap_path", text="")
 			subrow.operator(
 				"mcprep.meshswap_path_reset", icon=LOAD_FACTORY, text="")
 			if not context.scene.meshswap_path.lower().endswith('.blend'):
-				b_col.label(text=env._("MeshSwap file must be .blend"), icon="ERROR")
+				b_col.label(text="MeshSwap file must be .blend", icon="ERROR")
 			if not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
-				b_col.label(text=env._("MeshSwap file not found"), icon="ERROR")
+				b_col.label(text="MeshSwap file not found", icon="ERROR")
 
 		layout = self.layout  # clear out the box formatting
 		split = layout.split()
@@ -864,7 +877,7 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 
 class MCPREP_PT_bridge(bpy.types.Panel):
 	"""MCprep panel for directly importing and reloading minecraft saves"""
-	bl_label = env._("World Bridge")
+	bl_label = "World Bridge"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'UI'
 	bl_context = "objectmode"
@@ -881,7 +894,7 @@ class MCPREP_PT_bridge(bpy.types.Panel):
 
 class MCPREP_PT_world_tools(bpy.types.Panel):
 	"""World settings and tools"""
-	bl_label = env._("World Tools")
+	bl_label = "World Tools"
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'UI'	
 	bl_category = "MCprep"
@@ -895,7 +908,7 @@ class MCPREP_PT_world_tools(bpy.types.Panel):
 		rw = layout.row()
 		col = rw.column()
 		row = col.row(align=True)
-		row.label(text=env._("World settings and lighting"))  # world time
+		row.label(text="World settings and lighting")  # world time
 		row.operator(
 			"mcprep.open_help", text="", icon="QUESTION", emboss=False
 		).url = "https://theduckcow.com/dev/blender/mcprep/world-tools/"
@@ -910,14 +923,14 @@ class MCPREP_PT_world_tools(bpy.types.Panel):
 		rw = layout.row()
 		col = rw.column(align=True)
 		obj = world_tools.get_time_object()
-		col.label(text=env._("Time of day"))
+		col.label(text="Time of day")
 		if obj and "MCprepHour" in obj:
 			time = obj["MCprepHour"]
 			col.prop(
 				obj,
 				'["MCprepHour"]',
 				text="")
-			col.label(text=env._("{h}:{m}, day {d}").format(
+			col.label(text="{h}:{m}, day {d}".format(
 				h=str(int(time % 24 - time % 1)).zfill(2),
 				m=str(int(time % 1 * 60)).zfill(2),
 				d=int((time - time % 24) / 24)
@@ -926,17 +939,17 @@ class MCPREP_PT_world_tools(bpy.types.Panel):
 			box = col.box()
 			subcol = box.column()
 			subcol.scale_y = 0.8
-			subcol.label(text=env._("No time controller,"))
-			subcol.label(text=env._("add dynamic MC world."))
-		# col.label(text=env._("World setup"))
+			subcol.label(text="No time controller,")
+			subcol.label(text="add dynamic MC world.")
+		# col.label(text="World setup")
 		# col.operator("mcprep.world")
-		# col.operator("mcprep.world", text=env._("Add clouds"))
-		# col.operator("mcprep.world", text=env._("Set Weather"))
+		# col.operator("mcprep.world", text="Add clouds")
+		# col.operator("mcprep.world", text="Set Weather")
 
 
 class MCPREP_PT_skins(bpy.types.Panel):
 	"""MCprep panel for skin swapping"""
-	bl_label = env._("Skin Swapper")
+	bl_label = "Skin Swapper"
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'UI'
 	bl_category = "MCprep"
@@ -953,7 +966,7 @@ class MCPREP_PT_skins(bpy.types.Panel):
 		skinname = None
 
 		row = layout.row()
-		row.label(text=env._("Select skin"))
+		row.label(text="Select skin")
 		row.operator(
 			"mcprep.open_help", text="", icon="QUESTION", emboss=False
 		).url = "https://theduckcow.com/dev/blender/mcprep/skin-swapping/"
@@ -970,14 +983,14 @@ class MCPREP_PT_skins(bpy.types.Panel):
 		# any other conditions for needing reloading?
 		if not env.skin_list:
 			col = layout.column()
-			col.label(text=env._("No skins found/loaded"))
+			col.label(text="No skins found/loaded")
 			p = col.operator(
-				"mcprep.reload_skins", text=env._("Press to reload"), icon="ERROR")
+				"mcprep.reload_skins", text="Press to reload", icon="ERROR")
 		elif env.skin_list and len(env.skin_list) <= sind:
 			col = layout.column()
-			col.label(text=env._("Reload skins"))
+			col.label(text="Reload skins")
 			p = col.operator(
-				"mcprep.reload_skins", text=env._("Press to reload"), icon="ERROR")
+				"mcprep.reload_skins", text="Press to reload", icon="ERROR")
 		else:
 			col.template_list(
 				"MCPREP_UL_skins", "",
@@ -995,11 +1008,11 @@ class MCPREP_PT_skins(bpy.types.Panel):
 				p.filepath = env.skin_list[sind][1]
 			else:
 				row.enabled = False
-				p = row.operator("mcprep.skin_swapper", text=env._("No skins found"))
+				p = row.operator("mcprep.skin_swapper", text="No skins found")
 			row = col.row(align=True)
-			row.operator("mcprep.skin_swapper", text=env._("Skin from file"))
+			row.operator("mcprep.skin_swapper", text="Skin from file")
 			row = col.row(align=True)
-			row.operator("mcprep.applyusernameskin", text=env._("Skin from username"))
+			row.operator("mcprep.applyusernameskin", text="Skin from username")
 
 		split = layout.split()
 		col = split.column(align=True)
@@ -1007,20 +1020,20 @@ class MCPREP_PT_skins(bpy.types.Panel):
 		if not scn_props.show_settings_skin:
 			row.prop(
 				scn_props, "show_settings_skin",
-				text=env._("Advanced"), icon="TRIA_RIGHT")
+				text="Advanced", icon="TRIA_RIGHT")
 			row.operator(
 				"mcprep.open_preferences",
 				text="", icon="PREFERENCES").tab = "settings"
 		else:
 			row.prop(
 				scn_props, "show_settings_skin",
-				text=env._("Advanced"), icon="TRIA_DOWN")
+				text="Advanced", icon="TRIA_DOWN")
 			row.operator(
 				"mcprep.open_preferences",
 				text="", icon="PREFERENCES").tab = "settings"
 			box = col.box()
 			b_row = box.column(align=True)
-			b_row.label(text=env._("Skin path"))
+			b_row.label(text="Skin path")
 			b_subrow = b_row.row(align=True)
 			b_subrow.prop(context.scene, "mcprep_skin_path", text="")
 			b_subrow.operator(
@@ -1034,11 +1047,11 @@ class MCPREP_PT_skins(bpy.types.Panel):
 				if not scn_props.mob_list:
 					row.enabled = False
 					row.operator(
-						"mcprep.spawn_with_skin", text=env._("Reload mobs below"))
+						"mcprep.spawn_with_skin", text="Reload mobs below")
 				elif not env.skin_list:
 					row.enabled = False
 					row.operator(
-						"mcprep.spawn_with_skin", text=env._("Reload skins above"))
+						"mcprep.spawn_with_skin", text="Reload skins above")
 				else:
 					name = scn_props.mob_list[mob_ind].name
 					# datapass = scn_props.mob_list[mob_ind].mcmob_type
@@ -1048,7 +1061,7 @@ class MCPREP_PT_skins(bpy.types.Panel):
 
 class MCPREP_PT_materials(bpy.types.Panel):
 	"""MCprep panel for materials"""
-	bl_label = env._("MCprep materials")
+	bl_label = "MCprep materials"
 	bl_space_type = "PROPERTIES"
 	bl_region_type = 'WINDOW'
 	bl_context = "material"
@@ -1082,7 +1095,7 @@ class MCPREP_PT_materials(bpy.types.Panel):
 		else:
 			box = col.box()
 			b_row = box.row()
-			b_row.label(text=env._("No materials loaded"))
+			b_row.label(text="No materials loaded")
 			b_row = box.row()
 			b_row.scale_y = 2
 			b_row.operator("mcprep.reload_materials", icon="ERROR")
@@ -1091,12 +1104,12 @@ class MCPREP_PT_materials(bpy.types.Panel):
 			col.enabled = False
 			row = col.row(align=True)
 			row.scale_y = 1.5
-			ops = row.operator("mcprep.load_material", text=env._("Load material"))
+			ops = row.operator("mcprep.load_material", text="Load material")
 
 
 class MCPREP_PT_materials_subsettings(bpy.types.Panel):
 	"""MCprep panel for advanced material settings and functions"""
-	bl_label = env._("Advanced")
+	bl_label = "Advanced"
 	bl_parent_id = "MCPREP_PT_materials"
 	bl_space_type = "PROPERTIES"
 	bl_region_type = 'WINDOW'
@@ -1109,7 +1122,7 @@ class MCPREP_PT_materials_subsettings(bpy.types.Panel):
 
 		b_row = self.layout.row()
 		b_col = b_row.column(align=False)
-		b_col.label(text=env._("Resource pack"))
+		b_col.label(text="Resource pack")
 		subrow = b_col.row(align=True)
 		subrow.prop(context.scene, "mcprep_texturepack_path", text="")
 		subrow.operator(
@@ -1125,8 +1138,8 @@ class MCPREP_PT_materials_subsettings(bpy.types.Panel):
 
 def draw_mode_warning(ui_element: UILayout) -> None:
 	col = ui_element.column(align=True)
-	col.label(text=env._("Enter object mode"), icon="ERROR")
-	col.label(text=env._("to use spawner"), icon="BLANK1")
+	col.label(text="Enter object mode", icon="ERROR")
+	col.label(text="to use spawner", icon="BLANK1")
 	col.operator("object.mode_set").mode = "OBJECT"
 	col.label(text="")
 
@@ -1135,7 +1148,7 @@ def mob_spawner(self, context: Context) -> None:
 	scn_props = context.scene.mcprep_props
 
 	layout = self.layout
-	layout.label(text=env._("Import pre-rigged mobs & players"))
+	layout.label(text="Import pre-rigged mobs & players")
 	split = layout.split()
 	col = split.column(align=True)
 
@@ -1154,19 +1167,19 @@ def mob_spawner(self, context: Context) -> None:
 		b_row.label(text="")
 		b_col = box.column()
 		b_col.scale_y = 0.7
-		b_col.label(text=env._("No mobs in category,"))
-		b_col.label(text=env._("install a rig below or"))
-		b_col.label(text=env._("copy file to folder."))
+		b_col.label(text="No mobs in category,")
+		b_col.label(text="install a rig below or")
+		b_col.label(text="copy file to folder.")
 		b_row = box.row()
 		b_row.label(text="")
 	else:
 		box = col.box()
 		b_row = box.row()
-		b_row.label(text=env._("No mobs loaded"))
+		b_row.label(text="No mobs loaded")
 		b_row = box.row()
 		b_row.scale_y = 2
 		b_row.operator(
-			"mcprep.reload_spawners", text=env._("Reload assets"), icon="ERROR")
+			"mcprep.reload_spawners", text="Reload assets", icon="ERROR")
 
 	# get which rig is selected
 	if scn_props.mob_list:
@@ -1196,28 +1209,28 @@ def mob_spawner(self, context: Context) -> None:
 	if not scn_props.show_settings_spawner:
 		row.prop(
 			scn_props, "show_settings_spawner",
-			text=env._("Advanced"), icon="TRIA_RIGHT")
+			text="Advanced", icon="TRIA_RIGHT")
 		row.operator(
 			"mcprep.open_preferences",
 			text="", icon="PREFERENCES").tab = "settings"
 	else:
 		row.prop(
 			scn_props, "show_settings_spawner",
-			text=env._("Advanced"), icon="TRIA_DOWN")
+			text="Advanced", icon="TRIA_DOWN")
 		row.operator(
 			"mcprep.open_preferences",
 			text="", icon="PREFERENCES").tab = "settings"
 		box = col.box()
 		b_row = box.row()
 		b_col = b_row.column(align=False)
-		b_col.label(text=env._("Mob spawner folder"))
+		b_col.label(text="Mob spawner folder")
 		subrow = b_col.row(align=True)
 		subrow.prop(context.scene, "mcprep_mob_path", text="")
 		subrow.operator(
 			"mcprep.spawn_path_reset", icon=LOAD_FACTORY, text="")
 		b_row = box.row()
 		b_col = b_row.column(align=True)
-		ops = b_col.operator("mcprep.openfolder", text=env._("Open mob folder"))
+		ops = b_col.operator("mcprep.openfolder", text="Open mob folder")
 		ops.folder = context.scene.mcprep_mob_path
 
 		if not scn_props.mob_list:
@@ -1226,11 +1239,11 @@ def mob_spawner(self, context: Context) -> None:
 			icon_index = scn_props.mob_list[scn_props.mob_list_index].index
 			if f"mob-{icon_index}" in env.preview_collections["mobs"]:
 				b_col.operator(
-					"mcprep.mob_install_icon", text=env._("Change mob icon"))
+					"mcprep.mob_install_icon", text="Change mob icon")
 			else:
 				b_col.operator("mcprep.mob_install_icon")
 		b_col.operator("mcprep.mob_uninstall")
-		b_col.operator("mcprep.reload_mobs", text=env._("Reload mobs"))
+		b_col.operator("mcprep.reload_mobs", text="Reload mobs")
 		b_col.label(text=mcmob_type)
 
 
@@ -1238,7 +1251,7 @@ def meshswap_spawner(self, context: Context) -> None:
 	scn_props = context.scene.mcprep_props
 
 	layout = self.layout
-	layout.label(text=env._("Import pre-made blocks (e.g. lights)"))
+	layout.label(text="Import pre-made blocks (e.g. lights)")
 	split = layout.split()
 	col = split.column(align=True)
 
@@ -1252,30 +1265,30 @@ def meshswap_spawner(self, context: Context) -> None:
 	elif not context.scene.meshswap_path.lower().endswith('.blend'):
 		box = col.box()
 		b_row = box.row()
-		b_row.label(text=env._("Meshswap file must be a .blend"))
+		b_row.label(text="Meshswap file must be a .blend")
 		b_row = box.row()
 		b_row.scale_y = 2
 		b_row.operator(
 			"mcprep.meshswap_path_reset", icon=LOAD_FACTORY,
-			text=env._("Reset meshswap path"))
+			text="Reset meshswap path")
 	elif not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
 		box = col.box()
 		b_row = box.row()
-		b_row.label(text=env._("Meshswap file not found"))
+		b_row.label(text="Meshswap file not found")
 		b_row = box.row()
 		b_row.scale_y = 2
 		b_row.operator(
 			"mcprep.meshswap_path_reset", icon=LOAD_FACTORY,
-			text=env._("Reset meshswap path"))
+			text="Reset meshswap path")
 	else:
 		box = col.box()
 		b_row = box.row()
-		b_row.label(text=env._("No blocks loaded"))
+		b_row.label(text="No blocks loaded")
 		b_row = box.row()
 		b_row.scale_y = 2
 		b_row.operator(
 			"mcprep.reload_spawners",
-			text=env._("Reload assets"), icon="ERROR")
+			text="Reload assets", icon="ERROR")
 
 	col = layout.column(align=True)
 	row = col.row()
@@ -1294,7 +1307,7 @@ def meshswap_spawner(self, context: Context) -> None:
 			p.make_real = True
 
 	else:
-		row.operator("mcprep.meshswap_spawner", text=env._("Place block"))
+		row.operator("mcprep.meshswap_spawner", text="Place block")
 	# something to directly open meshswap file??
 
 	split = layout.split()
@@ -1304,24 +1317,24 @@ def meshswap_spawner(self, context: Context) -> None:
 	if not scn_props.show_settings_spawner:
 		col.prop(
 			scn_props, "show_settings_spawner",
-			text=env._("Advanced"), icon="TRIA_RIGHT")
+			text="Advanced", icon="TRIA_RIGHT")
 	else:
 		col.prop(
 			scn_props,
 			"show_settings_spawner",
-			text=env._("Advanced"), icon="TRIA_DOWN")
+			text="Advanced", icon="TRIA_DOWN")
 		box = col.box()
 		b_row = box.row()
 		b_col = b_row.column(align=False)
-		b_col.label(text=env._("Meshswap file"))
+		b_col.label(text="Meshswap file")
 		subrow = b_col.row(align=True)
 		subrow.prop(context.scene, "meshswap_path", text="")
 		subrow.operator(
 			"mcprep.meshswap_path_reset", icon=LOAD_FACTORY, text="")
 		if not context.scene.meshswap_path.lower().endswith('.blend'):
-			b_col.label(text=env._("MeshSwap file must be a .blend"), icon="ERROR")
+			b_col.label(text="MeshSwap file must be a .blend", icon="ERROR")
 		elif not os.path.isfile(bpy.path.abspath(context.scene.meshswap_path)):
-			b_col.label(text=env._("MeshSwap file not found"), icon="ERROR")
+			b_col.label(text="MeshSwap file not found", icon="ERROR")
 		b_row = box.row()
 		b_col = b_row.column(align=True)
 		b_col.operator("mcprep.reload_meshswap")
@@ -1332,7 +1345,7 @@ def item_spawner(self, context: Context) -> None:
 	scn_props = context.scene.mcprep_props
 	
 	layout = self.layout
-	layout.label(text=env._("Generate items from textures"))
+	layout.label(text="Generate items from textures")
 	split = layout.split()
 	col = split.column(align=True)
 
@@ -1352,18 +1365,18 @@ def item_spawner(self, context: Context) -> None:
 	else:
 		box = col.box()
 		b_row = box.row()
-		b_row.label(text=env._("No items loaded"))
+		b_row.label(text="No items loaded")
 		b_row = box.row()
 		b_row.scale_y = 2
 		b_row.operator(
 			"mcprep.reload_spawners",
-			text=env._("Reload assets"), icon="ERROR")
+			text="Reload assets", icon="ERROR")
 
 		col = layout.column(align=True)
 		col.enabled = False
 		row = col.row(align=True)
 		row.scale_y = 1.5
-		row.operator("mcprep.spawn_item", text=env._("Place item"))
+		row.operator("mcprep.spawn_item", text="Place item")
 		row = col.row(align=True)
 		row.operator("mcprep.spawn_item_file")
 
@@ -1374,15 +1387,15 @@ def item_spawner(self, context: Context) -> None:
 	if not scn_props.show_settings_spawner:
 		col.prop(
 			scn_props, "show_settings_spawner",
-			text=env._("Advanced"), icon="TRIA_RIGHT")
+			text="Advanced", icon="TRIA_RIGHT")
 	else:
 		col.prop(
 			scn_props, "show_settings_spawner",
-			text=env._("Advanced"), icon="TRIA_DOWN")
+			text="Advanced", icon="TRIA_DOWN")
 		box = col.box()
 		b_row = box.row()
 		b_col = b_row.column(align=False)
-		b_col.label(text=env._("Resource pack"))
+		b_col.label(text="Resource pack")
 		subrow = b_col.row(align=True)
 		subrow.prop(context.scene, "mcprep_texturepack_path", text="")
 		subrow.operator(
@@ -1396,7 +1409,7 @@ def entity_spawner(self, context: Context) -> None:
 	scn_props = context.scene.mcprep_props
 
 	layout = self.layout
-	layout.label(text=env._("Import pre-rigged entities"))
+	layout.label(text="Import pre-rigged entities")
 	split = layout.split()
 	col = split.column(align=True)
 
@@ -1410,30 +1423,30 @@ def entity_spawner(self, context: Context) -> None:
 	elif not context.scene.entity_path.lower().endswith('.blend'):
 		box = col.box()
 		b_row = box.row()
-		b_row.label(text=env._("Entity file must be a .blend"))
+		b_row.label(text="Entity file must be a .blend")
 		b_row = box.row()
 		b_row.scale_y = 2
 		b_row.operator(
 			"mcprep.entity_path_reset", icon=LOAD_FACTORY,
-			text=env._("Reset entity path"))
+			text="Reset entity path")
 	elif not os.path.isfile(bpy.path.abspath(context.scene.entity_path)):
 		box = col.box()
 		b_row = box.row()
-		b_row.label(text=env._("Entity file not found"))
+		b_row.label(text="Entity file not found")
 		b_row = box.row()
 		b_row.scale_y = 2
 		b_row.operator(
 			"mcprep.entity_path_reset", icon=LOAD_FACTORY,
-			text=env._("Reset entity path"))
+			text="Reset entity path")
 	else:
 		box = col.box()
 		b_row = box.row()
-		b_row.label(text=env._("No entities loaded"))
+		b_row.label(text="No entities loaded")
 		b_row = box.row()
 		b_row.scale_y = 2
 		b_row.operator(
 			"mcprep.reload_spawners",
-			text=env._("Reload assets"), icon="ERROR")
+			text="Reload assets", icon="ERROR")
 
 	col = layout.column(align=True)
 	row = col.row()
@@ -1445,7 +1458,7 @@ def entity_spawner(self, context: Context) -> None:
 		p = row.operator("mcprep.entity_spawner", text=f"Spawn: {name}")
 		p.entity = entity
 	else:
-		row.operator("mcprep.entity_spawner", text=env._("Spawn Entity"))
+		row.operator("mcprep.entity_spawner", text="Spawn Entity")
 
 	split = layout.split()
 	col = split.column(align=True)
@@ -1454,22 +1467,22 @@ def entity_spawner(self, context: Context) -> None:
 	if not scn_props.show_settings_spawner:
 		col.prop(
 			scn_props, "show_settings_spawner",
-			text=env._("Advanced"), icon="TRIA_RIGHT")
+			text="Advanced", icon="TRIA_RIGHT")
 	else:
 		col.prop(
 			scn_props, "show_settings_spawner",
-			text=env._("Advanced"), icon="TRIA_DOWN")
+			text="Advanced", icon="TRIA_DOWN")
 		box = col.box()
 		b_row = box.row()
 		b_col = b_row.column(align=False)
-		b_col.label(text=env._("Entity file"))
+		b_col.label(text="Entity file")
 		subrow = b_col.row(align=True)
 		subrow.prop(context.scene, "entity_path", text="")
 		subrow.operator("mcprep.entity_path_reset", icon=LOAD_FACTORY, text="")
 		if not context.scene.entity_path.lower().endswith('.blend'):
-			b_col.label(text=env._("MeshSwap file must be a .blend"), icon="ERROR")
+			b_col.label(text="MeshSwap file must be a .blend", icon="ERROR")
 		elif not os.path.isfile(bpy.path.abspath(context.scene.entity_path)):
-			b_col.label(text=env._("MeshSwap file not found"), icon="ERROR")
+			b_col.label(text="MeshSwap file not found", icon="ERROR")
 		b_row = box.row()
 		b_col = b_row.column(align=True)
 		b_col.operator("mcprep.reload_entities")
@@ -1481,7 +1494,7 @@ def model_spawner(self, context: Context) -> None:
 	addon_prefs = util.get_user_preferences(context)
 
 	layout = self.layout
-	layout.label(text=env._("Generate models from .json files"))
+	layout.label(text="Generate models from .json files")
 	split = layout.split()
 	col = split.column(align=True)
 
@@ -1506,12 +1519,12 @@ def model_spawner(self, context: Context) -> None:
 	else:
 		box = col.box()
 		b_row = box.row()
-		b_row.label(text=env._("No models loaded"))
+		b_row.label(text="No models loaded")
 		b_row = box.row()
 		b_row.scale_y = 2
 		b_row.operator(
 			"mcprep.reload_spawners",
-			text=env._("Reload assets"), icon="ERROR")
+			text="Reload assets", icon="ERROR")
 
 		col = layout.column(align=True)
 		row = col.row(align=True)
@@ -1533,15 +1546,15 @@ def model_spawner(self, context: Context) -> None:
 	if not scn_props.show_settings_spawner:
 		col.prop(
 			scn_props, "show_settings_spawner",
-			text=env._("Advanced"), icon="TRIA_RIGHT")
+			text="Advanced", icon="TRIA_RIGHT")
 	else:
 		col.prop(
 			scn_props, "show_settings_spawner",
-			text=env._("Advanced"), icon="TRIA_DOWN")
+			text="Advanced", icon="TRIA_DOWN")
 		box = col.box()
 		b_row = box.row()
 		b_col = b_row.column(align=False)
-		b_col.label(text=env._("Resource pack"))
+		b_col.label(text="Resource pack")
 		subrow = b_col.row(align=True)
 		subrow.prop(context.scene, "mcprep_texturepack_path", text="")
 		subrow.operator(
@@ -1557,7 +1570,7 @@ def effects_spawner(self, context: Context) -> None:
 
 	layout = self.layout
 	col = layout.column(align=True)
-	col.label(text=env._("Load/generate effects"))
+	col.label(text="Load/generate effects")
 
 	# Alternate draw approach, using UI list.
 	if scn_props.effects_list:
@@ -1583,18 +1596,18 @@ def effects_spawner(self, context: Context) -> None:
 	else:
 		box = col.box()
 		b_row = box.row()
-		b_row.label(text=env._("No effects loaded"))
+		b_row.label(text="No effects loaded")
 		b_row = box.row()
 		b_row.scale_y = 2
 		b_row.operator(
 			"mcprep.reload_spawners",
-			text=env._("Reload assets"), icon="ERROR")
+			text="Reload assets", icon="ERROR")
 
 		col = layout.column(align=True)
 		row = col.row(align=True)
 		row.scale_y = 1.5
 		row.enabled = False
-		row.operator("mcprep.spawn_item", text=env._("Add effect"))
+		row.operator("mcprep.spawn_item", text="Add effect")
 	row = col.row(align=True)
 	ops = row.operator("mcprep.spawn_particle_planes")
 	ops.location = util.get_cursor_location(context)
@@ -1622,33 +1635,33 @@ def effects_spawner(self, context: Context) -> None:
 	if not scn_props.show_settings_effect:
 		col.prop(
 			scn_props, "show_settings_effect",
-			text=env._("Advanced"), icon="TRIA_RIGHT")
+			text="Advanced", icon="TRIA_RIGHT")
 	else:
 		col.prop(
 			scn_props, "show_settings_effect",
-			text=env._("Advanced"), icon="TRIA_DOWN")
+			text="Advanced", icon="TRIA_DOWN")
 		box = col.box()
 		b_row = box.row()
 		b_col = b_row.column(align=False)
-		b_col.label(text=env._("Effects folder"))
+		b_col.label(text="Effects folder")
 		subrow = b_col.row(align=True)
 		subrow.prop(context.scene, "mcprep_effects_path", text="")
 		subrow.operator("mcprep.effects_path_reset", icon=LOAD_FACTORY, text="")
 
-		box.label(text=env._("Texture pack folder"))
+		box.label(text="Texture pack folder")
 		row = box.row(align=True)
 		row.prop(context.scene, "mcprep_texturepack_path", text="")
 		row.operator("mcprep.reset_texture_path", text="", icon=LOAD_FACTORY)
 
 		base = bpy.path.abspath(context.scene.mcprep_effects_path)
 		if not os.path.isdir(base):
-			b_col.label(text=env._("Effects folder not found"), icon="ERROR")
+			b_col.label(text="Effects folder not found", icon="ERROR")
 		elif not os.path.isdir(os.path.join(base, "collection")):
-			b_col.label(text=env._("Effects/collection folder not found"), icon="ERROR")
+			b_col.label(text="Effects/collection folder not found", icon="ERROR")
 		elif not os.path.isdir(os.path.join(base, "geonodes")):
-			b_col.label(text=env._("Effects/geonodes folder not found"), icon="ERROR")
+			b_col.label(text="Effects/geonodes folder not found", icon="ERROR")
 		elif not os.path.isdir(os.path.join(base, "particle")):
-			b_col.label(text=env._("Effects/particle folder not found"), icon="ERROR")
+			b_col.label(text="Effects/particle folder not found", icon="ERROR")
 		b_row = box.row()
 		b_col = b_row.column(align=True)
 		b_col.operator("mcprep.reload_effects")
@@ -1656,7 +1669,7 @@ def effects_spawner(self, context: Context) -> None:
 
 class MCPREP_PT_spawn(bpy.types.Panel):
 	"""MCprep panel for mob spawning"""
-	bl_label = env._("Spawner")
+	bl_label = "Spawner"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'UI'
 	bl_category = "MCprep"
@@ -1666,7 +1679,7 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 			restart_layout(self.layout)
 			return
 		row = self.layout.row(align=True)
-		row.label(text=env._("Click triangle to open"))
+		row.label(text="Click triangle to open")
 		ops = row.operator(
 			"mcprep.open_help", text="", icon="QUESTION", emboss=False)
 		ops.url = "https://theduckcow.com/dev/blender/mcprep/mcprep-spawner/"
@@ -1675,7 +1688,7 @@ class MCPREP_PT_spawn(bpy.types.Panel):
 
 class MCPREP_PT_mob_spawner(bpy.types.Panel):
 	"""MCprep panel for mob spawning"""
-	bl_label = env._("Mob spawner")
+	bl_label = "Mob spawner"
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'UI'	
@@ -1703,7 +1716,7 @@ class MCPREP_PT_mob_spawner(bpy.types.Panel):
 
 class MCPREP_PT_model_spawner(bpy.types.Panel):
 	"""MCprep panel for model/block spawning"""
-	bl_label = env._("Block (model) spawner")
+	bl_label = "Block (model) spawner"
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'UI'
@@ -1731,7 +1744,7 @@ class MCPREP_PT_model_spawner(bpy.types.Panel):
 
 class MCPREP_PT_item_spawner(bpy.types.Panel):
 	"""MCprep panel for item spawning"""
-	bl_label = env._("Item spawner")
+	bl_label = "Item spawner"
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'UI'
@@ -1760,7 +1773,7 @@ class MCPREP_PT_item_spawner(bpy.types.Panel):
 
 class MCPREP_PT_effects_spawner(bpy.types.Panel):
 	"""MCprep panel for effects spawning"""
-	bl_label = env._("Effects + weather")
+	bl_label = "Effects + weather"
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'UI'
@@ -1788,7 +1801,7 @@ class MCPREP_PT_effects_spawner(bpy.types.Panel):
 
 class MCPREP_PT_entity_spawner(bpy.types.Panel):
 	"""MCprep panel for entity spawning"""
-	bl_label = env._("Entity spawner")
+	bl_label = "Entity spawner"
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'UI'
@@ -1816,7 +1829,7 @@ class MCPREP_PT_entity_spawner(bpy.types.Panel):
 
 class MCPREP_PT_meshswap_spawner(bpy.types.Panel):
 	"""MCprep panel for meshswap spawning"""
-	bl_label = env._("Meshswap spawner")
+	bl_label = "Meshswap spawner"
 	bl_parent_id = "MCPREP_PT_spawn"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = 'UI'
@@ -1863,7 +1876,7 @@ def mcprep_uv_tools(self, context: Context) -> None:
 	"""Appended to UV tools in UV image editor tab, in object edit mode."""
 	layout = self.layout
 	layout.separator()
-	layout.label(text=env._("MCprep tools"))
+	layout.label(text="MCprep tools")
 	col = layout.column(align=True)
 	col.operator("mcprep.scale_uv")
 	col.operator("mcprep.select_alpha_faces")
@@ -1915,6 +1928,10 @@ class McprepProps(bpy.types.PropertyGroup):
 		default=False)
 	show_settings_skin: bpy.props.BoolProperty(
 		name="show skin settings",
+		description="Show extra MCprep panel settings",
+		default=False)
+	show_settings_optimizer: bpy.props.BoolProperty(
+		name="show optimizer settings",
 		description="Show extra MCprep panel settings",
 		default=False)
 	show_settings_spawner: bpy.props.BoolProperty(
