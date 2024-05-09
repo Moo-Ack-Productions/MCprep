@@ -517,9 +517,9 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 	@tracking.report_error
 	def execute(self, context):
 		tprep = time.time()
-		# TODO: Rework exporter tracking
-		# addon_prefs = util.get_user_preferences(context)
-		# self.track_exporter = addon_prefs.MCprep_exporter_type
+
+		# NOTE: This is temporary
+		self.track_exporter = addon_prefs.MCprep_exporter_type
 
 		direc = context.scene.meshswap_path
 		if not direc.lower().endswith('.blend'):
