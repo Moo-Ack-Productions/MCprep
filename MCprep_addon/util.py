@@ -39,7 +39,7 @@ from bpy.types import (
 )
 from mathutils import Vector, Matrix
 
-from .conf import env
+from .conf import MCprepError, env
 
 # Commonly used name for an excluded collection in Blender 2.8+
 SPAWNER_EXCLUDE = "Spawner Exclude"
@@ -48,31 +48,43 @@ SPAWNER_EXCLUDE = "Spawner Exclude"
 # GENERAL SUPPORTING FUNCTIONS (no registration required)
 # -----------------------------------------------------------------------------
 
-
-def apply_colorspace(node: Node, color_enum: Tuple) -> None:
-	"""Apply color space in a cross compatible way, for version and language.
-
-	Use enum nomeclature matching Blender 2.8x Default, not 2.7 or other lang
+def apply_noncolor_data(node: Node) -> Optional[MCprepError]:
 	"""
-	global noncolor_override
-	noncolor_override = None
+	Apply the Non-Color/Generic Data option to the passed
+	node in a way that is cross version compatible, as well as OCIO
+	config compatible in theory.
+	
+	Returns:
+		If success: None
+		If fail: 
+			All cases - MCprepError(TypeError)
+	"""
+	options: List[str] = []
+	if env.json_data:
+		options = env.json_data["non_color_options"]
 
 	if not node.image:
 		env.log("Node has no image applied yet, cannot change colorspace")
-
-	# For later 2.8, fix images color space user
-	if hasattr(node, "color_space"):  # 2.7 and earlier 2.8 versions
-		node.color_space = 'NONE'  # for better interpretation of specmaps
-	elif hasattr(node.image, "colorspace_settings"):  # later 2.8 versions
-		# try default 'Non-color', fall back to best guess 'Non-Colour Data'
-		if color_enum == 'Non-color' and noncolor_override is not None:
-			node.image.colorspace_settings.name = noncolor_override
-		else:
+	
+	# Blender 2.8+
+	if hasattr(node.image, "colorspace_settings"):
+		# Avoid hard-coding values into the 
+		# code so that users with non-standard
+		# setups can add whatever additional 
+		# options are needed for their OCIO
+		# setup
+		for opt in options:
 			try:
-				node.image.colorspace_settings.name = 'Non-Color'
-			except TypeError:
-				node.image.colorspace_settings.name = 'Non-Colour Data'
-				noncolor_override = 'Non-Colour Data'
+				node.image.colorspace_settings.name = opt
+				return None
+			except TypeError:	
+				continue
+	(lineno, file) = env.current_line_and_file()
+	return MCprepError(
+		TypeError("None of the non-color options work, add a new option to mcprep_data.json"),
+		lineno,
+		file
+	)
 
 
 def nameGeneralize(name: str) -> str:
@@ -453,7 +465,8 @@ def load_mcprep_json() -> bool:
 			"canon_mapping_block": {}
 		},
 		"mob_skip_prep": [],
-		"make_real": []
+		"make_real": [],
+		"non_color_options" : [],
 	}
 	if not os.path.isfile(path):
 		env.log(f"Error, json file does not exist: {path}")
