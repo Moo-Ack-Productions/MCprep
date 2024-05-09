@@ -266,8 +266,8 @@ def is_atlas_export(context: Context) -> bool:
 				file_types["ATLAS"] += 1
 			else:
 				file_types["INDIVIDUAL"] += 1
-		elif "COMMONMCOBJ_HEADER" in obj:
-			tex = CommonMCOBJTextureType[obj["texture_type"]]
+		elif "COMMONMCOBJ_HEADER" in obj and obj["PARENTED_EMPTY"] is not None:
+			tex = CommonMCOBJTextureType[obj["PARENTED_EMPTY"]["texture_type"]]
 			if tex is CommonMCOBJTextureType.ATLAS:
 				file_types["ATLAS"] += 1
 			elif tex is CommonMCOBJTextureType.INDIVIDUAL_TILES:

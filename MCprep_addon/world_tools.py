@@ -177,8 +177,8 @@ def get_exporter(context: Context) -> Optional[WorldExporter]:
 		return None
 
 	if "COMMONMCOBJ_HEADER" in obj:
-		if obj["exporter"] in EXPORTER_MAPPING:
-			return EXPORTER_MAPPING[obj["exporter"]]
+		if obj["PARENTED_EMPTY"] is not None and obj["PARENTED_EMPTY"]["exporter"] in EXPORTER_MAPPING:
+			return EXPORTER_MAPPING[obj["PARENTED_EMPTY"]["exporter"]]
 		else:
 			return WorldExporter.Unknown
 	elif "MCPREP_OBJ_HEADER" in obj:
@@ -704,18 +704,61 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 
 		if isinstance(header, ObjHeaderOptions):
 			prefs.MCprep_exporter_type = header.exporter()
+		
 
-		for obj in context.selected_objects:
-			if isinstance(header, CommonMCOBJ):
-				obj["COMMONMCOBJ_HEADER"] = True
-				for field in fields(header):
+		# Create empty at the center of the OBJ
+		if isinstance(header, CommonMCOBJ):
+			# Get actual 3D space coordinates of the full bounding box
+			#
+			# These are in Minecraft coordinates, so they translate
+			# from (X, Y, Z) to (X, -Z, Y)
+			max_pair =   (header.export_bounds_max[0]  + header.export_offset[0], 
+						(-header.export_bounds_max[2]) + (-header.export_offset[2]), 
+					 	  header.export_bounds_max[1]  + header.export_offset[1])
+
+			min_pair =   (header.export_bounds_min[0]  + header.export_offset[0], 
+						(-header.export_bounds_min[2]) + (-header.export_offset[2]), 
+						  header.export_bounds_min[1]  + header.export_offset[1])
+			
+			# Calculate the center of the bounding box
+			#
+			# We do this by taking the average of the given
+			# points, so:
+			# (x1 + x2) / 2
+			# (y1 + y2) / 2
+			# (z1 + z2) / 2
+			#
+			# This will give us the midpoints of these
+			# coordinates, which in turn will correspond
+			# to the center of the bounding box
+			location = ((max_pair[0] + min_pair[0]) / 2, 
+						(max_pair[1] + min_pair[1]) / 2, 
+						(max_pair[2] + min_pair[2]) / 2)
+			empty = bpy.data.objects.new(name=header.world_name + "_mcprep_empty", object_data=None)
+			bpy.context.collection.objects.link(empty)
+			empty.empty_display_size = 2
+			empty.empty_display_type = 'PLAIN_AXES'
+			empty.location = location
+			self.update_matrices(empty)
+			for field in fields(header):
 					if getattr(header, field.name) is None:
 						continue
 					if field.type == CommonMCOBJTextureType:
-						obj[field.name] = getattr(header, field.name).value	
+						empty[field.name] = getattr(header, field.name).value	
 					else:
-						obj[field.name] = getattr(header, field.name)
+						empty[field.name] = getattr(header, field.name)
 
+			
+		for obj in context.selected_objects:
+			if isinstance(header, CommonMCOBJ):
+				obj["COMMONMCOBJ_HEADER"] = True
+				objects = bpy.data.objects
+				empty = objects[header.world_name + "_mcprep_empty"]
+				obj["PARENTED_EMPTY"] = empty
+				obj.parent = empty
+				obj.matrix_parent_inverse = empty.matrix_world.inverted() # don't transform object
+				self.track_exporter = header.exporter
+				
 			elif isinstance(header, ObjHeaderOptions):
 				obj["MCPREP_OBJ_HEADER"] = True
 				obj["MCPREP_OBJ_FILE_TYPE"] = header.texture_type()
@@ -725,14 +768,22 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 				# option and by default use the object for 
 				# getting the exporter
 				obj["MCPREP_OBJ_EXPORTER"] = "mineways-c" if header.exporter() == "Mineways" else "jmc2obj-c"
+				self.track_exporter = addon_prefs.MCprep_exporter_type  # Soft detect.
 
 		self.split_world_by_material(context)
 
-		# TODO: figure out how we should 
-		# track exporters from here on out
-		# addon_prefs = util.get_user_preferences(context)
-		# self.track_exporter = addon_prefs.MCprep_exporter_type  # Soft detect.
 		return {'FINISHED'}
+
+	def update_matrices(self, obj):
+		"""Update mattrices of object so that we can accurately parent, 
+		because for some reason, Blender doesn't do this by default"""
+		if obj.parent is None:
+			obj.matrix_world = obj.matrix_basis
+
+		else:
+			obj.matrix_world = obj.parent.matrix_world * \
+							   obj.matrix_parent_inverse * \
+							   obj.matrix_basis
 
 	def obj_name_to_material(self, obj):
 		"""Update an objects name based on its first material"""
