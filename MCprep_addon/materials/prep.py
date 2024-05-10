@@ -310,9 +310,8 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 		else:
 			self.report(
 				{"ERROR"},
-				"Nothing modified, be sure you selected objects with existing materials!"
-			)
-
+				"Nothing modified, be sure you selected objects with existing materials!")
+		
 		addon_prefs = util.get_user_preferences(context)
 		self.track_param = context.scene.render.engine
 		self.track_exporter = addon_prefs.MCprep_exporter_type
