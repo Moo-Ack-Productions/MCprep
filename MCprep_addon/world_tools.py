@@ -739,6 +739,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			empty.empty_display_size = 2
 			empty.empty_display_type = 'PLAIN_AXES'
 			empty.location = location
+			empty.hide_viewport = True # Hide empty globally
 			util.update_matrices(empty)
 			for field in fields(header):
 					if getattr(header, field.name) is None:
