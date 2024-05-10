@@ -739,7 +739,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			empty.empty_display_size = 2
 			empty.empty_display_type = 'PLAIN_AXES'
 			empty.location = location
-			self.update_matrices(empty)
+			util.update_matrices(empty)
 			for field in fields(header):
 					if getattr(header, field.name) is None:
 						continue
@@ -773,18 +773,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		self.split_world_by_material(context)
 
 		return {'FINISHED'}
-
-	def update_matrices(self, obj):
-		"""Update mattrices of object so that we can accurately parent, 
-		because for some reason, Blender doesn't do this by default"""
-		if obj.parent is None:
-			obj.matrix_world = obj.matrix_basis
-
-		else:
-			obj.matrix_world = obj.parent.matrix_world * \
-							   obj.matrix_parent_inverse * \
-							   obj.matrix_basis
-
+	
 	def obj_name_to_material(self, obj):
 		"""Update an objects name based on its first material"""
 		if not obj:

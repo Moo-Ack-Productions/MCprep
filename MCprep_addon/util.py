@@ -49,6 +49,18 @@ SPAWNER_EXCLUDE = "Spawner Exclude"
 # GENERAL SUPPORTING FUNCTIONS (no registration required)
 # -----------------------------------------------------------------------------
 
+def update_matrices(obj):
+	"""Update mattrices of object so that we can accurately parent, 
+	because for some stupid reason, Blender doesn't do this by default"""
+	if obj.parent is None:
+		obj.matrix_world = obj.matrix_basis
+
+	else:
+		obj.matrix_world = obj.parent.matrix_world * \
+						   obj.matrix_parent_inverse * \
+						   obj.matrix_basis
+
+
 def apply_noncolor_data(node: Node) -> Optional[MCprepError]:
 	"""
 	Apply the Non-Color/Generic Data option to the passed
