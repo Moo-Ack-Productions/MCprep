@@ -445,6 +445,7 @@ class MCPREP_OT_swap_texture_pack(
 			col.prop(self, "syncMaterials")
 			col.prop(self, "improveUiSettings")
 			col.prop(self, "combineMaterials")
+			col.prop(self, "useEmission")
 
 	track_function = "texture_pack"
 	track_param = None
