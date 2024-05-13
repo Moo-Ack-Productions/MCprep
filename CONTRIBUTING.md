@@ -231,6 +231,11 @@ Signed-off-by: Random J Developer <random@developer.example.org>
 
 **This much be your real name and a working email address.**
 
+This can also be added with the `--signoff flag`:
+```
+$ git commit --signoff -m "Commit message"
+```
+
 If the change was given to you by someone else, and you have permission to contribute it here, that change must be signed off by the person who gave the change to you, and anyone before that (basically a chain of sign offs). Example:
 ```
 <commit message and summery by John Doe, who recieved the change from Jane Doe>
