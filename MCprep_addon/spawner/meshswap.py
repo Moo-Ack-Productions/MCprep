@@ -519,6 +519,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 		tprep = time.time()
 
 		# NOTE: This is temporary
+		addon_prefs = util.get_user_preferences(context)
 		self.track_exporter = addon_prefs.MCprep_exporter_type
 
 		direc = context.scene.meshswap_path

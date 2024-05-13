@@ -317,6 +317,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 		self.track_param = context.scene.render.engine
 
 		# NOTE: This is temporary
+		addon_prefs = util.get_user_preferences(context)
 		self.track_exporter = addon_prefs.MCprep_exporter_type
 		return {'FINISHED'}
 
@@ -480,6 +481,7 @@ class MCPREP_OT_swap_texture_pack(
 		invalid_uv, affected_objs = uv_tools.detect_invalid_uvs_from_objs(obj_list)
 
 		# NOTE: This is temporary
+		addon_prefs = util.get_user_preferences(context)
 		self.track_exporter = addon_prefs.MCprep_exporter_type
 
 		# set the scene's folder for the texturepack being swapped

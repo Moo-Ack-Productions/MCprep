@@ -433,6 +433,7 @@ class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 		self.track_param = context.scene.render.engine
 
 		# NOTE: This is temporary
+		addon_prefs = util.get_user_preferences(context)
 		self.track_exporter = addon_prefs.MCprep_exporter_type
 		return {'FINISHED'}
 

@@ -769,6 +769,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 				# option and by default use the object for 
 				# getting the exporter
 				obj["MCPREP_OBJ_EXPORTER"] = "mineways-c" if header.exporter() == "Mineways" else "jmc2obj-c"
+				addon_prefs = util.get_user_preferences(context)
 				self.track_exporter = addon_prefs.MCprep_exporter_type  # Soft detect.
 
 		self.split_world_by_material(context)
