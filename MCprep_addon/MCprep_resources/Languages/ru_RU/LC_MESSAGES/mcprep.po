@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: 3.6.0\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2024-01-01 10:18-0600\n"
-"PO-Revision-Date: 2024-05-14 20:16+0700\n"
+"PO-Revision-Date: 2024-05-15 07:21+0700\n"
 "Last-Translator: Mahid Ahmad Sheikh <mahid@standingpad.org>\n"
 "Language-Team: \n"
 "Language: ru_RU\n"
@@ -209,7 +209,7 @@ msgstr "Настройки анонимного отслеживания пол�
 
 #: MCprep_addon/mcprep_ui.py:704
 msgid "Opt into anonymous usage tracking"
-msgstr "ПРИНЯТЬ анонимное отслеживание использования"
+msgstr "Принять анонимное отслеживание использования"
 
 #: MCprep_addon/mcprep_ui.py:709
 msgid "Opt OUT of anonymous usage tracking"
@@ -221,7 +221,7 @@ msgstr "Для информации об анонимном отслеживан
 
 #: MCprep_addon/mcprep_ui.py:716
 msgid "Open the Privacy Policy"
-msgstr "Откройте Политику Конфиденциальности"
+msgstr "Открыть Политику Конфиденциальности"
 
 #: MCprep_addon/mcprep_ui.py:748
 msgid "World exporter"
@@ -309,7 +309,7 @@ msgstr "Нет контроллера времени,"
 
 #: MCprep_addon/mcprep_ui.py:941
 msgid "add dynamic MC world."
-msgstr "добавить динамический MC мир."
+msgstr "добавьте динамический MC мир."
 
 #: MCprep_addon/mcprep_ui.py:967
 msgid "Select skin"
