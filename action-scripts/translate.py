@@ -15,10 +15,9 @@ def main():
     # for a return value
     modules = [compile_po_to_mo, build_trans_dict]
     for mod in modules:
-        res = mod.main()
-        if res:
-            continue 
-        return res
+        error = mod.main()
+        if error:
+            return error
 
 if __name__ == "__main__":
     main()
