@@ -1,5 +1,5 @@
 diff --git a/MCprep_addon/__init__.py b/MCprep_addon/__init__.py
-index 1982f63..9e4aa3c 100755
+index e727f3f..39c9fa7 100755
 --- a/MCprep_addon/__init__.py
 +++ b/MCprep_addon/__init__.py
 @@ -39,13 +39,13 @@ Disclaimer: This is not an official Google product
@@ -7,15 +7,15 @@ index 1982f63..9e4aa3c 100755
  
  bl_info = {
 -	"name": "MCprep",
-+	"name": "MCprep 3.5 RC-3",
++	"name": "MCprep 3.6 RC-1",
  	"category": "Object",
--	"version": (3, 4, 3),
-+	"version": (3, 4, 3, 3),
+-	"version": (3, 5, 3),
++	"version": (3, 5, 3, 1),
  	"blender": (2, 80, 0),
  	"location": "3D window toolshelf > MCprep tab",
  	"description": "Minecraft workflow addon for rendering and animation",
 -	"warning": "",
-+	"warning": "Release Candidate, expect bugs",
++	"warning": "Release Candidate, expect bugs!",
  	"wiki_url": "https://TheDuckCow.com/MCprep",
  	"author": "Patrick W. Crawford <support@theduckcow.com>",
  	"tracker_url": "https://github.com/TheDuckCow/MCprep/issues"
