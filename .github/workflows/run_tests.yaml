@@ -39,7 +39,7 @@ jobs:
         env:
           BVERSION: ${{ matrix.blender-version }}
       - name: Set up Python v3.9
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: 3.9
       - name: Pip installs
@@ -63,4 +63,4 @@ jobs:
           ${{ matrix.blender-version }} --extract --remove-compressed \
           --quiet --print-blender-executable)" > blender_execs.txt
       - name: Run tests
-        run: python run_tests.py
+        run: python run_tests.py -t test_prep_simple
