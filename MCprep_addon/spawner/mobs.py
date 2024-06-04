@@ -256,7 +256,7 @@ class MCPREP_OT_mob_spawner(bpy.types.Operator):
 		row.prop(self, "clearPose")
 		row = self.layout.row(align=True)
 		engine = context.scene.render.engine
-		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE' or engine == 'BLENDER_EEVEE_NEXT':
 			row.prop(self, "prep_materials")
 		else:
 			row.prop(self, "prep_materials", text="Prep materials")
