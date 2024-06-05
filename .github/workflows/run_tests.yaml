@@ -69,8 +69,11 @@ jobs:
           mkdir MCprep_stable_release
           unzip ./MCprep_addon_v*.zip -d MCprep_stable_release
           mv -f ./MCprep_stable_release/MCprep_addon/MCprep_resources/** ./MCprep_addon/MCprep_resources
-          pwd
-          ls
-          ls ./MCprep_addon/MCprep_resources
+          echo "----- pwd"
+          echo $(pwd)
+          echo "----- ls"
+          echo $(ls)
+          echo "----- ls resources"
+          echo $(ls ./MCprep_addon/MCprep_resources)
       - name: Run tests
         run: python run_tests.py
