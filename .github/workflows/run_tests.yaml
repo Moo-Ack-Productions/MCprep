@@ -70,4 +70,4 @@ jobs:
           unzip ./MCprep_addon_v*.zip -d MCprep_stable_release
           mv -f ./MCprep_stable_release/MCprep_addon/MCprep_resources/** ./MCprep_addon/MCprep_resources 
       - name: Run tests
-        run: python run_tests.py -t test_prep_simple
+        run: python run_tests.py
