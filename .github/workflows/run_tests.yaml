@@ -63,7 +63,7 @@ jobs:
           ${{ matrix.blender-version }} --extract --remove-compressed \
           --quiet --print-blender-executable)" > blender_execs.txt
       - name: Download assets
-        run: >
+        run: |
           # TODO: use git describe --tags or equivalent to automatically get latest stable.
           wget "https://github.com/TheDuckCow/MCprep/releases/download/3.4.3/MCprep_addon_v3.4.3.zip"
           mkdir MCprep_stable_release
