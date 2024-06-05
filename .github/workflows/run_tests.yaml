@@ -68,6 +68,9 @@ jobs:
           wget "https://github.com/TheDuckCow/MCprep/releases/download/3.4.3/MCprep_addon_v3.4.3.zip"
           mkdir MCprep_stable_release
           unzip ./MCprep_addon_v*.zip -d MCprep_stable_release
-          mv -f ./MCprep_stable_release/MCprep_addon/MCprep_resources/** ./MCprep_addon/MCprep_resources 
+          mv -f ./MCprep_stable_release/MCprep_addon/MCprep_resources/** ./MCprep_addon/MCprep_resources
+          pwd
+          ls
+          ls ./MCprep_addon/MCprep_resources
       - name: Run tests
         run: python run_tests.py

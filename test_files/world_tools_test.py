@@ -187,6 +187,7 @@ class WorldToolsTest(unittest.TestCase):
     def test_world_import_mineways_separated(self):
         test_subpath = os.path.join(
             "test_data", "mineways_test_separated_1_15_2.obj")
+        print("test_subpath:", test_subpath)
         self._import_world_with_settings(file=test_subpath)
         self.assertEqual(self.addon_prefs.MCprep_exporter_type, "Mineways")
 
