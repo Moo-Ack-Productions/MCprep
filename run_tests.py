@@ -70,8 +70,15 @@ def main():
 
     # Compile the addon
     res = subprocess.check_output(COMPILE_CMD)
+    print("---- compile command, post output:")
     print(res.decode("utf-8"))
     print("Results of compile above -------------")
+    print("Binaries:", blender_execs)
+    addon_zip = "build/MCprep_addon.zip"
+    print("Is this a file?", addon_zip, os.path.isfile(addon_zip))
+    addon_zip = "/home/runner/work/MCprep/MCprep/build/MCprep_addon.zip"
+    print("And the abs version?", addon_zip, os.path.isfir(addon_zip))
+    print("End tmp, going onto runners")
 
     reset_test_file()
 
