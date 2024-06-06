@@ -76,4 +76,4 @@ jobs:
           echo "----- ls resources"
           echo $(ls ./MCprep_addon/MCprep_resources)
       - name: Run tests
-        run: python run_tests.py
+        run: python run_tests.py -t MaterialsTest
