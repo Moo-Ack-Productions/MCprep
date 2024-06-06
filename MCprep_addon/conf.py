@@ -79,6 +79,8 @@ class MCprepEnv:
 		self.data = None
 		self.json_data: Optional[Dict] = None
 		self.json_path: Path = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data.json")
+		print("Expected path:")
+		print(self.json_path)
 		self.json_path_update: Path = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data_update.json")
 
 		self.dev_file: Path = Path(os.path.dirname(__file__), "mcprep_dev.txt")
@@ -93,8 +95,10 @@ class MCprepEnv:
 			self.verbose = True
 			self.very_verbose = True
 			self.log("Dev Build!")
+			print("Dev build")
 
 		else:
+			print("Not a dev build")
 			self.dev_build = False
 			self.verbose = False
 			self.very_verbose = False

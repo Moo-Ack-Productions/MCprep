@@ -75,5 +75,7 @@ jobs:
           echo $(ls)
           echo "----- ls resources"
           echo $(ls ./MCprep_addon/MCprep_resources)
+          echo "----- checking specific passes"
+          echo $(ls -lta "/home/runner/work/MCprep/MCprep/test_files/test_resource_pack/materials.blend")
       - name: Run tests
         run: python run_tests.py -t MaterialsTest
