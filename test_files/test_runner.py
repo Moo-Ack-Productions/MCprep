@@ -80,6 +80,10 @@ def main():
 
     res = setup_env_paths(None)
     print("Did we get a path this time?", res)
+    bpy.ops.preferences.addon_enable(module="MCprep_addon")
+    res = setup_env_paths(None)
+    print("How about now??", res)
+
     print("All paths:", bpy.utils.script_paths())
     return
 
