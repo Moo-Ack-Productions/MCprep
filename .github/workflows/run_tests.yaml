@@ -77,6 +77,8 @@ jobs:
           echo $(ls ./MCprep_addon/MCprep_resources)
           echo "----- checking specific passes"
           echo $(ls -lta "/home/runner/work/MCprep/MCprep/test_files/test_resource_pack/materials.blend")
+          echo "Creating the addons folder"
+          mkdir -p /home/runner/.config/blender/4.1/scripts/addons
       - name: Run tests
         run: |
           python run_tests.py -t MaterialsTest
