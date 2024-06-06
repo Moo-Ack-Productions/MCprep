@@ -74,7 +74,7 @@ def main():
 
     print("Now doing temp install")
     addon_zip = "/home/runner/work/MCprep/MCprep/build/MCprep_addon.zip"
-    print("Does this file exist?", addon_zip, os.path.isfir(addon_zip))
+    print("Does this file exist?", addon_zip, os.path.isdir(addon_zip))
     res = bpy.ops.preferences.addon_install(filepath=addon_zip)
     print("Install output?", res)
 
