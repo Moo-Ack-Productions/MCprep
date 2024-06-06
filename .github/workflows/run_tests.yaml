@@ -69,19 +69,12 @@ jobs:
           mkdir MCprep_stable_release
           unzip -qq ./MCprep_addon_v*.zip -d MCprep_stable_release
           mv -f ./MCprep_stable_release/MCprep_addon/MCprep_resources/** ./MCprep_addon/MCprep_resources
-          echo "----- pwd"
-          echo $(pwd)
-          echo "----- ls"
-          echo $(ls)
-          echo "----- ls resources"
-          echo $(ls ./MCprep_addon/MCprep_resources)
-          echo "----- checking specific passes"
-          echo $(ls -lta "/home/runner/work/MCprep/MCprep/test_files/test_resource_pack/materials.blend")
-          echo "Creating the addons folder"
+          echo "Prepare for install by creating addons folder"
           mkdir -p /home/runner/.config/blender/4.1/scripts/addons
       - name: Run tests
         run: |
-          python run_tests.py -t AddonTest
+          python run_tests.py -t MaterialsTest
           echo "Addon was installed?"
           echo $(ls /home/runner/.config/blender/4.1/scripts/addons)
+          echo $(ls /home/runner/.config/blender/4.1/scripts/addons/MCprep_addon/MCprep_resources)
 

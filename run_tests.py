@@ -70,16 +70,7 @@ def main():
 
     # Compile the addon
     res = subprocess.check_output(COMPILE_CMD)
-    print("---- compile command, post output:")
-    print(res.decode("utf-8"))
-    print("Results of compile above -------------")
-    print("Binaries:", blender_execs)
-    addon_zip = "build/MCprep_addon.zip"
-    print("Is this a file?", addon_zip, os.path.isfile(addon_zip))
-    addon_zip = "/home/runner/work/MCprep/MCprep/build/MCprep_addon.zip"
-    print("And the abs version?", addon_zip, os.path.isdir(addon_zip))
-    print("End tmp, going onto runners")
-
+    print("Compile output:", res.decode("utf-8"))
     reset_test_file()
 
     # Loop over all binaries and run tests.
