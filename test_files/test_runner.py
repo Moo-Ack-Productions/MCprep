@@ -70,13 +70,13 @@ def main():
 
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-    print("What are paths???", )
+    #print("What are paths???", )
 
-    print("Now doing temp install")
-    addon_zip = "/home/runner/work/MCprep/MCprep/build/MCprep_addon.zip"
-    print("Does this file exist?", addon_zip, os.path.isdir(addon_zip))
-    res = bpy.ops.preferences.addon_install(filepath=addon_zip)
-    print("Install output?", res)
+    #print("Now doing temp install")
+    #addon_zip = "/home/runner/work/MCprep/MCprep/build/MCprep_addon.zip"
+    #print("Does this file exist?", addon_zip, os.path.isdir(addon_zip))
+    #res = bpy.ops.preferences.addon_install(filepath=addon_zip)
+    #print("Install output?", res)
 
     res = setup_env_paths(None)
     print("Did we get a path this time?", res)
@@ -85,7 +85,6 @@ def main():
     print("How about now??", res)
 
     print("All paths:", bpy.utils.script_paths())
-    return
 
 
     if args.version is not None:
