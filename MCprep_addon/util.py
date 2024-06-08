@@ -480,7 +480,7 @@ def load_mcprep_json() -> bool:
 			env.log("Successfully read the JSON file")
 			print("JSON data loaded, here's the contents")
 			print(" --------------")
-			print(env.json_data)
+			print(list(env.json_data))
 			print(" --------------")
 			return True
 		except Exception as err:
