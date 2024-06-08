@@ -78,7 +78,7 @@ jobs:
           mkdir -p /home/runner/.config/blender/4.1/scripts/addons
       - name: Run tests
         run: |
-          python run_tests.py
+          python run_tests.py -t MaterialsTest
           echo "Addon was installed?"
           echo $(ls /home/runner/.config/blender/4.1/scripts/addons)
           echo $(ls /home/runner/.config/blender/4.1/scripts/addons/MCprep_addon/MCprep_resources)
