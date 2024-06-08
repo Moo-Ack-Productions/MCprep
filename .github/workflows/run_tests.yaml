@@ -69,7 +69,7 @@ jobs:
           wget -nv "https://github.com/Moo-Ack-Productions/MCprep/releases/download/3.5.3/MCprep_addon_3.5.3.zip"
           git lfs pull
           mkdir MCprep_stable_release
-          unzip -qq ./MCprep_addon_v*.zip -d MCprep_stable_release
+          unzip -qq ./MCprep_addon_*.zip -d MCprep_stable_release
           # copy the checked-in json file
           mv ./MCprep_addon/MCprep_resources/mcprep_data_update.json _tmp.json
           mv -f ./MCprep_stable_release/MCprep_addon/MCprep_resources/** ./MCprep_addon/MCprep_resources
