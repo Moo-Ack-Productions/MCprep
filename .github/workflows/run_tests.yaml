@@ -66,7 +66,7 @@ jobs:
         run: |
           # TODO: use git describe --tags or equivalent to automatically get latest stable.
           # or at least hard code this more recent one:
-          https://github.com/Moo-Ack-Productions/MCprep/releases/download/3.5.3/MCprep_addon_3.5.3.zip
+          wget -nv "https://github.com/Moo-Ack-Productions/MCprep/releases/download/3.5.3/MCprep_addon_3.5.3.zip"
           git lfs pull
           mkdir MCprep_stable_release
           unzip -qq ./MCprep_addon_v*.zip -d MCprep_stable_release
