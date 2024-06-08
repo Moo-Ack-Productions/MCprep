@@ -478,15 +478,15 @@ def load_mcprep_json() -> bool:
 		try:
 			env.json_data = json.load(data_file)
 			env.log("Successfully read the JSON file")
+			print("JSON data loaded, here's the contents")
+			print(" --------------")
+			print(env.json_data)
+			print(" --------------")
 			return True
 		except Exception as err:
 			print("Failed to load json file:")
 			print('\t', err)
 			env.json_data = default
-	print("JSON data loaded, here's the contents")
-	print(" --------------")
-	print(env.json_data)
-	print(" --------------")
 
 
 def ui_scale() -> float:
