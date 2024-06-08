@@ -74,6 +74,7 @@ jobs:
       - name: Run tests
         run: |
           mv ./MCprep_addon/MCprep_resources/mcprep_data_update.json ./MCprep_addon/MCprep_resources/mcprep_data.json
+          cat ./MCprep_addon/MCprep_resources/mcprep_data_update.json
           python run_tests.py -t test_prep_pbr_seus
           echo "Addon was installed?"
           echo $(ls /home/runner/.config/blender/4.1/scripts/addons)

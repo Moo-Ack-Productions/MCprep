@@ -62,7 +62,9 @@ def get_mc_canonical_name(name: str) -> Tuple[str, Optional[Form]]:
 	general_name = util.nameGeneralize(name)
 	if not env.json_data:
 		res = util.load_mcprep_json()
+		print("DID load json from get_mc_canonical")
 		if not res:
+			print("Falledback")
 			return general_name, None
 
 	# Special case to allow material names, e.g. in meshswap, to end in .emit
