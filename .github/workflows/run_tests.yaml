@@ -63,6 +63,7 @@ jobs:
           ${{ matrix.blender-version }} --extract --remove-compressed \
           --quiet --print-blender-executable)" > blender_execs.txt
       - name: Download assets
+        if: always()
         run: |
           # TODO: use git describe --tags or equivalent to automatically get latest stable.
           # or at least hard code this more recent one:
@@ -83,4 +84,5 @@ jobs:
           echo "Addon was installed?"
           echo $(ls /home/runner/.config/blender/4.1/scripts/addons)
           echo $(ls /home/runner/.config/blender/4.1/scripts/addons/MCprep_addon/MCprep_resources)
-
+      - name: Output results
+        run: cat test_results.csv
