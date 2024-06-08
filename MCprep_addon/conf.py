@@ -81,6 +81,9 @@ class MCprepEnv:
 		self.json_path: Path = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data.json")
 		print("Expected path:")
 		print(self.json_path)
+		print("is a file?")
+		print(os.path.isfile(self.json_path))
+		print(os.listdir(os.path.dirname(self.json_path)))
 		self.json_path_update: Path = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data_update.json")
 
 		self.dev_file: Path = Path(os.path.dirname(__file__), "mcprep_dev.txt")

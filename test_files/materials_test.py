@@ -68,7 +68,9 @@ class MaterialsTest(unittest.TestCase):
             filepath = os.path.join(
                 testdir, "test_resource_pack", "textures", name + ".png")
             print("Intended cannon path:", filepath)
-            print("But does it exist?", os.path.isfile(filePath))
+            print("But does it exist?", os.path.isfile(filepath))
+            print("or its dir?", os.listdir(os.path.dirname(filepath)))
+            print("test folder contents?", os.listdir(testdir))
             return filepath
         else:
             base = self._get_mcprep_path()
