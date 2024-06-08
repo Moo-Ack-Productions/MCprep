@@ -93,6 +93,7 @@ class MCprepEnv:
 			self.verbose = True
 			self.very_verbose = True
 			self.log("Dev Build!")
+
 		else:
 			self.dev_build = False
 			self.verbose = False

@@ -39,7 +39,7 @@ class MaterialsTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        res = bpy.ops.preferences.addon_enable(module="MCprep_addon")
+        bpy.ops.preferences.addon_enable(module="MCprep_addon")
 
     def setUp(self):
         """Clears scene and data between each test"""
@@ -139,6 +139,7 @@ class MaterialsTest(unittest.TestCase):
         new_mat, _ = self._create_canon_mat()
         obj.active_material = new_mat
         self.assertIsNotNone(obj.active_material, "Material should be applied")
+
         res = bpy.ops.mcprep.prep_materials(
             animateTextures=False,
             packFormat=pack_format,
