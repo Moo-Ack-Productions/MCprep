@@ -66,8 +66,8 @@ jobs:
         run: |
           # TODO: use git describe --tags or equivalent to automatically get latest stable.
           # or at least hard code this more recent one:
-          # https://github.com/Moo-Ack-Productions/MCprep/releases/download/3.5.3/MCprep_addon_3.5.3.zip
-          wget -nv "https://github.com/TheDuckCow/MCprep/releases/download/3.4.3/MCprep_addon_v3.4.3.zip"
+          https://github.com/Moo-Ack-Productions/MCprep/releases/download/3.5.3/MCprep_addon_3.5.3.zip
+          git lfs pull
           mkdir MCprep_stable_release
           unzip -qq ./MCprep_addon_v*.zip -d MCprep_stable_release
           # copy the checked-in json file
@@ -78,8 +78,6 @@ jobs:
           mkdir -p /home/runner/.config/blender/4.1/scripts/addons
       - name: Run tests
         run: |
-          ls -lta /home/runner/work/MCprep/MCprep/test_files/test_resource_pack/materials.blend
-          git lfs pull
           ls -lta /home/runner/work/MCprep/MCprep/test_files/test_resource_pack/materials.blend
           python run_tests.py
           echo "Addon was installed?"
