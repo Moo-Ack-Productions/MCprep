@@ -451,7 +451,6 @@ def addGroupInstance(group_name: str, loc: Tuple, select: bool=True) -> bpy.type
 def load_mcprep_json() -> bool:
 	"""Load in the json file, defered so not at addon enable time."""
 	path = env.json_path
-	print("Path existing?", path, " > ", os.path.isfile(path))
 	default = {
 		"blocks": {
 			"reflective": [],
@@ -472,16 +471,11 @@ def load_mcprep_json() -> bool:
 	if not os.path.isfile(path):
 		env.log(f"Error, json file does not exist: {path}")
 		env.json_data = default
-		print(">>>> No data loaded")
 		return False
 	with open(path) as data_file:
 		try:
 			env.json_data = json.load(data_file)
 			env.log("Successfully read the JSON file")
-			print("JSON data loaded, here's the contents")
-			print(" --------------")
-			print(list(env.json_data))
-			print(" --------------")
 			return True
 		except Exception as err:
 			print("Failed to load json file:")

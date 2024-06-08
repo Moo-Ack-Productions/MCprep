@@ -40,7 +40,6 @@ class MaterialsTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         res = bpy.ops.preferences.addon_enable(module="MCprep_addon")
-        print("Checking, did addon enable OK?", res)
 
     def setUp(self):
         """Clears scene and data between each test"""
@@ -59,7 +58,6 @@ class MaterialsTest(unittest.TestCase):
             init = os.path.join(
                 base, "addons", "MCprep_addon")  # __init__.py folder
             if os.path.isdir(init):
-                print("MCprep path is: ", init)
                 return init
         self.fail("Failed to get MCprep path")
 
@@ -68,10 +66,6 @@ class MaterialsTest(unittest.TestCase):
             testdir = os.path.dirname(__file__)
             filepath = os.path.join(
                 testdir, "test_resource_pack", "textures", name + ".png")
-            print("Intended cannon path:", filepath)
-            print("But does it exist?", os.path.isfile(filepath))
-            print("or its dir?", os.listdir(os.path.dirname(filepath)))
-            print("test folder contents?", os.listdir(testdir))
             return filepath
         else:
             base = self._get_mcprep_path()
@@ -145,13 +139,11 @@ class MaterialsTest(unittest.TestCase):
         new_mat, _ = self._create_canon_mat()
         obj.active_material = new_mat
         self.assertIsNotNone(obj.active_material, "Material should be applied")
-        print("About to do the materials check via operator")
         res = bpy.ops.mcprep.prep_materials(
             animateTextures=False,
             packFormat=pack_format,
             autoFindMissingTextures=False,
             improveUiSettings=False)
-        print("Post to do the materials check via operator")
 
         self.assertEqual(res, {'FINISHED'}, "Did not return finished")
         return new_mat
