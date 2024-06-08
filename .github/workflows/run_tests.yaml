@@ -81,7 +81,7 @@ jobs:
           ls -lta /home/runner/work/MCprep/MCprep/test_files/test_resource_pack/materials.blend
           git lfs pull
           ls -lta /home/runner/work/MCprep/MCprep/test_files/test_resource_pack/materials.blend
-          python run_tests.py -t MaterialsTest
+          python run_tests.py
           echo "Addon was installed?"
           echo $(ls /home/runner/.config/blender/4.1/scripts/addons)
           echo $(ls /home/runner/.config/blender/4.1/scripts/addons/MCprep_addon/MCprep_resources)
