@@ -18,7 +18,7 @@
 
 
 import os
-from MCprep_addon import world_tools
+from pathlib import Path
 
 import bpy
 from bpy_extras.io_utils import ImportHelper
@@ -29,6 +29,7 @@ from . import sequences
 from . import uv_tools
 from .. import tracking
 from .. import util
+from .. import world_tools
 from ..conf import env
 
 # -----------------------------------------------------------------------------
@@ -492,7 +493,7 @@ class MCPREP_OT_swap_texture_pack(
 		res = 0
 		for mat in mat_list:
 			self.preprocess_material(mat)
-			res += generate.set_texture_pack(mat, folder, self.useExtraMaps)
+			res += generate.set_texture_pack(mat, Path(folder), self.useExtraMaps)
 			if self.animateTextures:
 				sequences.animate_single_material(
 					mat,

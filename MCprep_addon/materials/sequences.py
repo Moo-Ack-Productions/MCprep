@@ -219,7 +219,7 @@ def generate_material_sequence(source_path: Path, image_path: Path, form: Option
 		"try running blender as admin")
 
 	for img_pass in img_pass_dict:
-		passfile = img_pass_dict[img_pass]
+		passfile = str(img_pass_dict[img_pass])  # Convert from Path
 		env.log("Running on file:")
 		env.log(bpy.path.abspath(passfile))
 

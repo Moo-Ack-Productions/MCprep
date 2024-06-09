@@ -368,7 +368,7 @@ def set_texture_pack(
 			env.log(image.msg)
 		return 0
 
-	image_data = util.loadTexture(image)
+	image_data = util.loadTexture(str(image))
 	_ = set_cycles_texture(
 		image_data, material, extra_passes=use_extra_passes)
 	return 1
@@ -413,7 +413,7 @@ def set_cycles_texture(
 	# check if there is more data to see pass types
 	img_sets = {}
 	if extra_passes:
-		img_sets = find_additional_passes(image.filepath)
+		img_sets = find_additional_passes(Path(image.filepath))
 	changed = False
 
 	is_grayscale = False
@@ -583,7 +583,8 @@ def get_textures(material: Material) -> Dict[str, Image]:
 
 def find_additional_passes(image_file: Path) -> Dict[str, Image]:
 	"""Find relevant passes like normal and spec in same folder as image."""
-	abs_img_file = bpy.path.abspath(image_file)
+	print("What is this?", image_file)
+	abs_img_file = bpy.path.abspath(str(image_file))  # needs to be blend file relative
 	env.log(f"\tFind additional passes for: {image_file}", vv_only=True)
 	if not os.path.isfile(abs_img_file):
 		return {}
@@ -662,7 +663,7 @@ def replace_missing_texture(image: Image) -> bool:
 		if image_path.msg:
 			env.log(image_path.msg)
 		return False
-	image.filepath = image_path
+	image.filepath = str(image_path)
 	# image.reload() # not needed?
 	# pack?
 

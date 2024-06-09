@@ -452,7 +452,7 @@ class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 		# even if images of same name already exist, load new block
 		env.log(f"Find missing images: Creating new image datablock for {mat.name}")
 		# do not use 'check_existing=False' to keep compatibility pre 2.79
-		image = bpy.data.images.load(image_path, check_existing=True)
+		image = bpy.data.images.load(str(image_path), check_existing=True)
 
 		engine = bpy.context.scene.render.engine
 		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE' or engine == 'BLENDER_EEVEE_NEXT':
