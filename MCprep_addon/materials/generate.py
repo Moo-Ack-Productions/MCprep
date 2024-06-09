@@ -1169,7 +1169,7 @@ def generate_base_material(
 	mat = bpy.data.materials.new(name=name)
 
 	engine = context.scene.render.engine
-	if engine in ['CYCLES', 'BLENDER_EEVEE']:
+	if engine in ['CYCLES', 'BLENDER_EEVEE', 'BLENDER_EEVEE_NEXT']:
 		# need to create at least one texture node first, then the rest works
 		mat.use_nodes = True
 		nodes = mat.node_tree.nodes

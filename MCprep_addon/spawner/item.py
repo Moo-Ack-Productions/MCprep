@@ -238,7 +238,7 @@ def spawn_item_from_filepath(
 			mat.use_transparency = 1
 			mat.alpha = 0
 			mat.texture_slots[0].use_map_alpha = 1
-	elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+	elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE' or engine == 'BLENDER_EEVEE_NEXT':
 		mat.use_nodes = True
 		nodes = mat.node_tree.nodes
 		links = mat.node_tree.links

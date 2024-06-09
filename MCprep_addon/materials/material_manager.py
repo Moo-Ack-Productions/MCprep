@@ -450,7 +450,7 @@ class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 		image = bpy.data.images.load(image_path, check_existing=True)
 
 		engine = bpy.context.scene.render.engine
-		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE' or engine == 'BLENDER_EEVEE_NEXT':
 			status = generate.set_cycles_texture(image, mat)
 		elif engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
 			status = generate.set_cycles_texture(image, mat)

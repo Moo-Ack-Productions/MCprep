@@ -44,9 +44,11 @@ class Form(enum.Enum):
 class Engine(enum.Enum):
 	"""String exact match to output from blender itself for branching."""
 	CYCLES = "CYCLES"
+
+	# Blender 2.8 to 4.1
 	BLENDER_EEVEE = "BLENDER_EEVEE"
-	# EEVEE Next is the next generation EEVEE. So in preperation for that,
-	# we've added "BLENDER_EEVEE_NEXT" as an Engine option
+
+	# Blender 4.2 and beyond
 	BLENDER_EEVEE_NEXT = "BLENDER_EEVEE_NEXT"
 
 
