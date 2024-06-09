@@ -736,7 +736,6 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 						(max_pair[1] + min_pair[1]) / 2, 
 						(max_pair[2] + min_pair[2]) / 2)
 			empty = bpy.data.objects.new(name=header.world_name + "_mcprep_empty", object_data=None)
-			bpy.context.collection.objects.link(empty)
 			empty.empty_display_size = 2
 			empty.empty_display_type = 'PLAIN_AXES'
 			empty.location = location
@@ -752,7 +751,6 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 
 		else:
 			empty = bpy.data.objects.new("mcprep_obj_empty", object_data=None)
-			bpy.context.collection.objects.link(empty)
 			empty.empty_display_size = 2
 			empty.empty_display_type = 'PLAIN_AXES'
 			empty.hide_viewport = True # Hide empty globally
@@ -779,7 +777,8 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 				addon_prefs = util.get_user_preferences(context)
 				self.track_exporter = addon_prefs.MCprep_exporter_type  # Soft detect.
 
-		self.split_world_by_material(context)
+		new_col = self.split_world_by_material(context)
+		new_col.objects.link(empty) # parent empty
 
 		return {'FINISHED'}
 	
@@ -796,7 +795,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			return
 		obj.name = util.nameGeneralize(mat.name)
 
-	def split_world_by_material(self, context: Context) -> None:
+	def split_world_by_material(self, context: Context) -> bpy.types.Collection:
 		"""2.8-only function, split combined object into parts by material"""
 		world_name = os.path.basename(self.filepath)
 		world_name = os.path.splitext(world_name)[0]
@@ -816,6 +815,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		# Force renames based on material, as default names are not useful.
 		for obj in worldg.objects:
 			self.obj_name_to_material(obj)
+		return worldg
 
 
 class MCPREP_OT_prep_world(bpy.types.Operator):
