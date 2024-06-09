@@ -707,6 +707,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		
 
 		# Create empty at the center of the OBJ
+		empty = None
 		if isinstance(header, CommonMCOBJ):
 			# Get actual 3D space coordinates of the full bounding box
 			#
@@ -749,12 +750,15 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 					else:
 						empty[field.name] = getattr(header, field.name)
 
-			
+		else:
+			empty = bpy.data.objects.new("mcprep_obj_empty", object_data=None)
+			bpy.context.collection.objects.link(empty)
+			empty.empty_display_size = 2
+			empty.empty_display_type = 'PLAIN_AXES'
+			empty.hide_viewport = True # Hide empty globally
 		for obj in context.selected_objects:
 			if isinstance(header, CommonMCOBJ):
 				obj["COMMONMCOBJ_HEADER"] = True
-				objects = bpy.data.objects
-				empty = objects[header.world_name + "_mcprep_empty"]
 				obj["PARENTED_EMPTY"] = empty
 				obj.parent = empty
 				obj.matrix_parent_inverse = empty.matrix_world.inverted() # don't transform object
@@ -763,6 +767,9 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			elif isinstance(header, ObjHeaderOptions):
 				obj["MCPREP_OBJ_HEADER"] = True
 				obj["MCPREP_OBJ_FILE_TYPE"] = header.texture_type()
+
+				obj.parent = empty
+				obj.matrix_parent_inverse = empty.matrix_world.inverted() # don't transform object
 
 				# Future-proofing for MCprep 4.0 when we 
 				# put global exporter options behind a legacy
