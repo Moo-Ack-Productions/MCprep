@@ -131,7 +131,7 @@ def draw_mats_common(self, context: Context) -> None:
 	row = self.layout.row()
 	col = row.column()
 	engine = context.scene.render.engine
-	if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+	if engine == 'CYCLES' or engine == 'BLENDER_EEVEE' or engine == 'BLENDER_EEVEE_NEXT':
 		col.prop(self, "packFormat")
 		col.prop(self, "usePrincipledShader")
 	col.prop(self, "useReflections")
@@ -245,7 +245,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 					if res > 0:
 						mat["texture_swapped"] = True  # used to apply saturation
 
-			if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+			if engine == 'CYCLES' or engine == 'BLENDER_EEVEE' or engine == 'BLENDER_EEVEE_NEXT':
 				options = generate.PrepOptions(
 					passes,
 					self.useReflections,
@@ -447,6 +447,7 @@ class MCPREP_OT_swap_texture_pack(
 			col.prop(self, "syncMaterials")
 			col.prop(self, "improveUiSettings")
 			col.prop(self, "combineMaterials")
+			col.prop(self, "useEmission")
 
 	track_function = "texture_pack"
 	track_param = None
@@ -624,7 +625,7 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 				if res > 0:
 					mat["texture_swapped"] = True  # used to apply saturation
 
-		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE' or engine == 'BLENDER_EEVEE_NEXT':
 			options = generate.PrepOptions(
 				passes=passes,
 				use_reflections=self.useReflections,

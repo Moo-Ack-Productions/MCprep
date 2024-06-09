@@ -136,7 +136,7 @@ def add_material(
 			passes[pass_name] = None
 	# Prep material
 	# Halt if no diffuse image found
-	if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+	if engine == 'CYCLES' or engine == 'BLENDER_EEVEE' or engine == 'BLENDER_EEVEE_NEXT':
 		options = generate.PrepOptions(
 			passes=passes,
 			use_reflections=False,

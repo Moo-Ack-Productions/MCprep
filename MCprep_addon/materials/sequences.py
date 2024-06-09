@@ -115,7 +115,7 @@ def animate_single_material(
 		if not tile_path_dict[pass_name]:  # ie ''
 			env.log(f"Skipping passname: {pass_name}")
 			continue
-		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE' or engine == 'BLENDER_EEVEE_NEXT':
 			node = generate.get_node_for_pass(mat, pass_name)
 			if not node:
 				continue

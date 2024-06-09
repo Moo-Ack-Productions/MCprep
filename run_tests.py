@@ -70,8 +70,7 @@ def main():
 
     # Compile the addon
     res = subprocess.check_output(COMPILE_CMD)
-    print(res.decode("utf-8"))
-
+    print("Compile output:", res.decode("utf-8"))
     reset_test_file()
 
     # Loop over all binaries and run tests.

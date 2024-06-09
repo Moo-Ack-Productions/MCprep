@@ -161,7 +161,13 @@ class WorldToolsTest(unittest.TestCase):
 
     def test_enable_obj_importer(self):
         """Ensure module name is correct, since error won't be reported."""
-        bpy.ops.preferences.addon_enable(module="io_scene_obj")
+        if bpy.app.version < (4, 0):
+            res = bpy.ops.preferences.addon_enable(module="io_scene_obj")
+            self.assertEqual(res, {'FINISHED'})
+        else:
+            in_import_scn = "obj_import" in dir(bpy.ops.wm)
+            self.assertTrue(in_import_scn, "obj_import operator not found")
+
 
     def test_world_import_jmc_full(self):
         test_subpath = os.path.join(

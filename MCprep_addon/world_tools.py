@@ -832,7 +832,7 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 			context.scene.world = bpy.data.worlds.new("MCprep world")
 		if engine == 'CYCLES':
 			self.prep_world_cycles(context)
-		elif engine == 'BLENDER_EEVEE':
+		elif engine == 'BLENDER_EEVEE' or engine == 'BLENDER_EEVEE_NEXT':
 			self.prep_world_eevee(context)
 		else:
 			self.report({'ERROR'}, "Must be Cycles or EEVEE")
@@ -938,7 +938,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 		"""Dynamic set of enums to show based on engine"""
 		engine = bpy.context.scene.render.engine
 		enums = []
-		if engine in ("CYCLES", "BLENDER_EEVEE"):
+		if engine in ("CYCLES", "BLENDER_EEVEE", "BLENDER_EEVEE_NEXT"):
 			enums.append((
 				"world_shader",
 				"Dynamic sky + shader sun/moon",
@@ -1018,7 +1018,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 
 		engine = context.scene.render.engine
 		wname = None
-		if engine == "BLENDER_EEVEE":
+		if engine == "BLENDER_EEVEE" or engine == "BLENDER_EEVEE_NEXT":
 			blend = "clouds_moon_sun_eevee.blend"
 			wname = "MCprepWorldEevee"
 		else:
@@ -1035,7 +1035,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			new_objs.append(new_sun)	
 			bpy.ops.mcprep.world(skipUsage=True)  # do rest of sky setup
 
-		elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+		elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE' or engine == 'BLENDER_EEVEE_NEXT':
 			if not os.path.isfile(blendfile):
 				self.report(
 					{'ERROR'},
