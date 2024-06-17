@@ -1,10 +1,12 @@
 import ast
+import re
 from datetime import datetime, tzinfo, timedelta
 import time
 from pathlib import Path
+from typing import Optional
 import polib
 
-from bpy_addon_build.api import BabContext
+from bpy_addon_build.api import BabContext, BpyError
 
 class TranslateCallVisitor(ast.NodeVisitor):
     def __init__(self):
@@ -46,7 +48,7 @@ class TranslateCallVisitor(ast.NodeVisitor):
                 self.keys[msgid.value].append(msgid.lineno)
         self.generic_visit(node)
 
-MCPREP_VERSION = "3.6"
+VERSION_REGEX = r'"version"\s*:\s*(\(.*?\))'
 MCPREP_ISSUE_TRACKER = "https://github.com/Moo-Ack-Productions/MCprep/issues"
 
 # Copied from here:
@@ -67,10 +69,40 @@ class LocalTimeZone(tzinfo):
 
 ltz = LocalTimeZone()
 
-def pre_build(ctx: BabContext):
+def pre_build(ctx: BabContext) -> Optional[BpyError]:
     print("Building POT...")
     path = Path(ctx.current_path)
     extracted_strings = {}
+
+    version_str: Optional[str] = None
+    with open(Path(ctx.current_path, "__init__.py"), 'r') as f:
+        for line in f:
+            if re.search(VERSION_REGEX, line):
+                version_str = line
+                break
+
+    if not version_str:
+        return BpyError("Can't extract version from __init__.py!")
+    
+    try:
+        # Step by step breakdown:
+        # 1. Split the string '"version": (...)' to 
+        #    "version" and (...)
+        # 2. Take the second element, remove extra whitespace,
+        #    and remove the first character and last 2 characters
+        #    (parenthesis and trailing comma)
+        # 3. Split that final string by the comma
+        # 4. Do a small generator that strips each element
+        #    of extra whitespace
+        # 5. Join them up with a '.' in between
+        processed_version_string = '.'.join(tuple(
+            v.strip() for v in version_str.strip()
+                                .split(':')[1]
+                                .strip()[1:][:-2]
+                                .split(',')))
+    except Exception:
+        return BpyError(f"Couldn't convert {version_str}!")
+
     for p in path.rglob("*.py"):
         with open(p, 'r') as f:
             root = ast.parse(f.read())
@@ -81,7 +113,7 @@ def pre_build(ctx: BabContext):
     
     po = polib.POFile()
     po.metadata = {
-        "Project-Id-Version": MCPREP_VERSION,
+        "Project-Id-Version": processed_version_string,
         "Report-Msgid-Bugs-To": MCPREP_ISSUE_TRACKER,
         "POT-Creation-Date": datetime.fromtimestamp(timestamp, ltz).strftime('%Y-%m-%d %H:%M%z'),
         "PO-Revision-Date": "YEAR-MO-DA HO:MI+ZONE",
@@ -89,7 +121,7 @@ def pre_build(ctx: BabContext):
         "Language-Team": "LANGUAGE <LL@li.org>",
         "Language": "",
         "MIME-Version": "1.0",
-        "Content-Type": "text/plain; charset=CHARSET",
+        "Content-Type": "text/plain; charset=UTF-8",
         "Content-Transfer-Encoding": "8bit",
     }
     for file, keys in extracted_strings.items():
@@ -101,6 +133,4 @@ def pre_build(ctx: BabContext):
             )
             po.append(entry)
             po.save(str(ctx.current_path) + "/MCprep_resources/Languages/mcprep.pot")
-
-if __name__ == "__main__":
-    main()
+    return None

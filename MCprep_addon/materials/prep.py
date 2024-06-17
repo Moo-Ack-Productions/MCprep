@@ -205,14 +205,14 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 		engine = context.scene.render.engine
 		count = 0
 		count_lib_skipped = 0
+		count_no_prep = 0
 
 		for mat in mat_list:
 			if not mat:
 				env.log(
 					"During prep, found null material:" + str(mat), vv_only=True)
 				continue
-
-			elif mat.library:
+			elif mat.library or mat.get("MCPREP_NO_PREP", False):
 				count_lib_skipped += 1
 				continue
 
@@ -263,7 +263,8 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 			else:
 				self.report(
 					{'ERROR'},
-					"Only Cycles and Eevee are supported")
+					"Only Cycles and Eevee are supported"
+				)
 				return {'CANCELLED'}
 
 			if self.animateTextures:
@@ -291,14 +292,21 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 		if self.optimizeScene and engine == 'CYCLES':
 			bpy.ops.mcprep.optimize_scene()
 
+		has_lib_skipped = count_lib_skipped > 0
+		has_mat = count > 0
+		
+		info = []
+		if has_mat:
+			info.append(f"modified {count}")
+		if has_lib_skipped:
+			info.append(f"skipped {count_lib_skipped}")
+		
+		mat_info = ", ".join(x for x in info).capitalize()
+		
 		if self.skipUsage is True:
 			pass  # Don't report if a meta-call.
-		elif count_lib_skipped > 0:
-			self.report(
-				{"INFO"},
-				f"Modified {count} materials, skipped {count_lib_skipped} linked ones.")
-		elif count > 0:
-			self.report({"INFO"}, f"Modified  {count} materials")
+		elif has_mat or has_lib_skipped:
+			self.report({"INFO"}, mat_info) 
 		else:
 			self.report(
 				{"ERROR"},
@@ -437,6 +445,7 @@ class MCPREP_OT_swap_texture_pack(
 			col.prop(self, "syncMaterials")
 			col.prop(self, "improveUiSettings")
 			col.prop(self, "combineMaterials")
+			col.prop(self, "useEmission")
 
 	track_function = "texture_pack"
 	track_param = None
