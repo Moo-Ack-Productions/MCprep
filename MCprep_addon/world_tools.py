@@ -16,17 +16,21 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+import enum
+from dataclasses import fields
+from enum import Enum, auto
 import os
 import math
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Union
 import shutil
+from MCprep_addon.commonmcobj_parser import CommonMCOBJ, CommonMCOBJTextureType, parse_header
 
 import bpy
 from bpy.types import Context, Camera
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
-from .conf import env, VectorType
+from .conf import MCprepError, env, VectorType
 from . import util
 from . import tracking
 from .materials import generate
@@ -79,8 +83,11 @@ class ObjHeaderOptions:
 	"""Wrapper functions to avoid typos causing issues."""
 
 	def __init__(self):
-		self._exporter: Optional[str] = None
-		self._file_type: Optional[str] = None
+		# This assumes all OBJs that aren't from Mineways
+		# and don't have a CommonMCOBJ header are from 
+		# jmc2obj, and use individual tiles for textures
+		self._exporter: Optional[str] = "jmc2obj"
+		self._file_type: Optional[str] = "INDIVIDUAL_TILES"
 	
 	"""
 	Wrapper functions to avoid typos causing issues
@@ -110,54 +117,130 @@ class ObjHeaderOptions:
 		return self._file_type if self._file_type is not None else "NONE"
 
 
-obj_header = ObjHeaderOptions()
+class WorldExporter(Enum):
+	"""
+	Defines all supported exporters
+	with a fallback
+	"""
 
+	# Mineways with CommonMCOBJ
+	Mineways   = auto()
 
-def detect_world_exporter(filepath: Path) -> None:
+	# Jmc2OBJ with CommonMCOBJ
+	Jmc2OBJ    = auto()
+
+	# Cmc2OBJ, the reference 
+	# implementation of CommonMCOBJ
+	#
+	# For the most part, this 
+	# will be treated as 
+	# Unknown as it's not meant
+	# for regular use. The distinct
+	# option exists for testing purposes
+	Cmc2OBJ    = auto()
+
+	# Any untested exporter
+	Unknown	   = auto() 
+	
+	# Mineways before the CommonMCOBJ standard
+	ClassicMW  = auto()
+
+	# jmc2OBJ before the CommonMCOBJ standard
+	ClassicJmc = auto()
+
+EXPORTER_MAPPING = {
+	"mineways"   : WorldExporter.Mineways,
+	"jmc2obj"    : WorldExporter.Jmc2OBJ,
+	"cmc2obj"    : WorldExporter.Cmc2OBJ,
+	"mineways-c" : WorldExporter.ClassicMW,
+	"jmc2obj-c"  : WorldExporter.ClassicJmc
+}
+
+def get_exporter(context: Context) -> Optional[WorldExporter]:
+	"""
+	Return the exporter on the active object if it has 
+	an exporter attribute.
+
+	For maximum backwards compatibility, it'll convert the 
+	explicit options we have in MCprep for world exporters to 
+	WorldExporter enum objects, if the object does not have either
+	the CommonMCOBJ exporter attribute, or if it does not have the 
+	MCPREP_OBJ_EXPORTER attribute added in MCprep 3.6. This backwards
+	compatibility will be removed by default in MCprep 4.0
+
+	Returns:
+		- WorldExporter if the world exporter can be detected
+		- None otherwise
+	"""
+	obj = context.active_object
+	if not obj:
+		return None
+
+	if "COMMONMCOBJ_HEADER" in obj:
+		if obj["PARENTED_EMPTY"] is not None and obj["PARENTED_EMPTY"]["exporter"] in EXPORTER_MAPPING:
+			return EXPORTER_MAPPING[obj["PARENTED_EMPTY"]["exporter"]]
+		else:
+			return WorldExporter.Unknown
+	elif "MCPREP_OBJ_HEADER" in obj:
+		if "MCPREP_OBJ_EXPORTER" in obj:
+			return EXPORTER_MAPPING[obj["MCPREP_OBJ_EXPORTER"]]
+	
+	# This section will be placed behind a legacy 
+	# option in MCprep 4.0, once CommonMCOBJ becomes
+	# more adopted in exporters
+	prefs = util.get_user_preferences(context)
+	if prefs.MCprep_exporter_type == "Mineways":
+		return WorldExporter.ClassicMW
+	elif prefs.MCprep_exporter_type == "jmc2obj":
+		return WorldExporter.ClassicJmc
+	return None
+
+def detect_world_exporter(filepath: Path) -> Union[CommonMCOBJ, ObjHeaderOptions]:
 	"""Detect whether Mineways or jmc2obj was used, based on prefix info.
 
 	Primary heruistic: if detect Mineways header, assert Mineways, else
 	assume jmc2obj. All Mineways exports for a long time have prefix info
 	set in the obj file as comments.
 	"""
+	obj_header = ObjHeaderOptions()
 	with open(filepath, 'r') as obj_fd:
 		try:
-			header = obj_fd.readline()
-			if 'mineways' in header.lower():
-				obj_header.set_mineways()
-				# form of: # Wavefront OBJ file made by Mineways version 5.10...
-				for line in obj_fd:
-					if line.startswith("# File type:"):
-						header = line.rstrip()  # Remove trailing newline
+			cmc_header = parse_header(obj_fd)
+			if cmc_header is not None:
+				return cmc_header
+			else:
+				header = obj_fd.readline()
+				if 'mineways' in header.lower():
+					obj_header.set_mineways()
+					# form of: # Wavefront OBJ file made by Mineways version 5.10...
+					for line in obj_fd:
+						if line.startswith("# File type:"):
+							header = line.rstrip()  # Remove trailing newline
 
-				# The issue here is that Mineways has changed how the header is generated.
-				# As such, we're limited with only a couple of OBJs, some from
-				# 2020 and some from 2023, so we'll assume people are using
-				# an up to date version.
-				atlas = (
-					"# File type: Export all textures to three large images",
-					"# File type: Export full color texture patterns"
-				)
-				tiles = (
-					"# File type: Export tiles for textures to directory textures",
-					"# File type: Export individual textures to directory tex"
-				)
-				print('"{}"'.format(header))
-				if header in atlas:  # If a texture atlas is used
-					obj_header.set_atlas()
-				elif header in tiles:  # If the OBJ uses individual textures
-					obj_header.set_seperated()
-				return
+					# The issue here is that Mineways has changed how the header is generated.
+					# As such, we're limited with only a couple of OBJs, some from
+					# 2020 and some from 2023, so we'll assume people are using
+					# an up to date version.
+					atlas = (
+						"# File type: Export all textures to three large images",
+						"# File type: Export full color texture patterns"
+					)
+					tiles = (
+						"# File type: Export tiles for textures to directory textures",
+						"# File type: Export individual textures to directory tex"
+					)
+					print('"{}"'.format(header))
+					if header in atlas:  # If a texture atlas is used
+						obj_header.set_atlas()
+					elif header in tiles:  # If the OBJ uses individual textures
+						obj_header.set_seperated()
+					return obj_header
 		except UnicodeDecodeError:
 			print(f"Failed to read first line of obj: {filepath}")
-			return
-		obj_header.set_jmc2obj()
-		# Since this is the default for Jmc2Obj,
-		# we'll assume this is what the OBJ is using
-		obj_header.set_seperated()
+		return obj_header
 
 
-def convert_mtl(filepath):
+def convert_mtl(filepath) -> Optional[MCprepError]:
 	"""Convert the MTL file if we're not using one of Blender's built in
 	colorspaces
 
@@ -170,7 +253,8 @@ def convert_mtl(filepath):
 	- Add a header at the end
 
 	Returns:
-		True if success or skipped, False if failed, or None if skipped
+		- None if successful or skipped
+		- MCprepError if failed (may return with message)
 	"""
 	# Check if the MTL exists. If not, then check if it
 	# uses underscores. If still not, then return False
@@ -180,7 +264,8 @@ def convert_mtl(filepath):
 		if mtl_underscores.exists():
 			mtl = mtl_underscores
 		else:
-			return False
+			line, file = env.current_line_and_file()
+			return MCprepError(FileNotFoundError(), line, file)
 
 	lines = None
 	copied_file = None
@@ -190,8 +275,9 @@ def convert_mtl(filepath):
 			lines = mtl_file.readlines()
 	except Exception as e:
 		print(e)
-		return False
-	
+		line, file = env.current_line_and_file()
+		return MCprepError(e, line, file, "Could not read file!")
+
 	# This checks to see if the user is using a built-in colorspace or if none of the lines have map_d. If so
 	# then ignore this file and return None
 	if bpy.context.scene.view_settings.view_transform in BUILTIN_SPACES or not any("map_d" in s for s in lines):
@@ -215,10 +301,11 @@ def convert_mtl(filepath):
 			print("Header " + str(header))
 			copied_file = shutil.copy2(mtl, original_mtl_path.absolute())
 		else:
-			return True
+			return None
 	except Exception as e:
 		print(e)
-		return False
+		line, file = env.current_line_and_file()
+		return MCprepError(e, line, file)
 
 	# In this section, we go over each line
 	# and check to see if it begins with map_d. If
@@ -231,7 +318,8 @@ def convert_mtl(filepath):
 					lines[index] = "# " + line
 	except Exception as e:
 		print(e)
-		return False
+		line, file = env.current_line_and_file()
+		return MCprepError(e, line, file, "Could not read file!")
 
 	# This needs to be seperate since it involves writing
 	try:
@@ -243,20 +331,34 @@ def convert_mtl(filepath):
 	except Exception as e:
 		print(e)
 		shutil.copy2(copied_file, mtl)
-		return False
+		line, file = env.current_line_and_file()
+		return MCprepError(e, line, file)
 
-	return True
+	return None
 
+class OBJImportCode(enum.Enum):
+	"""
+	This represents the state of the 
+	OBJ import addon in pre-4.0 versions
+	of Blender
+	"""
+	ALREADY_ENABLED = 0
+	DISABLED = 1
 
-def enble_obj_importer() -> Optional[bool]:
-	"""Checks if obj import is avail and tries to activate if not.
+def enable_obj_importer() -> Union[OBJImportCode, MCprepError]:
+	"""
+	Checks if the obj import addon (pre-Blender 4.0) is enabled,
+	and enable it if it isn't enabled.
 
-	If we fail to enable obj importing, return false. True if enabled, and Non
-	if nothing changed.
+	Returns:
+		- OBJImportCode.ALREADY_ENABLED if either enabled already or 
+		  the user is using Blender 4.0.
+		- OBJImportCode.DISABLED if the addon had to be enabled.
+		- MCprepError with a message if the addon could not be enabled.
 	"""
 	enable_addon = None
 	if util.min_bv((4, 0)):
-		return None  # No longer an addon, native built in.
+		return OBJImportCode.ALREADY_ENABLED # No longer an addon, native built in.
 	else:
 		in_import_scn = "obj_import" not in dir(bpy.ops.wm)
 		in_wm = ""
@@ -264,13 +366,14 @@ def enble_obj_importer() -> Optional[bool]:
 			enable_addon = "io_scene_obj"
 
 	if enable_addon is None:
-		return None
+		return OBJImportCode.ALREADY_ENABLED
 
 	try:
 		bpy.ops.preferences.addon_enable(module=enable_addon)
-		return True
+		return OBJImportCode.DISABLED
 	except RuntimeError:
-		return False
+		line, file = env.current_line_and_file()
+		return MCprepError(Exception(), line, file, "Could not enable the Built-in OBJ importer!")
 
 
 # -----------------------------------------------------------------------------
@@ -295,13 +398,14 @@ class MCPREP_OT_open_jmc2obj(bpy.types.Operator):
 	def execute(self, context):
 		addon_prefs = util.get_user_preferences(context)
 		res = util.open_program(addon_prefs.open_jmc2obj_path)
-
-		if res == -1:
-			bpy.ops.mcprep.install_jmc2obj('INVOKE_DEFAULT')
-			return {'CANCELLED'}
-		elif res != 0:
-			self.report({'ERROR'}, str(res))
-			return {'CANCELLED'}
+		
+		if isinstance(res, MCprepError):
+			if isinstance(res.err_type, FileNotFoundError):
+				bpy.ops.mcprep.install_jmc2obj('INVOKE_DEFAULT')
+				return {'CANCELLED'}
+			else:
+				self.report({'ERROR'}, res.msg)
+				return {'CANCELLED'}
 		else:
 			self.report({'INFO'}, "jmc2obj should open soon")
 		return {'FINISHED'}
@@ -375,14 +479,16 @@ class MCPREP_OT_open_mineways(bpy.types.Operator):
 		if os.path.isfile(addon_prefs.open_mineways_path):
 			res = util.open_program(addon_prefs.open_mineways_path)
 		else:
-			res = -1
-
-		if res == -1:
-			bpy.ops.mcprep.install_mineways('INVOKE_DEFAULT')
-			return {'CANCELLED'}
-		elif res != 0:
-			self.report({'ERROR'}, str(res))
-			return {'CANCELLED'}
+			# Doesn't matter here, it's a dummy value
+			res = MCprepError(FileNotFoundError(), -1, "")
+		
+		if isinstance(res, MCprepError):
+			if isinstance(res.err_type, FileNotFoundError):
+				bpy.ops.mcprep.install_mineways('INVOKE_DEFAULT')
+				return {'CANCELLED'}
+			else:
+				self.report({'ERROR'}, res.msg)
+				return {'CANCELLED'}
 		else:
 			self.report({'INFO'}, "Mineways should open soon")
 		return {'FINISHED'}
@@ -474,15 +580,15 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			self.report({"ERROR"}, "You must select a .obj file to import")
 			return {'CANCELLED'}
 
-		res = enble_obj_importer()
-		if res is None:
+		res = enable_obj_importer()
+		if res is OBJImportCode.ALREADY_ENABLED:
 			pass
-		elif res is True:
+		elif res is OBJImportCode.DISABLED:
 			self.report(
 				{"INFO"},
 				"FYI: had to enable OBJ imports in user preferences")
-		elif res is False:
-			self.report({"ERROR"}, "Built-in OBJ importer could not be enabled")
+		elif isinstance(res, MCprepError):
+			self.report({"ERROR"}, res.msg)
 			return {'CANCELLED'}
 
 		# There are a number of bug reports that come from the generic call
@@ -503,10 +609,13 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		# First let's convert the MTL if needed
 		conv_res = convert_mtl(self.filepath)
 		try:
-			if conv_res is None:
-				pass  # skipped, no issue anyways.
-			elif conv_res is False:
-				self.report({"WARNING"}, "MTL conversion failed!")
+			if isinstance(conv_res, MCprepError):
+				if isinstance(conv_res.err_type, FileNotFoundError):
+					self.report({"WARNING"}, "MTL not found!")
+				elif conv_res.msg is not None:
+					self.report({"WARNING"}, conv_res.msg)
+				else:
+					self.report({"WARNING"}, conv_res.err_type)
 
 			res = None
 			if util.min_bv((3, 5)):
@@ -591,19 +700,88 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			return {'CANCELLED'}
 
 		prefs = util.get_user_preferences(context)
-		detect_world_exporter(self.filepath)
-		prefs.MCprep_exporter_type = obj_header.exporter()
+		header = detect_world_exporter(Path(self.filepath))
 
+		if isinstance(header, ObjHeaderOptions):
+			prefs.MCprep_exporter_type = header.exporter()
+		
+
+		# Create empty at the center of the OBJ
+		empty = None
+		if isinstance(header, CommonMCOBJ):
+			# Get actual 3D space coordinates of the full bounding box
+			#
+			# These are in Minecraft coordinates, so they translate
+			# from (X, Y, Z) to (X, -Z, Y)
+			max_pair =   (header.export_bounds_max[0]  + header.export_offset[0], 
+						(-header.export_bounds_max[2]) + (-header.export_offset[2]), 
+					 	  header.export_bounds_max[1]  + header.export_offset[1])
+
+			min_pair =   (header.export_bounds_min[0]  + header.export_offset[0], 
+						(-header.export_bounds_min[2]) + (-header.export_offset[2]), 
+						  header.export_bounds_min[1]  + header.export_offset[1])
+			
+			# Calculate the center of the bounding box
+			#
+			# We do this by taking the average of the given
+			# points, so:
+			# (x1 + x2) / 2
+			# (y1 + y2) / 2
+			# (z1 + z2) / 2
+			#
+			# This will give us the midpoints of these
+			# coordinates, which in turn will correspond
+			# to the center of the bounding box
+			location = ((max_pair[0] + min_pair[0]) / 2, 
+						(max_pair[1] + min_pair[1]) / 2, 
+						(max_pair[2] + min_pair[2]) / 2)
+			empty = bpy.data.objects.new(name=header.world_name + "_mcprep_empty", object_data=None)
+			empty.empty_display_size = 2
+			empty.empty_display_type = 'PLAIN_AXES'
+			empty.location = location
+			empty.hide_viewport = True # Hide empty globally
+			util.update_matrices(empty)
+			for field in fields(header):
+					if getattr(header, field.name) is None:
+						continue
+					if field.type == CommonMCOBJTextureType:
+						empty[field.name] = getattr(header, field.name).value	
+					else:
+						empty[field.name] = getattr(header, field.name)
+
+		else:
+			empty = bpy.data.objects.new("mcprep_obj_empty", object_data=None)
+			empty.empty_display_size = 2
+			empty.empty_display_type = 'PLAIN_AXES'
+			empty.hide_viewport = True # Hide empty globally
 		for obj in context.selected_objects:
-			obj["MCPREP_OBJ_HEADER"] = True
-			obj["MCPREP_OBJ_FILE_TYPE"] = obj_header.texture_type()
+			if isinstance(header, CommonMCOBJ):
+				obj["COMMONMCOBJ_HEADER"] = True
+				obj["PARENTED_EMPTY"] = empty
+				obj.parent = empty
+				obj.matrix_parent_inverse = empty.matrix_world.inverted() # don't transform object
+				self.track_exporter = header.exporter
+				
+			elif isinstance(header, ObjHeaderOptions):
+				obj["MCPREP_OBJ_HEADER"] = True
+				obj["MCPREP_OBJ_FILE_TYPE"] = header.texture_type()
 
-		self.split_world_by_material(context)
+				obj.parent = empty
+				obj.matrix_parent_inverse = empty.matrix_world.inverted() # don't transform object
 
-		addon_prefs = util.get_user_preferences(context)
-		self.track_exporter = addon_prefs.MCprep_exporter_type  # Soft detect.
+				# Future-proofing for MCprep 4.0 when we 
+				# put global exporter options behind a legacy
+				# option and by default use the object for 
+				# getting the exporter
+				obj["MCPREP_OBJ_EXPORTER"] = "mineways-c" if header.exporter() == "Mineways" else "jmc2obj-c"
+				addon_prefs = util.get_user_preferences(context)
+				self.track_exporter = addon_prefs.MCprep_exporter_type  # Soft detect.
+
+		new_col = self.split_world_by_material(context)
+		new_col.objects.link(empty) # parent empty
+
 		return {'FINISHED'}
-
+	
 	def obj_name_to_material(self, obj):
 		"""Update an objects name based on its first material"""
 		if not obj:
@@ -617,7 +795,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			return
 		obj.name = util.nameGeneralize(mat.name)
 
-	def split_world_by_material(self, context: Context) -> None:
+	def split_world_by_material(self, context: Context) -> bpy.types.Collection:
 		"""2.8-only function, split combined object into parts by material"""
 		world_name = os.path.basename(self.filepath)
 		world_name = os.path.splitext(world_name)[0]
@@ -637,6 +815,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		# Force renames based on material, as default names are not useful.
 		for obj in worldg.objects:
 			self.obj_name_to_material(obj)
+		return worldg
 
 
 class MCPREP_OT_prep_world(bpy.types.Operator):
@@ -662,10 +841,8 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 			self.prep_world_cycles(context)
 		elif engine == 'BLENDER_EEVEE' or engine == 'BLENDER_EEVEE_NEXT':
 			self.prep_world_eevee(context)
-		elif engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
-			self.prep_world_internal(context)
 		else:
-			self.report({'ERROR'}, "Must be cycles, eevee, or blender internal")
+			self.report({'ERROR'}, "Must be Cycles or EEVEE")
 		return {'FINISHED'}
 
 	def prep_world_cycles(self, context: Context) -> None:
@@ -756,41 +933,7 @@ class MCPREP_OT_prep_world(bpy.types.Operator):
 
 		# Renders faster at a (minor?) cost of the image output
 		# TODO: given the output change, consider make a bool toggle for this
-		bpy.context.scene.render.use_simplify = True
-
-	def prep_world_internal(self, context):
-		# check for any suns with the sky setting on;
-		if not context.scene.world:
-			return
-		context.scene.world.use_nodes = False
-		context.scene.world.horizon_color = (0.00938029, 0.0125943, 0.0140572)
-		context.scene.world.light_settings.use_ambient_occlusion = True
-		context.scene.world.light_settings.ao_blend_type = 'MULTIPLY'
-		context.scene.world.light_settings.ao_factor = 0.1
-		context.scene.world.light_settings.use_environment_light = True
-		context.scene.world.light_settings.environment_energy = 0.05
-		context.scene.render.use_shadows = True
-		context.scene.render.use_raytrace = True
-		context.scene.render.use_textures = True
-
-		# check for any sunlamps with sky setting
-		sky_used = False
-		for lamp in context.scene.objects:
-			if lamp.type not in ("LAMP", "LIGHT") or lamp.data.type != "SUN":
-				continue
-			if lamp.data.sky.use_sky:
-				sky_used = True
-				break
-		if sky_used:
-			env.log("MCprep sky being used with atmosphere")
-			context.scene.world.use_sky_blend = False
-			context.scene.world.horizon_color = (0.00938029, 0.0125943, 0.0140572)
-		else:
-			env.log("No MCprep sky with atmosphere")
-			context.scene.world.use_sky_blend = True
-			context.scene.world.horizon_color = (0.647705, 0.859927, 0.940392)
-			context.scene.world.zenith_color = (0.0954261, 0.546859, 1)
-
+		bpy.context.scene.render.use_simplify = True	
 
 class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 	"""Add sun lamp and time of day (dynamic) driver, setup sky with sun and moon"""
@@ -802,7 +945,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 		"""Dynamic set of enums to show based on engine"""
 		engine = bpy.context.scene.render.engine
 		enums = []
-		if bpy.app.version >= (2, 77) and engine in ("CYCLES", "BLENDER_EEVEE", "BLENDER_EEVEE_NEXT"):
+		if engine in ("CYCLES", "BLENDER_EEVEE", "BLENDER_EEVEE_NEXT"):
 			enums.append((
 				"world_shader",
 				"Dynamic sky + shader sun/moon",
@@ -896,17 +1039,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 		if self.world_type in ("world_static_mesh", "world_static_only"):
 			# Create world dynamically (previous, simpler implementation)
 			new_sun = self.create_sunlamp(context)
-			new_objs.append(new_sun)
-
-			if engine in ('BLENDER_RENDER', 'BLENDER_GAME'):
-				world = context.scene.world
-				if not world:
-					world = bpy.data.worlds.new("MCprep World")
-					context.scene.world = world
-				new_sun.data.shadow_method = 'RAY_SHADOW'
-				new_sun.data.shadow_soft_size = 0.5
-				world.use_sky_blend = False
-				world.horizon_color = (0.00938029, 0.0125943, 0.0140572)
+			new_objs.append(new_sun)	
 			bpy.ops.mcprep.world(skipUsage=True)  # do rest of sky setup
 
 		elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE' or engine == 'BLENDER_EEVEE_NEXT':
@@ -920,35 +1053,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			if wname in bpy.data.worlds:
 				prev_world = bpy.data.worlds[wname]
 				prev_world.name = "-old"
-			new_objs += self.create_dynamic_world(context, blendfile, wname)
-
-		elif engine == 'BLENDER_RENDER' or engine == 'BLENDER_GAME':
-			# dynamic world using built-in sun sky and atmosphere
-			new_sun = self.create_sunlamp(context)
-			new_objs.append(new_sun)
-			new_sun.data.shadow_method = 'RAY_SHADOW'
-			new_sun.data.shadow_soft_size = 0.5
-
-			world = context.scene.world
-			if not world:
-				world = bpy.data.worlds.new("MCprep World")
-				context.scene.world = world
-			world.use_sky_blend = False
-			world.horizon_color = (0.00938029, 0.0125943, 0.0140572)
-
-			# be sure to turn off all other sun lamps with atmosphere set
-			new_sun.data.sky.use_sky = True  # use sun orientation settings if BI
-			for lamp in context.scene.objects:
-				if lamp.type not in ("LAMP", "LIGHT") or lamp.data.type != "SUN":
-					continue
-				if lamp == new_sun:
-					continue
-				lamp.data.sky.use_sky = False
-
-			time_obj = get_time_object()
-			if not time_obj:
-				env.log(
-					"TODO: implement create time_obj, parent sun to it & driver setup")
+			new_objs += self.create_dynamic_world(context, blendfile, wname)	
 
 		if self.world_type in ("world_static_mesh", "world_mesh"):
 			if not os.path.isfile(blendfile):
@@ -1017,10 +1122,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 
 	def create_sunlamp(self, context: Context) -> bpy.types.Object:
 		"""Create new sun lamp from primitives"""
-		if hasattr(bpy.data, "lamps"):  # 2.7
-			newlamp = bpy.data.lamps.new("Sun", "SUN")
-		else:  # 2.8
-			newlamp = bpy.data.lights.new("Sun", "SUN")
+		newlamp = bpy.data.lights.new("Sun", "SUN")
 		obj = bpy.data.objects.new("Sunlamp", newlamp)
 		obj.location = (0, 0, 20)
 		obj.rotation_euler[0] = 0.481711

@@ -18,6 +18,7 @@
 
 
 import os
+from pathlib import Path
 
 import bpy
 from bpy_extras.io_utils import ImportHelper
@@ -28,6 +29,7 @@ from . import sequences
 from . import uv_tools
 from .. import tracking
 from .. import util
+from .. import world_tools
 from ..conf import env
 
 # -----------------------------------------------------------------------------
@@ -313,8 +315,10 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 				"Nothing modified, be sure you selected objects with existing materials!"
 			)
 
-		addon_prefs = util.get_user_preferences(context)
 		self.track_param = context.scene.render.engine
+
+		# NOTE: This is temporary
+		addon_prefs = util.get_user_preferences(context)
 		self.track_exporter = addon_prefs.MCprep_exporter_type
 		return {'FINISHED'}
 
@@ -419,8 +423,7 @@ class MCPREP_OT_swap_texture_pack(
 
 	@classmethod
 	def poll(cls, context):
-		addon_prefs = util.get_user_preferences(context)
-		if addon_prefs.MCprep_exporter_type != "(choose)":
+		if world_tools.get_exporter(context) != world_tools.WorldExporter.Unknown:
 			return util.is_atlas_export(context)
 		return False
 
@@ -479,6 +482,8 @@ class MCPREP_OT_swap_texture_pack(
 		_ = generate.detect_form(mat_list)
 		invalid_uv, affected_objs = uv_tools.detect_invalid_uvs_from_objs(obj_list)
 
+		# NOTE: This is temporary
+		addon_prefs = util.get_user_preferences(context)
 		self.track_exporter = addon_prefs.MCprep_exporter_type
 
 		# set the scene's folder for the texturepack being swapped
@@ -488,7 +493,7 @@ class MCPREP_OT_swap_texture_pack(
 		res = 0
 		for mat in mat_list:
 			self.preprocess_material(mat)
-			res += generate.set_texture_pack(mat, folder, self.useExtraMaps)
+			res += generate.set_texture_pack(mat, Path(folder), self.useExtraMaps)
 			if self.animateTextures:
 				sequences.animate_single_material(
 					mat,

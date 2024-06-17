@@ -26,6 +26,7 @@ import platform
 import random
 import re
 import subprocess
+from MCprep_addon.commonmcobj_parser import CommonMCOBJTextureType
 
 import bpy
 from bpy.types import (
@@ -47,6 +48,18 @@ SPAWNER_EXCLUDE = "Spawner Exclude"
 # -----------------------------------------------------------------------------
 # GENERAL SUPPORTING FUNCTIONS (no registration required)
 # -----------------------------------------------------------------------------
+
+def update_matrices(obj):
+	"""Update mattrices of object so that we can accurately parent, 
+	because for some stupid reason, Blender doesn't do this by default"""
+	if obj.parent is None:
+		obj.matrix_world = obj.matrix_basis
+
+	else:
+		obj.matrix_world = obj.parent.matrix_world * \
+						   obj.matrix_parent_inverse * \
+						   obj.matrix_basis
+
 
 def apply_noncolor_data(node: Node) -> Optional[MCprepError]:
 	"""
@@ -134,19 +147,27 @@ def materialsFromObj(obj_list: List[bpy.types.Object]) -> List[Material]:
 	return mat_list
 
 
-def bAppendLink(directory: str, name: str, toLink: bool, active_layer: bool=True) -> bool:
-	"""For multiple version compatibility, this function generalized
-	appending/linking blender post 2.71 changed to new append/link methods
+def bAppendLink(directory: str, name: str, toLink: bool, active_layer: bool=True) -> Optional[MCprepError]:
+	"""
+	This function calls the append and link methods in an 
+	easy and safe manner.
 
 	Note that for 2.8 compatibility, the directory passed in should
 	already be correctly identified (eg Group or Collection)
 
 	Arguments:
-		directory: xyz.blend/Type, where Type is: Collection, Group, Material...
-		name: asset name
+		directory: str
+			xyz.blend/Type, where Type is: Collection, Group, Material...
+		name: str
+			Asset name
 		toLink: bool
+			If true, link instead of append
+		active_layer: bool=True
+			Deprecated in MCprep 3.6 as it relates to pre-2.8 layers
 
-	Returns: true if successful, false if not.
+	Returns: 
+		- None if successful
+		- MCprepError with message if the asset could not be appended or linked
 	"""
 
 	env.log(f"Appending {directory} : {name}", vv_only=True)
@@ -155,17 +176,7 @@ def bAppendLink(directory: str, name: str, toLink: bool, active_layer: bool=True
 	if directory[-1] != "/" and directory[-1] != os.path.sep:
 		directory += os.path.sep
 
-	if "link_append" in dir(bpy.ops.wm):
-		# OLD method of importing, e.g. in blender 2.70
-		env.log("Using old method of append/link, 2.72 <=", vv_only=True)
-		try:
-			bpy.ops.wm.link_append(directory=directory, filename=name, link=toLink)
-			return True
-		except RuntimeError as e:
-			print("bAppendLink", e)
-			return False
-	elif "link" in dir(bpy.ops.wm) and "append" in dir(bpy.ops.wm):
-		env.log("Using post-2.72 method of append/link", vv_only=True)
+	if "link" in dir(bpy.ops.wm) and "append" in dir(bpy.ops.wm):
 		if toLink:
 			bpy.ops.wm.link(directory=directory, filename=name)
 		else:
@@ -173,10 +184,11 @@ def bAppendLink(directory: str, name: str, toLink: bool, active_layer: bool=True
 				bpy.ops.wm.append(
 					directory=directory,
 					filename=name)
-				return True
+				return None
 			except RuntimeError as e:
 				print("bAppendLink", e)
-				return False
+				line, file = env.current_line_and_file()
+				return MCprepError(e, line, file, f"Could not append {name}!")
 
 
 def obj_copy(
@@ -228,7 +240,11 @@ def min_bv(version: Tuple, *, inclusive: bool = True) -> bool:
 
 
 def bv28() -> bool:
-	"""Check if blender 2.8, for layouts, UI, and properties. """
+	"""
+	Check if blender 2.8, for layouts, UI, and properties. 
+	
+	Deprecated in MCprep 3.5, but kept to avoid breakage for now...
+	"""
 	env.deprecation_warning()
 	return min_bv((2, 80))
 
@@ -261,6 +277,12 @@ def is_atlas_export(context: Context) -> bool:
 			if obj["MCPREP_OBJ_FILE_TYPE"] == "ATLAS":
 				file_types["ATLAS"] += 1
 			else:
+				file_types["INDIVIDUAL"] += 1
+		elif "COMMONMCOBJ_HEADER" in obj and obj["PARENTED_EMPTY"] is not None:
+			tex = CommonMCOBJTextureType[obj["PARENTED_EMPTY"]["texture_type"]]
+			if tex is CommonMCOBJTextureType.ATLAS:
+				file_types["ATLAS"] += 1
+			elif tex is CommonMCOBJTextureType.INDIVIDUAL_TILES:
 				file_types["INDIVIDUAL"] += 1
 		else:
 			continue
@@ -339,19 +361,33 @@ def link_selected_objects_to_scene() -> None:
 		if ob not in list(bpy.context.scene.objects):
 			obj_link_scene(ob)
 
+def open_program(executable: str) -> Optional[MCprepError]:
+	"""
+	Runs an executable such as Mineways or jmc2OBJ, taking into account the 
+	user's operating system (using Wine if Mineways is to be launched on 
+	a non-Windows OS such as macOS or Linux) and automatically checks if 
+	the program exists or has the right permissions to be executed.
 
-def open_program(executable: str) -> Union[int, str]:
+	Returns:
+		- None if the program is found and ran successfully
+		- MCprepError in all error cases (may have error message)
+	"""
 	# Open an external program from filepath/executbale
 	executable = bpy.path.abspath(executable)
 	env.log(f"Open program request: {executable}")
+
+	# Doesn't matter where the exact error occurs
+	# in this function, since they're all going to 
+	# be crazy hard to decipher
+	line, file = env.current_line_and_file()
 
 	# input could be .app file, which appears as if a folder
 	if not os.path.isfile(executable):
 		env.log("File not executable")
 		if not os.path.isdir(executable):
-			return -1
+			return MCprepError(FileNotFoundError(), line, file)
 		elif not executable.lower().endswith(".app"):
-			return -1
+			return MCprepError(FileNotFoundError(), line, file)
 
 	# try to open with wine, if available
 	osx_or_linux = platform.system() == "Darwin"
@@ -373,13 +409,13 @@ def open_program(executable: str) -> Union[int, str]:
 			# for line in iter(p.stdout.readline, ''):
 			# 	# will print lines as they come, instead of just at end
 			# 	print(stdout)
-			return 0
+			return None
 
 	try:  # attempt to use blender's built-in method
 		res = bpy.ops.wm.path_open(filepath=executable)
 		if res == {"FINISHED"}:
 			env.log("Opened using built in path opener")
-			return 0
+			return None
 		else:
 			env.log("Did not get finished response: ", str(res))
 	except:
@@ -393,8 +429,8 @@ def open_program(executable: str) -> Union[int, str]:
 		p = Popen(['open', executable], stdin=PIPE, stdout=PIPE, stderr=PIPE)
 		stdout, err = p.communicate(b"")
 		if err != b"":
-			return f"Error occured while trying to open executable: {err}" 
-	return "Failed to open executable"
+			return MCprepError(RuntimeError(), line, file, f"Error occured while trying to open executable: {err!r}")
+	return MCprepError(RuntimeError(), line, file, "Failed to open executable")
 
 
 def open_folder_crossplatform(folder: str) -> bool:
