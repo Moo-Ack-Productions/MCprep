@@ -1,4 +1,7 @@
 # Get the latest stable release and unzip
+# 
+# TODO: Automatically get the latest tag and download link. Perhaps 
+# through the GitHub API?
 wget "https://github.com/Moo-Ack-Productions/MCprep/releases/download/3.5.3/MCprep_addon_3.5.3.zip"
 mkdir MCprep_stable_release
 unzip ./MCprep_addon_*.zip -d MCprep_stable_release
