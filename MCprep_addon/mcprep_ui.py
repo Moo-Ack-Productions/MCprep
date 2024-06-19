@@ -943,6 +943,8 @@ class MCPREP_PT_skins(bpy.types.Panel):
 
 	def draw(self, context):
 		layout = self.layout
+		wm_props = context.window_manager.mcprep
+
 		if addon_just_updated():
 			restart_layout(layout)
 			return
@@ -951,56 +953,63 @@ class MCPREP_PT_skins(bpy.types.Panel):
 		sind = context.scene.mcprep_skins_list_index
 		mob_ind = context.scene.mcprep_props.mob_list_index
 		skinname = None
-
 		row = layout.row()
 		row.label(text=env._("Select skin"))
 		row.operator(
 			"mcprep.open_help", text="", icon="QUESTION", emboss=False
 		).url = "https://theduckcow.com/dev/blender/mcprep/skin-swapping/"
-
-		# set size of UIlist
 		row = layout.row()
-		col = row.column()
+		row.prop(wm_props, "skin_modes",expand=True)
+		if wm_props.skin_modes == 'PLAYER':
+		
+			# set size of UIlist
+			row = layout.row()
+			col = row.column()
 
-		is_sortable = len(env.skin_list) > 1
-		rows = 1
-		if (is_sortable):
-			rows = 4
+			is_sortable = len(env.skin_list) > 1
+			rows = 1
+			if (is_sortable):
+				rows = 4
 
-		# any other conditions for needing reloading?
-		if not env.skin_list:
-			col = layout.column()
-			col.label(text=env._("No skins found/loaded"))
-			p = col.operator(
-				"mcprep.reload_skins", text=env._("Press to reload"), icon="ERROR")
-		elif env.skin_list and len(env.skin_list) <= sind:
-			col = layout.column()
-			col.label(text=env._("Reload skins"))
-			p = col.operator(
-				"mcprep.reload_skins", text=env._("Press to reload"), icon="ERROR")
-		else:
-			col.template_list(
-				"MCPREP_UL_skins", "",
-				context.scene, "mcprep_skins_list",
-				context.scene, "mcprep_skins_list_index",
-				rows=rows)
-
-			col = layout.column(align=True)
-
-			row = col.row(align=True)
-			row.scale_y = 1.5
-			if env.skin_list:
-				skinname = bpy.path.basename(env.skin_list[sind][0])
-				p = row.operator("mcprep.applyskin", text=f"Apply {skinname}")
-				p.filepath = env.skin_list[sind][1]
+			# any other conditions for needing reloading?
+			if not env.skin_list:
+				col = layout.column()
+				col.label(text="No skins found/loaded")
+				p = col.operator(
+					"mcprep.reload_skins", text="Press to reload", icon="ERROR")
+			elif env.skin_list and len(env.skin_list) <= sind:
+				col = layout.column()
+				col.label(text="Reload skins")
+				p = col.operator(
+					"mcprep.reload_skins", text="Press to reload", icon="ERROR")
 			else:
-				row.enabled = False
-				p = row.operator("mcprep.skin_swapper", text=env._("No skins found"))
-			row = col.row(align=True)
-			row.operator("mcprep.skin_swapper", text=env._("Skin from file"))
-			row = col.row(align=True)
-			row.operator("mcprep.applyusernameskin", text=env._("Skin from username"))
+				col.template_list(
+					"MCPREP_UL_skins", "",
+					context.scene, "mcprep_skins_list",
+					context.scene, "mcprep_skins_list_index",
+					rows=rows)
 
+				col = layout.column(align=True)
+
+				row = col.row(align=True)
+				row.scale_y = 1.5
+				if env.skin_list:
+					skinname = bpy.path.basename(env.skin_list[sind][0])
+					p = row.operator("mcprep.applyskin", text=f"Apply {skinname}")
+					p.filepath = env.skin_list[sind][1]
+				else:
+					row.enabled = False
+					p = row.operator("mcprep.skin_swapper", text="No skins found")
+				row = col.row(align=True)
+				row.operator("mcprep.skin_swapper", text="Skin from file")
+				row = col.row(align=True)
+				row.operator("mcprep.applyusernameskin", text="Skin from username")
+		else:
+			row = layout.row()
+			col = row.column()
+
+			wm_props.draw_variation_ui(context, col)
+			col.operator("mcprep.swap_skin")
 		split = layout.split()
 		col = split.column(align=True)
 		row = col.row(align=True)
@@ -1044,6 +1053,12 @@ class MCPREP_PT_skins(bpy.types.Panel):
 					# datapass = scn_props.mob_list[mob_ind].mcmob_type
 					tx = f"Spawn {name} with {skinname}"
 					row.operator("mcprep.spawn_with_skin", text=tx)
+			b_row.label(text="Resource pack")
+			subrow = b_row.row(align=True)
+			subrow.prop(context.scene, "mcprep_texturepack_path", text="")
+			subrow.operator(
+				"mcprep.reset_texture_path", icon=LOAD_FACTORY, text="")
+			
 
 
 class MCPREP_PT_materials(bpy.types.Panel):
@@ -1969,6 +1984,25 @@ class McprepProps(bpy.types.PropertyGroup):
 	effects_list_index: bpy.props.IntProperty(default=0)
 
 
+class MCprepWindowManager(spawn_util.VariationProp, bpy.types.PropertyGroup):
+	skin_modes : bpy.props.EnumProperty(
+		name="Modes",
+		description="Skinswap modes",
+		items=(
+			('PLAYER', "Player", ""),
+			('MOB', "Mob/Entity", "")
+		)
+	)
+
+	@classmethod
+	def register(cls):
+		bpy.types.WindowManager.mcprep = bpy.props.PointerProperty(type=cls)
+	
+	@classmethod
+	def unregister(cls):
+		del bpy.types.WindowManager.mcprep
+		
+		
 # -----------------------------------------------------------------------------
 # Register functions
 # -----------------------------------------------------------------------------
@@ -1977,6 +2011,7 @@ class McprepProps(bpy.types.PropertyGroup):
 classes = (
 	McprepPreference,
 	McprepProps,
+	MCprepWindowManager,
 	MCPREP_MT_mob_spawner,
 	MCPREP_MT_meshswap_place,
 	MCPREP_MT_item_spawn,

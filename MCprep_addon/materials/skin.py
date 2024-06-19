@@ -31,8 +31,17 @@ from bpy.types import Context, Material
 from . import generate
 from .. import tracking
 from .. import util
+from ..spawner import spawn_util
 
 from ..conf import env
+from .prep import McprepMaterialProps
+
+
+swap_all_imgs_desc = (
+	"Swap textures in all image nodes that exist on the selected \n"
+	"material; if off, will instead seek to only replace the images of \n"
+	"nodes (not image blocks) named MCPREP_SKIN_SWAP"
+)
 
 
 swap_all_imgs_desc = (
@@ -335,7 +344,29 @@ def download_user(self, context: Context, username: str) -> Optional[Path]:
 		self.track_param = "username"
 	return saveloc
 
+def check_entity_texture(texture_path: str) -> Optional[Path]:
+	context = bpy.context
+	addon_prefs = util.get_user_preferences(context)
+	active_pack = bpy.path.abspath(context.scene.mcprep_texturepack_path)
+	active_pack = os.path.join(
+		active_pack, "assets", "minecraft", "textures", "entity")
 
+	base_pack = bpy.path.abspath(addon_prefs.custom_texturepack_path)
+	base_pack = os.path.join(
+		base_pack, "assets", "minecraft", "textures", "entity")
+
+	# if not os.path.isdir(active_pack):
+	# 	env.log(f"No models found for active path {active_pack}")
+	# 	return None
+	base_has_textures = os.path.isdir(base_pack)
+
+
+	if base_has_textures:
+		return generate.find_from_texturepack(texture_path)
+	else:
+		env.log(f"Base resource pack has no entity texture folder: {base_pack}")
+		return None
+	
 # -----------------------------------------------------------------------------
 # Operators / UI classes
 # -----------------------------------------------------------------------------
@@ -394,7 +425,6 @@ class MCPREP_OT_swap_skin_from_file(bpy.types.Operator, ImportHelper):
 			return {'CANCELLED'}
 
 		return {'FINISHED'}
-
 
 class MCPREP_OT_apply_skin(bpy.types.Operator):
 	"""Apply the active UIlist skin to select characters"""
@@ -703,6 +733,77 @@ class MCPREP_OT_spawn_mob_with_skin(bpy.types.Operator):
 		return {'FINISHED'}
 
 
+class MCPREP_OT_swap_skin_variant(bpy.types.Operator, spawn_util.VariationProp):
+	"""Apply the active UIlist skin to select characters"""
+	bl_idname = "mcprep.swap_skin"
+	bl_label = "Swap mob skin"
+	bl_description = "Swap the mobs variant"
+	bl_options = {'REGISTER', 'UNDO'}
+	
+	# def invoke(self, context, event):
+	# 	return context.window_manager.invoke_props_dialog(
+	# 		self, width=300 * util.ui_scale())
+
+	# def draw(self, context: Context):
+	# 	layout = self.layout
+	# 	self.draw_variation_ui(context, layout)
+	
+	@tracking.report_error
+	def execute(self, context: Context):
+		obj = context.object
+		if obj.type != 'ARMATURE':
+			self.report({'ERROR'}, "Please select an armature")
+			return {'CANCELLED'}
+		mats, skipped = getMatsFromSelected(obj, False)
+		mob_type = obj.get("MCPREP_mob_type", "Custom")
+		
+		if mob_type == "Custom":
+			self.report({'ERROR'}, "You are not allowed to use on Custom rig")
+			return {'CANCELLED'}
+		
+		texture_paths = self.get_texture_paths(mob_type)
+		name = mob_type.lower().replace(" ", "_")
+		if mob_type == "Villager":
+			self.doVillager(mats, texture_paths)
+		elif mob_type == "Zombie":
+			check_entity_texture(context)
+			if self.zombie_variation in ["ZOMBIE", "HUSK"]:
+				# Using Player model so convert player skin to 1.8 format
+				# loadSkinFile()
+				pass
+			else:
+				# Assign textures materials for drown
+				pass
+		elif mob_type == "Skeleton":
+			pass
+		
+		elif mob_type in ("Allay", "Vex"):
+			if mob_type == "Allay":
+				name += "/" + name
+			else:
+				name = "illager"
+			
+		else:
+			pass
+		return {'FINISHED'}
+
+	def doVillager(self, materials: List[Material], texture_paths: List[str]):
+		""" materials texture path order follows by profession, profession level, type """
+		prof_mat, biome_mat, level_mat = None, None, None
+		if mat[0].get("MCPREP_VILLAGER_PROFESSION"):
+				image = util.loadTexture(texture_paths[0])
+				proStat = generate.assert_textures_on_materials(image, [mat])
+			if mat.get("MCPREP_VILLAGER_BIOME"):
+				image = util.loadTexture(texture_paths[1])
+				biomeStat = generate.assert_textures_on_materials(image, [mat])
+			if mat.get("MCPREP_VILLAGER_LEVEL"):
+				image = util.loadTexture(texture_paths[2])
+				levelStat = generate.assert_textures_on_materials(image, [mat])
+			if not all([proStat, biomeStat, levelStat]):
+				self.report({'ERROR'}, "Something wrong happen during swap variant texture")
+			else:
+				pass
+
 class MCPREP_OT_download_username_list(bpy.types.Operator):
 	"""Apply the active UIlist skin to select characters"""
 	bl_idname = "mcprep.download_username_list"
@@ -788,6 +889,7 @@ classes = (
 	ListColl,
 	MCPREP_OT_swap_skin_from_file,
 	MCPREP_OT_apply_skin,
+	MCPREP_OT_swap_skin_variant,
 	MCPREP_OT_apply_username_skin,
 	MCPREP_OT_download_username_list,
 	# MCPREP_OT_skin_fix_eyes,

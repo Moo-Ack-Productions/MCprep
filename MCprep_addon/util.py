@@ -17,7 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 from subprocess import Popen, PIPE
-from typing import List, Optional, Union, Tuple
+from typing import List, Optional, Union, Tuple, Any, Dict
 import enum
 import json
 import operator
@@ -35,7 +35,8 @@ from bpy.types import (
 	Material,
 	Image,
 	Node,
-	UILayout
+	UILayout,
+	ID
 )
 from mathutils import Vector, Matrix
 
@@ -778,3 +779,16 @@ def move_assets_to_excluded_layer(context: Context, collections: List[Collection
 			continue  # not linked, likely a sub-group not added to scn
 		spawner_exclude_vl.collection.children.link(grp)
 		initial_view_coll.collection.children.unlink(grp)
+
+
+def set_prop(id_block: ID, key: str, value: Any, **kwargs: Dict[str, Any]):
+	"""Create or set the properties
+		3.0 got more functionalities
+	"""
+	id_block[key] = value
+	if bv30():
+		id_props = id_block.id_properties_ui(key)
+		id_props.update(**kwargs)
+		overrides = kwargs.get("overridable_library", True)
+		if overrides is not None:
+			id_block.property_overridable_library_set(f'["{key}"]', overrides)

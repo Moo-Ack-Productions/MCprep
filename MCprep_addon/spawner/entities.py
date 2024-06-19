@@ -21,7 +21,10 @@ from typing import Dict, List
 
 import bpy
 
-from bpy.types import Context
+from bpy.types import (
+	Context, 
+	Event
+)
 from ..conf import env, Entity
 from .. import util
 from .. import tracking
