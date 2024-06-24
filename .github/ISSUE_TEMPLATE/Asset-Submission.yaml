@@ -29,6 +29,8 @@ body:
           required: true
         - label: I am the sole creator of this rig, other than any textures by Mojang. Any custom textures I created myself.
           required: true
+        - label: That I, submitter of this rig, will be active in all discussion on this submission, and understand that not *responding to comments on this submission could result in this submission being rejected*.
+          required: true
 
   - type: textarea
     id: usage-details
