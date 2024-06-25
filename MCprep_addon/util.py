@@ -239,16 +239,6 @@ def min_bv(version: Tuple, *, inclusive: bool = True) -> bool:
 		return bpy.app.version >= version
 
 
-def bv28() -> bool:
-	"""
-	Check if blender 2.8, for layouts, UI, and properties. 
-	
-	Deprecated in MCprep 3.5, but kept to avoid breakage for now...
-	"""
-	env.deprecation_warning()
-	return min_bv((2, 80))
-
-
 def bv30() -> bool:
 	"""Check if we're dealing with Blender 3.0"""
 	return min_bv((3, 00))
