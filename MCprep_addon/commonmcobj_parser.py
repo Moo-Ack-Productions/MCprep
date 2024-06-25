@@ -214,14 +214,14 @@ def parse_common_header(header_lines: list[str]) -> CommonMCOBJ:
 
     return header
 
+
 def parse_header(f: TextIO) -> Optional[CommonMCOBJ]:
     """
-    Parses a file and returns a CommonMCOBJ object if 
-    the header exists.
-    
+    Parses a file and returns a CommonMCOBJ object if the header exists.
+
     f: TextIO
         File object
-    
+
     Returns:
         - CommonMCOBJ object if header exists
         - None otherwise
@@ -229,19 +229,23 @@ def parse_header(f: TextIO) -> Optional[CommonMCOBJ]:
 
     header: List[str] = []
     found_header = False
-    
+
     # Read in the header
-    for l in f:
-        tl = " ".join(l.rstrip().split())
-        if tl == "# COMMON_MC_OBJ_START":
+    lines_read = 0
+    for _l in f:
+        tl = " ".join(_l.rstrip().split())
+        lines_read += 1
+        if lines_read > 100 and tl and not tl.startswith("#"):
+            break  # no need to parse further than the true header area
+        elif tl == "# COMMON_MC_OBJ_START":
             header.append(tl)
-            found_header = True 
+            found_header = True
             continue
         elif tl == "# COMMON_MC_OBJ_END":
             header.append(tl)
             break
         if not found_header or tl == "#":
-            continue 
+            continue
         header.append(tl)
     if not len(header):
         return None
