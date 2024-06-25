@@ -84,11 +84,11 @@ class ObjHeaderOptions:
 
 	def __init__(self):
 		# This assumes all OBJs that aren't from Mineways
-		# and don't have a CommonMCOBJ header are from 
+		# and don't have a CommonMCOBJ header are from
 		# jmc2obj, and use individual tiles for textures
 		self._exporter: Optional[str] = "jmc2obj"
 		self._file_type: Optional[str] = "INDIVIDUAL_TILES"
-	
+
 	"""
 	Wrapper functions to avoid typos causing issues
 	"""
@@ -124,29 +124,30 @@ class WorldExporter(Enum):
 	"""
 
 	# Mineways with CommonMCOBJ
-	Mineways   = auto()
+	Mineways = auto()
 
 	# Jmc2OBJ with CommonMCOBJ
-	Jmc2OBJ    = auto()
+	Jmc2OBJ = auto()
 
-	# Cmc2OBJ, the reference 
+	# Cmc2OBJ, the reference
 	# implementation of CommonMCOBJ
 	#
-	# For the most part, this 
-	# will be treated as 
+	# For the most part, this
+	# will be treated as
 	# Unknown as it's not meant
 	# for regular use. The distinct
 	# option exists for testing purposes
-	Cmc2OBJ    = auto()
+	Cmc2OBJ = auto()
 
 	# Any untested exporter
-	Unknown	   = auto() 
-	
+	Unknown = auto()
+
 	# Mineways before the CommonMCOBJ standard
-	ClassicMW  = auto()
+	ClassicMW = auto()
 
 	# jmc2OBJ before the CommonMCOBJ standard
 	ClassicJmc = auto()
+
 
 EXPORTER_MAPPING = {
 	"mineways"   : WorldExporter.Mineways,
@@ -156,15 +157,16 @@ EXPORTER_MAPPING = {
 	"jmc2obj-c"  : WorldExporter.ClassicJmc
 }
 
+
 def get_exporter(context: Context) -> Optional[WorldExporter]:
 	"""
-	Return the exporter on the active object if it has 
+	Return the exporter on the active object if it has
 	an exporter attribute.
 
-	For maximum backwards compatibility, it'll convert the 
-	explicit options we have in MCprep for world exporters to 
+	For maximum backwards compatibility, it'll convert the
+	explicit options we have in MCprep for world exporters to
 	WorldExporter enum objects, if the object does not have either
-	the CommonMCOBJ exporter attribute, or if it does not have the 
+	the CommonMCOBJ exporter attribute, or if it does not have the
 	MCPREP_OBJ_EXPORTER attribute added in MCprep 3.6. This backwards
 	compatibility will be removed by default in MCprep 4.0
 
@@ -184,8 +186,8 @@ def get_exporter(context: Context) -> Optional[WorldExporter]:
 	elif "MCPREP_OBJ_HEADER" in obj:
 		if "MCPREP_OBJ_EXPORTER" in obj:
 			return EXPORTER_MAPPING[obj["MCPREP_OBJ_EXPORTER"]]
-	
-	# This section will be placed behind a legacy 
+
+	# This section will be placed behind a legacy
 	# option in MCprep 4.0, once CommonMCOBJ becomes
 	# more adopted in exporters
 	prefs = util.get_user_preferences(context)
@@ -195,6 +197,7 @@ def get_exporter(context: Context) -> Optional[WorldExporter]:
 		return WorldExporter.ClassicJmc
 	return None
 
+
 def detect_world_exporter(filepath: Path) -> Union[CommonMCOBJ, ObjHeaderOptions]:
 	"""Detect whether Mineways or jmc2obj was used, based on prefix info.
 
@@ -203,38 +206,41 @@ def detect_world_exporter(filepath: Path) -> Union[CommonMCOBJ, ObjHeaderOptions
 	set in the obj file as comments.
 	"""
 	obj_header = ObjHeaderOptions()
+
+	# First parse header for commonmcobj
+	with open(filepath, 'r') as obj_fd:
+		cmc_header = parse_header(obj_fd)
+		if cmc_header is not None:
+			return cmc_header
+
+	# If not found, fall back to recognizing the mineway legacy convention
 	with open(filepath, 'r') as obj_fd:
 		try:
-			cmc_header = parse_header(obj_fd)
-			if cmc_header is not None:
-				return cmc_header
-			else:
-				header = obj_fd.readline()
-				if 'mineways' in header.lower():
-					obj_header.set_mineways()
-					# form of: # Wavefront OBJ file made by Mineways version 5.10...
-					for line in obj_fd:
-						if line.startswith("# File type:"):
-							header = line.rstrip()  # Remove trailing newline
+			header = obj_fd.readline()
+			if 'mineways' in header.lower():
+				obj_header.set_mineways()
+				# form of: # Wavefront OBJ file made by Mineways version 5.10...
+				for line in obj_fd:
+					if line.startswith("# File type:"):
+						header = line.rstrip()  # Remove trailing newline
 
-					# The issue here is that Mineways has changed how the header is generated.
-					# As such, we're limited with only a couple of OBJs, some from
-					# 2020 and some from 2023, so we'll assume people are using
-					# an up to date version.
-					atlas = (
-						"# File type: Export all textures to three large images",
-						"# File type: Export full color texture patterns"
-					)
-					tiles = (
-						"# File type: Export tiles for textures to directory textures",
-						"# File type: Export individual textures to directory tex"
-					)
-					print('"{}"'.format(header))
-					if header in atlas:  # If a texture atlas is used
-						obj_header.set_atlas()
-					elif header in tiles:  # If the OBJ uses individual textures
-						obj_header.set_seperated()
-					return obj_header
+				# The issue here is that Mineways has changed how the header is generated.
+				# As such, we're limited with only a couple of OBJs, some from
+				# 2020 and some from 2023, so we'll assume people are using
+				# an up to date version.
+				atlas = (
+					"# File type: Export all textures to three large images",
+					"# File type: Export full color texture patterns"
+				)
+				tiles = (
+					"# File type: Export tiles for textures to directory textures",
+					"# File type: Export individual textures to directory tex"
+				)
+				if header in atlas:  # If a texture atlas is used
+					obj_header.set_atlas()
+				elif header in tiles:  # If the OBJ uses individual textures
+					obj_header.set_seperated()
+				return obj_header
 		except UnicodeDecodeError:
 			print(f"Failed to read first line of obj: {filepath}")
 		return obj_header
@@ -704,7 +710,6 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 
 		if isinstance(header, ObjHeaderOptions):
 			prefs.MCprep_exporter_type = header.exporter()
-		
 
 		# Create empty at the center of the OBJ
 		empty = None
@@ -720,7 +725,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			min_pair =   (header.export_bounds_min[0]  + header.export_offset[0], 
 						(-header.export_bounds_min[2]) + (-header.export_offset[2]), 
 						  header.export_bounds_min[1]  + header.export_offset[1])
-			
+
 			# Calculate the center of the bounding box
 			#
 			# We do this by taking the average of the given
@@ -732,56 +737,64 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			# This will give us the midpoints of these
 			# coordinates, which in turn will correspond
 			# to the center of the bounding box
-			location = ((max_pair[0] + min_pair[0]) / 2, 
-						(max_pair[1] + min_pair[1]) / 2, 
-						(max_pair[2] + min_pair[2]) / 2)
-			empty = bpy.data.objects.new(name=header.world_name + "_mcprep_empty", object_data=None)
+			location = (
+				(max_pair[0] + min_pair[0]) / 2,
+				(max_pair[1] + min_pair[1]) / 2,
+				(max_pair[2] + min_pair[2]) / 2)
+			empty = bpy.data.objects.new(
+				name=header.world_name + "_mcprep_empty", object_data=None)
 			empty.empty_display_size = 2
 			empty.empty_display_type = 'PLAIN_AXES'
 			empty.location = location
-			empty.hide_viewport = True # Hide empty globally
+			empty.hide_viewport = True  # Hide empty globally
 			util.update_matrices(empty)
 			for field in fields(header):
-					if getattr(header, field.name) is None:
-						continue
-					if field.type == CommonMCOBJTextureType:
-						empty[field.name] = getattr(header, field.name).value	
-					else:
-						empty[field.name] = getattr(header, field.name)
+				if getattr(header, field.name) is None:
+					continue
+				if field.type == CommonMCOBJTextureType:
+					empty[field.name] = getattr(header, field.name).value
+				else:
+					empty[field.name] = getattr(header, field.name)
 
 		else:
 			empty = bpy.data.objects.new("mcprep_obj_empty", object_data=None)
 			empty.empty_display_size = 2
 			empty.empty_display_type = 'PLAIN_AXES'
-			empty.hide_viewport = True # Hide empty globally
+			empty.hide_viewport = True  # Hide empty globally
+
+		addon_prefs = util.get_user_preferences(context)
+
 		for obj in context.selected_objects:
 			if isinstance(header, CommonMCOBJ):
 				obj["COMMONMCOBJ_HEADER"] = True
 				obj["PARENTED_EMPTY"] = empty
 				obj.parent = empty
-				obj.matrix_parent_inverse = empty.matrix_world.inverted() # don't transform object
+				obj.matrix_parent_inverse = empty.matrix_world.inverted()  # don't transform object
 				self.track_exporter = header.exporter
-				
+
 			elif isinstance(header, ObjHeaderOptions):
 				obj["MCPREP_OBJ_HEADER"] = True
 				obj["MCPREP_OBJ_FILE_TYPE"] = header.texture_type()
 
 				obj.parent = empty
-				obj.matrix_parent_inverse = empty.matrix_world.inverted() # don't transform object
+				obj.matrix_parent_inverse = empty.matrix_world.inverted()  # don't transform object
 
-				# Future-proofing for MCprep 4.0 when we 
+				# Future-proofing for MCprep 4.0 when we
 				# put global exporter options behind a legacy
-				# option and by default use the object for 
+				# option and by default use the object for
 				# getting the exporter
 				obj["MCPREP_OBJ_EXPORTER"] = "mineways-c" if header.exporter() == "Mineways" else "jmc2obj-c"
-				addon_prefs = util.get_user_preferences(context)
 				self.track_exporter = addon_prefs.MCprep_exporter_type  # Soft detect.
 
+		# One final assignment of the preferences, to avoid doing each loop
+		val = header.exporter if isinstance(header, CommonMCOBJ) else header.exporter()
+		addon_prefs.MCprep_exporter_type = "Mineways" if val.lower().startswith("mineways") else "jmc2obj"
+
 		new_col = self.split_world_by_material(context)
-		new_col.objects.link(empty) # parent empty
+		new_col.objects.link(empty)  # parent empty
 
 		return {'FINISHED'}
-	
+
 	def obj_name_to_material(self, obj):
 		"""Update an objects name based on its first material"""
 		if not obj:

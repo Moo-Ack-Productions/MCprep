@@ -168,8 +168,7 @@ class WorldToolsTest(unittest.TestCase):
             in_import_scn = "obj_import" in dir(bpy.ops.wm)
             self.assertTrue(in_import_scn, "obj_import operator not found")
 
-
-    def test_world_import_jmc_full(self):
+    def test_world_import_legacy_jmc_full(self):
         test_subpath = os.path.join(
             "test_data", "jmc2obj_test_1_15_2.obj")
         self._import_world_with_settings(file=test_subpath)
@@ -190,7 +189,29 @@ class WorldToolsTest(unittest.TestCase):
         with self.subTest("test_mappings"):
             self._import_materials_util("block_mapping_jmc")
 
-    def test_world_import_mineways_separated(self):
+    def test_world_import_cmcobj_jmc_full(self):
+        test_subpath = os.path.join(
+            "test_data", "jmc2obj_test_1_21.obj")
+        self._import_world_with_settings(file=test_subpath)
+        # TODO: Check that affirms it picks up the mcobj format.
+        self.assertEqual(self.addon_prefs.MCprep_exporter_type, "jmc2obj")
+
+        # UV tool test. Would be in its own test, but then we would be doing
+        # multiple unnecessary imports of the same world. So make it a subtest.
+        with self.subTest("test_uv_transform_no_alert_jmc2obj"):
+            invalid, invalid_objs = detect_invalid_uvs_from_objs(
+                bpy.context.selected_objects)
+            prt = ",".join([obj.name.split("_")[-1] for obj in invalid_objs])
+            self.assertFalse(
+                invalid, f"jmc2obj export should not alert: {prt}")
+
+        with self.subTest("canon_name_validation"):
+            self._canonical_name_no_none()
+
+        with self.subTest("test_mappings"):
+            self._import_materials_util("block_mapping_jmc")
+
+    def test_world_import_legacy_mineways_separated(self):
         test_subpath = os.path.join(
             "test_data", "mineways_test_separated_1_15_2.obj")
         self._import_world_with_settings(file=test_subpath)
@@ -212,9 +233,66 @@ class WorldToolsTest(unittest.TestCase):
         with self.subTest("test_mappings"):
             self._import_materials_util("block_mapping_mineways")
 
-    def test_world_import_mineways_combined(self):
+    def test_world_import_cmcobj_mineways_separated(self):
+        test_subpath = os.path.join(
+            "test_data", "mineways_test_separated_1_21.obj")
+        self._import_world_with_settings(file=test_subpath)
+        self.assertEqual(self.addon_prefs.MCprep_exporter_type, "Mineways")
+
+        # UV tool test. Would be in its own test, but then we would be doing
+        # multiple unnecessary imports of the same world. So make it a subtest.
+        with self.subTest("test_uv_transform_no_alert_mineways"):
+            invalid, invalid_objs = detect_invalid_uvs_from_objs(
+                bpy.context.selected_objects)
+            prt = ",".join([obj.name for obj in invalid_objs])
+            self.assertFalse(
+                invalid,
+                f"Mineways separated tiles export should not alert: {prt}")
+
+        with self.subTest("canon_name_validation"):
+            self._canonical_name_no_none()
+
+        with self.subTest("test_mappings"):
+            self._import_materials_util("block_mapping_mineways")
+
+    def test_world_import_legacy_mineways_combined(self):
         test_subpath = os.path.join(
             "test_data", "mineways_test_combined_1_15_2.obj")
+        self._import_world_with_settings(file=test_subpath)
+        self.assertEqual(self.addon_prefs.MCprep_exporter_type, "Mineways")
+
+        with self.subTest("test_uv_transform_combined_alert"):
+            invalid, invalid_objs = detect_invalid_uvs_from_objs(
+                bpy.context.selected_objects)
+            self.assertTrue(invalid, "Combined image export should alert")
+            if not invalid_objs:
+                self.fail(
+                    "Correctly alerted combined image, but no obj's returned")
+
+            # Do specific checks for water and lava, could be combined and
+            # cover more than one uv position (and falsely pass the test) in
+            # combined, water is called "Stationary_Wat" and "Stationary_Lav"
+            # (yes, appears cutoff; and yes includes the flowing too)
+            # NOTE! in 2.7x, will be named "Stationary_Water", but in 2.9 it is
+            # "Test_MCprep_1.16.4__-145_4_1271_to_-118_255_1311_Stationary_Wat"
+            water_obj = [obj for obj in bpy.data.objects
+                         if "Stationary_Wat" in obj.name][0]
+            lava_obj = [obj for obj in bpy.data.objects
+                        if "Stationary_Lav" in obj.name][0]
+
+            invalid, invalid_objs = detect_invalid_uvs_from_objs(
+                [lava_obj, water_obj])
+            self.assertTrue(invalid, "Combined lava/water should still alert")
+
+        with self.subTest("canon_name_validation"):
+            self._canonical_name_no_none()
+
+        with self.subTest("test_mappings"):
+            self._import_materials_util("block_mapping_mineways")
+
+    def test_world_import_cmcobj_mineways_combined(self):
+        test_subpath = os.path.join(
+            "test_data", "mineways_test_combined_1_21.obj")
         self._import_world_with_settings(file=test_subpath)
         self.assertEqual(self.addon_prefs.MCprep_exporter_type, "Mineways")
 
@@ -314,6 +392,8 @@ class WorldToolsTest(unittest.TestCase):
 
         # Resultant file
         res = world_tools.convert_mtl(tmp_mtl)
+        print("Need to fix this, it's giving none (meaning a success, when it shouldn't?)")
+        print(res, " for: ", tmp_mtl)
 
         # Restore the property we unset.
         world_tools.BUILTIN_SPACES = save_init
