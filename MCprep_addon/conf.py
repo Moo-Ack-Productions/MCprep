@@ -135,7 +135,7 @@ class MCprepEnv:
 		# list of material names, each is a string. None by default to indicate
 		# that no reading has occurred. If lib not found, will update to [].
 		# If ever changing the resource pack, should also reset to None.
-		self.material_sync_cache: Optional[List] = []
+		self.material_sync_cache: List = []
 	
 		# Whether we use PO files directly or use the converted form
 		self.use_direct_i18n = False
