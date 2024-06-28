@@ -577,10 +577,10 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			# Auto change from MTL to OBJ, latet if's will check if existing.
 			self.filepath = str(new_filename)
 		if not self.filepath:
-			self.report({"ERROR"}, "File not found, could not import obj")
+			self.report({"ERROR"}, f"File not found, could not import obj \'{self.filepath}\'")
 			return {'CANCELLED'}
 		if not os.path.isfile(self.filepath):
-			self.report({"ERROR"}, "File not found, could not import obj")
+			self.report({"ERROR"}, f"File not found, could not import obj \'{self.filepath}\'")
 			return {'CANCELLED'}
 		if not self.filepath.lower().endswith(".obj"):
 			self.report({"ERROR"}, "You must select a .obj file to import")
