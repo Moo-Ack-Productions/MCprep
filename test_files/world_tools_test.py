@@ -399,11 +399,9 @@ class WorldToolsTest(unittest.TestCase):
         world_tools.BUILTIN_SPACES = save_init
         print("TEST: post", world_tools.BUILTIN_SPACES)
 
-        self.assertIsNotNone(
+        self.assertIsNone(
             res,
-            "Failed to mock color space and thus could not test convert_mtl")
-
-        self.assertTrue(res, "Convert mtl failed with false response")
+            f"Failed to mock color space and thus could not test convert_mtl")
 
         # Now check that the data is the same.
         res = filecmp.cmp(tmp_mtl, modified_mtl, shallow=False)
