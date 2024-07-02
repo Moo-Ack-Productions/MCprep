@@ -246,7 +246,7 @@ def detect_world_exporter(filepath: Path) -> Union[CommonMCOBJ, ObjHeaderOptions
 		return obj_header
 
 
-def convert_mtl(filepath) -> Optional[MCprepError]:
+def convert_mtl(filepath) -> Union[bool, MCprepError]:
 	"""Convert the MTL file if we're not using one of Blender's built in
 	colorspaces
 
@@ -259,9 +259,14 @@ def convert_mtl(filepath) -> Optional[MCprepError]:
 	- Add a header at the end
 
 	Returns:
-		- None if successful or skipped
+		- True if performed, False if not skipped
 		- MCprepError if failed (may return with message)
 	"""
+	
+	# Perform this early to get it out of the way
+	if bpy.context.scene.view_settings.view_transform in BUILTIN_SPACES:
+		return False
+
 	# Check if the MTL exists. If not, then check if it
 	# uses underscores. If still not, then return False
 	mtl = Path(filepath.rsplit(".", 1)[0] + '.mtl')
@@ -284,10 +289,9 @@ def convert_mtl(filepath) -> Optional[MCprepError]:
 		line, file = env.current_line_and_file()
 		return MCprepError(e, line, file, "Could not read file!")
 
-	# This checks to see if the user is using a built-in colorspace or if none of the lines have map_d. If so
-	# then ignore this file and return None
-	if bpy.context.scene.view_settings.view_transform in BUILTIN_SPACES or not any("map_d" in s for s in lines):
-		return None
+	# This checks to see if none of the lines have map_d. If so then skip
+	if not any("map_d" in s for s in lines):
+		return False
 
 	# This represents a new folder that'll backup the MTL filepath
 	original_mtl_path = Path(filepath).parent.absolute() / "ORIGINAL_MTLS"
@@ -307,7 +311,7 @@ def convert_mtl(filepath) -> Optional[MCprepError]:
 			print("Header " + str(header))
 			copied_file = shutil.copy2(mtl, original_mtl_path.absolute())
 		else:
-			return None
+			return False
 	except Exception as e:
 		print(e)
 		line, file = env.current_line_and_file()
@@ -340,7 +344,7 @@ def convert_mtl(filepath) -> Optional[MCprepError]:
 		line, file = env.current_line_and_file()
 		return MCprepError(e, line, file)
 
-	return None
+	return True
 
 class OBJImportCode(enum.Enum):
 	"""
