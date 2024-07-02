@@ -40,17 +40,9 @@ from .materials import generate
 # supporting functions
 # -----------------------------------------------------------------------------
 
-BUILTIN_SPACES = (
-	"Standard",
-	"Filmic",
-	"Filmic Log",
-	"Raw",
-	"False Color"
-)
-
+BUILTIN_SPACES = ('Standard', 'Khronos PBR Neutral', 'AgX', 'Filmic', 'Filmic Log', 'False Color', 'Raw')
 
 time_obj_cache = None
-
 
 def get_time_object() -> None:
 	"""Returns the time object if present in the file"""
