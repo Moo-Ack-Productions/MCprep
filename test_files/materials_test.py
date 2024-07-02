@@ -695,17 +695,17 @@ class MaterialsTest(unittest.TestCase):
         # the test cases; input is diffuse, output is the whole dict
         cases = [
             {
-                "diffuse": os.path.join(tmp_dir, "oak_log_top.png"),
-                "specular": os.path.join(tmp_dir, "oak_log_top-s.png"),
-                "normal": os.path.join(tmp_dir, "oak_log_top_n.png"),
+                "diffuse": Path(tmp_dir) / "oak_log_top.png",
+                "specular": Path(tmp_dir) / "oak_log_top-s.png",
+                "normal": Path(tmp_dir) / "oak_log_top_n.png",
             }, {
-                "diffuse": os.path.join(tmp_dir, "oak_log.jpg"),
-                "specular": os.path.join(tmp_dir, "oak_log_s.jpg"),
-                "normal": os.path.join(tmp_dir, "oak_log_n.jpeg"),
-                "displace": os.path.join(tmp_dir, "oak_log_disp.jpeg"),
+                "diffuse": Path(tmp_dir) / "oak_log.jpg",
+                "specular": Path(tmp_dir) / "oak_log_s.jpg",
+                "normal": Path(tmp_dir) / "oak_log_n.jpeg",
+                "displace": Path(tmp_dir) / "oak_log_disp.jpeg",
             }, {
-                "diffuse": os.path.join(tmp_dir, "stonecutter_saw.tiff"),
-                "normal": os.path.join(tmp_dir, "stonecutter_saw n.tiff"),
+                "diffuse": Path(tmp_dir) / "stonecutter_saw.tiff",
+                "normal": Path(tmp_dir) / "stonecutter_saw n.tiff",
             }
         ]
 

@@ -26,7 +26,7 @@ from . import sequences
 from .. import tracking
 from .. import util
 
-from ..conf import env
+from ..conf import MCprepError, env
 
 
 # -----------------------------------------------------------------------------
@@ -431,6 +431,8 @@ class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 
 		self.report({'INFO'}, f"Updated {count} materials")
 		self.track_param = context.scene.render.engine
+
+		# NOTE: This is temporary
 		addon_prefs = util.get_user_preferences(context)
 		self.track_exporter = addon_prefs.MCprep_exporter_type
 		return {'FINISHED'}
@@ -440,14 +442,17 @@ class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 		env.log(f"Loading from texpack for {mat.name}", vv_only=True)
 		canon, _ = generate.get_mc_canonical_name(mat.name)
 		image_path = generate.find_from_texturepack(canon)
-		if not image_path or not os.path.isfile(image_path):
-			env.log(f"Find missing images: No source file found for {mat.name}")
+		if isinstance(image_path, MCprepError):
+			if image_path.msg:
+				env.log(image_path.msg)
+			else:
+				env.log(f"Find missing images: No source file found for {mat.name}")
 			return False
 
 		# even if images of same name already exist, load new block
 		env.log(f"Find missing images: Creating new image datablock for {mat.name}")
 		# do not use 'check_existing=False' to keep compatibility pre 2.79
-		image = bpy.data.images.load(image_path, check_existing=True)
+		image = bpy.data.images.load(str(image_path), check_existing=True)
 
 		engine = bpy.context.scene.render.engine
 		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE' or engine == 'BLENDER_EEVEE_NEXT':

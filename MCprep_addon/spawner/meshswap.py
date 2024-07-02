@@ -20,6 +20,7 @@
 from dataclasses import dataclass
 from typing import Dict, List, Union, Tuple
 import math
+from MCprep_addon import world_tools
 import mathutils
 import os
 import random
@@ -465,8 +466,7 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 
 	@classmethod
 	def poll(cls, context):
-		addon_prefs = util.get_user_preferences(context)
-		return addon_prefs.MCprep_exporter_type != "(choose)" and context.mode == 'OBJECT'
+		return world_tools.get_exporter(context) != world_tools.WorldExporter.Unknown and context.mode == 'OBJECT'
 
 	def invoke(self, context, event):
 		return context.window_manager.invoke_props_dialog(
@@ -517,6 +517,8 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 	@tracking.report_error
 	def execute(self, context):
 		tprep = time.time()
+
+		# NOTE: This is temporary
 		addon_prefs = util.get_user_preferences(context)
 		self.track_exporter = addon_prefs.MCprep_exporter_type
 

@@ -98,7 +98,7 @@ Feature list
 
 CREDIT
 ======
-While this addon is released as open source software, the assets are being released as [Creative Commons Attributions, CC-BY](https://creativecommons.org/licenses/by/3.0/us/). If you use MeshSwap, **please credit the creators** by linking to this page wherever your project may appear: [http://github.com/TheDuckCow/MCprep](https://github.com/TheDuckCow/MCprep)
+While this addon is released as open source software under the GNU GPL license, the assets are being released as [Creative Commons Attributions, CC-BY](https://creativecommons.org/licenses/by/3.0/us/). If you use MeshSwap, **please credit the creators** by linking to this page wherever your project may appear: [http://github.com/TheDuckCow/MCprep](https://github.com/TheDuckCow/MCprep). In addition, different parts of MCprep are under different GPL compatible licenses (see `LICENSE-3RD-PARTY.txt`).
 
 Meshswap Block models developed by [Patrick W. Crawford](https://twitter.com/TheDuckCow), [SilverC16](http://youtube.com/user/silverC16), and [Nils Söderman (rymdnisse)](http://youtube.com/rymdnisse).
 

@@ -753,13 +753,14 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		row = col.row(align=True)
 		row.prop(addon_prefs, "MCprep_exporter_type", expand=True)
 		row = col.row(align=True)
-		if addon_prefs.MCprep_exporter_type == "(choose)":
+		exporter = world_tools.get_exporter(context)
+		if exporter is None:
 			row.operator(
 				"mcprep.open_jmc2obj", text=env._("Select exporter!"), icon='ERROR')
 			row.enabled = False
-		elif addon_prefs.MCprep_exporter_type == "Mineways":
+		elif exporter is world_tools.WorldExporter.Mineways or exporter is world_tools.WorldExporter.ClassicMW:
 			row.operator("mcprep.open_mineways")
-		else:
+		elif exporter is world_tools.WorldExporter.Jmc2OBJ or exporter is world_tools.WorldExporter.ClassicJmc:
 			row.operator("mcprep.open_jmc2obj")
 
 		wpath = addon_prefs.world_obj_path
@@ -782,7 +783,8 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		p.filepath = context.scene.mcprep_texturepack_path
 		if context.mode == "OBJECT":
 			col.operator("mcprep.meshswap", text=env._("Mesh Swap"))
-			if addon_prefs.MCprep_exporter_type == "(choose)":
+			exporter = world_tools.get_exporter(context)
+			if exporter is None or exporter is world_tools.WorldExporter.Unknown:
 				col.label(text=env._("Select exporter!"), icon='ERROR')
 		if context.mode == 'EDIT_MESH':
 			col.operator("mcprep.scale_uv")
@@ -1063,7 +1065,6 @@ class MCPREP_PT_materials(bpy.types.Panel):
 			return
 
 		row = layout.row()
-		# row.operator("mcprep.create_default_material")
 		split = layout.split()
 		col = split.column(align=True)
 
@@ -1499,9 +1500,10 @@ def model_spawner(self, context: Context) -> None:
 		ops = row.operator("mcprep.spawn_model", text=f"Place: {model.name}")
 		ops.location = util.get_cursor_location(context)
 		ops.filepath = model.filepath
-		if addon_prefs.MCprep_exporter_type == "Mineways":
+		exporter = world_tools.get_exporter(context)
+		if exporter is world_tools.WorldExporter.Mineways or exporter is world_tools.WorldExporter.ClassicMW:
 			ops.snapping = "offset"
-		elif addon_prefs.MCprep_exporter_type == "jmc2obj":
+		elif exporter is world_tools.WorldExporter.Jmc2OBJ or exporter is world_tools.WorldExporter.ClassicJmc:
 			ops.snapping = "center"
 	else:
 		box = col.box()
@@ -1521,9 +1523,10 @@ def model_spawner(self, context: Context) -> None:
 
 	ops = col.operator("mcprep.import_model_file")
 	ops.location = util.get_cursor_location(context)
-	if addon_prefs.MCprep_exporter_type == "Mineways":
+	exporter = world_tools.get_exporter(context)
+	if exporter is world_tools.WorldExporter.Mineways or exporter is world_tools.WorldExporter.ClassicMW:
 		ops.snapping = "center"
-	elif addon_prefs.MCprep_exporter_type == "jmc2obj":
+	elif exporter is world_tools.WorldExporter.Jmc2OBJ or exporter is world_tools.WorldExporter.ClassicJmc:
 		ops.snapping = "offset"
 
 	split = layout.split()

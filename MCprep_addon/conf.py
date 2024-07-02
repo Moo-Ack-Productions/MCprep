@@ -135,7 +135,7 @@ class MCprepEnv:
 		# list of material names, each is a string. None by default to indicate
 		# that no reading has occurred. If lib not found, will update to [].
 		# If ever changing the resource pack, should also reset to None.
-		self.material_sync_cache = []
+		self.material_sync_cache: List = []
 	
 		# Whether we use PO files directly or use the converted form
 		self.use_direct_i18n = False
@@ -305,10 +305,16 @@ class MCprepError(object):
 		Path of file the exception object
 		was created in. The preferred way 
 		to get this is __file__
+
+	msg: Optional[str]
+		Optional message to display for an 
+		exception. Use this if the exception 
+		type may not be so clear cut
 	"""
 	err_type: BaseException
 	line: int 
 	file: str
+	msg: Optional[str] = None
 
 env = MCprepEnv()
 

@@ -17,7 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import os
-from typing import Dict, Optional, List, Any, Tuple, Union
+from typing import Dict, Optional, List, Any, Tuple, Union, cast
 from pathlib import Path
 from dataclasses import dataclass
 from enum import Enum
@@ -26,7 +26,7 @@ import bpy
 from bpy.types import Context, Material, Image, Texture, Nodes, NodeLinks, Node
 
 from .. import util
-from ..conf import env, Form
+from ..conf import MCprepError, env, Form
 
 AnimatedTex = Dict[str, int]
 
@@ -125,43 +125,51 @@ def get_mc_canonical_name(name: str) -> Tuple[str, Optional[Form]]:
 	return canon, form
 
 
-def find_from_texturepack(blockname: str, resource_folder: Optional[Path]=None) -> Path:
+def find_from_texturepack(blockname: str, resource_folder: Optional[Path]=None) -> Union[Path, MCprepError]:
 	"""Given a blockname (and resource folder), find image filepath.
 
 	Finds textures following any pack which should have this structure, and
 	the input folder or default resource folder could target at any of the
 	following sublevels above the <subfolder> level.
 	//pack_name/assets/minecraft/textures/<subfolder>/<blockname.png>
-	"""
-	if not resource_folder:
-		# default to internal pack
-		resource_folder = bpy.path.abspath(bpy.context.scene.mcprep_texturepack_path)
 
-	if not os.path.isdir(resource_folder):
+	Returns:
+		- Path if successful
+		- MCprepError if error occurs (may return with a message)
+	"""
+	if resource_folder is None:
+		# default to internal pack
+		resource_folder = Path(cast(
+			str,
+			bpy.path.abspath(bpy.context.scene.mcprep_texturepack_path)
+		))
+
+	if not resource_folder.exists() or not resource_folder.is_dir():
 		env.log("Error, resource folder does not exist")
-		return
+		line, file = env.current_line_and_file()
+		return MCprepError(FileNotFoundError(), line, file, f"Resource pack folder at {resource_folder} does not exist!")
 
 	# Check multiple paths, picking the first match (order is important),
 	# goal of picking out the /textures folder.
 	check_dirs = [
-		os.path.join(resource_folder, "textures"),
-		os.path.join(resource_folder, "minecraft", "textures"),
-		os.path.join(resource_folder, "assets", "minecraft", "textures")]
+		Path(resource_folder, "textures"),
+		Path(resource_folder, "minecraft", "textures"),
+		Path(resource_folder, "assets", "minecraft", "textures")]
 	for path in check_dirs:
-		if os.path.isdir(path):
+		if path.exists():
 			resource_folder = path
 			break
 
 	search_paths = [
 		resource_folder,
 		# Both singular and plural shown below as it has varied historically.
-		os.path.join(resource_folder, "blocks"),
-		os.path.join(resource_folder, "block"),
-		os.path.join(resource_folder, "items"),
-		os.path.join(resource_folder, "item"),
-		os.path.join(resource_folder, "entity"),
-		os.path.join(resource_folder, "models"),
-		os.path.join(resource_folder, "model"),
+		Path(resource_folder, "blocks"),
+		Path(resource_folder, "block"),
+		Path(resource_folder, "items"),
+		Path(resource_folder, "item"),
+		Path(resource_folder, "entity"),
+		Path(resource_folder, "models"),
+		Path(resource_folder, "model"),
 	]
 	res = None
 
@@ -170,32 +178,36 @@ def find_from_texturepack(blockname: str, resource_folder: Optional[Path]=None) 
 	if "/" in blockname:
 		newpath = blockname.replace("/", os.path.sep)
 		for ext in extensions:
-			if os.path.isfile(os.path.join(resource_folder, newpath + ext)):
-				res = os.path.join(resource_folder, newpath + ext)
+			if Path(resource_folder, newpath + ext).exists():
+				res = Path(resource_folder, newpath + ext)
 				return res
 		newpath = os.path.basename(blockname)  # case where goes into other subpaths
 		for ext in extensions:
-			if os.path.isfile(os.path.join(resource_folder, newpath + ext)):
-				res = os.path.join(resource_folder, newpath + ext)
+			if Path(resource_folder, newpath + ext).exists():
+				res = Path(resource_folder, newpath + ext)
 				return res
 
 	# fallback (more common case), wide-search for
 	for path in search_paths:
-		if not os.path.isdir(path):
+		if not path.is_dir():
 			continue
 		for ext in extensions:
-			check_path = os.path.join(path, blockname + ext)
-			if os.path.isfile(check_path):
-				res = os.path.join(path, blockname + ext)
+			check_path = Path(path, blockname + ext)
+			if check_path.exists() and check_path.is_file():
+				res = Path(path, blockname + ext)
 				return res
+
 	# Mineways fallback
 	for suffix in ["-Alpha", "-RGB", "-RGBA"]:
 		if blockname.endswith(suffix):
-			res = os.path.join(
+			res = Path(
 				resource_folder, "mineways_assets", f"mineways{suffix}.png")
-			if os.path.isfile(res):
+			if res.exists() and res.is_file():
 				return res
 
+	if res is None:
+		line, file = env.current_line_and_file()
+		return MCprepError(FileNotFoundError(), line, file)
 	return res
 
 
@@ -204,6 +216,13 @@ def detect_form(materials: List[Material]) -> Optional[Form]:
 
 	Useful for pre-determining elibibility of a function and also for tracking
 	reporting to give sense of how common which exporter is used.
+
+	materials: List[Material]:
+		List of materials to check from 
+
+	Returns:
+		- Form if detected
+		- None if not detected
 	"""
 	jmc2obj = 0
 	mc = 0
@@ -344,10 +363,12 @@ def set_texture_pack(
 	"""
 	mc_name, _ = get_mc_canonical_name(material.name)
 	image = find_from_texturepack(mc_name, folder)
-	if image is None:
+	if isinstance(image, MCprepError):
+		if image.msg:
+			env.log(image.msg)
 		return 0
 
-	image_data = util.loadTexture(image)
+	image_data = util.loadTexture(str(image))
 	_ = set_cycles_texture(
 		image_data, material, extra_passes=use_extra_passes)
 	return 1
@@ -392,7 +413,7 @@ def set_cycles_texture(
 	# check if there is more data to see pass types
 	img_sets = {}
 	if extra_passes:
-		img_sets = find_additional_passes(image.filepath)
+		img_sets = find_additional_passes(Path(image.filepath))
 	changed = False
 
 	is_grayscale = False
@@ -562,7 +583,8 @@ def get_textures(material: Material) -> Dict[str, Image]:
 
 def find_additional_passes(image_file: Path) -> Dict[str, Image]:
 	"""Find relevant passes like normal and spec in same folder as image."""
-	abs_img_file = bpy.path.abspath(image_file)
+	print("What is this?", image_file)
+	abs_img_file = bpy.path.abspath(str(image_file))  # needs to be blend file relative
 	env.log(f"\tFind additional passes for: {image_file}", vv_only=True)
 	if not os.path.isfile(abs_img_file):
 		return {}
@@ -637,9 +659,11 @@ def replace_missing_texture(image: Image) -> bool:
 	canon, _ = get_mc_canonical_name(name)
 	# TODO: detect for pass structure like normal and still look for right pass
 	image_path = find_from_texturepack(canon)
-	if not image_path:
+	if isinstance(image_path, MCprepError):
+		if image_path.msg:
+			env.log(image_path.msg)
 		return False
-	image.filepath = image_path
+	image.filepath = str(image_path)
 	# image.reload() # not needed?
 	# pack?
 
