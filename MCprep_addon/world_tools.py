@@ -149,8 +149,9 @@ EXPORTER_MAPPING = {
 	"jmc2obj-c"  : WorldExporter.ClassicJmc
 }
 
+UNSUPPORTED_OR_NONE = (WorldExporter.Unknown, None)
 
-def get_exporter(context: Context) -> WorldExporter:
+def get_exporter(context: Context) -> Optional[WorldExporter]:
 	"""
 	Return the exporter on the active object if it has
 	an exporter attribute.
@@ -168,7 +169,7 @@ def get_exporter(context: Context) -> WorldExporter:
 	"""
 	obj = context.active_object
 	if not obj:
-		return WorldExporter.Unknown
+		return None
 
 	if "COMMONMCOBJ_HEADER" in obj:
 		if obj["PARENTED_EMPTY"] is not None and obj["PARENTED_EMPTY"]["exporter"] in EXPORTER_MAPPING:
@@ -187,7 +188,7 @@ def get_exporter(context: Context) -> WorldExporter:
 		return WorldExporter.ClassicMW
 	elif prefs.MCprep_exporter_type == "jmc2obj":
 		return WorldExporter.ClassicJmc
-	return WorldExporter.Unknown
+	return None
 
 
 def detect_world_exporter(filepath: Path) -> Union[CommonMCOBJ, ObjHeaderOptions]:

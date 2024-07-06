@@ -423,7 +423,7 @@ class MCPREP_OT_swap_texture_pack(
 
 	@classmethod
 	def poll(cls, context):
-		if world_tools.get_exporter(context) != world_tools.WorldExporter.Unknown:
+		if world_tools.get_exporter(context) != None:
 			return util.is_atlas_export(context)
 		# Fallback to legacy
 		addon_prefs = util.get_user_preferences(context)
