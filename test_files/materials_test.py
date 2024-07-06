@@ -886,7 +886,7 @@ class MaterialsTest(unittest.TestCase):
         obj.active_material = new_mat
         self.assertIsNotNone(obj.active_material, "Material should be applied")
 
-        # Ensure if no texture pack selected, it fails.
+        # Ensure if no exporter type selected, it fails.
         addon_prefs = util.get_user_preferences(bpy.context)
         addon_prefs.MCprep_exporter_type = "(choose)"
         with self.assertRaises(RuntimeError):

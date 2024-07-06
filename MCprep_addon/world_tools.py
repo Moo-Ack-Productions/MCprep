@@ -150,7 +150,7 @@ EXPORTER_MAPPING = {
 }
 
 
-def get_exporter(context: Context) -> Optional[WorldExporter]:
+def get_exporter(context: Context) -> WorldExporter:
 	"""
 	Return the exporter on the active object if it has
 	an exporter attribute.
@@ -168,7 +168,7 @@ def get_exporter(context: Context) -> Optional[WorldExporter]:
 	"""
 	obj = context.active_object
 	if not obj:
-		return None
+		return WorldExporter.Unknown
 
 	if "COMMONMCOBJ_HEADER" in obj:
 		if obj["PARENTED_EMPTY"] is not None and obj["PARENTED_EMPTY"]["exporter"] in EXPORTER_MAPPING:
@@ -187,7 +187,7 @@ def get_exporter(context: Context) -> Optional[WorldExporter]:
 		return WorldExporter.ClassicMW
 	elif prefs.MCprep_exporter_type == "jmc2obj":
 		return WorldExporter.ClassicJmc
-	return None
+	return WorldExporter.Unknown
 
 
 def detect_world_exporter(filepath: Path) -> Union[CommonMCOBJ, ObjHeaderOptions]:
@@ -251,7 +251,8 @@ def convert_mtl(filepath) -> Union[bool, MCprepError]:
 	- Add a header at the end
 
 	Returns:
-		- True if performed, False if not skipped
+		- True if the file was converted
+		- False if conversion was skipped or it was already converted before
 		- MCprepError if failed (may return with message)
 	"""
 	
@@ -347,20 +348,21 @@ class OBJImportCode(enum.Enum):
 	ALREADY_ENABLED = 0
 	DISABLED = 1
 
+
 def enable_obj_importer() -> Union[OBJImportCode, MCprepError]:
 	"""
 	Checks if the obj import addon (pre-Blender 4.0) is enabled,
 	and enable it if it isn't enabled.
 
 	Returns:
-		- OBJImportCode.ALREADY_ENABLED if either enabled already or 
+		- OBJImportCode.ALREADY_ENABLED if either enabled already or
 		  the user is using Blender 4.0.
 		- OBJImportCode.DISABLED if the addon had to be enabled.
 		- MCprepError with a message if the addon could not be enabled.
 	"""
 	enable_addon = None
 	if util.min_bv((4, 0)):
-		return OBJImportCode.ALREADY_ENABLED # No longer an addon, native built in.
+		return OBJImportCode.ALREADY_ENABLED  # No longer an addon, native built in.
 	else:
 		in_import_scn = "obj_import" not in dir(bpy.ops.wm)
 		in_wm = ""

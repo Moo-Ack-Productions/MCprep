@@ -388,27 +388,16 @@ class WorldToolsTest(unittest.TestCase):
         # framework, hence we'll just clear the  world_tool's vars.
         save_init = list(world_tools.BUILTIN_SPACES)
         world_tools.BUILTIN_SPACES = ["NotRealSpace"]
-        print("TEST: pre", world_tools.BUILTIN_SPACES)
-
-        # Resultant file
         res = world_tools.convert_mtl(tmp_mtl)
-        print("Need to fix this, it's giving none (meaning a success, when it shouldn't?)")
-        print(res, " for: ", tmp_mtl)
-
-        # Restore the property we unset.
         world_tools.BUILTIN_SPACES = save_init
-        print("TEST: post", world_tools.BUILTIN_SPACES)
 
-        self.assertIsNone(
+        self.assertTrue(
             res,
-            f"Failed to mock color space and thus could not test convert_mtl")
-
-        # Now check that the data is the same.
+            "Should return false ie skipped conversion")
         res = filecmp.cmp(tmp_mtl, modified_mtl, shallow=False)
+        os.remove(tmp_mtl)  # Cleanup first, in case assert fails
         self.assertTrue(
             res, f"Generated MTL is different: {tmp_mtl} vs {modified_mtl}")
-        # Not removing file, since we likely want to inspect it.
-        os.remove(tmp_mtl)
 
     def test_convert_mtl_skip(self):
         """Ensures that we properly skip if a built in space active."""
@@ -440,11 +429,10 @@ class WorldToolsTest(unittest.TestCase):
 
         # Restore the property we unset.
         world_tools.BUILTIN_SPACES = save_init
-        # print("TEST: post", world_tools.BUILTIN_SPACES)
 
         if res is not None:
             os.remove(tmp_mtl)
-        self.assertIsNone(res, "Should not have converter MTL for valid space")
+        self.assertFalse(res, "Should not have converter MTL for valid space")
 
 
 if __name__ == '__main__':
