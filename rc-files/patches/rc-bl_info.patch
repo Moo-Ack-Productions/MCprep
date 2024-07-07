@@ -7,10 +7,10 @@ index e727f3f..39c9fa7 100755
  
  bl_info = {
 -	"name": "MCprep",
-+	"name": "MCprep 3.6 RC-2",
++	"name": "MCprep 3.6 RC-3",
  	"category": "Object",
 -	"version": (3, 5, 3),
-+	"version": (3, 5, 3, 2),
++	"version": (3, 5, 3, 3),
  	"blender": (2, 80, 0),
  	"location": "3D window toolshelf > MCprep tab",
  	"description": "Minecraft workflow addon for rendering and animation",
