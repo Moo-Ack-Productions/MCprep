@@ -522,7 +522,7 @@ class VIVY_OT_swap_texture_pack(
 		run the swap (and auto load e.g. normals and specs if avail.)
 		"""
 		mc_name, _ = get_mc_canonical_name(material.name)
-		image = generate.find_from_texturepack(mc_name, folder)
+		image = generate.find_from_texturepack(mc_name, Path(folder) if not isinstance(folder, Path) else folder)
 		if image is None:
 			obj = bpy.context.view_layer.objects.active
 			md = env.vivy_material_json["materials"][obj["VIVY_MATERIAL_NAME"]]
@@ -552,7 +552,7 @@ class VIVY_OT_swap_texture_pack(
 			generate_vivy_materials(self, context, options)
 			return False
 
-		image_data = util.loadTexture(image)
+		image_data = util.loadTexture(str(image))
 		_ = self.set_cycles_texture(context, image_data, material, material_type, True)
 		return True
 
@@ -591,7 +591,7 @@ class VIVY_OT_swap_texture_pack(
 			if "specular" in img_sets:
 				new_img = util.loadTexture(img_sets["specular"])
 				s.image = new_img
-				util.apply_colorspace(s, 'Non-Color')
+				util.apply_noncolor_data(s)
 				passes["specular"] = new_img
 			else:
 				fallback = Fallback.FALLBACK_S
@@ -600,7 +600,7 @@ class VIVY_OT_swap_texture_pack(
 			if "normal" in img_sets:
 				new_img = util.loadTexture(img_sets["normal"])
 				n.image = new_img
-				util.apply_colorspace(n, 'Non-Color')
+				util.apply_noncolor_data(n)
 				passes["normal"] = new_img 
 			else:
 				fallback = Fallback.FALLBACK_N
