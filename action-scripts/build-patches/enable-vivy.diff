@@ -1,0 +1,13 @@
+diff --git a/MCprep_addon/conf.py b/MCprep_addon/conf.py
+index 637adac..4a201f5 100644
+--- a/MCprep_addon/conf.py
++++ b/MCprep_addon/conf.py
+@@ -72,7 +72,7 @@ except:
+ 
+ # This enables Vivy. Only use if
+ # you know what you're doing!
+-ENABLE_VIVY = False
++ENABLE_VIVY = True
+ 
+ # -----------------------------------------------------------------------------
+ # ADDON GLOBAL VARIABLES AND INITIAL SETTINGS
