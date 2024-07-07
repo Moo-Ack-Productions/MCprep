@@ -28,7 +28,7 @@ from . import addon_updater_ops
 from . import tracking
 from . import util
 from . import world_tools
-from .materials import material_manager
+from .materials import material_manager, vivy_materials
 from .materials.generate import update_mcprep_texturepack_path
 from .materials.skin import update_skin_path
 from .spawner import effects
@@ -772,11 +772,11 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		col = split.column(align=True)
 
 		if ENABLE_VIVY:
-			col.label(text="vivy tools")
-			col.operator("vivy.prep_materials", text="prep materials")
-			col.operator("mcprep.open_file", text="edit vivi material library").file=str(vivy_materials.get_vivy_blend())
-			col.operator("vivy.export_library", text="export vivy material library")
-			col.operator("vivy.import_library", text="import previous export")
+			col.label(text="Vivy tools")
+			col.operator("vivy.prep_materials", text="Prep materials")
+			col.operator("mcprep.open_file", text="Edit Vivy Material Library").file=str(vivy_materials.get_vivy_blend())
+			col.operator("vivy.export_library", text="Export Vivy Material Library")
+			col.operator("vivy.import_library", text="Import Previous Export")
 		else:
 			col.label(text=env._("MCprep tools"))
 			col.operator("mcprep.prep_materials", text=env._("Prep Materials"))
