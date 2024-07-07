@@ -24,6 +24,7 @@ from dataclasses import dataclass
 import enum
 import os
 import gettext
+import json
 
 import bpy
 from bpy.utils.previews import ImagePreviewCollection
