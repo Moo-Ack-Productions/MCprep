@@ -8,6 +8,6 @@ def pre_build(ctx: BabContext) -> None:
     print("Applying Vivy Patches")
     _ = subprocess.run(["git", "apply", str(VIVY_PATCH)], cwd=ctx.current_path.parent)
 
-def pre_build(ctx: BabContext) -> None:
+def clean_up(ctx: BabContext) -> None:
     print("Cleaning up patches")
     _ = subprocess.run(["git", "apply", "-R", str(VIVY_PATCH)], cwd=ctx.current_path.parent)
