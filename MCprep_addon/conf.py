@@ -151,6 +151,23 @@ class MCprepEnv:
 										 languages=[language.name])
 			self.use_direct_i18n = True
 			self.log("Loaded direct i18n!")
+
+		# Cache for Vivy materials. Identical to self.material_sync_cache, but
+		# as a seperate variable to avoid conflicts
+		self.vivy_cache = None
+		
+		# The JSON file for Vivy's materials
+		self.vivy_material_json: Optional[Dict] = None
+		self.reload_vivy_json() # Get latest JSON data
+
+	def reload_vivy_json(self) -> None:
+		json_path = Path(os.path.join(os.path.dirname(__file__), "MCprep_resources", "vivy_materials.json"))
+		if not json_path.exists():
+			json_path.touch()
+			self.vivy_material_json = {}
+		else: 
+			with open(json_path, 'r') as f:
+				self.vivy_material_json = json.load(f) if json_path.stat().st_size != 0 else {}
 	
 	# This allows us to translate strings on the fly
 	def _(self, msg: str) -> str:
@@ -353,3 +370,4 @@ def unregister():
 	env.skin_list = []
 	env.rig_categories = []
 	env.material_sync_cache = []
+	env.vivy_cache = []

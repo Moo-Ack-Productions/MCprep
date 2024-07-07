@@ -141,6 +141,19 @@ if "generate" in locals():
 	importlib.reload(generate)
 else:
 	from .materials import generate
+if "vivy_materials" in locals():
+	importlib.reload(vivy_materials)
+else:
+	from .materials import vivy_materials
+
+if "vivy_ui" in locals():
+	importlib.reload(vivy_ui)
+else:
+	from . import vivy_ui 
+if "vivy_editor" in locals():
+	importlib.reload(vivy_editor)
+else:
+	from . import vivy_editor
 
 # Only include those with a register function, which is not all
 module_list = (
@@ -162,6 +175,9 @@ module_list = (
 	world_tools,
 	# bridge,
 	mcprep_ui,
+	vivy_materials,
+	vivy_ui,
+	vivy_editor
 )
 
 
