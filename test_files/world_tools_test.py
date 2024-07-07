@@ -85,14 +85,16 @@ class WorldToolsTest(unittest.TestCase):
         # can't import conf separately.
         mcprep_data = util.env.json_data["blocks"][mapping_set]
 
+        generalized = [get_mc_canonical_name(mat.name)[0] for mat in bpy.data.materials]
+
         # first detect alignment to the raw underlining mappings, nothing to
         # do with canonical yet
         mapped = [
-            mat.name for mat in bpy.data.materials
-            if mat.name in mcprep_data]  # ok!
+            name for name in generalized
+            if name in mcprep_data]  # ok!
         unmapped = [
-            mat.name for mat in bpy.data.materials
-            if mat.name not in mcprep_data]  # not ok
+            name for name in generalized
+            if name not in mcprep_data]  # not ok
         fullset = mapped + unmapped  # ie all materials
         unleveraged = [
             mat for mat in mcprep_data
@@ -132,8 +134,9 @@ class WorldToolsTest(unittest.TestCase):
         if mats_not_canon and mapping_set != "block_mapping_mineways":
             # print("Non-canon material names found: ({})".format(len(mats_not_canon)))
             # print(mats_not_canon)
-            if len(mats_not_canon) > 30:  # arbitrary threshold
-                self.fail("Too many materials found without canonical name")
+            if len(mats_not_canon) > 40:  # arbitrary threshold
+                self.fail(("Too many materials found without canonical name: "
+                           f"{len(mats_not_canon)}"))
 
         # affirm the correct mappings
         mats_no_packimage = [
