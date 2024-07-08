@@ -29,7 +29,7 @@ import json
 
 from .. import tracking
 from .. import util
-from ..conf import env
+from ..conf import MCprepError, env
 from . import generate
 from . import sync
 from .generate import checklist, get_mc_canonical_name
@@ -523,7 +523,10 @@ class VIVY_OT_swap_texture_pack(
 		"""
 		mc_name, _ = get_mc_canonical_name(material.name)
 		image = generate.find_from_texturepack(mc_name, Path(folder) if not isinstance(folder, Path) else folder)
-		if image is None:
+
+		if isinstance(image, MCprepError):
+			if image.msg:
+				env.log(image.msg)
 			obj = bpy.context.view_layer.objects.active
 			md = env.vivy_material_json["materials"][obj["VIVY_MATERIAL_NAME"]]
 			options = VivyOptions(
@@ -551,7 +554,7 @@ class VIVY_OT_swap_texture_pack(
 			)
 			generate_vivy_materials(self, context, options)
 			return False
-
+		
 		image_data = util.loadTexture(str(image))
 		_ = self.set_cycles_texture(context, image_data, material, material_type, True)
 		return True
