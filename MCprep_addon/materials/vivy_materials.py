@@ -167,7 +167,7 @@ def set_material(context: Context, material: Material, options: VivyOptions) -> 
 
 			if not material_nodes.get("Image Texture") and not material_nodes.get(options.material.passes.diffuse):
 				return "Material has no Image Texture node"
-
+			
 			nnode_diffuse = nnodes.get(p[0])
 			nnode_diffuse.image = options.passes[p[1]]
 
@@ -606,7 +606,10 @@ class VIVY_OT_swap_texture_pack(
 				util.apply_noncolor_data(n)
 				passes["normal"] = new_img 
 			else:
-				fallback = Fallback.FALLBACK_N
+				if fallback == Fallback.FALLBACK_S:
+					fallback = Fallback.FALLBACK
+				else:
+					fallback = Fallback.FALLBACK_N
 		
 		# use fallback material if needed
 		if fallback is not None:
@@ -636,7 +639,6 @@ class VIVY_OT_swap_texture_pack(
 				fallback=fallback
 			)
 			generate_vivy_materials(self, context, options)
-			set_material(context, material, options)
 			
 
 		changed = True
