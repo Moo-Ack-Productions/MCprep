@@ -665,10 +665,10 @@ def replace_missing_texture(image: Image) -> bool:
 	# pack?
 	# Due to the issue below, must trick blender to reload the datablock
 	# https://projects.blender.org/blender/blender/issues/115984
-	#if image.source == 'FILE' and image.source != 'SEQUENCE':
-	#	old = image.source
-	#	image.source = 'SEQUENCE'
-	#	image.source = old
+	if image.source == 'FILE' and image.source != 'SEQUENCE':
+		old = image.source
+		image.source = 'SEQUENCE'
+		image.source = old
 
 	return True  # updated image block
 
