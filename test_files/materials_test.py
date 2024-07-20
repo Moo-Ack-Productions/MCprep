@@ -98,6 +98,15 @@ class MaterialsTest(unittest.TestCase):
             raise Exception("Failed to set test texturepack path")
         bpy.context.scene.mcprep_texturepack_path = path
 
+    def _count_missing_files(self) -> int:
+        missing = 0
+        for img in bpy.data.images:
+            if not os.path.isfile(img.filepath):
+                missing += 1
+            elif img.channels == 0:
+                missing += 1
+        return missing
+
     def test_prep_materials_no_selection(self):
         """Ensures prepping with no selection fails."""
         with self.assertRaises(RuntimeError) as rte:
@@ -782,6 +791,31 @@ class MaterialsTest(unittest.TestCase):
             elif not os.path.isfile(post_path):
                 os.remove(tmp_image)
                 self.fail("New path file does not exist")
+
+    def test_replace_missing_textures_integration(self):
+        """A more exhaustive test to ensure find missing works in jmc2obj exports."""
+
+        testdir = os.path.dirname(__file__)
+        demo_world = os.path.join(testdir, "test_data", "jmc2obj_test_1_21.obj")
+
+        # Do built-in world import (as opposed to mcprep.import_world_split)
+        # to keep it simple here
+        if util.min_bv((3, 5)):
+            res = bpy.ops.wm.obj_import(
+                filepath=demo_world, use_split_groups=True)
+        else:
+            res = bpy.ops.import_scene.obj(
+                filepath=demo_world, use_split_groups=True)
+        self.assertEqual(res, {"FINISHED"})
+
+        pre_missing_count = self._count_missing_files()
+        bpy.ops.mcprep.replace_missing_textures(animateTextures=False)
+        post_missing_count = self._count_missing_files()
+
+        self.assertGreater(
+            pre_missing_count, 0, "Ensure some initial missing imgs")
+        self.assertGreater(
+            pre_missing_count, post_missing_count, "Ensure some imgs repalced")
 
     def test_replace_missing_images_moved_blend(self):
         """Scenario where we save, close, then move the blend file."""
