@@ -26,7 +26,7 @@ import platform
 import random
 import re
 import subprocess
-from MCprep_addon.commonmcobj_parser import CommonMCOBJTextureType
+from .commonmcobj_parser import CommonMCOBJTextureType
 
 import bpy
 from bpy.types import (
