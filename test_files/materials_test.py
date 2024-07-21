@@ -104,6 +104,8 @@ class MaterialsTest(unittest.TestCase):
             if not os.path.isfile(img.filepath):
                 missing += 1
             elif img.channels == 0:
+                # If a file is valid but still not loaded by blender, the num
+                # of chanels will appear to be zero
                 missing += 1
         return missing
 
@@ -815,7 +817,7 @@ class MaterialsTest(unittest.TestCase):
         self.assertGreater(
             pre_missing_count, 0, "Ensure some initial missing imgs")
         self.assertGreater(
-            pre_missing_count, post_missing_count, "Ensure some imgs repalced")
+            pre_missing_count, post_missing_count, "Ensure some imgs replaced")
 
     def test_replace_missing_images_moved_blend(self):
         """Scenario where we save, close, then move the blend file."""
