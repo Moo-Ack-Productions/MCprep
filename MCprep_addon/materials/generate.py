@@ -652,10 +652,7 @@ def replace_missing_texture(image: Image) -> bool:
 	env.log(f"Missing datablock detected: {image.name}")
 
 	name = image.name
-	if len(name) > 4 and name[-4] == ".":
-		name = name[:-4]  # cuts off e.g. .png
-	elif len(name) > 5 and name[-5] == ".":
-		name = name[:-5]  # cuts off e.g. .jpeg
+	name = os.path.splitext(name)[0]  # cut off png / jpg / etc
 	canon, _ = get_mc_canonical_name(name)
 	# TODO: detect for pass structure like normal and still look for right pass
 	image_path = find_from_texturepack(canon)
@@ -666,6 +663,12 @@ def replace_missing_texture(image: Image) -> bool:
 	image.filepath = str(image_path)
 	# image.reload() # not needed?
 	# pack?
+	# Due to the issue below, must trick blender to reload the datablock
+	# https://projects.blender.org/blender/blender/issues/115984
+	if image.source == 'FILE' and image.source != 'SEQUENCE':
+		old = image.source
+		image.source = 'SEQUENCE'
+		image.source = old
 
 	return True  # updated image block
 
