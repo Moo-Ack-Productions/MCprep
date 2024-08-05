@@ -1,5 +1,5 @@
-name: Bug Report
-description: File a bug report
+name: Bug Report/MCprep Issue
+description: Report a bug/MCprep issue
 labels: ["user-troubleshoot"]
 body:
   - type: markdown
