@@ -18,7 +18,7 @@ on:
     types: [opened, reopened, synchronize]  # drop synchronize not run per commit
     branches:
       - dev
-      - main
+      - master
     paths:
       - 'MCprep_addon/**'
 

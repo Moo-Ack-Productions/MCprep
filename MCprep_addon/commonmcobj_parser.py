@@ -93,7 +93,8 @@ class CommonMCOBJ:
     # Original header
     original_header: Optional[str]
 
-def parse_common_header(header_lines: list[str]) -> CommonMCOBJ:
+
+def parse_common_header(header_lines: List[str]) -> CommonMCOBJ:
     """
     Parses the CommonMCOBJ header information from a list of strings.
 
