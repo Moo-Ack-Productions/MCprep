@@ -20,3 +20,4 @@ venv/
 MCprep_addon/import_bridge/conf
 MCprep_addon/import_bridge/nbt
 MCprep_addon/MCprep_resources/
+MCprep_addon/.vscode

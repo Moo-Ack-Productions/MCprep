@@ -62,6 +62,7 @@ Entity = Tuple[str, str, str]
 # constant to make it easier to use
 # and check for
 UNKNOWN_LOCATION = (-1, "UNKNOWN LOCATION")
+DEBUG_MODE = False
 
 # check if custom preview icons available
 try:
@@ -315,6 +316,11 @@ class MCprepError(object):
 	line: int 
 	file: str
 	msg: Optional[str] = None
+
+# Requires Extension support and building with the proper wheels
+if DEBUG_MODE and bpy.app.version >= (4, 2, 0):
+	import debugpy
+	debugpy.listen(("localhost", 5678))
 
 env = MCprepEnv()
 

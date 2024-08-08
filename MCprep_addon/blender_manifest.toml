@@ -1,0 +1,21 @@
+schema_version = "1.0.0"
+
+id = "mcprep"
+version = "3.6.0"
+name = "MCprep"
+tagline = "An addon for Minecraft animation workflows"
+maintainer = "Patrick W. Crawford <support@theduckcow.com"
+type = "add-on"
+
+website = "https://TheDuckCow.com/MCprep"
+
+tags = ["Animation", "Material"]
+
+blender_version_min = "4.2.0"
+
+license = [
+  "SPDX:GPL-3.0-or-later",
+]
+
+[permissions]
+files = "To import OBJ files and assets"

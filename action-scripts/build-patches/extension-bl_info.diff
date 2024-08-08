@@ -1,0 +1,28 @@
+diff --git a/MCprep_addon/__init__.py b/MCprep_addon/__init__.py
+index e727f3f..748a5dc 100755
+--- a/MCprep_addon/__init__.py
++++ b/MCprep_addon/__init__.py
+@@ -38,7 +38,7 @@ Disclaimer: This is not an official Google product
+ # Increment this number for each time you get a "inconsistent use of spaces and tab error"
+ # 								error = 51
+ 
+-bl_info = {
++mcprep_bl_info = {
+ 	"name": "MCprep",
+ 	"category": "Object",
+ 	"version": (3, 5, 3),
+@@ -62,12 +62,11 @@ import bpy
+ 
+ 
+ def register():
+-	load_modules.register(bl_info)
++	load_modules.register(mcprep_bl_info)
+ 
+ 
+ def unregister():
+-	load_modules.unregister(bl_info)
+-
++	load_modules.unregister(mcprep_bl_info)
+ 
+ if __name__ == "__main__":
+ 	register()
