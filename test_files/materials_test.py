@@ -98,6 +98,17 @@ class MaterialsTest(unittest.TestCase):
             raise Exception("Failed to set test texturepack path")
         bpy.context.scene.mcprep_texturepack_path = path
 
+    def _count_missing_files(self) -> int:
+        missing = 0
+        for img in bpy.data.images:
+            if not os.path.isfile(img.filepath):
+                missing += 1
+            elif img.channels == 0:
+                # If a file is valid but still not loaded by blender, the num
+                # of chanels will appear to be zero
+                missing += 1
+        return missing
+
     def test_prep_materials_no_selection(self):
         """Ensures prepping with no selection fails."""
         with self.assertRaises(RuntimeError) as rte:
@@ -695,17 +706,17 @@ class MaterialsTest(unittest.TestCase):
         # the test cases; input is diffuse, output is the whole dict
         cases = [
             {
-                "diffuse": os.path.join(tmp_dir, "oak_log_top.png"),
-                "specular": os.path.join(tmp_dir, "oak_log_top-s.png"),
-                "normal": os.path.join(tmp_dir, "oak_log_top_n.png"),
+                "diffuse": Path(tmp_dir) / "oak_log_top.png",
+                "specular": Path(tmp_dir) / "oak_log_top-s.png",
+                "normal": Path(tmp_dir) / "oak_log_top_n.png",
             }, {
-                "diffuse": os.path.join(tmp_dir, "oak_log.jpg"),
-                "specular": os.path.join(tmp_dir, "oak_log_s.jpg"),
-                "normal": os.path.join(tmp_dir, "oak_log_n.jpeg"),
-                "displace": os.path.join(tmp_dir, "oak_log_disp.jpeg"),
+                "diffuse": Path(tmp_dir) / "oak_log.jpg",
+                "specular": Path(tmp_dir) / "oak_log_s.jpg",
+                "normal": Path(tmp_dir) / "oak_log_n.jpeg",
+                "displace": Path(tmp_dir) / "oak_log_disp.jpeg",
             }, {
-                "diffuse": os.path.join(tmp_dir, "stonecutter_saw.tiff"),
-                "normal": os.path.join(tmp_dir, "stonecutter_saw n.tiff"),
+                "diffuse": Path(tmp_dir) / "stonecutter_saw.tiff",
+                "normal": Path(tmp_dir) / "stonecutter_saw n.tiff",
             }
         ]
 
@@ -782,6 +793,31 @@ class MaterialsTest(unittest.TestCase):
             elif not os.path.isfile(post_path):
                 os.remove(tmp_image)
                 self.fail("New path file does not exist")
+
+    def test_replace_missing_textures_integration(self):
+        """A more exhaustive test to ensure find missing works in jmc2obj exports."""
+
+        testdir = os.path.dirname(__file__)
+        demo_world = os.path.join(testdir, "test_data", "jmc2obj_test_1_21.obj")
+
+        # Do built-in world import (as opposed to mcprep.import_world_split)
+        # to keep it simple here
+        if util.min_bv((3, 5)):
+            res = bpy.ops.wm.obj_import(
+                filepath=demo_world, use_split_groups=True)
+        else:
+            res = bpy.ops.import_scene.obj(
+                filepath=demo_world, use_split_groups=True)
+        self.assertEqual(res, {"FINISHED"})
+
+        pre_missing_count = self._count_missing_files()
+        bpy.ops.mcprep.replace_missing_textures(animateTextures=False)
+        post_missing_count = self._count_missing_files()
+
+        self.assertGreater(
+            pre_missing_count, 0, "Ensure some initial missing imgs")
+        self.assertGreater(
+            pre_missing_count, post_missing_count, "Ensure some imgs replaced")
 
     def test_replace_missing_images_moved_blend(self):
         """Scenario where we save, close, then move the blend file."""
@@ -886,7 +922,7 @@ class MaterialsTest(unittest.TestCase):
         obj.active_material = new_mat
         self.assertIsNotNone(obj.active_material, "Material should be applied")
 
-        # Ensure if no texture pack selected, it fails.
+        # Ensure if no exporter type selected, it fails.
         addon_prefs = util.get_user_preferences(bpy.context)
         addon_prefs.MCprep_exporter_type = "(choose)"
         with self.assertRaises(RuntimeError):

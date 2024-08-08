@@ -41,7 +41,7 @@ import sys
 import time
 
 
-COMPILE_CMD = ["bpy-addon-build", "--during-build", "dev"]
+COMPILE_CMD = ["bab", "-b", "dev"]
 DATA_CMD = ["python", "mcprep_data_refresh.py", "-auto"]  # TODO, include in build
 DCC_EXES = "blender_execs.txt"
 TEST_RUNNER = os.path.join("test_files", "test_runner.py")
@@ -70,8 +70,7 @@ def main():
 
     # Compile the addon
     res = subprocess.check_output(COMPILE_CMD)
-    print(res.decode("utf-8"))
-
+    print("Compile output:", res.decode("utf-8"))
     reset_test_file()
 
     # Loop over all binaries and run tests.

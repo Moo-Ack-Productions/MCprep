@@ -32,7 +32,7 @@ from . import generate
 from . import uv_tools
 from .. import tracking
 from .. import util
-from ..conf import env, Engine, Form
+from ..conf import MCprepError, env, Engine, Form
 
 
 class ExportLocation(enum.Enum):
@@ -72,8 +72,12 @@ def animate_single_material(
 
 	# get the base image from the texturepack (cycles/BI general)
 	image_path_canon = generate.find_from_texturepack(canon)
-	if not image_path_canon:
-		env.log(f"Canon path not found for {mat_gen}:{canon}, form {form}, path: {image_path_canon}", vv_only=True)
+
+	if isinstance(image_path_canon, MCprepError):
+		if image_path_canon.msg:
+			env.log(image_path_canon.msg)
+		else: 
+			env.log(f"Error occured during texturepack search for {mat_gen}:{canon}, form {form}")
 		return affectable, False, None
 
 	if not os.path.isfile(f"{image_path_canon}.mcmeta"):
@@ -111,7 +115,7 @@ def animate_single_material(
 		if not tile_path_dict[pass_name]:  # ie ''
 			env.log(f"Skipping passname: {pass_name}")
 			continue
-		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE' or engine == 'BLENDER_EEVEE_NEXT':
 			node = generate.get_node_for_pass(mat, pass_name)
 			if not node:
 				continue
@@ -215,7 +219,7 @@ def generate_material_sequence(source_path: Path, image_path: Path, form: Option
 		"try running blender as admin")
 
 	for img_pass in img_pass_dict:
-		passfile = img_pass_dict[img_pass]
+		passfile = str(img_pass_dict[img_pass])  # Convert from Path
 		env.log("Running on file:")
 		env.log(bpy.path.abspath(passfile))
 

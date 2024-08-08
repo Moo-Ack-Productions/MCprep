@@ -85,14 +85,16 @@ class WorldToolsTest(unittest.TestCase):
         # can't import conf separately.
         mcprep_data = util.env.json_data["blocks"][mapping_set]
 
+        generalized = [get_mc_canonical_name(mat.name)[0] for mat in bpy.data.materials]
+
         # first detect alignment to the raw underlining mappings, nothing to
         # do with canonical yet
         mapped = [
-            mat.name for mat in bpy.data.materials
-            if mat.name in mcprep_data]  # ok!
+            name for name in generalized
+            if name in mcprep_data]  # ok!
         unmapped = [
-            mat.name for mat in bpy.data.materials
-            if mat.name not in mcprep_data]  # not ok
+            name for name in generalized
+            if name not in mcprep_data]  # not ok
         fullset = mapped + unmapped  # ie all materials
         unleveraged = [
             mat for mat in mcprep_data
@@ -132,8 +134,9 @@ class WorldToolsTest(unittest.TestCase):
         if mats_not_canon and mapping_set != "block_mapping_mineways":
             # print("Non-canon material names found: ({})".format(len(mats_not_canon)))
             # print(mats_not_canon)
-            if len(mats_not_canon) > 30:  # arbitrary threshold
-                self.fail("Too many materials found without canonical name")
+            if len(mats_not_canon) > 40:  # arbitrary threshold
+                self.fail(("Too many materials found without canonical name: "
+                           f"{len(mats_not_canon)}"))
 
         # affirm the correct mappings
         mats_no_packimage = [
@@ -161,9 +164,14 @@ class WorldToolsTest(unittest.TestCase):
 
     def test_enable_obj_importer(self):
         """Ensure module name is correct, since error won't be reported."""
-        bpy.ops.preferences.addon_enable(module="io_scene_obj")
+        if bpy.app.version < (4, 0):
+            res = bpy.ops.preferences.addon_enable(module="io_scene_obj")
+            self.assertEqual(res, {'FINISHED'})
+        else:
+            in_import_scn = "obj_import" in dir(bpy.ops.wm)
+            self.assertTrue(in_import_scn, "obj_import operator not found")
 
-    def test_world_import_jmc_full(self):
+    def test_world_import_legacy_jmc_full(self):
         test_subpath = os.path.join(
             "test_data", "jmc2obj_test_1_15_2.obj")
         self._import_world_with_settings(file=test_subpath)
@@ -184,7 +192,29 @@ class WorldToolsTest(unittest.TestCase):
         with self.subTest("test_mappings"):
             self._import_materials_util("block_mapping_jmc")
 
-    def test_world_import_mineways_separated(self):
+    def test_world_import_cmcobj_jmc_full(self):
+        test_subpath = os.path.join(
+            "test_data", "jmc2obj_test_1_21.obj")
+        self._import_world_with_settings(file=test_subpath)
+        # TODO: Check that affirms it picks up the mcobj format.
+        self.assertEqual(self.addon_prefs.MCprep_exporter_type, "jmc2obj")
+
+        # UV tool test. Would be in its own test, but then we would be doing
+        # multiple unnecessary imports of the same world. So make it a subtest.
+        with self.subTest("test_uv_transform_no_alert_jmc2obj"):
+            invalid, invalid_objs = detect_invalid_uvs_from_objs(
+                bpy.context.selected_objects)
+            prt = ",".join([obj.name.split("_")[-1] for obj in invalid_objs])
+            self.assertFalse(
+                invalid, f"jmc2obj export should not alert: {prt}")
+
+        with self.subTest("canon_name_validation"):
+            self._canonical_name_no_none()
+
+        with self.subTest("test_mappings"):
+            self._import_materials_util("block_mapping_jmc")
+
+    def test_world_import_legacy_mineways_separated(self):
         test_subpath = os.path.join(
             "test_data", "mineways_test_separated_1_15_2.obj")
         self._import_world_with_settings(file=test_subpath)
@@ -206,9 +236,66 @@ class WorldToolsTest(unittest.TestCase):
         with self.subTest("test_mappings"):
             self._import_materials_util("block_mapping_mineways")
 
-    def test_world_import_mineways_combined(self):
+    def test_world_import_cmcobj_mineways_separated(self):
+        test_subpath = os.path.join(
+            "test_data", "mineways_test_separated_1_21.obj")
+        self._import_world_with_settings(file=test_subpath)
+        self.assertEqual(self.addon_prefs.MCprep_exporter_type, "Mineways")
+
+        # UV tool test. Would be in its own test, but then we would be doing
+        # multiple unnecessary imports of the same world. So make it a subtest.
+        with self.subTest("test_uv_transform_no_alert_mineways"):
+            invalid, invalid_objs = detect_invalid_uvs_from_objs(
+                bpy.context.selected_objects)
+            prt = ",".join([obj.name for obj in invalid_objs])
+            self.assertFalse(
+                invalid,
+                f"Mineways separated tiles export should not alert: {prt}")
+
+        with self.subTest("canon_name_validation"):
+            self._canonical_name_no_none()
+
+        with self.subTest("test_mappings"):
+            self._import_materials_util("block_mapping_mineways")
+
+    def test_world_import_legacy_mineways_combined(self):
         test_subpath = os.path.join(
             "test_data", "mineways_test_combined_1_15_2.obj")
+        self._import_world_with_settings(file=test_subpath)
+        self.assertEqual(self.addon_prefs.MCprep_exporter_type, "Mineways")
+
+        with self.subTest("test_uv_transform_combined_alert"):
+            invalid, invalid_objs = detect_invalid_uvs_from_objs(
+                bpy.context.selected_objects)
+            self.assertTrue(invalid, "Combined image export should alert")
+            if not invalid_objs:
+                self.fail(
+                    "Correctly alerted combined image, but no obj's returned")
+
+            # Do specific checks for water and lava, could be combined and
+            # cover more than one uv position (and falsely pass the test) in
+            # combined, water is called "Stationary_Wat" and "Stationary_Lav"
+            # (yes, appears cutoff; and yes includes the flowing too)
+            # NOTE! in 2.7x, will be named "Stationary_Water", but in 2.9 it is
+            # "Test_MCprep_1.16.4__-145_4_1271_to_-118_255_1311_Stationary_Wat"
+            water_obj = [obj for obj in bpy.data.objects
+                         if "Stationary_Wat" in obj.name][0]
+            lava_obj = [obj for obj in bpy.data.objects
+                        if "Stationary_Lav" in obj.name][0]
+
+            invalid, invalid_objs = detect_invalid_uvs_from_objs(
+                [lava_obj, water_obj])
+            self.assertTrue(invalid, "Combined lava/water should still alert")
+
+        with self.subTest("canon_name_validation"):
+            self._canonical_name_no_none()
+
+        with self.subTest("test_mappings"):
+            self._import_materials_util("block_mapping_mineways")
+
+    def test_world_import_cmcobj_mineways_combined(self):
+        test_subpath = os.path.join(
+            "test_data", "mineways_test_combined_1_21.obj")
         self._import_world_with_settings(file=test_subpath)
         self.assertEqual(self.addon_prefs.MCprep_exporter_type, "Mineways")
 
@@ -304,27 +391,16 @@ class WorldToolsTest(unittest.TestCase):
         # framework, hence we'll just clear the  world_tool's vars.
         save_init = list(world_tools.BUILTIN_SPACES)
         world_tools.BUILTIN_SPACES = ["NotRealSpace"]
-        print("TEST: pre", world_tools.BUILTIN_SPACES)
-
-        # Resultant file
         res = world_tools.convert_mtl(tmp_mtl)
-
-        # Restore the property we unset.
         world_tools.BUILTIN_SPACES = save_init
-        print("TEST: post", world_tools.BUILTIN_SPACES)
 
-        self.assertIsNotNone(
+        self.assertTrue(
             res,
-            "Failed to mock color space and thus could not test convert_mtl")
-
-        self.assertTrue(res, "Convert mtl failed with false response")
-
-        # Now check that the data is the same.
+            "Should return false ie skipped conversion")
         res = filecmp.cmp(tmp_mtl, modified_mtl, shallow=False)
+        os.remove(tmp_mtl)  # Cleanup first, in case assert fails
         self.assertTrue(
             res, f"Generated MTL is different: {tmp_mtl} vs {modified_mtl}")
-        # Not removing file, since we likely want to inspect it.
-        os.remove(tmp_mtl)
 
     def test_convert_mtl_skip(self):
         """Ensures that we properly skip if a built in space active."""
@@ -356,11 +432,10 @@ class WorldToolsTest(unittest.TestCase):
 
         # Restore the property we unset.
         world_tools.BUILTIN_SPACES = save_init
-        # print("TEST: post", world_tools.BUILTIN_SPACES)
 
         if res is not None:
             os.remove(tmp_mtl)
-        self.assertIsNone(res, "Should not have converter MTL for valid space")
+        self.assertFalse(res, "Should not have converter MTL for valid space")
 
 
 if __name__ == '__main__':

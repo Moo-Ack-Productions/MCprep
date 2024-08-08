@@ -17,7 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import os
-from typing import Dict, Optional, List, Any, Tuple, Union
+from typing import Dict, Optional, List, Any, Tuple, Union, cast
 from pathlib import Path
 from dataclasses import dataclass
 from enum import Enum
@@ -26,9 +26,14 @@ import bpy
 from bpy.types import Context, Material, Image, Texture, Nodes, NodeLinks, Node
 
 from .. import util
-from ..conf import env, Form
+from ..conf import MCprepError, env, Form
 
 AnimatedTex = Dict[str, int]
+
+# Error codes used during mat prep
+NO_DIFFUSE_NODE = 1
+IMG_MISSING = 2
+
 
 class PackFormat(Enum):
 	SIMPLE = 0
@@ -125,43 +130,51 @@ def get_mc_canonical_name(name: str) -> Tuple[str, Optional[Form]]:
 	return canon, form
 
 
-def find_from_texturepack(blockname: str, resource_folder: Optional[Path]=None) -> Path:
+def find_from_texturepack(blockname: str, resource_folder: Optional[Path]=None) -> Union[Path, MCprepError]:
 	"""Given a blockname (and resource folder), find image filepath.
 
 	Finds textures following any pack which should have this structure, and
 	the input folder or default resource folder could target at any of the
 	following sublevels above the <subfolder> level.
 	//pack_name/assets/minecraft/textures/<subfolder>/<blockname.png>
-	"""
-	if not resource_folder:
-		# default to internal pack
-		resource_folder = bpy.path.abspath(bpy.context.scene.mcprep_texturepack_path)
 
-	if not os.path.isdir(resource_folder):
+	Returns:
+		- Path if successful
+		- MCprepError if error occurs (may return with a message)
+	"""
+	if resource_folder is None:
+		# default to internal pack
+		resource_folder = Path(cast(
+			str,
+			bpy.path.abspath(bpy.context.scene.mcprep_texturepack_path)
+		))
+
+	if not resource_folder.exists() or not resource_folder.is_dir():
 		env.log("Error, resource folder does not exist")
-		return
+		line, file = env.current_line_and_file()
+		return MCprepError(FileNotFoundError(), line, file, f"Resource pack folder at {resource_folder} does not exist!")
 
 	# Check multiple paths, picking the first match (order is important),
 	# goal of picking out the /textures folder.
 	check_dirs = [
-		os.path.join(resource_folder, "textures"),
-		os.path.join(resource_folder, "minecraft", "textures"),
-		os.path.join(resource_folder, "assets", "minecraft", "textures")]
+		Path(resource_folder, "textures"),
+		Path(resource_folder, "minecraft", "textures"),
+		Path(resource_folder, "assets", "minecraft", "textures")]
 	for path in check_dirs:
-		if os.path.isdir(path):
+		if path.exists():
 			resource_folder = path
 			break
 
 	search_paths = [
 		resource_folder,
 		# Both singular and plural shown below as it has varied historically.
-		os.path.join(resource_folder, "blocks"),
-		os.path.join(resource_folder, "block"),
-		os.path.join(resource_folder, "items"),
-		os.path.join(resource_folder, "item"),
-		os.path.join(resource_folder, "entity"),
-		os.path.join(resource_folder, "models"),
-		os.path.join(resource_folder, "model"),
+		Path(resource_folder, "blocks"),
+		Path(resource_folder, "block"),
+		Path(resource_folder, "items"),
+		Path(resource_folder, "item"),
+		Path(resource_folder, "entity"),
+		Path(resource_folder, "models"),
+		Path(resource_folder, "model"),
 	]
 	res = None
 
@@ -170,32 +183,36 @@ def find_from_texturepack(blockname: str, resource_folder: Optional[Path]=None) 
 	if "/" in blockname:
 		newpath = blockname.replace("/", os.path.sep)
 		for ext in extensions:
-			if os.path.isfile(os.path.join(resource_folder, newpath + ext)):
-				res = os.path.join(resource_folder, newpath + ext)
+			if Path(resource_folder, newpath + ext).exists():
+				res = Path(resource_folder, newpath + ext)
 				return res
 		newpath = os.path.basename(blockname)  # case where goes into other subpaths
 		for ext in extensions:
-			if os.path.isfile(os.path.join(resource_folder, newpath + ext)):
-				res = os.path.join(resource_folder, newpath + ext)
+			if Path(resource_folder, newpath + ext).exists():
+				res = Path(resource_folder, newpath + ext)
 				return res
 
 	# fallback (more common case), wide-search for
 	for path in search_paths:
-		if not os.path.isdir(path):
+		if not path.is_dir():
 			continue
 		for ext in extensions:
-			check_path = os.path.join(path, blockname + ext)
-			if os.path.isfile(check_path):
-				res = os.path.join(path, blockname + ext)
+			check_path = Path(path, blockname + ext)
+			if check_path.exists() and check_path.is_file():
+				res = Path(path, blockname + ext)
 				return res
+
 	# Mineways fallback
 	for suffix in ["-Alpha", "-RGB", "-RGBA"]:
 		if blockname.endswith(suffix):
-			res = os.path.join(
+			res = Path(
 				resource_folder, "mineways_assets", f"mineways{suffix}.png")
-			if os.path.isfile(res):
+			if res.exists() and res.is_file():
 				return res
 
+	if res is None:
+		line, file = env.current_line_and_file()
+		return MCprepError(FileNotFoundError(), line, file)
 	return res
 
 
@@ -204,6 +221,13 @@ def detect_form(materials: List[Material]) -> Optional[Form]:
 
 	Useful for pre-determining elibibility of a function and also for tracking
 	reporting to give sense of how common which exporter is used.
+
+	materials: List[Material]:
+		List of materials to check from 
+
+	Returns:
+		- Form if detected
+		- None if not detected
 	"""
 	jmc2obj = 0
 	mc = 0
@@ -344,10 +368,12 @@ def set_texture_pack(
 	"""
 	mc_name, _ = get_mc_canonical_name(material.name)
 	image = find_from_texturepack(mc_name, folder)
-	if image is None:
+	if isinstance(image, MCprepError):
+		if image.msg:
+			env.log(image.msg)
 		return 0
 
-	image_data = util.loadTexture(image)
+	image_data = util.loadTexture(str(image))
 	_ = set_cycles_texture(
 		image_data, material, extra_passes=use_extra_passes)
 	return 1
@@ -392,7 +418,7 @@ def set_cycles_texture(
 	# check if there is more data to see pass types
 	img_sets = {}
 	if extra_passes:
-		img_sets = find_additional_passes(image.filepath)
+		img_sets = find_additional_passes(Path(image.filepath))
 	changed = False
 
 	is_grayscale = False
@@ -419,9 +445,12 @@ def set_cycles_texture(
 			if "normal" in img_sets:
 				new_img = util.loadTexture(img_sets["normal"])
 				node.image = new_img
-				util.apply_colorspace(node, 'Non-Color')
 				node.mute = False
 				node.hide = False
+				
+				res = util.apply_noncolor_data(node)
+				if res is not None:
+					env.log(f"TypeError on {res.line} in {res.file}: {res.err_type}")
 			else:
 				node.mute = True
 				node.hide = True
@@ -436,7 +465,9 @@ def set_cycles_texture(
 				node.image = new_img
 				node.mute = False
 				node.hide = False
-				util.apply_colorspace(node, 'Non-Color')
+				res = util.apply_noncolor_data(node)
+				if res is not None:
+					env.log(f"TypeError on {res.line} in {res.file}: {res.err_type}")
 			else:
 				node.mute = True
 				node.hide = True
@@ -557,7 +588,8 @@ def get_textures(material: Material) -> Dict[str, Image]:
 
 def find_additional_passes(image_file: Path) -> Dict[str, Image]:
 	"""Find relevant passes like normal and spec in same folder as image."""
-	abs_img_file = bpy.path.abspath(image_file)
+	print("What is this?", image_file)
+	abs_img_file = bpy.path.abspath(str(image_file))  # needs to be blend file relative
 	env.log(f"\tFind additional passes for: {image_file}", vv_only=True)
 	if not os.path.isfile(abs_img_file):
 		return {}
@@ -625,18 +657,23 @@ def replace_missing_texture(image: Image) -> bool:
 	env.log(f"Missing datablock detected: {image.name}")
 
 	name = image.name
-	if len(name) > 4 and name[-4] == ".":
-		name = name[:-4]  # cuts off e.g. .png
-	elif len(name) > 5 and name[-5] == ".":
-		name = name[:-5]  # cuts off e.g. .jpeg
+	name = os.path.splitext(name)[0]  # cut off png / jpg / etc
 	canon, _ = get_mc_canonical_name(name)
 	# TODO: detect for pass structure like normal and still look for right pass
 	image_path = find_from_texturepack(canon)
-	if not image_path:
+	if isinstance(image_path, MCprepError):
+		if image_path.msg:
+			env.log(image_path.msg)
 		return False
-	image.filepath = image_path
+	image.filepath = str(image_path)
 	# image.reload() # not needed?
 	# pack?
+	# Due to the issue below, must trick blender to reload the datablock
+	# https://projects.blender.org/blender/blender/issues/115984
+	if image.source == 'FILE' and image.source != 'SEQUENCE':
+		old = image.source
+		image.source = 'SEQUENCE'
+		image.source = old
 
 	return True  # updated image block
 
@@ -971,8 +1008,12 @@ def texgen_specular(mat: Material, passes: Dict[str, Image], nodeInputs: List, u
 		nodeNormal.mute = True
 
 	# Update to use non-color data for spec and normal
-	util.apply_colorspace(nodeTexSpec, 'Non-Color')
-	util.apply_colorspace(nodeTexNorm, 'Non-Color')
+	res = util.apply_noncolor_data(nodeTexSpec)
+	if res is not None:
+		env.log(f"TypeError on {res.line} in {res.file}: {res.err_type}")
+	res = util.apply_noncolor_data(nodeTexNorm)
+	if res is not None:
+		env.log(f"TypeError on {res.line} in {res.file}: {res.err_type}")
 
 	# Graystyle Blending
 	if not checklist(canon, "desaturated"):
@@ -1113,8 +1154,12 @@ def texgen_seus(mat: Material, passes: Dict[str, Image], nodeInputs: List, use_r
 		nodeNormal.mute = True
 
 	# Update to use non-color data for spec and normal
-	util.apply_colorspace(nodeTexSpec, 'Non-Color')
-	util.apply_colorspace(nodeTexNorm, 'Non-Color')
+	res = util.apply_noncolor_data(nodeTexSpec)
+	if res is not None:
+		env.log(f"TypeError on {res.line} in {res.file}: {res.err_type}")
+	res = util.apply_noncolor_data(nodeTexNorm)
+	if res is not None:
+		env.log(f"TypeError on {res.line} in {res.file}: {res.err_type}")
 
 	# Graystyle Blending
 	if not checklist(canon, "desaturated"):
@@ -1156,7 +1201,7 @@ def generate_base_material(
 	mat = bpy.data.materials.new(name=name)
 
 	engine = context.scene.render.engine
-	if engine in ['CYCLES', 'BLENDER_EEVEE']:
+	if engine in ['CYCLES', 'BLENDER_EEVEE', 'BLENDER_EEVEE_NEXT']:
 		# need to create at least one texture node first, then the rest works
 		mat.use_nodes = True
 		nodes = mat.node_tree.nodes
@@ -1204,16 +1249,16 @@ def matgen_cycles_simple(mat: Material, options: PrepOptions) -> Optional[bool]:
 
 	if not image_diff:
 		print(f"Could not find diffuse image, halting generation: {mat.name}")
-		return
+		return NO_DIFFUSE_NODE
 	elif image_diff.size[0] == 0 or image_diff.size[1] == 0:
 		if image_diff.source != 'SEQUENCE':
 			# Common non animated case; this means the image is missing and would
 			# have already checked for replacement textures by now, so skip.
-			return
+			return IMG_MISSING
 		if not os.path.isfile(bpy.path.abspath(image_diff.filepath)):
 			# can't check size or pixels as it often is not immediately avaialble
 			# so instead, check against firs frame of sequence to verify load
-			return
+			return IMG_MISSING
 
 	mat.use_nodes = True
 	animated_data = copy_texture_animation_pass_settings(mat)
@@ -1324,16 +1369,16 @@ def matgen_cycles_principled(mat: Material, options: PrepOptions) -> Optional[bo
 
 	if not image_diff:
 		print(f"Could not find diffuse image, halting generation: {mat.name}")
-		return
+		return NO_DIFFUSE_NODE
 	elif image_diff.size[0] == 0 or image_diff.size[1] == 0:
 		if image_diff.source != 'SEQUENCE':
 			# Common non animated case; this means the image is missing and would
 			# have already checked for replacement textures by now, so skip
-			return
+			return IMG_MISSING
 		if not os.path.isfile(bpy.path.abspath(image_diff.filepath)):
 			# can't check size or pixels as it often is not immediately avaialble
 			# so instead, check against first frame of sequence to verify load
-			return
+			return IMG_MISSING
 
 	mat.use_nodes = True
 	animated_data = copy_texture_animation_pass_settings(mat)
@@ -1352,7 +1397,7 @@ def matgen_cycles_principled(mat: Material, options: PrepOptions) -> Optional[bo
 
 	# Sets default transparency value
 	nodeMixTrans.inputs[0].default_value = 1
-	
+
 	# Sets default reflective values
 	if options.use_reflections and checklist(canon, "reflective"):
 		principled.inputs["Roughness"].default_value = 0
@@ -1372,11 +1417,11 @@ def matgen_cycles_principled(mat: Material, options: PrepOptions) -> Optional[bo
 	links.new(nodeMixTrans.outputs["Shader"], nodeOut.inputs[0])
 
 	nodeEmit = create_node(
-			nodes, "ShaderNodeEmission", location=(120, 140))
+		nodes, "ShaderNodeEmission", location=(120, 140))
 	nodeEmitCam = create_node(
-			nodes, "ShaderNodeEmission", location=(120, 260))
+		nodes, "ShaderNodeEmission", location=(120, 260))
 	nodeMixEmit = create_node(
-			nodes, "ShaderNodeMixShader", location=(420, 0))
+		nodes, "ShaderNodeMixShader", location=(420, 0))
 	if options.use_emission_nodes:
 		# Create emission nodes
 		nodeMixCam = create_node(
@@ -1385,7 +1430,7 @@ def matgen_cycles_principled(mat: Material, options: PrepOptions) -> Optional[bo
 			nodes, "ShaderNodeLightFalloff", location=(-80, 320))
 		nodeLightPath = create_node(
 			nodes, "ShaderNodeLightPath", location=(-320, 520))
-				
+
 		# Set values
 		nodeFalloff.inputs["Strength"].default_value = 32
 		nodeEmitCam.inputs["Strength"].default_value = 4
@@ -1406,7 +1451,6 @@ def matgen_cycles_principled(mat: Material, options: PrepOptions) -> Optional[bo
 	else:
 		links.new(principled.outputs[0], nodeMixTrans.inputs[2])
 
-
 	nodeInputs = [
 		[
 			principled.inputs["Base Color"],
@@ -1418,7 +1462,7 @@ def matgen_cycles_principled(mat: Material, options: PrepOptions) -> Optional[bo
 		[principled.inputs["Metallic"]],
 		[principled.inputs["Specular IOR Level" if util.min_bv((4, 0, 0)) else "Specular"]],
 		[principled.inputs["Normal"]]]
-	
+
 	if not options.use_emission_nodes:
 		nodes.remove(nodeEmit)
 		nodes.remove(nodeEmitCam)
@@ -1480,16 +1524,16 @@ def matgen_cycles_original(mat: Material, options: PrepOptions):
 
 	if not image_diff:
 		print(f"Could not find diffuse image, halting generation: {mat.name}")
-		return
+		return NO_DIFFUSE_NODE
 	elif image_diff.size[0] == 0 or image_diff.size[1] == 0:
 		if image_diff.source != 'SEQUENCE':
 			# Common non animated case; this means the image is missing and would
 			# have already checked for replacement textures by now, so skip
-			return
+			return IMG_MISSING
 		if not os.path.isfile(bpy.path.abspath(image_diff.filepath)):
 			# can't check size or pixels as it often is not immediately avaialble
 			# so instea, check against firs frame of sequence to verify load
-			return
+			return IMG_MISSING
 
 	mat.use_nodes = True
 	animated_data = copy_texture_animation_pass_settings(mat)
@@ -1795,7 +1839,9 @@ def matgen_special_water(mat: Material, passes: Dict[str, Image]) -> Optional[bo
 	links.new(nodeNormal.outputs[0], nodeGlass.inputs[3])
 
 	# Normal update
-	util.apply_colorspace(nodeTexNorm, 'Non-Color')
+	res = util.apply_noncolor_data(nodeTexNorm)
+	if res is not None:
+		env.log(f"TypeError on {res.line} in {res.file}: {res.err_type}")
 	if image_norm:
 		nodeTexNorm.image = image_norm
 		nodeTexNorm.mute = False
@@ -1929,7 +1975,9 @@ def matgen_special_glass(mat: Material, passes: Dict[str, Image]) -> Optional[bo
 	links.new(nodeNormal.outputs[0], nodeDiff.inputs[2])
 
 	# Normal update
-	util.apply_colorspace(nodeTexNorm, 'Non-Color')
+	res = util.apply_noncolor_data(nodeTexNorm)
+	if res is not None:
+		env.log(f"TypeError on {res.line} in {res.file}: {res.err_type}")
 	if image_norm:
 		nodeTexNorm.image = image_norm
 		nodeTexNorm.mute = False

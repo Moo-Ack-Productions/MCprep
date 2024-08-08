@@ -18,6 +18,7 @@
 
 
 import os
+from pathlib import Path
 
 import bpy
 from bpy_extras.io_utils import ImportHelper
@@ -28,6 +29,7 @@ from . import sequences
 from . import uv_tools
 from .. import tracking
 from .. import util
+from .. import world_tools
 from ..conf import env
 
 # -----------------------------------------------------------------------------
@@ -130,7 +132,7 @@ def draw_mats_common(self, context: Context) -> None:
 	row = self.layout.row()
 	col = row.column()
 	engine = context.scene.render.engine
-	if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+	if engine == 'CYCLES' or engine == 'BLENDER_EEVEE' or engine == 'BLENDER_EEVEE_NEXT':
 		col.prop(self, "packFormat")
 		col.prop(self, "usePrincipledShader")
 	col.prop(self, "useReflections")
@@ -205,14 +207,17 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 		engine = context.scene.render.engine
 		count = 0
 		count_lib_skipped = 0
+		count_img_not_found = 0
+		count_misc_no_prep = 0
+
+		print("Orig mat list: ", len(mat_list))
 
 		for mat in mat_list:
 			if not mat:
 				env.log(
 					"During prep, found null material:" + str(mat), vv_only=True)
 				continue
-
-			elif mat.library:
+			elif mat.library or mat.get("MCPREP_NO_PREP", False):
 				count_lib_skipped += 1
 				continue
 
@@ -244,7 +249,7 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 					if res > 0:
 						mat["texture_swapped"] = True  # used to apply saturation
 
-			if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+			if engine == 'CYCLES' or engine == 'BLENDER_EEVEE' or engine == 'BLENDER_EEVEE_NEXT':
 				options = generate.PrepOptions(
 					passes,
 					self.useReflections,
@@ -260,10 +265,15 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 				)
 				if res == 0:
 					count += 1
+				elif res == generate.IMG_MISSING:
+					count_img_not_found += 1
+				else:
+					count_misc_no_prep += 1
 			else:
 				self.report(
 					{'ERROR'},
-					"Only Cycles and Eevee are supported")
+					"Only Cycles and Eevee are supported"
+				)
 				return {'CANCELLED'}
 
 			if self.animateTextures:
@@ -291,22 +301,37 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 		if self.optimizeScene and engine == 'CYCLES':
 			bpy.ops.mcprep.optimize_scene()
 
+		has_lib_skipped = count_lib_skipped > 0
+		has_mat = count > 0
+		has_missing = count_img_not_found > 0
+
+		info = []
+		if has_mat:
+			info.append(f"modified {count}")
+		if has_lib_skipped:
+			info.append(f"skipped {count_lib_skipped}")
+
+		mat_info = ", ".join(x for x in info).capitalize()
+
 		if self.skipUsage is True:
 			pass  # Don't report if a meta-call.
-		elif count_lib_skipped > 0:
+		elif has_mat or has_lib_skipped:
+			self.report({"INFO"}, mat_info)
+		elif has_missing:
 			self.report(
-				{"INFO"},
-				f"Modified {count} materials, skipped {count_lib_skipped} linked ones.")
-		elif count > 0:
-			self.report({"INFO"}, f"Modified  {count} materials")
+				{"ERROR"},
+				"Nothing modified, due missing image paths - try advanced: Find Missing Textures or File > External Data > Find Missing Files"
+			)
 		else:
 			self.report(
 				{"ERROR"},
 				"Nothing modified, be sure you selected objects with existing materials!"
 			)
 
-		addon_prefs = util.get_user_preferences(context)
 		self.track_param = context.scene.render.engine
+
+		# NOTE: This is temporary
+		addon_prefs = util.get_user_preferences(context)
 		self.track_exporter = addon_prefs.MCprep_exporter_type
 		return {'FINISHED'}
 
@@ -411,6 +436,9 @@ class MCPREP_OT_swap_texture_pack(
 
 	@classmethod
 	def poll(cls, context):
+		if world_tools.get_exporter(context) != None:
+			return util.is_atlas_export(context)
+		# Fallback to legacy
 		addon_prefs = util.get_user_preferences(context)
 		if addon_prefs.MCprep_exporter_type != "(choose)":
 			return util.is_atlas_export(context)
@@ -437,6 +465,7 @@ class MCPREP_OT_swap_texture_pack(
 			col.prop(self, "syncMaterials")
 			col.prop(self, "improveUiSettings")
 			col.prop(self, "combineMaterials")
+			col.prop(self, "useEmission")
 
 	track_function = "texture_pack"
 	track_param = None
@@ -470,6 +499,8 @@ class MCPREP_OT_swap_texture_pack(
 		_ = generate.detect_form(mat_list)
 		invalid_uv, affected_objs = uv_tools.detect_invalid_uvs_from_objs(obj_list)
 
+		# NOTE: This is temporary
+		addon_prefs = util.get_user_preferences(context)
 		self.track_exporter = addon_prefs.MCprep_exporter_type
 
 		# set the scene's folder for the texturepack being swapped
@@ -479,7 +510,7 @@ class MCPREP_OT_swap_texture_pack(
 		res = 0
 		for mat in mat_list:
 			self.preprocess_material(mat)
-			res += generate.set_texture_pack(mat, folder, self.useExtraMaps)
+			res += generate.set_texture_pack(mat, Path(folder), self.useExtraMaps)
 			if self.animateTextures:
 				sequences.animate_single_material(
 					mat,
@@ -612,7 +643,7 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 				if res > 0:
 					mat["texture_swapped"] = True  # used to apply saturation
 
-		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
+		if engine == 'CYCLES' or engine == 'BLENDER_EEVEE' or engine == 'BLENDER_EEVEE_NEXT':
 			options = generate.PrepOptions(
 				passes=passes,
 				use_reflections=self.useReflections,
