@@ -4608,6 +4608,11 @@
 		"Strider",
 		"Warden"
 	],
+	"non_color_options": [
+		"Non-Color",
+		"Non-Colour Data",
+		"NONE"
+	],
 	"unspawnable_for_now": [
 		"banner",
 		"bed",
