@@ -74,7 +74,7 @@ def apply_noncolor_data(node: Node) -> Optional[MCprepError]:
 	"""
 	options: List[str] = []
 	if env.json_data:
-		options = env.json_data["non_color_options"]
+		options = env.json_data.get("non_color_options", [])
 
 	if not node.image:
 		env.log("Node has no image applied yet, cannot change colorspace")
