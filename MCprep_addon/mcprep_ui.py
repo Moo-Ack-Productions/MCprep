@@ -28,7 +28,7 @@ from . import addon_updater_ops
 from . import tracking
 from . import util
 from . import world_tools
-from .materials import material_manager
+from .materials import material_manager, vivy_materials
 from .materials.generate import update_mcprep_texturepack_path
 from .materials.skin import update_skin_path
 from .spawner import effects
@@ -37,7 +37,7 @@ from .spawner import mcmodel
 from .spawner import meshswap
 from .spawner import mobs
 from .spawner import spawn_util
-from .conf import env
+from .conf import env, ENABLE_VIVY
 # from .import_bridge import bridge
 
 # blender 2.8 icon selections
@@ -770,8 +770,16 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 
 		split = layout.split()
 		col = split.column(align=True)
-		col.label(text=env._("MCprep tools"))
-		col.operator("mcprep.prep_materials", text=env._("Prep Materials"))
+
+		if ENABLE_VIVY:
+			col.label(text="Vivy tools")
+			col.operator("vivy.prep_materials", text="Prep materials")
+			col.operator("mcprep.open_file", text="Edit Vivy Material Library").file=str(vivy_materials.get_vivy_blend())
+			col.operator("vivy.export_library", text="Export Vivy Material Library")
+			col.operator("vivy.import_library", text="Import Previous Export")
+		else:
+			col.label(text=env._("MCprep tools"))
+			col.operator("mcprep.prep_materials", text=env._("Prep Materials"))
 
 		if not util.is_atlas_export(context):
 			row = col.row()
@@ -779,7 +787,7 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 				"mcprep.open_help", text="", icon="QUESTION", emboss=False
 			).url = "https://github.com/TheDuckCow/MCprep/blob/master/docs/common_errors.md#common-error-messages-and-what-they-mean"
 			row.label(text=env._("OBJ incompatible with textureswap"))
-		p = col.operator("mcprep.swap_texture_pack")
+		p = col.operator("vivy.swap_texture_pack") if ENABLE_VIVY else col.operator("mcprep.swap_texture_pack")
 		p.filepath = context.scene.mcprep_texturepack_path
 		if context.mode == "OBJECT":
 			col.operator("mcprep.meshswap", text=env._("Mesh Swap"))
