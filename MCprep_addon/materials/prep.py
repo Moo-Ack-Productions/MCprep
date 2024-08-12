@@ -74,10 +74,6 @@ class McprepMaterialProps():
 		name="Improve UI",
 		description="Automatically improve relevant UI settings",
 		default=True)
-	optimizeScene: bpy.props.BoolProperty(
-		name="Optimize scene (cycles)",
-		description="Optimize the scene for faster cycles rendering",
-		default=False)
 	usePrincipledShader: bpy.props.BoolProperty(
 		name="Use Principled Shader (if available)",
 		description=(
@@ -162,7 +158,6 @@ def draw_mats_common(self, context: Context) -> None:
 	col = row.column()
 	col.prop(self, "combineMaterials")
 	row = self.layout.row()
-	row.prop(self, "optimizeScene")
 	row.prop(self, "useEmission")
 
 
@@ -297,9 +292,6 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 				bpy.ops.mcprep.improve_ui()
 			except RuntimeError as err:
 				print(f"Failed to improve UI with error: {err}")
-
-		if self.optimizeScene and engine == 'CYCLES':
-			bpy.ops.mcprep.optimize_scene()
 
 		has_lib_skipped = count_lib_skipped > 0
 		has_mat = count > 0
