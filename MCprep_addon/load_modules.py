@@ -175,6 +175,9 @@ module_list = (
 	world_tools,
 	# bridge,
 	mcprep_ui,
+)
+
+vivy_modules = (
 	vivy_materials,
 	vivy_ui,
 	vivy_editor
@@ -190,6 +193,10 @@ def register(bl_info):
 	for mod in module_list:
 		mod.register()
 
+	if conf.ENABLE_VIVY:
+		for mod in vivy_modules:
+			mod.register()
+
 	# addon updater code and configurations
 	addon_updater_ops.register(bl_info)
 
@@ -204,6 +211,10 @@ def register(bl_info):
 def unregister(bl_info):
 	for mod in reversed(module_list):
 		mod.unregister()
+
+	if conf.ENABLE_VIVY:
+		for mod in reversed(vivy_modules):
+			mod.register()
 
 	tracking.unregister()
 	conf.unregister()
