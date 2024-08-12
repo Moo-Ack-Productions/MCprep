@@ -753,7 +753,11 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		row = col.row(align=True)
 		row.prop(addon_prefs, "MCprep_exporter_type", expand=True)
 		row = col.row(align=True)
-		exporter = world_tools.get_exporter(context)
+
+		compliant_exporter = world_tools.get_exporter(context)
+		exporter = compliant_exporter if compliant_exporter is not None else world_tools.get_explicit_exporter_legacy(context)
+		del compliant_exporter
+
 		if exporter is None:
 			row.operator(
 				"mcprep.open_jmc2obj", text=env._("Select exporter!"), icon='ERROR')
