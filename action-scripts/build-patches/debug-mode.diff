@@ -7,7 +7,7 @@ index 705e0ae..23683df 100644
  ]
  
 +wheels = [
-+  "./wheels/debugpy-1.8.2-cp311-cp311-macosx_11_0_universal2.whl",
++  "./wheels/debugpy-1.8.2-py2.py3-none-any.whl",
 +  "./wheels/debugpy-1.8.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
 +  "./wheels/debugpy-1.8.2-cp311-cp311-win_amd64.whl",
 +]
