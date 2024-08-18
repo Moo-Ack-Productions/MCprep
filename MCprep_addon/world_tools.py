@@ -183,13 +183,24 @@ def get_exporter(context: Context) -> Optional[WorldExporter]:
 	# This section will be placed behind a legacy
 	# option in MCprep 4.0, once CommonMCOBJ becomes
 	# more adopted in exporters
+	return get_explicit_exporter_legacy(context)
+
+def get_explicit_exporter_legacy(context: Context) -> Optional[WorldExporter]:
+	"""Return the explicit exporter setting set in the MCPrep UI (Warning: Not CommonMCOBJ Compliant!)
+
+	Unlike get_exporter, this doesn't depend on an object being selected, but
+	as a result is not CommonMCOBJ compliant (as this is based on an explicit
+	setting for the world exporter and not giving the OBJ the chance to declare
+	its exporter explicitly. This is meant for a few edge cases where the user might
+	want to do something that depends on an exporter being known, but without selecting 
+	an object, such as in a startup file and having the ability to open Mineways or jmc2OBJ.
+	"""
 	prefs = util.get_user_preferences(context)
 	if prefs.MCprep_exporter_type == "Mineways":
 		return WorldExporter.ClassicMW
 	elif prefs.MCprep_exporter_type == "jmc2obj":
 		return WorldExporter.ClassicJmc
 	return None
-
 
 def detect_world_exporter(filepath: Path) -> Union[CommonMCOBJ, ObjHeaderOptions]:
 	"""Detect whether Mineways or jmc2obj was used, based on prefix info.
