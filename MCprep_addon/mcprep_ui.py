@@ -788,7 +788,9 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		if context.mode == "OBJECT":
 			col.operator("mcprep.meshswap", text=env._("Mesh Swap"))
 			exporter = world_tools.get_exporter(context)
-			if exporter is None or exporter is world_tools.WorldExporter.Unknown:
+			if not context.object and not context.selected_objects:
+				pass
+			elif exporter is None or exporter is world_tools.WorldExporter.Unknown:
 				col.label(text=env._("Select exporter!"), icon='ERROR')
 		if context.mode == 'EDIT_MESH':
 			col.operator("mcprep.scale_uv")
