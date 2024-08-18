@@ -20,7 +20,7 @@
 from dataclasses import dataclass
 from typing import Dict, List, Union, Tuple
 import math
-from MCprep_addon import world_tools
+from .. import world_tools
 import mathutils
 import os
 import random

@@ -1,0 +1,29 @@
+diff --git a/MCprep_addon/blender_manifest.toml b/MCprep_addon/blender_manifest.toml
+index 705e0ae..23683df 100644
+--- a/MCprep_addon/blender_manifest.toml
++++ b/MCprep_addon/blender_manifest.toml
+@@ -17,5 +17,11 @@ license = [
+   "SPDX:GPL-3.0-or-later",
+ ]
+ 
++wheels = [
++  "./wheels/debugpy-1.8.2-py2.py3-none-any.whl",
++  "./wheels/debugpy-1.8.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
++  "./wheels/debugpy-1.8.2-cp311-cp311-win_amd64.whl",
++]
++
+ [permissions]
+ files = "To import OBJ files and assets"
+diff --git a/MCprep_addon/conf.py b/MCprep_addon/conf.py
+index 38bda7f..f74b0fe 100644
+--- a/MCprep_addon/conf.py
++++ b/MCprep_addon/conf.py
+@@ -62,7 +62,7 @@ Entity = Tuple[str, str, str]
+ # constant to make it easier to use
+ # and check for
+ UNKNOWN_LOCATION = (-1, "UNKNOWN LOCATION")
+-DEBUG_MODE = False
++DEBUG_MODE = True
+ 
+ # check if custom preview icons available
+ try:

@@ -24,7 +24,7 @@ import math
 from pathlib import Path
 from typing import List, Optional, Union
 import shutil
-from MCprep_addon.commonmcobj_parser import CommonMCOBJ, CommonMCOBJTextureType, parse_header
+from .commonmcobj_parser import CommonMCOBJ, CommonMCOBJTextureType, parse_header
 
 import bpy
 from bpy.types import Context, Camera
