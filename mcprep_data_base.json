@@ -127,5 +127,11 @@
 ],
 "make_real": [
 	"chest",
-	"chest_double"]
+	"chest_double"
+],
+"non_color_options": [
+	"Non-Color",
+	"Non-Colour Data",
+	"NONE"
+]
 }

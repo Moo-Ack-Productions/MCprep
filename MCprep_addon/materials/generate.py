@@ -30,6 +30,11 @@ from ..conf import MCprepError, env, Form
 
 AnimatedTex = Dict[str, int]
 
+# Error codes used during mat prep
+NO_DIFFUSE_NODE = 1
+IMG_MISSING = 2
+
+
 class PackFormat(Enum):
 	SIMPLE = 0
 	SEUS = 1
@@ -652,10 +657,7 @@ def replace_missing_texture(image: Image) -> bool:
 	env.log(f"Missing datablock detected: {image.name}")
 
 	name = image.name
-	if len(name) > 4 and name[-4] == ".":
-		name = name[:-4]  # cuts off e.g. .png
-	elif len(name) > 5 and name[-5] == ".":
-		name = name[:-5]  # cuts off e.g. .jpeg
+	name = os.path.splitext(name)[0]  # cut off png / jpg / etc
 	canon, _ = get_mc_canonical_name(name)
 	# TODO: detect for pass structure like normal and still look for right pass
 	image_path = find_from_texturepack(canon)
@@ -666,6 +668,12 @@ def replace_missing_texture(image: Image) -> bool:
 	image.filepath = str(image_path)
 	# image.reload() # not needed?
 	# pack?
+	# Due to the issue below, must trick blender to reload the datablock
+	# https://projects.blender.org/blender/blender/issues/115984
+	if image.source == 'FILE' and image.source != 'SEQUENCE':
+		old = image.source
+		image.source = 'SEQUENCE'
+		image.source = old
 
 	return True  # updated image block
 
@@ -1241,16 +1249,16 @@ def matgen_cycles_simple(mat: Material, options: PrepOptions) -> Optional[bool]:
 
 	if not image_diff:
 		print(f"Could not find diffuse image, halting generation: {mat.name}")
-		return
+		return NO_DIFFUSE_NODE
 	elif image_diff.size[0] == 0 or image_diff.size[1] == 0:
 		if image_diff.source != 'SEQUENCE':
 			# Common non animated case; this means the image is missing and would
 			# have already checked for replacement textures by now, so skip.
-			return
+			return IMG_MISSING
 		if not os.path.isfile(bpy.path.abspath(image_diff.filepath)):
 			# can't check size or pixels as it often is not immediately avaialble
 			# so instead, check against firs frame of sequence to verify load
-			return
+			return IMG_MISSING
 
 	mat.use_nodes = True
 	animated_data = copy_texture_animation_pass_settings(mat)
@@ -1361,16 +1369,16 @@ def matgen_cycles_principled(mat: Material, options: PrepOptions) -> Optional[bo
 
 	if not image_diff:
 		print(f"Could not find diffuse image, halting generation: {mat.name}")
-		return
+		return NO_DIFFUSE_NODE
 	elif image_diff.size[0] == 0 or image_diff.size[1] == 0:
 		if image_diff.source != 'SEQUENCE':
 			# Common non animated case; this means the image is missing and would
 			# have already checked for replacement textures by now, so skip
-			return
+			return IMG_MISSING
 		if not os.path.isfile(bpy.path.abspath(image_diff.filepath)):
 			# can't check size or pixels as it often is not immediately avaialble
 			# so instead, check against first frame of sequence to verify load
-			return
+			return IMG_MISSING
 
 	mat.use_nodes = True
 	animated_data = copy_texture_animation_pass_settings(mat)
@@ -1389,7 +1397,7 @@ def matgen_cycles_principled(mat: Material, options: PrepOptions) -> Optional[bo
 
 	# Sets default transparency value
 	nodeMixTrans.inputs[0].default_value = 1
-	
+
 	# Sets default reflective values
 	if options.use_reflections and checklist(canon, "reflective"):
 		principled.inputs["Roughness"].default_value = 0
@@ -1409,11 +1417,11 @@ def matgen_cycles_principled(mat: Material, options: PrepOptions) -> Optional[bo
 	links.new(nodeMixTrans.outputs["Shader"], nodeOut.inputs[0])
 
 	nodeEmit = create_node(
-			nodes, "ShaderNodeEmission", location=(120, 140))
+		nodes, "ShaderNodeEmission", location=(120, 140))
 	nodeEmitCam = create_node(
-			nodes, "ShaderNodeEmission", location=(120, 260))
+		nodes, "ShaderNodeEmission", location=(120, 260))
 	nodeMixEmit = create_node(
-			nodes, "ShaderNodeMixShader", location=(420, 0))
+		nodes, "ShaderNodeMixShader", location=(420, 0))
 	if options.use_emission_nodes:
 		# Create emission nodes
 		nodeMixCam = create_node(
@@ -1422,7 +1430,7 @@ def matgen_cycles_principled(mat: Material, options: PrepOptions) -> Optional[bo
 			nodes, "ShaderNodeLightFalloff", location=(-80, 320))
 		nodeLightPath = create_node(
 			nodes, "ShaderNodeLightPath", location=(-320, 520))
-				
+
 		# Set values
 		nodeFalloff.inputs["Strength"].default_value = 32
 		nodeEmitCam.inputs["Strength"].default_value = 4
@@ -1443,7 +1451,6 @@ def matgen_cycles_principled(mat: Material, options: PrepOptions) -> Optional[bo
 	else:
 		links.new(principled.outputs[0], nodeMixTrans.inputs[2])
 
-
 	nodeInputs = [
 		[
 			principled.inputs["Base Color"],
@@ -1455,7 +1462,7 @@ def matgen_cycles_principled(mat: Material, options: PrepOptions) -> Optional[bo
 		[principled.inputs["Metallic"]],
 		[principled.inputs["Specular IOR Level" if util.min_bv((4, 0, 0)) else "Specular"]],
 		[principled.inputs["Normal"]]]
-	
+
 	if not options.use_emission_nodes:
 		nodes.remove(nodeEmit)
 		nodes.remove(nodeEmitCam)
@@ -1517,16 +1524,16 @@ def matgen_cycles_original(mat: Material, options: PrepOptions):
 
 	if not image_diff:
 		print(f"Could not find diffuse image, halting generation: {mat.name}")
-		return
+		return NO_DIFFUSE_NODE
 	elif image_diff.size[0] == 0 or image_diff.size[1] == 0:
 		if image_diff.source != 'SEQUENCE':
 			# Common non animated case; this means the image is missing and would
 			# have already checked for replacement textures by now, so skip
-			return
+			return IMG_MISSING
 		if not os.path.isfile(bpy.path.abspath(image_diff.filepath)):
 			# can't check size or pixels as it often is not immediately avaialble
 			# so instea, check against firs frame of sequence to verify load
-			return
+			return IMG_MISSING
 
 	mat.use_nodes = True
 	animated_data = copy_texture_animation_pass_settings(mat)

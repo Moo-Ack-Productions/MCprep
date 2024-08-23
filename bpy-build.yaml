@@ -22,6 +22,10 @@ build_actions:
     script: "action-scripts/default.py"
   dev: 
     script: "action-scripts/dev.py"
+  extension:
+    script: "action-scripts/extension.py"
+  debug:
+    script: "action-scripts/debug-build.py"
   translate:
     script: "action-scripts/translate.py"
   enable-vivy-system:

@@ -74,10 +74,6 @@ class McprepMaterialProps():
 		name="Improve UI",
 		description="Automatically improve relevant UI settings",
 		default=True)
-	optimizeScene: bpy.props.BoolProperty(
-		name="Optimize scene (cycles)",
-		description="Optimize the scene for faster cycles rendering",
-		default=False)
 	usePrincipledShader: bpy.props.BoolProperty(
 		name="Use Principled Shader (if available)",
 		description=(
@@ -162,7 +158,6 @@ def draw_mats_common(self, context: Context) -> None:
 	col = row.column()
 	col.prop(self, "combineMaterials")
 	row = self.layout.row()
-	row.prop(self, "optimizeScene")
 	row.prop(self, "useEmission")
 
 
@@ -207,7 +202,10 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 		engine = context.scene.render.engine
 		count = 0
 		count_lib_skipped = 0
-		count_no_prep = 0
+		count_img_not_found = 0
+		count_misc_no_prep = 0
+
+		print("Orig mat list: ", len(mat_list))
 
 		for mat in mat_list:
 			if not mat:
@@ -262,6 +260,10 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 				)
 				if res == 0:
 					count += 1
+				elif res == generate.IMG_MISSING:
+					count_img_not_found += 1
+				else:
+					count_misc_no_prep += 1
 			else:
 				self.report(
 					{'ERROR'},
@@ -291,24 +293,27 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 			except RuntimeError as err:
 				print(f"Failed to improve UI with error: {err}")
 
-		if self.optimizeScene and engine == 'CYCLES':
-			bpy.ops.mcprep.optimize_scene()
-
 		has_lib_skipped = count_lib_skipped > 0
 		has_mat = count > 0
-		
+		has_missing = count_img_not_found > 0
+
 		info = []
 		if has_mat:
 			info.append(f"modified {count}")
 		if has_lib_skipped:
 			info.append(f"skipped {count_lib_skipped}")
-		
+
 		mat_info = ", ".join(x for x in info).capitalize()
-		
+
 		if self.skipUsage is True:
 			pass  # Don't report if a meta-call.
 		elif has_mat or has_lib_skipped:
-			self.report({"INFO"}, mat_info) 
+			self.report({"INFO"}, mat_info)
+		elif has_missing:
+			self.report(
+				{"ERROR"},
+				"Nothing modified, due missing image paths - try advanced: Find Missing Textures or File > External Data > Find Missing Files"
+			)
 		else:
 			self.report(
 				{"ERROR"},
