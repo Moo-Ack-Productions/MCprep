@@ -28,5 +28,3 @@ build_actions:
     script: "action-scripts/debug-build.py"
   translate:
     script: "action-scripts/translate.py"
-  enable-vivy-system:
-    script: "action-scripts/enable-vivy-system.py"

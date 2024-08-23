@@ -72,10 +72,6 @@ except:
 	print("MCprep: No custom icons in this blender instance")
 	pass
 
-# This enables Vivy. Only use if
-# you know what you're doing!
-ENABLE_VIVY = False
-
 # -----------------------------------------------------------------------------
 # ADDON GLOBAL VARIABLES AND INITIAL SETTINGS
 # -----------------------------------------------------------------------------

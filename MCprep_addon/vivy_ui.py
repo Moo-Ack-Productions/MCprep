@@ -2,6 +2,7 @@ import json
 import bpy
 from .materials import vivy_materials
 from .conf import env
+from .util import is_vivy_enabled
 
 class VivyNodeToolProps(bpy.types.PropertyGroup):
     # Query materials in JSON
@@ -62,6 +63,10 @@ class VivyNodeToolProps(bpy.types.PropertyGroup):
 class VIVY_OT_register_material(bpy.types.Operator):
     bl_idname = "vivy_node_tools.register_material"
     bl_label = "Register Material"
+
+    @classmethod
+    def poll(cls, context):
+        return is_vivy_enabled(context)
 
     def execute(self, context):
         vprop = context.scene.vivy_node_tools
@@ -157,6 +162,10 @@ class VIVY_OT_register_material(bpy.types.Operator):
 class VIVY_OT_set_pass(bpy.types.Operator):
     bl_idname = "vivy_node_tools.set_pass"
     bl_label = "Set Pass for Image Node"
+    
+    @classmethod
+    def poll(cls, context):
+        return is_vivy_enabled(context)
 
     def execute(self, context):
         vprop = context.scene.vivy_node_tools
@@ -235,6 +244,10 @@ class VIVY_OT_set_refinement(bpy.types.Operator):
     bl_idname = "vivy_node_tools.set_refinement"
     bl_label = "Set Material as Refinement"
 
+    @classmethod
+    def poll(cls, context):
+        return is_vivy_enabled(context)
+
     def execute(self, context):
         vprop = context.scene.vivy_node_tools
         
@@ -306,7 +319,7 @@ class VIVY_PT_node_tools(bpy.types.Panel):
     
     @classmethod
     def poll(cls, context):
-        return context.area.ui_type == "ShaderNodeTree" and str(vivy_materials.get_vivy_blend().absolute()) == bpy.data.filepath
+        return context.area.ui_type == "ShaderNodeTree" and str(vivy_materials.get_vivy_blend().absolute()) == bpy.data.filepath and is_vivy_enabled(context)
     
     # Refinements section
     def draw_refinements(self, context, row):
@@ -449,6 +462,8 @@ class VIVY_PT_node_tools_refinement(bpy.types.Panel):
     
     @classmethod
     def poll(cls, context):
+        if not is_vivy_enabled(context):
+            return False
         if not (context.area.ui_type == "ShaderNodeTree" and str(vivy_materials.get_vivy_blend().absolute()) == bpy.data.filepath):
             return False
 

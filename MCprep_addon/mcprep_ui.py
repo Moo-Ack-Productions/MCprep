@@ -37,7 +37,7 @@ from .spawner import mcmodel
 from .spawner import meshswap
 from .spawner import mobs
 from .spawner import spawn_util
-from .conf import env, ENABLE_VIVY
+from .conf import env
 # from .import_bridge import bridge
 
 # blender 2.8 icon selections
@@ -466,6 +466,13 @@ class McprepPreference(bpy.types.AddonPreferences):
 			('experimental', 'Experimental', 'Enable experimental features')],
 		name="Feature set",
 		update=feature_set_update)
+	
+	# WARNING: EXPERIMENTAL FEATURES
+	exp_vivy_material_system: bpy.props.BoolProperty(
+		name="Experimental: Experimental Material Templates (Vivy)",
+		description="Enable Vivy material templating features",
+		default=False,
+	)
 
 	# addon updater preferences
 
@@ -642,6 +649,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 				box.label(text=env._("Using MCprep in experimental mode!"), icon="ERROR")
 				box.label(text=env._("Early access features and requests for feedback"))
 				box.label(text=env._("will be made visible. Thank you for contributing."))
+				box.prop(self, "exp_vivy_material_system")
 
 		elif self.preferences_tab == "tutorials":
 			layout.label(
@@ -775,7 +783,7 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		split = layout.split()
 		col = split.column(align=True)
 
-		if ENABLE_VIVY:
+		if util.is_vivy_enabled(context):
 			col.label(text="Vivy tools")
 			col.operator("vivy.prep_materials", text="Prep materials")
 			col.operator("mcprep.open_file", text="Edit Vivy Material Library").file=str(vivy_materials.get_vivy_blend())
@@ -791,7 +799,7 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 				"mcprep.open_help", text="", icon="QUESTION", emboss=False
 			).url = "https://github.com/TheDuckCow/MCprep/blob/master/docs/common_errors.md#common-error-messages-and-what-they-mean"
 			row.label(text=env._("OBJ incompatible with textureswap"))
-		p = col.operator("vivy.swap_texture_pack") if ENABLE_VIVY else col.operator("mcprep.swap_texture_pack")
+		p = col.operator("vivy.swap_texture_pack") if util.is_vivy_enabled(context) else col.operator("mcprep.swap_texture_pack")
 		p.filepath = context.scene.mcprep_texturepack_path
 		if context.mode == "OBJECT":
 			col.operator("mcprep.meshswap", text=env._("Mesh Swap"))
