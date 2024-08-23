@@ -1,9 +1,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: 3.5.3\n"
+"Project-Id-Version: 3.6.1\n"
 "Report-Msgid-Bugs-To: https://github.com/Moo-Ack-Productions/MCprep/issues\n"
-"POT-Creation-Date: 2024-06-17 00:40-0500\n"
+"POT-Creation-Date: 2024-08-22 21:18-0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -96,8 +96,8 @@ msgstr ""
 msgid "Meshwap assets"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:545 MCprep_addon/mcprep_ui.py:858
-#: MCprep_addon/mcprep_ui.py:1324 MCprep_addon/mcprep_ui.py:1472
+#: MCprep_addon/mcprep_ui.py:545 MCprep_addon/mcprep_ui.py:866
+#: MCprep_addon/mcprep_ui.py:1331 MCprep_addon/mcprep_ui.py:1479
 msgid "MeshSwap file not found"
 msgstr ""
 
@@ -105,11 +105,11 @@ msgstr ""
 msgid "Entity assets"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:555 MCprep_addon/mcprep_ui.py:1422
+#: MCprep_addon/mcprep_ui.py:555 MCprep_addon/mcprep_ui.py:1429
 msgid "Entity file not found"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:561 MCprep_addon/mcprep_ui.py:1645
+#: MCprep_addon/mcprep_ui.py:561 MCprep_addon/mcprep_ui.py:1654
 msgid "Effects folder not found"
 msgstr ""
 
@@ -117,8 +117,8 @@ msgstr ""
 msgid "Texture / Resource packs"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:569 MCprep_addon/mcprep_ui.py:830
-#: MCprep_addon/mcprep_ui.py:1638
+#: MCprep_addon/mcprep_ui.py:569 MCprep_addon/mcprep_ui.py:838
+#: MCprep_addon/mcprep_ui.py:1647
 msgid "Texture pack folder"
 msgstr ""
 
@@ -218,7 +218,7 @@ msgstr ""
 msgid "jmc2obj/Mineways"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:683 MCprep_addon/mcprep_ui.py:884
+#: MCprep_addon/mcprep_ui.py:683 MCprep_addon/mcprep_ui.py:892
 msgid "World Tools"
 msgstr ""
 
@@ -254,333 +254,333 @@ msgstr ""
 msgid "World exporter"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:758 MCprep_addon/mcprep_ui.py:786
+#: MCprep_addon/mcprep_ui.py:763 MCprep_addon/mcprep_ui.py:794
 msgid "Select exporter!"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:768
+#: MCprep_addon/mcprep_ui.py:773
 msgid "OBJ world import"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:772 MCprep_addon/mcprep_ui.py:1866
+#: MCprep_addon/mcprep_ui.py:777 MCprep_addon/mcprep_ui.py:1875
 msgid "MCprep tools"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:773
+#: MCprep_addon/mcprep_ui.py:778
 msgid "Prep Materials"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:780
+#: MCprep_addon/mcprep_ui.py:785
 msgid "OBJ incompatible with textureswap"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:784
+#: MCprep_addon/mcprep_ui.py:789
 msgid "Mesh Swap"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:806
+#: MCprep_addon/mcprep_ui.py:814
 msgid "(UI already improved)"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:809
+#: MCprep_addon/mcprep_ui.py:817
 msgid "Improve UI"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:816 MCprep_addon/mcprep_ui.py:823
-#: MCprep_addon/mcprep_ui.py:1010 MCprep_addon/mcprep_ui.py:1017
-#: MCprep_addon/mcprep_ui.py:1099 MCprep_addon/mcprep_ui.py:1199
-#: MCprep_addon/mcprep_ui.py:1206 MCprep_addon/mcprep_ui.py:1307
-#: MCprep_addon/mcprep_ui.py:1312 MCprep_addon/mcprep_ui.py:1377
-#: MCprep_addon/mcprep_ui.py:1381 MCprep_addon/mcprep_ui.py:1457
-#: MCprep_addon/mcprep_ui.py:1461 MCprep_addon/mcprep_ui.py:1536
-#: MCprep_addon/mcprep_ui.py:1540 MCprep_addon/mcprep_ui.py:1625
-#: MCprep_addon/mcprep_ui.py:1629
+#: MCprep_addon/mcprep_ui.py:824 MCprep_addon/mcprep_ui.py:831
+#: MCprep_addon/mcprep_ui.py:1018 MCprep_addon/mcprep_ui.py:1025
+#: MCprep_addon/mcprep_ui.py:1106 MCprep_addon/mcprep_ui.py:1206
+#: MCprep_addon/mcprep_ui.py:1213 MCprep_addon/mcprep_ui.py:1314
+#: MCprep_addon/mcprep_ui.py:1319 MCprep_addon/mcprep_ui.py:1384
+#: MCprep_addon/mcprep_ui.py:1388 MCprep_addon/mcprep_ui.py:1464
+#: MCprep_addon/mcprep_ui.py:1468 MCprep_addon/mcprep_ui.py:1545
+#: MCprep_addon/mcprep_ui.py:1549 MCprep_addon/mcprep_ui.py:1634
+#: MCprep_addon/mcprep_ui.py:1638
 msgid "Advanced"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:846
+#: MCprep_addon/mcprep_ui.py:854
 msgid "Combine Materials"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:848
+#: MCprep_addon/mcprep_ui.py:856
 msgid "Combine Images"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:850
+#: MCprep_addon/mcprep_ui.py:858
 msgid "Meshswap source:"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:856
+#: MCprep_addon/mcprep_ui.py:864
 msgid "MeshSwap file must be .blend"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:867
+#: MCprep_addon/mcprep_ui.py:875
 msgid "World Bridge"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:898
+#: MCprep_addon/mcprep_ui.py:906
 msgid "World settings and lighting"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:913
+#: MCprep_addon/mcprep_ui.py:921
 msgid "Time of day"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:920
+#: MCprep_addon/mcprep_ui.py:928
 msgid "{h}:{m}, day {d}"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:929
+#: MCprep_addon/mcprep_ui.py:937
 msgid "No time controller,"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:930
+#: MCprep_addon/mcprep_ui.py:938
 msgid "add dynamic MC world."
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:939
+#: MCprep_addon/mcprep_ui.py:947
 msgid "Skin Swapper"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:956
+#: MCprep_addon/mcprep_ui.py:964
 msgid "Select skin"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:973
+#: MCprep_addon/mcprep_ui.py:981
 msgid "No skins found/loaded"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:975 MCprep_addon/mcprep_ui.py:980
+#: MCprep_addon/mcprep_ui.py:983 MCprep_addon/mcprep_ui.py:988
 msgid "Press to reload"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:978
+#: MCprep_addon/mcprep_ui.py:986
 msgid "Reload skins"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:998
+#: MCprep_addon/mcprep_ui.py:1006
 msgid "No skins found"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1000
+#: MCprep_addon/mcprep_ui.py:1008
 msgid "Skin from file"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1002
+#: MCprep_addon/mcprep_ui.py:1010
 msgid "Skin from username"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1023
+#: MCprep_addon/mcprep_ui.py:1031
 msgid "Skin path"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1037
+#: MCprep_addon/mcprep_ui.py:1045
 msgid "Reload mobs below"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1041
+#: MCprep_addon/mcprep_ui.py:1049
 msgid "Reload skins above"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1051
+#: MCprep_addon/mcprep_ui.py:1059
 msgid "MCprep materials"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1085
+#: MCprep_addon/mcprep_ui.py:1092
 msgid "No materials loaded"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1094
+#: MCprep_addon/mcprep_ui.py:1101
 msgid "Load material"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1112 MCprep_addon/mcprep_ui.py:1385
-#: MCprep_addon/mcprep_ui.py:1544
+#: MCprep_addon/mcprep_ui.py:1119 MCprep_addon/mcprep_ui.py:1392
+#: MCprep_addon/mcprep_ui.py:1553
 msgid "Resource pack"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1128
+#: MCprep_addon/mcprep_ui.py:1135
 msgid "Enter object mode"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1129
+#: MCprep_addon/mcprep_ui.py:1136
 msgid "to use spawner"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1138
+#: MCprep_addon/mcprep_ui.py:1145
 msgid "Import pre-rigged mobs & players"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1157
+#: MCprep_addon/mcprep_ui.py:1164
 msgid "No mobs in category,"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1158
+#: MCprep_addon/mcprep_ui.py:1165
 msgid "install a rig below or"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1159
+#: MCprep_addon/mcprep_ui.py:1166
 msgid "copy file to folder."
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1165
+#: MCprep_addon/mcprep_ui.py:1172
 msgid "No mobs loaded"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1169 MCprep_addon/mcprep_ui.py:1278
-#: MCprep_addon/mcprep_ui.py:1360 MCprep_addon/mcprep_ui.py:1436
-#: MCprep_addon/mcprep_ui.py:1514 MCprep_addon/mcprep_ui.py:1591
+#: MCprep_addon/mcprep_ui.py:1176 MCprep_addon/mcprep_ui.py:1285
+#: MCprep_addon/mcprep_ui.py:1367 MCprep_addon/mcprep_ui.py:1443
+#: MCprep_addon/mcprep_ui.py:1522 MCprep_addon/mcprep_ui.py:1600
 msgid "Reload assets"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1213
+#: MCprep_addon/mcprep_ui.py:1220
 msgid "Mob spawner folder"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1220
+#: MCprep_addon/mcprep_ui.py:1227
 msgid "Open mob folder"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1229
+#: MCprep_addon/mcprep_ui.py:1236
 msgid "Change mob icon"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1233
+#: MCprep_addon/mcprep_ui.py:1240
 msgid "Reload mobs"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1241
+#: MCprep_addon/mcprep_ui.py:1248
 msgid "Import pre-made blocks (e.g. lights)"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1255
+#: MCprep_addon/mcprep_ui.py:1262
 msgid "Meshswap file must be a .blend"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1260 MCprep_addon/mcprep_ui.py:1269
+#: MCprep_addon/mcprep_ui.py:1267 MCprep_addon/mcprep_ui.py:1276
 msgid "Reset meshswap path"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1264
+#: MCprep_addon/mcprep_ui.py:1271
 msgid "Meshswap file not found"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1273
+#: MCprep_addon/mcprep_ui.py:1280
 msgid "No blocks loaded"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1297
+#: MCprep_addon/mcprep_ui.py:1304
 msgid "Place block"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1316
+#: MCprep_addon/mcprep_ui.py:1323
 msgid "Meshswap file"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1322 MCprep_addon/mcprep_ui.py:1470
+#: MCprep_addon/mcprep_ui.py:1329 MCprep_addon/mcprep_ui.py:1477
 msgid "MeshSwap file must be a .blend"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1335
+#: MCprep_addon/mcprep_ui.py:1342
 msgid "Generate items from textures"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1355
+#: MCprep_addon/mcprep_ui.py:1362
 msgid "No items loaded"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1366
+#: MCprep_addon/mcprep_ui.py:1373
 msgid "Place item"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1399
+#: MCprep_addon/mcprep_ui.py:1406
 msgid "Import pre-rigged entities"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1413
+#: MCprep_addon/mcprep_ui.py:1420
 msgid "Entity file must be a .blend"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1418 MCprep_addon/mcprep_ui.py:1427
+#: MCprep_addon/mcprep_ui.py:1425 MCprep_addon/mcprep_ui.py:1434
 msgid "Reset entity path"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1431
+#: MCprep_addon/mcprep_ui.py:1438
 msgid "No entities loaded"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1448
+#: MCprep_addon/mcprep_ui.py:1455
 msgid "Spawn Entity"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1465
+#: MCprep_addon/mcprep_ui.py:1472
 msgid "Entity file"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1484
+#: MCprep_addon/mcprep_ui.py:1491
 msgid "Generate models from .json files"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1509
+#: MCprep_addon/mcprep_ui.py:1517
 msgid "No models loaded"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1560
+#: MCprep_addon/mcprep_ui.py:1569
 msgid "Load/generate effects"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1586
+#: MCprep_addon/mcprep_ui.py:1595
 msgid "No effects loaded"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1597
+#: MCprep_addon/mcprep_ui.py:1606
 msgid "Add effect"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1633
+#: MCprep_addon/mcprep_ui.py:1642
 msgid "Effects folder"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1647
+#: MCprep_addon/mcprep_ui.py:1656
 msgid "Effects/collection folder not found"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1649
+#: MCprep_addon/mcprep_ui.py:1658
 msgid "Effects/geonodes folder not found"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1651
+#: MCprep_addon/mcprep_ui.py:1660
 msgid "Effects/particle folder not found"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1659
+#: MCprep_addon/mcprep_ui.py:1668
 msgid "Spawner"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1669
+#: MCprep_addon/mcprep_ui.py:1678
 msgid "Click triangle to open"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1678
+#: MCprep_addon/mcprep_ui.py:1687
 msgid "Mob spawner"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1706
+#: MCprep_addon/mcprep_ui.py:1715
 msgid "Block (model) spawner"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1734
+#: MCprep_addon/mcprep_ui.py:1743
 msgid "Item spawner"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1763
+#: MCprep_addon/mcprep_ui.py:1772
 msgid "Effects + weather"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1791
+#: MCprep_addon/mcprep_ui.py:1800
 msgid "Entity spawner"
 msgstr ""
 
-#: MCprep_addon/mcprep_ui.py:1819
+#: MCprep_addon/mcprep_ui.py:1828
 msgid "Meshswap spawner"
 msgstr ""
