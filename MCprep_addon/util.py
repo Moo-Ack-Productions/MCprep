@@ -60,6 +60,14 @@ def update_matrices(obj):
 						   obj.matrix_parent_inverse * \
 						   obj.matrix_basis
 
+def is_experimental(context) -> bool:
+	"""Returns whether experimental features are enabled or not"""
+	addon_prefs = get_user_preferences(context)
+	return addon_prefs.feature_set == "experimental"
+
+def is_vivy_enabled(context) -> bool:
+	addon_prefs = get_user_preferences(context)
+	return is_experimental(context) and addon_prefs.exp_vivy_material_system
 
 def apply_noncolor_data(node: Node) -> Optional[MCprepError]:
 	"""
