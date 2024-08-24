@@ -149,8 +149,8 @@ class MCprepEnv:
 						self.languages_folder,
 						fallback=True,
 						languages=[language.name])
-			self.use_direct_i18n = True
-			self.log("Loaded direct i18n!")
+				self.use_direct_i18n = True
+				self.log("Loaded direct i18n!")
 
 		except Exception:
 			self.languages = {}
