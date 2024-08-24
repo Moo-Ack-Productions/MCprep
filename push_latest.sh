@@ -56,7 +56,13 @@ rm mcprep_addon_trackerid.json
 
 echo "Building prod addon..."
 bab -b translate # No --during-build dev to make it prod.
-ls build/MCprep_addon.zip
+if [ $? -eq 0 ]; then
+    echo "Build complete"
+    ls build/MCprep_addon.zip
+else
+    echo "Build failed"
+    exit
+fi
 
 # -----------------------------------------------------------------------------
 # Cross check no local changes, such as updated translations
