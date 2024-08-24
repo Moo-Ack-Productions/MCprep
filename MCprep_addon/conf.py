@@ -27,6 +27,7 @@ import gettext
 
 import bpy
 from bpy.utils.previews import ImagePreviewCollection
+import bpy.utils.previews
 
 
 # -----------------------------------------------------------------------------
@@ -57,19 +58,12 @@ VectorType = Union[Tuple[float, float, float], Vector]
 Skin = Tuple[str, Path]
 Entity = Tuple[str, str, str]
 
-# Represents an unknown location 
-# for MCprepError. Given a global 
+# Represents an unknown location
+# for MCprepError. Given a global
 # constant to make it easier to use
 # and check for
 UNKNOWN_LOCATION = (-1, "UNKNOWN LOCATION")
 DEBUG_MODE = False
-
-# check if custom preview icons available
-try:
-	import bpy.utils.previews
-except:
-	print("MCprep: No custom icons in this blender instance")
-	pass
 
 
 # -----------------------------------------------------------------------------
@@ -81,11 +75,14 @@ class MCprepEnv:
 	def __init__(self):
 		self.data = None
 		self.json_data: Optional[Dict] = None
-		self.json_path: Path = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data.json")
-		self.json_path_update: Path = Path(os.path.dirname(__file__), "MCprep_resources", "mcprep_data_update.json")
+		self.json_path: Path = Path(
+			os.path.dirname(__file__), "MCprep_resources", "mcprep_data.json")
+		self.json_path_update: Path = Path(
+			os.path.dirname(__file__), "MCprep_resources", "mcprep_data_update.json")
 
 		self.dev_file: Path = Path(os.path.dirname(__file__), "mcprep_dev.txt")
-		self.languages_folder: Path = Path(os.path.dirname(__file__), "MCprep_resources", "Languages")
+		self.languages_folder: Path = Path(
+			os.path.dirname(__file__), "MCprep_resources", "Languages")
 		self.translations: Path = Path(os.path.dirname(__file__), "translations.py")
 
 		self.last_check_for_updated = 0
@@ -137,7 +134,7 @@ class MCprepEnv:
 		# that no reading has occurred. If lib not found, will update to [].
 		# If ever changing the resource pack, should also reset to None.
 		self.material_sync_cache: List = []
-	
+
 		# Whether we use PO files directly or use the converted form
 		self.use_direct_i18n = False
 		# i18n using Python's gettext module
@@ -159,7 +156,6 @@ class MCprepEnv:
 			self.languages = {}
 			self.log("Exception occured while loading translations!")
 
-	
 	# This allows us to translate strings on the fly
 	def _(self, msg: str) -> str:
 		if not self.use_direct_i18n:
@@ -258,14 +254,14 @@ class MCprepEnv:
 		MCprepError.
 
 		This function can not return an MCprepError value as doing
-		so would be more complicated for the caller. As such, if 
-		this fails, we return values -1 and "UNKNOWN LOCATION" to 
-		indicate that we do not know the line number or file path 
+		so would be more complicated for the caller. As such, if
+		this fails, we return values -1 and "UNKNOWN LOCATION" to
+		indicate that we do not know the line number or file path
 		the error occured on.
 
 		Returns:
-			- If success: Tuple[int, str] representing the current 
-			line and file path 
+			- If success: Tuple[int, str] representing the current
+			line and file path
 
 			- If fail: (-1, "UNKNOWN LOCATION")
 		"""
@@ -274,10 +270,10 @@ class MCprepEnv:
 		cur_frame = inspect.currentframe()
 		if not cur_frame:
 			return UNKNOWN_LOCATION
-		
+
 		# Get the previous frame since the
 		# current frame is made for this function,
-		# not the function/code that called 
+		# not the function/code that called
 		# this function
 		prev_frame = cur_frame.f_back
 		if not prev_frame:
@@ -286,50 +282,45 @@ class MCprepEnv:
 		frame_info = inspect.getframeinfo(prev_frame)
 		return frame_info.lineno, frame_info.filename
 
+
 @dataclass
 class MCprepError(object):
 	"""
-	Object that is returned when 
+	Object that is returned when
 	an error occurs. This is meant
-	to give more information to the 
-	caller so that a better error 
+	to give more information to the
+	caller so that a better error
 	message can be made
 
 	Attributes
 	------------
 	err_type: BaseException
-		The error type; uses standard 
+		The error type; uses standard
 		Python exceptions
-		
+
 
 	line: int
-		Line the exception object was 
-		created on. The preferred method 
-		to do this is to use currentframe 
-		and getframeinfo from the inspect 
+		Line the exception object was
+		created on. The preferred method
+		to do this is to use currentframe
+		and getframeinfo from the inspect
 		module
 
 	file: str
 		Path of file the exception object
-		was created in. The preferred way 
+		was created in. The preferred way
 		to get this is __file__
 
 	msg: Optional[str]
-		Optional message to display for an 
-		exception. Use this if the exception 
+		Optional message to display for an
+		exception. Use this if the exception
 		type may not be so clear cut
 	"""
 	err_type: BaseException
-	line: int 
+	line: int
 	file: str
 	msg: Optional[str] = None
 
-# Requires Extension support and building with the proper wheels
-if DEBUG_MODE and bpy.app.version >= (4, 2, 0):
-	import debugpy
-	debugpy.listen(("localhost", 5678))
-
-env = MCprepEnv()
 
 def updater_select_link_function(self, tag):
 	"""Indicates what zip file to use for updating from a tag structure.
@@ -347,6 +338,16 @@ def updater_select_link_function(self, tag):
 # -----------------------------------------------------------------------------
 # GLOBAL REGISTRATOR INIT
 # -----------------------------------------------------------------------------
+
+
+# Requires Extension support and building with the proper wheels
+if DEBUG_MODE and bpy.app.version >= (4, 2, 0):
+	import debugpy
+	debugpy.listen(("localhost", 5678))
+
+
+env = MCprepEnv()
+
 
 def register():
 	global env
