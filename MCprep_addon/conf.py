@@ -143,14 +143,15 @@ class MCprepEnv:
 		# i18n using Python's gettext module
 		#
 		# This only runs if translations.py does not exist
+		self.languages: dict[str, gettext.NullTranslations] = {}
 		try:
 			if not self.translations.exists():
-				self.languages: dict[str, gettext.NullTranslations] = {}
 				for language in self.languages_folder.iterdir():
-					self.languages[language.name] = gettext.translation("mcprep", 
-											 self.languages_folder, 
-											 fallback=True,
-											 languages=[language.name])
+					self.languages[language.name] = gettext.translation(
+						"mcprep",
+						self.languages_folder,
+						fallback=True,
+						languages=[language.name])
 			self.use_direct_i18n = True
 			self.log("Loaded direct i18n!")
 
