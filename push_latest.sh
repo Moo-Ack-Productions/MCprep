@@ -55,7 +55,7 @@ rm MCprep_addon/mcprep_addon_tracker.json
 rm mcprep_addon_trackerid.json
 
 echo "Building prod addon..."
-bpy-addon-build -b translate # No --during-build dev to make it prod.
+bab -b translate # No --during-build dev to make it prod.
 ls build/MCprep_addon.zip
 
 # -----------------------------------------------------------------------------
