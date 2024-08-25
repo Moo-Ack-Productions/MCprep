@@ -19,5 +19,12 @@ venv/
 *.sublime-*
 MCprep_addon/import_bridge/conf
 MCprep_addon/import_bridge/nbt
-MCprep_addon/MCprep_resources/
+MCprep_addon/MCprep_resources/*.blend
+MCprep_addon/MCprep_resources/mcprep_data.json
+MCprep_addon/MCprep_resources/effects
+MCprep_addon/MCprep_resources/resourcepacks
+MCprep_addon/MCprep_resources/rigs
+MCprep_addon/MCprep_resources/skins
+MCprep_addon/MCprep_resources/textures
+!MCprep_addon/MCprep_resources/Languages/*
 MCprep_addon/.vscode
