@@ -65,6 +65,8 @@ Entity = Tuple[str, str, str]
 UNKNOWN_LOCATION = (-1, "UNKNOWN LOCATION")
 DEBUG_MODE = False
 
+MCPREP_RESOURCES: Path = Path(os.path.dirname(__file__), "MCprep_resources")
+
 
 # -----------------------------------------------------------------------------
 # ADDON GLOBAL VARIABLES AND INITIAL SETTINGS
@@ -75,14 +77,12 @@ class MCprepEnv:
 	def __init__(self):
 		self.data = None
 		self.json_data: Optional[Dict] = None
-		self.json_path: Path = Path(
-			os.path.dirname(__file__), "MCprep_resources", "mcprep_data.json")
+		self.json_path: Path = Path(MCPREP_RESOURCES, "mcprep_data.json")
 		self.json_path_update: Path = Path(
-			os.path.dirname(__file__), "MCprep_resources", "mcprep_data_update.json")
+			MCPREP_RESOURCES, "mcprep_data_update.json")
 
 		self.dev_file: Path = Path(os.path.dirname(__file__), "mcprep_dev.txt")
-		self.languages_folder: Path = Path(
-			os.path.dirname(__file__), "MCprep_resources", "Languages")
+		self.languages_folder: Path = Path(MCPREP_RESOURCES, "Languages")
 		self.translations: Path = Path(os.path.dirname(__file__), "translations.py")
 
 		self.last_check_for_updated = 0
