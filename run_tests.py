@@ -123,8 +123,8 @@ def main():
     compile_time = t1 - t0
     test_time = t2 - t1
     exit_code = 1 if any_failures else 0
-    print(f"Compiled in {compile_time:.1f}s, tests ran in {test_time:.1f}s")
-    print(f"Finished in {compile_time + test_time:.1f}s with code {exit_code}")
+    print(f"Compiled in {compile_time:.1f}s + tests ran in {test_time:.1f}s")
+    print(f"Total of {t2-t0:.1f}s with exit code {exit_code}")
     sys.exit(exit_code)
 
 

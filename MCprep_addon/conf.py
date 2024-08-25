@@ -143,26 +143,21 @@ class MCprepEnv:
 		self.languages: dict[str, gettext.NullTranslations] = {}
 		self._load_translations()
 
-	def _load_translations(self, prefix="") -> None:
+	def _load_translations(self) -> None:
 		"""Loads in mo file translation maps"""
 		try:
 			if not self.translations.exists():
-				print(prefix, "No translations.py, running in location: ", __file__, " with ", self.languages_folder)
 				for language in self.languages_folder.iterdir():
-					print(prefix, "In langdir:", language.name)
 					self.languages[language.name] = gettext.translation(
 						"mcprep",
 						localedir=self.languages_folder,
 						fallback=True,
 						languages=[language.name])
-					print(prefix, "Loaded: ", language.name)
 				self.use_direct_i18n = True
 				self.log("Loaded direct i18n!")
 		except Exception as e:
 			self.languages = {}
 			self.log(f"Exception occured while loading translations! {e}")
-			print(prefix, "Exception", e)
-			#raise e
 
 	def _(self, msg: str) -> str:
 		"""Allows us to translate strings on the fly"""

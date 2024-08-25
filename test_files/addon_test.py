@@ -63,18 +63,13 @@ class AddonTest(unittest.TestCase):
         lang_folder = mcprep_dir / "MCprep_resources" / "Languages"
         test_env.languages_folder = lang_folder
 
-        print("Lang folder", lang_folder)
-        print("self.translations", test_env.use_direct_i18n)
-        print("Dir:", list(os.listdir(lang_folder)))
-
         # Don't assign translations, to force building the map in memory
         # translations_py = mcprep_dir / "translations.py"
         # test_env.translations = translations_py
 
         # Force load translations into this instance of MCprepEnv
-        test_env._load_translations(prefix=">>>\t")
+        test_env._load_translations()
 
-        # TODO: Not working, above load encounters error
         self.assertIn(
             "en_US", test_env.languages, "Missing default translation key")
         self.assertTrue(
@@ -83,7 +78,8 @@ class AddonTest(unittest.TestCase):
         # Magic string evaluations, will break if source po's change
         test_translations = [
             ("ru_RU", "Restart blender", "Перезапустите блендер"),
-            ("zh_HANS", "Texture pack folder", "材质包文件夹"),
+            # Blender 4.0+ only has 'zh_HANS', 'zh_HANT'
+            ("zh_HANS" if bpy.app.version > (4, 0) else "zh_CN", "Texture pack folder", "材质包文件夹"),
             ("en_US", "Mob Spawner", "Mob Spawner"),
         ]
         for lang, src, dst in test_translations:
@@ -94,7 +90,6 @@ class AddonTest(unittest.TestCase):
                         lang_folder / lang / "LC_MESSAGES" / "mcprep.mo"),
                     f"Missing {lang}'s mo file")
 
-                # TODO: Not working
                 bpy.context.preferences.view.language = lang
                 res = test_env._(src)
                 self.assertEqual(res, dst, f"Unexpected {lang} translation)")
