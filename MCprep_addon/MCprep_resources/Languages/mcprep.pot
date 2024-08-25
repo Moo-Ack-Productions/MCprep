@@ -1,9 +1,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: 3.6.1\n"
+"Project-Id-Version: 3.6.1.1\n"
 "Report-Msgid-Bugs-To: https://github.com/Moo-Ack-Productions/MCprep/issues\n"
-"POT-Creation-Date: 2024-08-22 21:18-0700\n"
+"POT-Creation-Date: 2024-08-24 22:58-0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
