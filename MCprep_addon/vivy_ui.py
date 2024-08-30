@@ -28,7 +28,8 @@ class VivyNodeToolProps(bpy.types.PropertyGroup):
     as_what: bpy.props.EnumProperty(name="As What?",
                                            items=[
                                             ("regular", "As Material", ""),
-                                            ("refine", "As Refinement", "")])
+                                            ("refine", "As Refinement", "")],
+                                    default="regular")
 
     # Names for pass nodes
     diffuse_name: bpy.props.StringProperty(name="Diffuse Node Name", 
@@ -368,20 +369,16 @@ class VIVY_PT_node_tools(bpy.types.Panel):
                 row.label(text="Name of Diffuse Node:")
                 row = layout.row()
                 row.prop(vprop, "diffuse_name", text="")
-                row = layout.row()
-                row.label(text="Set Type:")
-                row = layout.row()
-                row.prop(vprop, "as_what", text="")
-                row = layout.row()
+                #row = layout.row()
+                #row.label(text="Set Type:")
+                #row = layout.row()
+                #row.prop(vprop, "as_what", text="")
+                #row = layout.row()
 
                 # Grey out button if no name is inputed 
                 # or if it's all spaces
                 row.enabled = vprop.material_name.strip() != ""
-
-                if vprop.as_what == "refine":
-                    self.draw_refinements(context, row)
-                elif vprop.as_what == "regular":
-                    row.operator("vivy_node_tools.register_material")
+                row.operator("vivy_node_tools.register_material")
             else:
                 row.label(text="Select the image node that'll hold the diffuse pass")
 
@@ -497,7 +494,7 @@ class VIVY_PT_node_tools_refinement(bpy.types.Panel):
 classes = [
     VivyNodeToolProps,
     VIVY_PT_node_tools,
-    VIVY_PT_node_tools_refinement,
+    #VIVY_PT_node_tools_refinement,
     VIVY_OT_register_material,
     VIVY_OT_set_pass,
     VIVY_OT_set_refinement
