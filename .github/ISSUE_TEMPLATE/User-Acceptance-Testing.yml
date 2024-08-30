@@ -1,0 +1,56 @@
+name: User Acceptance Testing
+description: Procedure for doing human QA release testing
+labels: ["uat"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For each test below, check the box if it passes. If it fails, elaborate
+        and then either way, attach this issue to the final 
+  - type: textarea
+    id: blender-versions
+    attributes:
+      label: Blender version(s) tested
+    validations:
+      required: true
+  - type: checkboxes
+    id: uat-tests
+    attributes:
+      label: Test cases
+      description: Go line by line and check the boxes for each test passed
+      options:
+        - label: Remove MCprep, restart blender, then Install MCprep, enable, disable, then enable again without errors
+        - label: Open Mineways or jmc2obj button (configure as necessary to make it run the executbale)
+        - label: Import any exported obj world, and verify that it imported into own collection, correct exporter was auto-selected, and on selecting one of the objects it contains the custome object properties which are appropriate
+        - label: Go into rendered mode to verify blurry/bad textures, then press prep materials and check they are fixed as expected
+        - label: Import a world with broken textures, then check that prep materials or Advanced/find missing works
+        - label: Select a block like lava, and use advanced > animate textures, press play to make sure it's now animated
+        - label: Go to the materials tab with any primitive object selected, load materials, then try applying lava - again selecting animate textures; ensure on play it's animated
+        - label: Try running mesh swap on the entire scene, veryfing at least one object is meshswaped (will be world dependant, typically tall grass should at least be there)
+        - label: Try advanced > combine materials and combine images, mostly making sure it doesn't error out
+        - label: Try sync materials (more advanced, you might need to make a custom material first in the addon lib folder)
+        - label: Enter rendered mode, then press Create MC sky, try once with each of the options (changing in the redo last options) in rendered mode and verifying that it reacts e.g. adding/removing shader/mesh moon/sun and adding/removing clouds per tick box
+        - label: Test pressing render panorama, picking a small resolution to make it fast
+        - label: Test changing the time of day (after having added one of the dynamic sky options)
+        - label: Try skin swapping (from file, username, and/or pre-installed list). Check that it applies to all children of a rig when the armature is selected, but only individual meshes if meshes are selected without the rig
+        - label: Try a mob spawn
+        - label: Try a (few) block spawns
+        - label: Try an item spawn (either from list and/or from a file on disk)
+        - label: Try each type of available effect spawn (weather geo, weather particle, tnt collection at different frames, and some particle)
+        - label: Try an entity spawn
+        - label: Try a meshswap spawn, especially animated ones like torches or lighting-based ones like jack_o_lanterns
+
+  - type: textarea
+    id: test-failures
+    attributes:
+      label: Test failures
+      description: For each test failure, note the number here and describe what exactly failed
+    validations:
+      required: false
+  - type: textarea
+    id: automated-tests
+    attributes:
+      label: Automated test results
+      description: Paste the output of unit tests here, either local run or the github action result
+    validations:
+      required: false

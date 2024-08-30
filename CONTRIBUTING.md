@@ -129,28 +129,26 @@ In order to run these tests, **you must ensure your git folder with your MCprep 
 
 At the moment, only the project lead (TheDuckCow) should ever mint new releases for MCprep. However, the steps are noted here for completeness:
 
-1. All releases need a corresponding milestone, like v3.3.1
-1. Make sure the version is the correct number for the release (should match a corresponding milestone). Make this commit on the dev branch.
-1. Create a pull request and merge dev into master (without deleting the dev branch). Close out any remaining corresponding milestones. Add this pull request to the milestone, only merging when all other tasks are completed or moved out of the milestone.
-1. Check out master, git pull
-1. Make sure that `"dev" = False` in conf.py, so that prod resources are used for reporting (it should always be this way on the master branch without doing anything, even after doing a merge from dev; but *always* double check)
-1. Create [a draft release](https://github.com/TheDuckCow/MCprep/releases/new) on GitHub
-   - Tag is in the form `3.3.1`, no leading `v`.
-   - The title however is in the form `MCprep v3.3.0 | ShortName` where version has a leading `v`.
-   - Copy the body fo the description from the prior release, and then update the text and splash screen (if a major release). Edit a prior release without making changes to get the raw markdown code, e.g. [from here](https://github.com/TheDuckCow/MCprep/releases/edit/3.3.0).
-1. Run `bpy-addon-build.py` to build the addon
-1. Run all tests, ideally on two different operating systems. Use the `./run_tests.sh -all` flag to run on all versions of blender
-1. If all tests pass, again DOUBLE CHECK that "dev" = false in conf.py, then
-1. Drag and drop the generated updated zip file onto github.
-1. Rename so it's in the form including its version number, e.g. `MCprep_addon_v3.3.0.zip`
-1. Press publish release
+
+1. Checkout dev, and commit the correct release version in `MCprep_addon/__init__.py` (should match a corresponding milestone)
+1. Create a pull request to merge dev into master. This can be approved and merged without review, since all code is already reviewed - but only TheDuckCow may do this bypass with current repo permissions
+1. Locally, check out master and run `git pull`
+1. Run all local unit tests using `python run_tests.py -a`
+  - While we do have remote github unit tests, TheDuckCow has many more versions locally for wider testing to be more comprehensive. But, github action unittests can be used in a standin if necessary.
+1. Create a new UAT issue from [issues here](https://github.com/Moo-Ack-Productions/MCprep/issues/new/choose) with the name of the corresponding milestone
+  - The automated test results above should be pasted into the last section of this UAT form.
+  - If not all UAT steps pass, consider halting the release and/or updating/creating new issues
+1. If all UAT steps pass, the run `./push_latest.sh` in the repo root
+  - Follow the script's instructions and prompts for ensuring the release completes
+  - You will likely need to update POT files and the json mapping via `mcprep_data_refresh.py` which gets called from within this script. Make a new PR if appropriate.
+1. After this script has finished, go to [github releases](https://github.com/Moo-Ack-Productions/MCprep/releases) and edit the draft release to hand hand-adjusted changelogs
+1. Press release
    1. **Immediately** download and install an old release MCprep, and install into blender (restart blender too)
    1. Make sure that the trigger to update MCprep to the new version is working.
    1. If it works, then **immediately update** the https://theduckcow.com/dev/blender/mcprep-download/ page to point to the new number (must be manually updated by TheDuckCow).
    1. Anything wrong? Immediately delete the entire release, and as a second step, also delete the tag (you likely want to copy the markdown text of the release though to a safe temporary space, so you don't lose that). You can do both steps from the github UI.
 1. After release, enter hypercare by monitoring the discord channel and the datastudio dashboard for error reporting (only core contributors will have access to this)
 1. git checkout dev, and then upversion the dev branch to a unique incremental version. So if you just released v3.3.1, then the dev branch should be updated to be (3, 3, 1, 1) so that we can tell official releases apart from dev versions.
-
 
 
 ## Creating your blender_execs.txt

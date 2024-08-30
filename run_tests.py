@@ -41,7 +41,7 @@ import sys
 import time
 
 
-COMPILE_CMD = ["bab", "-b", "dev"]
+COMPILE_CMD = ["bab", "-b", "dev", "translate"]
 DATA_CMD = ["python", "mcprep_data_refresh.py", "-auto"]  # TODO, include in build
 DCC_EXES = "blender_execs.txt"
 TEST_RUNNER = os.path.join("test_files", "test_runner.py")
@@ -60,6 +60,7 @@ class TestSpeed(Enum):
 
 
 def main():
+    t0 = time.time()
     args = get_args()
 
     # Read arguments
@@ -69,12 +70,21 @@ def main():
         return
 
     # Compile the addon
+    if args.version:
+        # Just install into the only blender version we'll test anyways
+        COMPILE_CMD.extend(["-v", args.version])
+    elif not args.all_execs:
+        # Just install into the first blender binary listed to match the tests
+        # TODO: get Blender version from the binary path at blender_execs[0]
+        # default_v = x
+        # COMPILE_CMD.extend(["-v", default_v])
+        pass
     res = subprocess.check_output(COMPILE_CMD)
     print("Compile output:", res.decode("utf-8"))
     reset_test_file()
 
     # Loop over all binaries and run tests.
-    t0 = time.time()
+    t1 = time.time()
     any_failures = False
     for ind, binary in enumerate(blender_execs):
         run_all = args.all_execs is True
@@ -104,15 +114,17 @@ def main():
         if child.returncode != 0:
             any_failures = True
 
-    t1 = time.time()
+    t2 = time.time()
 
     # Especially ensure tracker files are removed after tests complete.
     remove_tracker_files()
 
     output_results()
-    round_s = round(t1 - t0)
+    compile_time = t1 - t0
+    test_time = t2 - t1
     exit_code = 1 if any_failures else 0
-    print(f"tests took {round_s}s to run, ending with code {exit_code}")
+    print(f"Compiled in {compile_time:.1f}s + tests ran in {test_time:.1f}s")
+    print(f"Total of {t2-t0:.1f}s with exit code {exit_code}")
     sys.exit(exit_code)
 
 
