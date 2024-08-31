@@ -151,6 +151,11 @@ if "vivy_ui" in locals():
 else:
 	from . import vivy_ui 
 
+if "vivy_editor" in locals():
+	importlib.reload(vivy_editor)
+else:
+	from . import vivy_editor
+
 # Only include those with a register function, which is not all
 module_list = (
 	conf,
@@ -173,6 +178,7 @@ module_list = (
 	mcprep_ui,
 	vivy_materials,
 	vivy_ui,
+	vivy_editor
 )
 
 

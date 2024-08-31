@@ -138,7 +138,7 @@ class MCprepEnv:
 		# Whether we use PO files directly or use the converted form
 		self.use_direct_i18n = False
 
-		self.languages: dict[str, gettext.NullTranslations] = {}
+		self.languages: Dict[str, gettext.NullTranslations] = {}
 		self._load_translations()
 
 		# Cache for Vivy materials. Identical to self.material_sync_cache, but
@@ -148,6 +148,11 @@ class MCprepEnv:
 		# The JSON file for Vivy's materials
 		self.vivy_material_json: Optional[Dict] = None
 		self.reload_vivy_json() # Get latest JSON data
+
+		# State for name changes in the Vivy config
+		#
+		# This is reverse, so the new name refers to the previous name
+		self.vivy_name_changes: Dict[str, str] = {}
 
 	def reload_vivy_json(self) -> None:
 		json_path = Path(os.path.join(os.path.dirname(__file__), "MCprep_resources", "vivy_materials.json"))
