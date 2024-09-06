@@ -24,6 +24,7 @@ from dataclasses import dataclass
 import enum
 import os
 import gettext
+import json
 
 import bpy
 from bpy.utils.previews import ImagePreviewCollection
@@ -66,7 +67,6 @@ UNKNOWN_LOCATION = (-1, "UNKNOWN LOCATION")
 DEBUG_MODE = False
 
 MCPREP_RESOURCES: Path = Path(os.path.dirname(__file__), "MCprep_resources")
-
 
 # -----------------------------------------------------------------------------
 # ADDON GLOBAL VARIABLES AND INITIAL SETTINGS
@@ -137,11 +137,31 @@ class MCprepEnv:
 
 		# Whether we use PO files directly or use the converted form
 		self.use_direct_i18n = False
-		# i18n using Python's gettext module
-		#
-		# This only runs if translations.py does not exist
-		self.languages: dict[str, gettext.NullTranslations] = {}
+
+		self.languages: Dict[str, gettext.NullTranslations] = {}
 		self._load_translations()
+
+		# Cache for Vivy materials. Identical to self.material_sync_cache, but
+		# as a seperate variable to avoid conflicts
+		self.vivy_cache = None
+		
+		# The JSON file for Vivy's materials
+		self.vivy_material_json: Dict = {}
+
+		# State for name changes in the Vivy config
+		#
+		# This is reverse, so the new name refers to the previous name
+		self.vivy_name_changes: Dict[str, str] = {}		
+
+	def reload_vivy_json(self, path: Path) -> None:
+		json_path = Path(path, "vivy_materials.json")
+		if not json_path.exists():
+			json_path.touch()
+			self.vivy_material_json = {}
+		else: 
+			with open(json_path, 'r') as f:
+				self.vivy_material_json = json.load(f) if json_path.stat().st_size != 0 else {}
+	
 
 	def _load_translations(self) -> None:
 		"""Loads in mo file translation maps"""
@@ -370,3 +390,4 @@ def unregister():
 	env.skin_list = []
 	env.rig_categories = []
 	env.material_sync_cache = []
+	env.vivy_cache = []
