@@ -17,6 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import os
+from pathlib import Path
 import time
 
 # library imports
@@ -473,6 +474,11 @@ class McprepPreference(bpy.types.AddonPreferences):
 		description="Enable Vivy material templating features",
 		default=False,
 	)
+	exp_vivy_file_path: bpy.props.StringProperty(
+		name="Vivy Folder",
+		description="Folder to source Vivy materials",
+		subtype='DIR_PATH',
+		default='//')
 
 	# addon updater preferences
 
@@ -566,6 +572,16 @@ class McprepPreference(bpy.types.AddonPreferences):
 			if not os.path.isdir(bpy.path.abspath(self.effects_path)):
 				row = box.row()
 				row.label(text=env._("Effects folder not found"), icon="ERROR")
+
+			if util.is_vivy_enabled(context):
+				split = util.layout_split(box, factor=factor_width)
+				col = split.column()
+				col.label(text=env._("Vivy Path"))
+				col = split.column()
+				col.prop(self, "exp_vivy_file_path", text="")
+				if not os.path.isdir(bpy.path.abspath(self.exp_vivy_file_path)):
+					row = box.row()
+					row.label(text=env._("Vivy folder not found"), icon="ERROR")
 
 			row = layout.row()
 			row.scale_y = 0.7
@@ -787,8 +803,6 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			col.label(text="Vivy tools")
 			col.operator("vivy.prep_materials", text="Prep materials")
 			col.operator("mcprep.open_file", text="Edit Vivy Material Library").file=str(vivy_materials.get_vivy_blend())
-			col.operator("vivy.export_library", text="Export Vivy Material Library")
-			col.operator("vivy.import_library", text="Import Previous Export")
 		else:
 			col.label(text=env._("MCprep tools"))
 			col.operator("mcprep.prep_materials", text=env._("Prep Materials"))
@@ -855,6 +869,13 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			row = b_col.row(align=True)
 			row.prop(context.scene, "mcprep_texturepack_path", text="")
 			row.operator("mcprep.reset_texture_path", text="", icon=LOAD_FACTORY)
+
+			if util.is_vivy_enabled(context):
+				b_row = box.row()
+				b_col = b_row.column(align=False)
+				b_col.label(text=env._("Vivy Path"))
+				row = b_col.row(align=True)
+				row.prop(context.scene, "vivy_file_path", text="")
 
 			b_row = box.row()
 			b_col = b_row.column(align=True)
@@ -1921,6 +1942,9 @@ def mcprep_image_tools(self, context: Context) -> None:
 	else:
 		row.operator("mcprep.spawn_item", text=txt).filepath = path
 
+def update_vivy_json(self, context: Context) -> None:
+	path = Path(bpy.path.abspath(context.scene.vivy_file_path))
+	env.reload_vivy_json(path)
 
 # -----------------------------------------------
 # Addon wide properties (aside from user preferences)
@@ -2077,7 +2101,12 @@ def register():
 			"with material prepping"),
 		update=update_mcprep_texturepack_path,
 		default=addon_prefs.custom_texturepack_path)
-
+	bpy.types.Scene.vivy_file_path = bpy.props.StringProperty(
+		name="Vivy Folder",
+		description="Folder to source Vivy materials",
+		subtype='DIR_PATH',
+		update=update_vivy_json,
+		default=addon_prefs.exp_vivy_file_path)
 	env.verbose = addon_prefs.verbose
 	if hasattr(bpy.types, "VIEW3D_MT_add"):  # 2.8
 		bpy.types.VIEW3D_MT_add.append(draw_mcprepadd)
@@ -2106,3 +2135,4 @@ def unregister():
 	del bpy.types.Scene.entity_path
 	del bpy.types.Scene.mcprep_skin_path
 	del bpy.types.Scene.mcprep_texturepack_path
+	del bpy.types.Scene.vivy_file_path

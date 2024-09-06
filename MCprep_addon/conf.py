@@ -146,16 +146,15 @@ class MCprepEnv:
 		self.vivy_cache = None
 		
 		# The JSON file for Vivy's materials
-		self.vivy_material_json: Optional[Dict] = None
-		self.reload_vivy_json() # Get latest JSON data
+		self.vivy_material_json: Dict = {}
 
 		# State for name changes in the Vivy config
 		#
 		# This is reverse, so the new name refers to the previous name
-		self.vivy_name_changes: Dict[str, str] = {}
+		self.vivy_name_changes: Dict[str, str] = {}		
 
-	def reload_vivy_json(self) -> None:
-		json_path = Path(os.path.join(os.path.dirname(__file__), "MCprep_resources", "vivy_materials.json"))
+	def reload_vivy_json(self, path: Path) -> None:
+		json_path = Path(path, "vivy_materials.json")
 		if not json_path.exists():
 			json_path.touch()
 			self.vivy_material_json = {}

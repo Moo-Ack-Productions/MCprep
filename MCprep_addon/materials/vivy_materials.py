@@ -180,11 +180,14 @@ def set_material(context: Context, material: Material, options: VivyOptions) -> 
 
 def get_vivy_blend() -> Path:
 	"""Return the path of the Vivy material library"""
-	return Path(os.path.join(env.json_path.parent, "vivy_materials.blend"))
+	try:
+		return Path(os.path.join(bpy.context.scene.vivy_file_path, "vivy_materials.blend"))
+	except Exception:
+		return Path("")
 
 def get_vivy_json() -> Path:
 	"""Return the path of the Vivy JSON file"""
-	return Path(os.path.join(env.json_path.parent, "vivy_materials.json"))
+	return Path(os.path.join(bpy.context.scene.vivy_file_path, "vivy_materials.json"))
 
 def generate_vivy_materials(self, context, options: VivyOptions):
 	# Sync file stuff.
