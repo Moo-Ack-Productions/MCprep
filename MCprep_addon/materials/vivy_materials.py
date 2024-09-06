@@ -648,81 +648,9 @@ class VIVY_OT_swap_texture_pack(
 		nodes.active = nodes.get(diffuse)
 		return changed
 
-class VIVY_OT_material_export(bpy.types.Operator, VivyMaterialProps):
-	"""
-	Export operator for Vivy's material library
-	"""
-	bl_idname = "vivy.export_library"
-	bl_label = "Export Vivy's Material Library"
-	bl_options = {'REGISTER'}
-	
-	directory: bpy.props.StringProperty(
-        name="Folder to Export To",
-        description="",
-        subtype='DIR_PATH'
-        )
-
-	filter_folder: bpy.props.BoolProperty(
-        default=True,
-        options={"HIDDEN"}
-        )
-	
-	def invoke(self, context, event):
-		context.window_manager.fileselect_add(self)
-		return {'RUNNING_MODAL'}
-
-	track_function = "vivy_material_export"
-	track_param = None
-	track_exporter = None
-	@tracking.report_error
-	def execute(self, context):
-		import zipfile
-		from datetime import date
-		zip_file_name = f"vivy_export-{date.today()}" + '.zip'
-		zip_file_path = Path(self.directory) / Path(zip_file_name)
-		with zipfile.ZipFile(zip_file_path, mode='w') as zf:
-			blend_path, json_path = (get_vivy_blend(), get_vivy_json())
-			if not blend_path.exists() or not json_path.exists():
-				self.report({'ERROR'}, "Missing library files to export!")
-				return {'CANCELLED'}
-			zf.write(blend_path, arcname=blend_path.name)
-			zf.write(json_path, arcname=json_path.name)
-		return {'FINISHED'}
-
-class VIVY_OT_material_import(bpy.types.Operator, ImportHelper):
-	bl_label = "Import Vivy Library"
-	bl_idname = "vivy.import_library"
-
-	filter_glob: bpy.props.StringProperty(
-		default='*.zip',
-		options={'HIDDEN'}
-	)
-	
-	track_function = "vivy_material_import"
-	track_param = None
-	track_exporter = None
-	@tracking.report_error
-	def execute(self, context):
-		import zipfile
-		path = Path(self.filepath)
-		with zipfile.ZipFile(path, mode="r") as zf:
-			files = zf.namelist()
-			if "vivy_materials.blend" not in files or "vivy_materials.json" not in files:
-				self.report({'ERROR'}, "Zip archive is missing files!")
-				return {'CANCELLED'}
-			zf.extract("vivy_materials.blend", path=get_vivy_blend().parent)
-			zf.extract("vivy_materials.json", path=get_vivy_json().parent)
-
-		# Reload the JSON to get
-		# updated information
-		env.reload_vivy_json()
-		return {'FINISHED'}
-
 classes = [
 	VIVY_OT_materials,
 	VIVY_OT_swap_texture_pack,
-	VIVY_OT_material_export,
-	VIVY_OT_material_import
 ]
 
 def register():
