@@ -1942,9 +1942,12 @@ def mcprep_image_tools(self, context: Context) -> None:
 	else:
 		row.operator("mcprep.spawn_item", text=txt).filepath = path
 
-def update_vivy_json(self, context: Context) -> None:
+def update_vivy_variables(self, context: Context) -> None:
+	"""Update all Vivy related variables when changing the file"""
 	path = Path(bpy.path.abspath(context.scene.vivy_file_path))
 	env.reload_vivy_json(path)
+	env.vivy_name_changes = {}
+	env.vivy_cache = None
 
 # -----------------------------------------------
 # Addon wide properties (aside from user preferences)
@@ -2105,7 +2108,7 @@ def register():
 		name="Vivy Folder",
 		description="Folder to source Vivy materials",
 		subtype='DIR_PATH',
-		update=update_vivy_json,
+		update=update_vivy_variables,
 		default=addon_prefs.exp_vivy_file_path)
 	env.verbose = addon_prefs.verbose
 	if hasattr(bpy.types, "VIEW3D_MT_add"):  # 2.8
