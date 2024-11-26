@@ -51,7 +51,7 @@ class VIVY_OT_reload_editor(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        env.reload_vivy_json()
+        env.reload_vivy_json(context.scene.vivy_file_path)
         reload_vivy_materials(context)
         return {'FINISHED'}
 
