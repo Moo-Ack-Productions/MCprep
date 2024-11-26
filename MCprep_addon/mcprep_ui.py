@@ -375,6 +375,13 @@ class McprepPreference(bpy.types.AddonPreferences):
 	def change_verbose(self, context):
 		env.verbose = self.verbose
 
+	def update_exp_vivy_file_path(self, context):
+		"""Update important Vivy variables when setting Vivy file path"""
+		path = Path(bpy.path.abspath(self.exp_vivy_file_path))
+		env.reload_vivy_json(path)
+		env.vivy_name_changes = {}
+		env.vivy_cache = None
+
 	meshswap_path: bpy.props.StringProperty(
 		name="Meshswap path",
 		description=(
@@ -478,7 +485,9 @@ class McprepPreference(bpy.types.AddonPreferences):
 		name="Vivy Folder",
 		description="Folder to source Vivy materials",
 		subtype='DIR_PATH',
-		default='//')
+		default='//',
+		update=update_exp_vivy_file_path
+		)
 
 	# addon updater preferences
 
@@ -2119,7 +2128,11 @@ def register():
 		env.log("IMAGE_MT_uvs registration!")
 		bpy.types.IMAGE_MT_uvs.append(mcprep_uv_tools)
 	# bpy.types.IMAGE_MT_image.append(mcprep_image_tools) # crashes, re-do ops
-
+	
+	path = Path(bpy.path.abspath(addon_prefs.exp_vivy_file_path))
+	env.reload_vivy_json(path)
+	env.vivy_name_changes = {}
+	env.vivy_cache = None
 
 def unregister():
 	for cls in reversed(classes):
