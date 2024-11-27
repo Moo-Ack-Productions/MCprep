@@ -99,6 +99,15 @@ class VIVY_OT_apply_changes(bpy.types.Operator):
                 orig_passes["specular"] = name.specular
                 orig_passes["normal"] = name.normal
                 data["materials"][mat.name] = original_data
+                
+                # Update mappings as well for
+                # the UI
+                for key in data["mapping"]:
+                    data_mapping = data["mapping"][key]
+                    for map in data_mapping:
+                        if map["material"] != old_name:
+                            continue
+                        map["material"] = mat.name
             else:
                 data["materials"][mat.name] = {
                     "desc": mat.desc,
@@ -109,6 +118,7 @@ class VIVY_OT_apply_changes(bpy.types.Operator):
                         "normal": mat.normal
                     }
                 }
+
             json_path = vivy_materials.get_vivy_json()
             with open(json_path, 'w') as f:
                 json.dump(data, f)
