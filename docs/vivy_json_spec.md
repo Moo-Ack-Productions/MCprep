@@ -56,7 +56,7 @@ A Vivy JSON file may be defined as follows
     - `specular` - Specular pass
     - `normal` - Normal pass
   - `refinements` - Specialized sub-materials to use with certain groupings. They're applied in the following order:
-    - `emit` - Emissive materials
+    - `emissive` - Emissive materials
     - `reflective` - Reflective materials
     - `metallic` - Metallic materials
     - `glass` - Glass/transmissive materials
