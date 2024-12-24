@@ -234,11 +234,18 @@ def get_format_version_texturepack(resource_folder: Optional[Path]=None) -> Unio
 		return MCprepError(FileNotFoundError(), line, file, f"Resource pack folder at {resource_folder} does not exist!")
 
 	# Resource folder is same level as assets folder
-	file = Path(resource_folder, "pack.mcmeta")
-	if (file.is_file()):
-		with open(file, 'r') as f:
+	meta_file = Path(resource_folder, "pack.mcmeta")
+	if meta_file.exists() and meta_file.is_file():
+		with open(meta_file, 'r') as f:
 			data = json.load(f)
-			return data["pack"]["pack_format"]
+			if data.get("pack"):
+				r = data.get("pack").get("pack_format")
+				if r:
+					return r
+			# Comment this out for now
+			# Invalid pack.mcmeta file
+			# line, file = env.current_line_and_file()
+			# MCprepError(TypeError(), line, file, f"Resource pack metadata ({meta_file}) is invalid!")
 	# return the unaffected change version, 22
 	return 21
 
@@ -395,9 +402,14 @@ def set_texture_pack(
 	"""
 	mc_name, _ = get_mc_canonical_name(material.name)
 	texture_pack_format = get_format_version_texturepack(folder)
+	if isinstance(texture_pack_format, MCprepError):
+		if texture_pack_format.msg:
+			env.log(texture_pack_format.msg)
+		return 0
 	# grass rename to short_grass in MC 1.20.3 with pack format version 22
 	if (material.name == "grass" and texture_pack_format > 21):
 		mc_name = "short_grass"
+	
 	image = find_from_texturepack(mc_name, folder)
 	if isinstance(image, MCprepError):
 		if image.msg:
