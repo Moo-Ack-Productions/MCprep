@@ -342,6 +342,7 @@ class MaterialsTest(unittest.TestCase):
         should_saturate = {
             # Sample of canonically grayscale textures.
             "grass": True,
+            "short_grass": True,
             "grass_block_top": True,
             "acacia_leaves": True,
             "redstone_dust_line0": True,
