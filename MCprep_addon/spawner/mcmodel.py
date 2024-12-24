@@ -116,11 +116,14 @@ def add_element(
 	return verts, edges, faces
 
 
-def add_material(
+def add_get_material(
 	name: str = "material", path: str = "", use_name: bool = False
 ) -> Optional[Material]:
-	"""Creates a simple material with an image texture from path."""
+	"""Creates or get an existing created simple material with an image texture from path."""
 	engine = bpy.context.scene.render.engine
+	mat = bpy.data.materials.get(name)
+	if mat:
+		return mat
 
 	# Create the base material node tree setup
 	mat, err = generate.generate_base_material(bpy.context, name, path, False)
@@ -302,7 +305,9 @@ def add_model(
 		for img in textures:
 			if img != "particle":
 				tex_pth = locate_image(bpy.context, textures, img, model_filepath)
-				mat = add_material(f"{obj_name}_{img}", tex_pth, use_name=False)
+				# For json file only use 1 material for all faces
+				name = f"{obj_name}" if (len(textures) < 3) else f"{obj_name}_{img}"
+				mat = add_get_material(name, tex_pth, use_name=False)
 				obj_mats = obj.data.materials
 				if f"#{img}" not in materials:
 					obj_mats.append(mat)
