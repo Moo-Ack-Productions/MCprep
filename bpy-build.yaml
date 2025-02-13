@@ -6,8 +6,8 @@ extension_settings:
   build_legacy: true
 
 install_versions:
-  - 4.3+
-  - 2.83..4.3
+  - 4.4+
+  - 2.83..4.4
 
 build_actions:
   default: 
