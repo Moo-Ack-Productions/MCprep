@@ -69,6 +69,8 @@ class VivyOptions:
 	passes: Dict[str, str]
 	fallback: Optional[Fallback]
 
+CACHED_MATERIALS: Dict[str, Material] = {}
+
 def reload_material_vivy_library(context: Context) -> None:
 	"""Reloads the library and cache"""
 	sync_file = get_vivy_blend()
@@ -140,29 +142,31 @@ def set_material(context: Context, material: Material, options: VivyOptions) -> 
 	init_mats = list(bpy.data.materials)
 	path = os.path.join(str(sync_file), "Material")
 
-	if isinstance(import_name, str):
+	if isinstance(import_name, str) and import_name not in CACHED_MATERIALS:
 		util.bAppendLink(path, import_name, False)  # No linking.
 
-	imported = set(list(bpy.data.materials)) - set(init_mats)
-	if not imported:
-		return f"Could not import {material.name}"
-	selected_material = list(imported)[0]
+		imported = set(list(bpy.data.materials)) - set(init_mats)
+		if not imported:
+			return f"Could not import {import_name}"
+		CACHED_MATERIALS[import_name] = list(imported)[0]
 	
 	# Set the passes
 	passes = [(options.material.passes.diffuse, "diffuse"), 
 		   (options.material.passes.specular, "specular"), 
 		   (options.material.passes.normal, "normal")]
 
+	replacement_mat = CACHED_MATERIALS[import_name].copy()
+
 	for p in passes:
 		if p[0] is not None:
-			new_material_nodes = selected_material.node_tree.nodes
+			new_material_nodes = replacement_mat.node_tree.nodes
 			if not new_material_nodes.get(p[0]):
 				return f"Material has no {p[1]} node"
 
 			if not material.node_tree.nodes:
 				return "Material has no nodes"
 
-			nnodes = selected_material.node_tree.nodes
+			nnodes = replacement_mat.node_tree.nodes
 			material_nodes = material.node_tree.nodes
 
 			if not material_nodes.get("Image Texture") and not material_nodes.get(options.material.passes.diffuse):
@@ -171,11 +175,10 @@ def set_material(context: Context, material: Material, options: VivyOptions) -> 
 			nnode_diffuse = nnodes.get(p[0])
 			nnode_diffuse.image = options.passes[p[1]]
 
-	material.user_remap(selected_material)
-
+	material.user_remap(replacement_mat)
 	m_name = material.name
 	bpy.data.materials.remove(material)
-	selected_material.name = m_name
+	replacement_mat.name = m_name
 	return None
 
 def get_vivy_blend() -> Path:
