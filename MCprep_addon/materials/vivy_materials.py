@@ -70,6 +70,7 @@ class VivyOptions:
 	fallback: Optional[Fallback]
 
 CACHED_MATERIALS: Dict[str, Material] = {}
+MAT_TO_IMPORT: Dict[str, str] = {}
 
 def reload_material_vivy_library(context: Context) -> None:
 	"""Reloads the library and cache"""
@@ -136,6 +137,9 @@ def set_material(context: Context, material: Material, options: VivyOptions) -> 
 	elif util.nameGeneralize(options.material.base_material) in env.vivy_cache:
 		import_name = util.nameGeneralize(options.material.base_material)
 
+	if not import_name:
+		return "Can't have None for import name"
+
 	# If link is true, check library material not already linked.
 	sync_file = get_vivy_blend()
 
@@ -179,6 +183,7 @@ def set_material(context: Context, material: Material, options: VivyOptions) -> 
 	m_name = material.name
 	bpy.data.materials.remove(material)
 	replacement_mat.name = m_name
+	MAT_TO_IMPORT[m_name] = import_name
 	return None
 
 def get_vivy_blend() -> Path:
@@ -403,7 +408,8 @@ class VIVY_OT_materials(bpy.types.Operator, VivyMaterialProps):
 		
 		for obj in obj_list:
 			obj["VIVY_PREPPED"] = True
-			obj["VIVY_MATERIAL_NAME"] = self.materialName
+			obj["VIVY_MATERIAL_SET"] = json.dumps(MAT_TO_IMPORT)
+			obj["VIVY_MATERIAL_BASE"] = self.materialName
 
 		addon_prefs = util.get_user_preferences(context)
 		self.track_param = context.scene.render.engine
@@ -473,23 +479,13 @@ class VIVY_OT_swap_texture_pack(
 			self.report({'ERROR'}, "No objects selected")
 			return {'CANCELLED'}
 		
-		mtype = None
+		mtype_set = None
 		for obj in obj_list:
 			if "VIVY_PREPPED" not in obj:
 				self.report({'ERROR'}, "OBJ needs to be prepped first!")
 				return {'CANCELLED'}
-			
-			material_types = {}
-			if obj["VIVY_MATERIAL_NAME"] not in material_types:
-				material_types[obj["VIVY_MATERIAL_NAME"]] = 0
-			else:
-				material_types[obj["VIVY_MATERIAL_NAME"]] += 1
-			
-			if len(material_types) > 1:
-				self.report({'ERROR'}, "Multiple material types at once for texture swap not supported yet!")
-				return {'CANCELED'}
-
-			mtype = obj["VIVY_MATERIAL_NAME"]
+			mtype_set = json.loads(obj["VIVY_MATERIAL_SET"])
+			mbase = obj["VIVY_MATERIAL_BASE"]
 
 		# gets the list of materials (without repetition) from selected
 		mat_list = util.materialsFromObj(obj_list)
@@ -506,8 +502,10 @@ class VIVY_OT_swap_texture_pack(
 		env.log(f"Materials detected: {len(mat_list)}")
 		res = 0
 		for mat in mat_list:
+			if mat.name not in mtype_set:
+				continue
 			self.preprocess_material(mat)
-			res += self.set_texture_pack(context, mat, folder, mtype)
+			res += self.set_texture_pack(context, mat, folder, mtype_set[mat.name], mbase)
 			self.report({'INFO'}, f"{res} materials affected")
 		self.track_param = context.scene.render.engine
 		return {'FINISHED'}
@@ -521,7 +519,7 @@ class VIVY_OT_swap_texture_pack(
 			material.name = "grass_block_side"
 			env.log("Renamed material: grass_block_side_overlay to grass_block_side")
 	
-	def set_texture_pack(self, context, material: Material, folder: Path, material_type: str) -> bool:
+	def set_texture_pack(self, context, material: Material, folder: Path, mtype: str, mbase: str) -> bool:
 		"""Replace existing material's image with texture pack's.
 
 		Run through and check for each if counterpart material exists, then
@@ -534,7 +532,7 @@ class VIVY_OT_swap_texture_pack(
 			if image.msg:
 				env.log(image.msg)
 			obj = bpy.context.view_layer.objects.active
-			md = env.vivy_material_json["materials"][obj["VIVY_MATERIAL_NAME"]]
+			md = env.vivy_material_json["materials"][mbase]
 			options = VivyOptions(
 				source_mat=material.name,
 				material=VivyMaterial(
@@ -562,10 +560,10 @@ class VIVY_OT_swap_texture_pack(
 			return False
 		
 		image_data = util.loadTexture(str(image))
-		_ = self.set_cycles_texture(context, image_data, material, material_type, True)
+		_ = self.set_cycles_texture(context, image_data, material, mtype, mbase, True)
 		return True
 
-	def set_cycles_texture(self, context, image: generate.Image, material: Material, type: str, extra_passes: bool=False) -> bool:
+	def set_cycles_texture(self, context, image: generate.Image, material: Material, mtype: str, mbase: str, extra_passes: bool=False) -> bool:
 		"""
 		Used by skin swap and assiging missing textures or tex swapping.
 		Args:
@@ -581,12 +579,23 @@ class VIVY_OT_swap_texture_pack(
 		if extra_passes:
 			img_sets = generate.find_additional_passes(image.filepath)
 		changed = False
-		
-		p = env.vivy_material_json["materials"][type]["passes"]
-		print(p)
-		diffuse = p["diffuse"] if "diffuse" in p else None
-		specular = p["specular"] if "specular" in p else None
-		normal = p["normal"] if "normal" in p else None
+
+		mat_passes = {}
+		for mapping in env.vivy_material_json["mapping"][mtype]:
+			if env.vivy_material_json["materials"][mapping["material"]]["base_material"] != mbase:
+				continue
+			
+			mat_passes = env.vivy_material_json["materials"][mapping["material"]]["passes"]
+			if "refinement" not in mapping:
+				continue
+			if mapping["refinement"] == "fallback_s" or mapping["refinement"] == "fallback":
+				mat_passes.pop("specular", None)
+			if mapping["refinement"] == "fallback_n" or mapping["refinement"] == "fallback":
+				mat_passes.pop("normal", None)
+
+		diffuse = mat_passes["diffuse"] if "diffuse" in mat_passes else None
+		specular = mat_passes["specular"] if "specular" in mat_passes else None
+		normal = mat_passes["normal"] if "normal" in mat_passes else None
 
 		nodes = material.node_tree.nodes
 		fallback = None
@@ -597,7 +606,7 @@ class VIVY_OT_swap_texture_pack(
 			passes["diffuse"] = image
 		if specular is not None:
 			s = nodes.get(specular)
-			if "specular" in img_sets:
+			if "specular" in img_sets and s is not None:
 				new_img = util.loadTexture(img_sets["specular"])
 				s.image = new_img
 				util.apply_noncolor_data(s)
@@ -606,7 +615,7 @@ class VIVY_OT_swap_texture_pack(
 				fallback = Fallback.FALLBACK_S
 		if normal is not None:
 			n = nodes.get(normal)
-			if "normal" in img_sets:
+			if "normal" in img_sets and n is not None:
 				new_img = util.loadTexture(img_sets["normal"])
 				n.image = new_img
 				util.apply_noncolor_data(n)
@@ -620,7 +629,7 @@ class VIVY_OT_swap_texture_pack(
 		# use fallback material if needed
 		if fallback is not None:
 			obj = bpy.context.view_layer.objects.active
-			md = env.vivy_material_json["materials"][obj["VIVY_MATERIAL_NAME"]]
+			md = env.vivy_material_json["materials"][mbase]
 			options = VivyOptions(
 				source_mat=material.name,
 				material=VivyMaterial(
