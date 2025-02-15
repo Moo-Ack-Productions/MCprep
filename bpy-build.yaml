@@ -1,22 +1,13 @@
 addon_folder: MCprep_addon
 build_name: MCprep_addon
 
+build_extension: false
+extension_settings:
+  build_legacy: true
+
 install_versions:
-  - 4.3
-  - 4.2
-  - 4.1
-  - 4.0
-  - 3.6 
-  - 3.5
-  - 3.4
-  - 3.3
-  - 3.2
-  - 3.1
-  - 3.0
-  - 2.93
-  - 2.9
-  - 2.83
-  - 2.8
+  - 4.4+
+  - 2.83..4.4
 
 build_actions:
   default: 
