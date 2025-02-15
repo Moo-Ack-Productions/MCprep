@@ -1,7 +1,7 @@
 addon_folder: MCprep_addon
 build_name: MCprep_addon
 
-build_extension: true
+build_extension: false
 extension_settings:
   build_legacy: true
 
