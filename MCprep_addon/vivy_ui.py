@@ -61,7 +61,7 @@ class VivyNodeToolProps(bpy.types.PropertyGroup):
     refinement_of: bpy.props.EnumProperty(name="Refinement of",
                                          items=query_materials)
 
-class VIVY_OT_register_material(bpy.types.Operator):
+class MCPREP_OT_vivy_register_material(bpy.types.Operator):
     bl_idname = "vivy_node_tools.register_material"
     bl_label = "Register Material"
 
@@ -155,12 +155,12 @@ class VIVY_OT_register_material(bpy.types.Operator):
         return {'FINISHED'}
 
 # If the code looks similar to the 
-# code for VIVY_OT_register_material, 
+# code for MCPREP_OT_vivy_register_material, 
 # that's because I copied pasted the 
 # operator and adjusted some stuff 
 #
 # I'm lazy, I know
-class VIVY_OT_set_pass(bpy.types.Operator):
+class MCPREP_OT_vivy_set_pass(bpy.types.Operator):
     bl_idname = "vivy_node_tools.set_pass"
     bl_label = "Set Pass for Image Node"
     
@@ -241,7 +241,7 @@ class VIVY_OT_set_pass(bpy.types.Operator):
         env.reload_vivy_json() # Reload once afterwards too
         return {'FINISHED'}
 
-class VIVY_OT_set_refinement(bpy.types.Operator):
+class MCPREP_OT_vivy_set_refinement(bpy.types.Operator):
     bl_idname = "vivy_node_tools.set_refinement"
     bl_label = "Set Material as Refinement"
 
@@ -310,9 +310,9 @@ class VIVY_OT_set_refinement(bpy.types.Operator):
         
         return {'FINISHED'}
 
-class VIVY_PT_node_tools(bpy.types.Panel):
+class MCPREP_PT_vivy_node_tools(bpy.types.Panel):
     bl_label = "Vivy Tools"
-    bl_idname = "VIVY_PT_node_tools"
+    bl_idname = "MCPREP_PT_vivy_node_tools"
     bl_space_type = 'NODE_EDITOR'
     bl_region_type = 'UI'
     bl_category = "Vivy"
@@ -447,14 +447,14 @@ class VIVY_PT_node_tools(bpy.types.Panel):
                 row.operator("vivy_node_tools.set_pass")
                 row = layout.row()
 
-class VIVY_PT_node_tools_refinement(bpy.types.Panel):
+class MCPREP_PT_vivy_node_tools_refinement(bpy.types.Panel):
     bl_label = "Refinements"
-    bl_idname = "VIVY_PT_node_tools_refinement"
+    bl_idname = "MCPREP_PT_vivy_node_tools_refinement"
     bl_space_type = 'NODE_EDITOR'
     bl_region_type = 'UI'
     bl_category = "Vivy"
     bl_context = "scene" 
-    bl_parent_id = "VIVY_PT_node_tools"
+    bl_parent_id = "MCPREP_PT_vivy_node_tools"
     bl_options = {"DEFAULT_CLOSED"}
     
     @classmethod
@@ -493,11 +493,11 @@ class VIVY_PT_node_tools_refinement(bpy.types.Panel):
 
 classes = [
     VivyNodeToolProps,
-    VIVY_PT_node_tools,
-    #VIVY_PT_node_tools_refinement,
-    VIVY_OT_register_material,
-    VIVY_OT_set_pass,
-    VIVY_OT_set_refinement
+    MCPREP_PT_vivy_node_tools,
+    #MCPREP_PT_vivy_node_tools_refinement,
+    MCPREP_OT_vivy_register_material,
+    MCPREP_OT_vivy_set_pass,
+    MCPREP_OT_vivy_set_refinement
 ]
 
 def register():

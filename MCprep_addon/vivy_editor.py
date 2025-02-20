@@ -73,7 +73,7 @@ def reload_vivy_materials(context):
                 vmat.fallback_n = refinements_data["fallback_n"] if "fallback_n" in refinements_data else MCPREP_VIVY_NONE
                 vmat.fallback = refinements_data["fallback"] if "fallback" in refinements_data else MCPREP_VIVY_NONE
 
-class VIVY_UL_materials(bpy.types.UIList):
+class MCPREP_UL_vivy_materials(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
             if env.vivy_material_json is not None:
@@ -82,7 +82,7 @@ class VIVY_UL_materials(bpy.types.UIList):
             layout.alignment = 'CENTER'
             layout.label(text="", icon_value=icon)
 
-class VIVY_OT_reload_editor(bpy.types.Operator):
+class MCPREP_OT_vivy_reload_editor(bpy.types.Operator):
     bl_idname = "vivy.reload_editor"
     bl_label = "Reload Vivy Materials"
     bl_options = {'REGISTER', 'UNDO'}
@@ -92,7 +92,7 @@ class VIVY_OT_reload_editor(bpy.types.Operator):
         reload_vivy_materials(context)
         return {'FINISHED'}
 
-class VIVY_OT_apply_changes(bpy.types.Operator):
+class MCPREP_OT_vivy_apply_changes(bpy.types.Operator):
     bl_idname = "vivy.apply_changes"
     bl_label = "Apply Changes to Current Material"
     bl_options = {'REGISTER', 'UNDO'}
@@ -191,9 +191,9 @@ class VIVY_OT_apply_changes(bpy.types.Operator):
                 json.dump(data, f)
         return {'FINISHED'}
 
-class VIVY_PT_editor(bpy.types.Panel):
+class MCPREP_PT_vivy_editor(bpy.types.Panel):
     bl_label = "Vivy Config Editor"
-    bl_idname = "VIVY_PT_editor"
+    bl_idname = "MCPREP_PT_vivy_editor"
     bl_space_type = 'NODE_EDITOR'
     bl_region_type = 'UI'
     bl_category = "Vivy"
@@ -207,7 +207,7 @@ class VIVY_PT_editor(bpy.types.Panel):
         layout = self.layout
         vprop = context.scene.vivy_editor_props
         if vprop.vivy_materials and env.vivy_material_json is not None:
-            layout.template_list("VIVY_UL_materials", 
+            layout.template_list("MCPREP_UL_vivy_materials", 
                                  "", 
                                  vprop, 
                                  "vivy_materials", 
@@ -249,10 +249,10 @@ class VIVY_PT_editor(bpy.types.Panel):
             layout.operator("vivy.reload_editor")   
 
 classes = [
-    VIVY_OT_reload_editor,
-    VIVY_OT_apply_changes,
-    VIVY_PT_editor,
-    VIVY_UL_materials,
+    MCPREP_OT_vivy_reload_editor,
+    MCPREP_OT_vivy_apply_changes,
+    MCPREP_PT_vivy_editor,
+    MCPREP_UL_vivy_materials,
     ListVivyMaterials,
     VivyEditorProps,
 ]

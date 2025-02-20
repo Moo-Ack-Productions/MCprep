@@ -259,7 +259,7 @@ def draw_mats_common(self, context: Context) -> None:
 			row = box.row()
 			row.label(text="Complete Fallback for No Extra Passes")
 
-class VIVY_OT_materials(bpy.types.Operator, VivyMaterialProps):
+class MCPREP_OT_vivy_materials(bpy.types.Operator, VivyMaterialProps):
 	"""
 	Vivy's custom material generator that 
 	derives much of its code from MCprep's 
@@ -371,7 +371,7 @@ class VIVY_OT_materials(bpy.types.Operator, VivyMaterialProps):
 		self.track_exporter = addon_prefs.MCprep_exporter_type
 		return {'FINISHED'}
 
-class VIVY_OT_swap_texture_pack(
+class MCPREP_OT_vivy_swap_texture_pack(
 	bpy.types.Operator, ImportHelper, VivyMaterialProps):
 	"""Swap current textures for that of a texture pack folder"""
 	bl_idname = "vivy.swap_texture_pack"
@@ -585,8 +585,8 @@ class VIVY_OT_swap_texture_pack(
 		return changed
 
 classes = [
-	VIVY_OT_materials,
-	VIVY_OT_swap_texture_pack,
+	MCPREP_OT_vivy_materials,
+	MCPREP_OT_vivy_swap_texture_pack,
 ]
 
 def register():
