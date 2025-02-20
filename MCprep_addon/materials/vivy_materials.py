@@ -19,7 +19,6 @@
 import bpy
 from bpy.types import Context, Material
 from bpy_extras.io_utils import ImportHelper
-from enum import Enum
 
 import os
 from dataclasses import dataclass
@@ -32,42 +31,15 @@ from .. import util
 from ..conf import MCprepError, env
 from . import generate
 from . import sync
+from . import vivy_utils as vu
 from .generate import checklist, get_mc_canonical_name
-
-class Fallback(Enum):
-	FALLBACK_S = "fallback_s"
-	FALLBACK_N = "fallback_n"
-	FALLBACK = "fallback"
-
-@dataclass
-class VivyPasses:
-	diffuse: str 
-	specular: Optional[str]
-	normal: Optional[str]
-
-@dataclass
-class VivyRefinements:
-	emissive: Optional[str]
-	reflective: Optional[str]
-	metallic: Optional[str]
-	glass: Optional[str]
-	fallback_n: Optional[str]
-	fallback_s: Optional[str]
-	fallback: Optional[str]
-
-@dataclass
-class VivyMaterial:
-	base_material: str 
-	desc: str 
-	passes: VivyPasses
-	refinements: Optional[VivyRefinements]
 
 @dataclass
 class VivyOptions:
 	source_mat: str
-	material: VivyMaterial
+	material: vu.VivyMaterial
 	passes: Dict[str, str]
-	fallback: Optional[Fallback]
+	fallback: Optional[vu.Fallback]
 
 CACHED_MATERIALS: Dict[str, Material] = {}
 MAT_TO_IMPORT: Dict[str, str] = {}
@@ -95,7 +67,7 @@ def material_in_vivy_library(material: str, context: Context) -> bool:
 	return False
 
 def set_material(context: Context, material: Material, options: VivyOptions) -> Optional[Union[Material, str]]:
-	if isinstance(options.material.refinements, VivyRefinements):
+	if isinstance(options.material.refinements, vu.VivyRefinements):
 		ext = options.material.refinements
 		if ext.emissive is not None:
 			matGen = util.nameGeneralize(options.source_mat)
@@ -232,8 +204,8 @@ class VivyMaterialProps():
 			with open(get_vivy_json(), 'r') as f:
 				env.vivy_material_json = json.load(f)
 		itms = []
-		if "materials" in env.vivy_material_json:
-			for m, d in env.vivy_material_json["materials"].items():
+		if vu.VIVY_MATERIALS in env.vivy_material_json:
+			for m, d in env.vivy_material_json[vu.VIVY_MATERIALS].items():
 				itms.append((m, m, d["desc"]))
 		return itms
 
@@ -247,43 +219,43 @@ def draw_mats_common(self, context: Context) -> None:
 	row = self.layout.row()
 	row.prop(self, "materialName")
 
-	md = env.vivy_material_json["materials"][self.materialName]
+	md = vu.data_vivy_material(self.materialName)
 	row = self.layout.row()
-	row.label(text=md["desc"])
+	row.label(text=md.desc)
 	
 	box = self.layout.box()
 	box.label(text="Expects the following passes:")
 	row = box.row()
 	row.label(text="Diffuse", icon="MATERIAL")
-	if "specular" in md["passes"]:
+	if md.passes.specular:
 		row = box.row()
 		row.label(text="Specular", icon="NODE_MATERIAL")
-	if "normal" in md["passes"]:
+	if md.passes.normal:
 		row = box.row()
 		row.label(text="Normal", icon="ORIENTATION_NORMAL")
 	
-	if "refinements" in md:
+	if md.refinements:
 		box = self.layout.box()
 		box.label(text="Has refinements for the following:")
-		if "emissive" in md["refinements"]:
+		if md.refinements.emissive:
 			row = box.row()
 			row.label(text="Emission", icon="OUTLINER_OB_LIGHT")
-		if "reflective" in md["refinements"]:
+		if md.refinements.reflective:
 			row = box.row()
 			row.label(text="Glossy", icon="NODE_MATERIAL")
-		if "metallic" in md["refinements"]:
+		if md.refinements.metallic:
 			row = box.row()
 			row.label(text="Metalic", icon="NODE_MATERIAL")
-		if "glass" in md["refinements"]:
+		if md.refinements.glass:
 			row = box.row()
 			row.label(text="Transmissive", icon="OUTLINER_OB_LIGHTPROBE")
-		if "fallback_s" in md["refinements"]:
+		if md.refinements.fallback_s:
 			row = box.row()
 			row.label(text="Fallback for Missing Specular")
-		if "fallback_n" in md["refinements"]:
+		if md.refinements.fallback_n:
 			row = box.row()
 			row.label(text="Fallback for Missing Normal")
-		if "fallback" in md["refinements"]:
+		if md.refinements.fallback:
 			row = box.row()
 			row.label(text="Complete Fallback for No Extra Passes")
 
@@ -362,27 +334,10 @@ class VIVY_OT_materials(bpy.types.Operator, VivyMaterialProps):
 							env.vivy_material_json = json.load(f)
 
 				# Set all options and go!
-				md = env.vivy_material_json["materials"][self.materialName]
+				md = vu.data_vivy_material(self.materialName)
 				options = VivyOptions(
 					source_mat=mat.name,
-					material=VivyMaterial(
-						base_material=md["base_material"],
-						desc=md["desc"],
-						passes=VivyPasses(
-							diffuse=md["passes"]["diffuse"],
-							specular=md["passes"]["specular"] if "specular" in md["passes"] else None,
-							normal=md["passes"]["normal"] if "normal" in md["passes"] else None
-						),
-						refinements=None if "refinements" not in md else VivyRefinements(
-							emissive=md["refinements"]["emissive"] if "emissive" in md["refinements"] else None,
-							reflective=md["refinements"]["reflective"] if "reflecive" in md["refinements"] else None,
-							metallic=md["refinements"]["metallic"] if "metallic" in md["refinements"] else None,
-							glass=md["refinements"]["glass"] if "glass" in md["refinements"] else None,
-							fallback_s=md["refinements"]["fallback_s"] if "fallback_s" in md["refinements"] else None,
-							fallback_n=md["refinements"]["fallback_n"] if "fallback_n" in md["refinements"] else None,
-							fallback=md["refinements"]["fallback"] if "fallback" in md["refinements"] else None
-						)
-					),
+					material=md,
 					passes=passes,
 					fallback=None
 				)
@@ -532,29 +487,12 @@ class VIVY_OT_swap_texture_pack(
 			if image.msg:
 				env.log(image.msg)
 			obj = bpy.context.view_layer.objects.active
-			md = env.vivy_material_json["materials"][mbase]
+			md = vu.data_vivy_material(mbase)
 			options = VivyOptions(
 				source_mat=material.name,
-				material=VivyMaterial(
-					base_material=md["base_material"],
-					desc=md["desc"],
-					passes=VivyPasses(
-						diffuse=md["passes"]["diffuse"],
-						specular=md["passes"]["specular"] if "specular" in md["passes"] else None,
-						normal=md["passes"]["normal"] if "normal" in md["passes"] else None
-					),
-					refinements=None if "refinements" not in md else VivyRefinements(
-						emissive=md["refinements"]["emissive"] if "emissive" in md["refinements"] else None,
-						reflective=md["refinements"]["reflective"] if "reflecive" in md["refinements"] else None,
-						metallic=md["refinements"]["metallic"] if "metallic" in md["refinements"] else None,
-						glass=md["refinements"]["glass"] if "glass" in md["refinements"] else None,
-						fallback_s=md["refinements"]["fallback_s"] if "fallback_s" in md["refinements"] else None,
-						fallback_n=md["refinements"]["fallback_n"] if "fallback_n" in md["refinements"] else None,
-						fallback=md["refinements"]["fallback"] if "fallback" in md["refinements"] else None
-					)
-				),
+				material=md,
 				passes=generate.get_textures(material),
-				fallback=Fallback.FALLBACK
+				fallback=vu.Fallback.FALLBACK
 			)
 			generate_vivy_materials(self, context, options)
 			return False
@@ -580,22 +518,25 @@ class VIVY_OT_swap_texture_pack(
 			img_sets = generate.find_additional_passes(image.filepath)
 		changed = False
 
-		mat_passes = {}
-		for mapping in env.vivy_material_json["mapping"][mtype]:
-			if env.vivy_material_json["materials"][mapping["material"]]["base_material"] != mbase:
+		mat_passes = None
+		for mapping in vu.data_vivy_mappings(mtype):
+			if mapping.material.base_material == mbase:
 				continue
 			
-			mat_passes = env.vivy_material_json["materials"][mapping["material"]]["passes"]
-			if "refinement" not in mapping:
+			mat_passes = mapping.material.passes
+			if mapping.refinement is None:
 				continue
-			if mapping["refinement"] == "fallback_s" or mapping["refinement"] == "fallback":
-				mat_passes.pop("specular", None)
-			if mapping["refinement"] == "fallback_n" or mapping["refinement"] == "fallback":
-				mat_passes.pop("normal", None)
+			if mapping.refinement == vu.Fallback.FALLBACK_S or mapping.refinement == vu.Fallback.FALLBACK:
+				mat_passes.specular = None
+			if mapping.refinement == vu.Fallback.FALLBACK_N or mapping.refinement == vu.Fallback.FALLBACK:
+				mat_passes.normal = None
 
-		diffuse = mat_passes["diffuse"] if "diffuse" in mat_passes else None
-		specular = mat_passes["specular"] if "specular" in mat_passes else None
-		normal = mat_passes["normal"] if "normal" in mat_passes else None
+		if not mat_passes:
+			return False
+
+		diffuse = mat_passes.diffuse
+		specular = mat_passes.specular
+		normal = mat_passes.normal
 
 		nodes = material.node_tree.nodes
 		fallback = None
@@ -612,7 +553,7 @@ class VIVY_OT_swap_texture_pack(
 				util.apply_noncolor_data(s)
 				passes["specular"] = new_img
 			else:
-				fallback = Fallback.FALLBACK_S
+				fallback = vu.Fallback.FALLBACK_S
 		if normal is not None:
 			n = nodes.get(normal)
 			if "normal" in img_sets and n is not None:
@@ -621,35 +562,18 @@ class VIVY_OT_swap_texture_pack(
 				util.apply_noncolor_data(n)
 				passes["normal"] = new_img 
 			else:
-				if fallback == Fallback.FALLBACK_S:
-					fallback = Fallback.FALLBACK
+				if fallback == vu.Fallback.FALLBACK_S:
+					fallback = vu.Fallback.FALLBACK
 				else:
-					fallback = Fallback.FALLBACK_N
+					fallback = vu.Fallback.FALLBACK_N
 		
 		# use fallback material if needed
 		if fallback is not None:
 			obj = bpy.context.view_layer.objects.active
-			md = env.vivy_material_json["materials"][mbase]
+			md = vu.data_vivy_material(mbase)
 			options = VivyOptions(
 				source_mat=material.name,
-				material=VivyMaterial(
-					base_material=md["base_material"],
-					desc=md["desc"],
-					passes=VivyPasses(
-						diffuse=md["passes"]["diffuse"],
-						specular=md["passes"]["specular"] if "specular" in md["passes"] else None,
-						normal=md["passes"]["normal"] if "normal" in md["passes"] else None
-					),
-					refinements=None if "refinements" not in md else VivyRefinements(
-						emissive=md["refinements"]["emissive"] if "emissive" in md["refinements"] else None,
-						reflective=md["refinements"]["reflective"] if "reflecive" in md["refinements"] else None,
-						metallic=md["refinements"]["metallic"] if "metallic" in md["refinements"] else None,
-						glass=md["refinements"]["glass"] if "glass" in md["refinements"] else None,
-						fallback_s=md["refinements"]["fallback_s"] if "fallback_s" in md["refinements"] else None,
-						fallback_n=md["refinements"]["fallback_n"] if "fallback_n" in md["refinements"] else None,
-						fallback=md["refinements"]["fallback"] if "fallback" in md["refinements"] else None
-					)
-				),
+				material=md,
 				passes=passes,
 				fallback=fallback
 			)
