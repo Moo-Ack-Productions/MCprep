@@ -40,7 +40,7 @@ Learn how to use MCprep
 About MCprep
 ======
 
-This is a blender python addon to improve and automate many aspects of creating Minecraft renders and animations. It can help you improt world's exported from Minecraft, set up better materials, importing mobs and items, and set up proxy characters for animation, and even includes default animations for common blocks/mobs like tall grass, torches, and mobs like the bat or blaze. This addon assumes you have already exported a Minecraft world to an OBJ file. While the script should work for any world importer, it has been tested and developed based on the jmc2obj and Mineways tools for exporting Minecraft worlds to obj files.
+This is a blender python addon to improve and automate many aspects of creating Minecraft renders and animations. It can help you import world's exported from Minecraft, set up better materials, importing mobs and items, and set up proxy characters for animation, and even includes default animations for common blocks/mobs like tall grass, torches, and mobs like the bat or blaze. This addon assumes you have already exported a Minecraft world to an OBJ file. While the script should work for any world importer, it has been tested and developed based on the jmc2obj and Mineways tools for exporting Minecraft worlds to obj files.
 
 This addon is made to work with an asset library directory, from which models and groups are linked or imported from. This library blend file is included, but does not have all types of blocks generated yet. This will be improved in the future.
 
