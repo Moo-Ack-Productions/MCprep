@@ -186,7 +186,7 @@ class MCPREP_OT_vivy_set_pass(bpy.types.Operator):
         #
         # TODO: Figure out how to do this all in one block
         json_path = vivy_materials.get_vivy_json()
-        env.reload_vivy_json() # To make sure we get the latest data
+        env.reload_vivy_json(json_path.parent) # To make sure we get the latest data
         data = env.vivy_material_json
         
         if data is None:
