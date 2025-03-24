@@ -69,7 +69,7 @@ jobs:
         if: always()
         run: |
           # TODO: use git describe --tags or equivalent to automatically get latest stable.
-          wget -nv "https://github.com/Moo-Ack-Productions/MCprep/releases/download/3.5.3/MCprep_addon_3.5.3.zip"
+          wget -nv "https://github.com/Moo-Ack-Productions/MCprep/releases/download/3.6.1.2/MCprep_addon_3.6.1.2.zip"
           git lfs pull
           mkdir MCprep_stable_release
           unzip -qq ./MCprep_addon_*.zip -d MCprep_stable_release
@@ -80,6 +80,7 @@ jobs:
           echo "Prepare for install by creating addons folder"
           mkdir -p /home/runner/.config/blender/4.1/scripts/addons
           echo $(ls /home/runner/.config/blender/4.1/scripts/addons)
+          echo $(ls /home/runner/.config/blender/4.1/scripts/addons/MCprep_addon)
           echo $(ls /home/runner/.config/blender/4.1/scripts/addons/MCprep_addon/MCprep_resources)
       - name: Run tests
         run: |
