@@ -75,6 +75,7 @@ jobs:
           unzip -qq ./MCprep_addon_*.zip -d MCprep_stable_release
           # Copy the checked-in data json to override the wget version
           mv ./MCprep_addon/MCprep_resources/mcprep_data_update.json _tmp.json
+          rm -r ./MCprep_stable_release/MCprep_addon/MCprep_resources/Languages
           mv -f ./MCprep_stable_release/MCprep_addon/MCprep_resources/** ./MCprep_addon/MCprep_resources
           mv -f _tmp.json ./MCprep_addon/MCprep_resources/mcprep_data_update.json 
           echo "Prepare for install by creating addons folder"
