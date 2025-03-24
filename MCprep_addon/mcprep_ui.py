@@ -2060,12 +2060,22 @@ classes = (
 	MCPREP_PT_materials_subsettings,
 )
 
+# This handler we make not persistent since
+# we only need it to defer initialization
+# long enough for addon preferences to be ready
+def defer_vivy_init(_):
+	addon_prefs = util.get_user_preferences()
+	path = Path(bpy.path.abspath(addon_prefs.exp_vivy_file_path))
+	env.reload_vivy_json(path)
+	env.vivy_name_changes = {}
+	env.vivy_cache = None
 
 def register():
 	for cls in classes:
 		bpy.utils.register_class(cls)
 
 	bpy.types.Scene.mcprep_props = bpy.props.PointerProperty(type=McprepProps)
+	bpy.app.handlers.load_post.append(defer_vivy_init)
 
 	# scene settings (later re-attempt to put into props group)
 	addon_prefs = util.get_user_preferences()
@@ -2127,16 +2137,13 @@ def register():
 		# this is a dropdown menu for UVs, not a panel
 		env.log("IMAGE_MT_uvs registration!")
 		bpy.types.IMAGE_MT_uvs.append(mcprep_uv_tools)
-	# bpy.types.IMAGE_MT_image.append(mcprep_image_tools) # crashes, re-do ops
-	
-	path = Path(bpy.path.abspath(addon_prefs.exp_vivy_file_path))
-	env.reload_vivy_json(path)
-	env.vivy_name_changes = {}
-	env.vivy_cache = None
+	# bpy.types.IMAGE_MT_image.append(mcprep_image_tools) # crashes, re-do ops	
 
 def unregister():
 	for cls in reversed(classes):
 		bpy.utils.unregister_class(cls)
+
+	bpy.app.handlers.load_post.remove(defer_vivy_init)
 
 	if hasattr(bpy.types, "VIEW3D_MT_add"):  # 2.8
 		bpy.types.VIEW3D_MT_add.remove(draw_mcprepadd)
