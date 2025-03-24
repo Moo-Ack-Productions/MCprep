@@ -2142,8 +2142,9 @@ def register():
 def unregister():
 	for cls in reversed(classes):
 		bpy.utils.unregister_class(cls)
-
-	bpy.app.handlers.load_post.remove(defer_vivy_init)
+	
+	if defer_vivy_init in bpy.app.handlers.load_post:
+		bpy.app.handlers.load_post.remove(defer_vivy_init)
 
 	if hasattr(bpy.types, "VIEW3D_MT_add"):  # 2.8
 		bpy.types.VIEW3D_MT_add.remove(draw_mcprepadd)
