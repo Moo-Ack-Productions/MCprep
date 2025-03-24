@@ -128,6 +128,8 @@ class MCPREP_OT_vivy_apply_changes(bpy.types.Operator):
                 orig_passes["normal"] = mat.normal if mat.normal != "" else MCPREP_VIVY_NONE
                 
                 # refinements
+                if "refinements" not in original_data:
+                    original_data["refinements"] = {}
                 orig_refinements = original_data["refinements"]
                 orig_refinements["emissive"] = mat.emissive
                 orig_refinements["reflective"] = mat.reflective
