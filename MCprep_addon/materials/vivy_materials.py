@@ -92,13 +92,13 @@ def set_material(context: Context, material: Material, options: VivyOptions) -> 
 
 		# Fallbacks in case texture swap with PBR fails
 		if options.fallback is not None:
-			if options.fallback == Fallback.FALLBACK_S and ext.fallback_s is not None:
+			if options.fallback == vu.Fallback.FALLBACK_S and ext.fallback_s is not None:
 				options.material.base_material = ext.fallback_s
 				options.material.passes.specular = None
-			elif options.fallback == Fallback.FALLBACK_N and ext.fallback_n is not None:
+			elif options.fallback == vu.Fallback.FALLBACK_N and ext.fallback_n is not None:
 				options.material.base_material = ext.fallback_n
 				options.material.passes.normal = None
-			elif options.fallback == Fallback.FALLBACK and ext.fallback is not None:
+			elif options.fallback == vu.Fallback.FALLBACK and ext.fallback is not None:
 				options.material.base_material = ext.fallback
 				options.material.passes.specular = None
 				options.material.passes.normal = None
@@ -118,7 +118,7 @@ def set_material(context: Context, material: Material, options: VivyOptions) -> 
 	init_mats = list(bpy.data.materials)
 	path = os.path.join(str(sync_file), "Material")
 
-	if isinstance(import_name, str) and import_name not in CACHED_MATERIALS:
+	if import_name not in CACHED_MATERIALS:
 		util.bAppendLink(path, import_name, False)  # No linking.
 
 		imported = set(list(bpy.data.materials)) - set(init_mats)

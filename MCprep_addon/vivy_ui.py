@@ -87,7 +87,7 @@ class MCPREP_OT_vivy_register_material(bpy.types.Operator):
         #
         # TODO: Figure out how to do this all in one block
         json_path = vivy_materials.get_vivy_json()
-        env.reload_vivy_json() # To make sure we get the latest data
+        env.reload_vivy_json(json_path.parent) # To make sure we get the latest data
         data = env.vivy_material_json
         
         if data is None:
@@ -151,7 +151,7 @@ class MCPREP_OT_vivy_register_material(bpy.types.Operator):
         with open(json_path, 'w') as f:
             json.dump(data, f)
         
-        env.reload_vivy_json() # Reload once afterwards too
+        env.reload_vivy_json(json_path.parent) # Reload once afterwards too
         return {'FINISHED'}
 
 # If the code looks similar to the 
@@ -238,7 +238,7 @@ class MCPREP_OT_vivy_set_pass(bpy.types.Operator):
         with open(json_path, 'w') as f:
             json.dump(data, f)
         
-        env.reload_vivy_json() # Reload once afterwards too
+        env.reload_vivy_json(json_path.parent) # Reload once afterwards too
         return {'FINISHED'}
 
 class MCPREP_OT_vivy_set_refinement(bpy.types.Operator):
@@ -262,7 +262,7 @@ class MCPREP_OT_vivy_set_refinement(bpy.types.Operator):
         #
         # TODO: Figure out how to do this all in one block
         json_path = vivy_materials.get_vivy_json()
-        env.reload_vivy_json() # To make sure we get the latest data
+        env.reload_vivy_json(json_path.parent) # To make sure we get the latest data
         data = env.vivy_material_json
         
         if data is None:
@@ -342,7 +342,7 @@ class MCPREP_PT_vivy_node_tools(bpy.types.Panel):
         anode = context.active_node
         vprop = context.scene.vivy_node_tools
         active_material = context.active_object.active_material.name \
-            if context.active_object.active_material.name is not None else None
+            if context.active_object.active_material is not None else None
 
         # We are assuming the data is up to date 
         # based on how the addon works and is supposed
