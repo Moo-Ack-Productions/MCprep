@@ -406,6 +406,10 @@ class McprepPreference(bpy.types.AddonPreferences):
 			"with material prepping"),
 		subtype='DIR_PATH',
 		default=f"{scriptdir}/MCprep_resources/resourcepacks/mcprep_default/")
+	minecraft_versions_path: bpy.props.StringProperty(
+		name="Minecraft Versions Path",
+		description="Path containing the installed version of Minecraft",
+		subtype='DIR_PATH')
 	skin_path: bpy.props.StringProperty(
 		name="Skin path",
 		description="Folder for skin textures, used in skin swapping",
@@ -609,6 +613,21 @@ class McprepPreference(bpy.types.AddonPreferences):
 			col = split.column()
 			p = col.operator("mcprep.openfolder", text=env._("Open texture pack folder"))
 			p.folder = self.custom_texturepack_path
+			
+			row = layout.row()
+			row.scale_y = 0.7
+			row.label(text=env._("Refresh MCprep data with local Minecraft install"))
+			box = layout.box()
+			split = util.layout_split(box, factor=factor_width)
+			col = split.column()
+			col.label(text=env._("Path to Minecraft versions folder"))
+			col = split.column()
+			col.prop(self, "minecraft_versions_path", text="")
+			split = util.layout_split(box, factor=factor_width)
+			col = split.column()
+			col.label(text=env._("Refresh"))
+			col = split.column()
+			col.operator("mcprep.refresh_data", text=env._("Locally Refresh MCprep JSON data"))
 
 			row = layout.row()
 			row.scale_y = 0.7
