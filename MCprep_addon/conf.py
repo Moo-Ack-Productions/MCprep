@@ -68,6 +68,8 @@ DEBUG_MODE = False
 
 MCPREP_RESOURCES: Path = Path(os.path.dirname(__file__), "MCprep_resources")
 
+VIVY_VERSION = 1
+
 # -----------------------------------------------------------------------------
 # ADDON GLOBAL VARIABLES AND INITIAL SETTINGS
 # -----------------------------------------------------------------------------
@@ -157,11 +159,15 @@ class MCprepEnv:
 		json_path = Path(path, "vivy_materials.json")
 		if not json_path.exists():
 			json_path.touch()
-			self.vivy_material_json = {}
+			self.vivy_material_json = {
+				"version": VIVY_VERSION,
+				"materials": {}
+			}
+			with open(json_path, 'w') as f:
+				json.dump(self.vivy_material_json, f)
 		else: 
 			with open(json_path, 'r') as f:
 				self.vivy_material_json = json.load(f) if json_path.stat().st_size != 0 else {}
-	
 
 	def _load_translations(self) -> None:
 		"""Loads in mo file translation maps"""

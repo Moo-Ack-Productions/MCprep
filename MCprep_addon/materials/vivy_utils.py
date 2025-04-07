@@ -23,6 +23,7 @@ from enum import Enum
 from ..conf import env
 
 # Constants for JSON keys
+VIVY_VERSION					= "version"
 VIVY_MATERIALS					= "materials"
 VIVY_MATERIALS_BASE_MATERIAL		= "base_material"
 VIVY_MATERIALS_DESC					= "desc"
@@ -191,3 +192,11 @@ def json_vivy_mappings(mat: str) -> List[Dict]:
 		List[Dict] - List of material mappings
 	"""
 	return env.vivy_material_json[VIVY_MAPPING][mat]
+
+def json_vivy_version() -> int:
+	"""Returns the version of the Vivy JSON format used by the library
+
+	Returns:
+		int - Vivy JSON format version
+	"""
+	return env.vivy_material_json[VIVY_VERSION]

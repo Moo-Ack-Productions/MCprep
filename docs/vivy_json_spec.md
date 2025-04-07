@@ -5,6 +5,7 @@ This file defines the Vivy JSON spec for reference purposes.
 A Vivy JSON file may be defined as follows
 ```json
 {
+  "version": 1,
   "materials": 
     {
       "PBR": {
@@ -48,7 +49,8 @@ A Vivy JSON file may be defined as follows
 }
 ```
 
-- `materials` - A dictionaty of Vivy materials. Each key represents the Vivy-side name of the material.
+- `version` - Version of the Vivy JSON format in use
+- `materials` - A dictionaty of Vivy materials. Each key represents the Vivy-side name of the material
   - `base_material` - Blender-side name of the material
   - `desc` - Description of the material to show in the UI
   - `passes` - A dictionary of different pass types mapped to the node names of the image node containing the pass
