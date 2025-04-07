@@ -48,7 +48,7 @@
 		"tall_grass_bottom": [0.227161, 0.614651, 0.089036],
 		"fern": [0.227161, 0.614651, 0.089036],
 		"grass_block_top": [0.227161, 0.614651, 0.089036],
-		"grass_block_side_overlay": [0.227161, 0.614651, 0.089036],
+		"grass_block_overlay": [0.227161, 0.614651, 0.089036],
 		"acacia_leaves": [0.227161, 0.614651, 0.089036],
 		"dark_oak_leaves": [0.227161, 0.614651, 0.089036],
 		"birch_leaves": [0.227161, 0.614651, 0.089036],
@@ -120,10 +120,10 @@
 	"moving_piston",
 	"piston",
 	"scaffolding",
-	"shulker_box",
 	"sunflower",
 	"water_still",
-	"water"
+	"water",
+	"conduit"
 ],
 "make_real": [
 	"chest",

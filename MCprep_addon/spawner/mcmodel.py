@@ -22,6 +22,7 @@ from mathutils import Vector
 from math import sin, cos, radians
 from pathlib import Path
 from typing import Dict, Optional, Tuple, Union, Sequence
+import re
 
 import bpy
 import bmesh
@@ -301,15 +302,24 @@ def add_model(
 	uv_layer = bm.loops.layers.uv.verify()
 
 	materials = []
+	materials_remap = {}
 	if textures:
 		for img in textures:
 			if img != "particle":
 				tex_pth = locate_image(bpy.context, textures, img, model_filepath)
-				# For json file only use 1 material for all faces
-				name = f"{obj_name}" if (len(textures) < 3) else f"{obj_name}_{img}"
-				mat = add_get_material(name, tex_pth, use_name=False)
+				# Ensure the material name json file only use 1 material or having "all" texture
+				if (len(textures) < 3 or textures.get("all")):
+					name = f"{obj_name}"
+				else:
+					name = f"{obj_name}_{img}"
+					materials_remap[f"#{img}"] = textures[img]
+				mat = None
+				if "#" not in textures[img]:
+					mat = add_get_material(name, tex_pth, use_name=False)
 				obj_mats = obj.data.materials
-				if f"#{img}" not in materials:
+				# Map the "#" reference texture for later use in the assign material
+				# Make sure the same material doesn't get append and ignore reference texture like "#all"
+				if f"#{img}" not in materials and name not in obj_mats and mat is not None:
 					obj_mats.append(mat)
 					materials.append(f"#{img}")
 
@@ -355,6 +365,7 @@ def add_model(
 						uv_coords = [e['to'][0], e['to'][2], e['from'][0], e['from'][2]]
 					if "side" in face_mat:
 						uv_coords = [e['to'][0], -e['to'][1], e['from'][0], -e['from'][2]]
+				# TODO: handle Hopper and Cauldron uv problem
 
 			# uv in the model is between 0 to 16 regardless of resolution,
 			# in blender its 0 to 1 the y-axis is inverted when compared to
@@ -376,7 +387,7 @@ def add_model(
 			# Give slight offset by normal for overlay geometry
 			if face_mat == "#overlay":
 				bmesh.ops.translate(bm, verts=face.verts,
-						    vec=0.02 * face.normal)
+						    vec=0.005 * face.normal)
 
 			for j in range(len(face.loops)):
 				# uv coords order is determened by the rotation of the uv,
@@ -385,7 +396,11 @@ def add_model(
 				face.loops[j][uv_layer].uv = uvs[(j + uv_idx) % len(uvs)]
 
 			# Assign the material on face
-			if face_mat is not None and face_mat in materials:
+			# using materials_remap to remap the index, used for the block with remapping "#side"
+			if face_mat is not None and (face_mat in materials or face_mat in materials_remap):
+				face_mat_ref = materials_remap.get(face_mat)
+				if face_mat_ref is not None and "#" in face_mat_ref:
+					face_mat = face_mat_ref
 				face.material_index = materials.index(face_mat)
 
 	# Quick way to clean the model, hopefully it doesn't cause any UV issues
@@ -461,8 +476,27 @@ def update_model_list(context: Context):
 
 		# Filter out models that can't spawn. Typically those that reference
 		# #fire or the likes in the file.
-		if "template" in name:
+		# These blocks just don't make sense to put in the for "unspawnable_for_now"
+		# Template base of that block for example candle, cake with candles
+		# Orient blocks base, cube same as orientable (no texture)
+		# Light blocks are just special no geometry block with 15 states of light levels
+		# Shulkers, Hanging Signs, Signs are entities, put it here for now since they have a lot of variants
+		# pitcher_crop_top_stage_1 is a top part of a double plant. I have no idea why it have no geometry.
+		is_contains = re.search(
+			r"template_| orientable| cube_ | \
+			_shulker_box| _sign| \
+			light_0| light_1| \
+			pitcher_crop_top| custom_fence_",
+			name
+		)
+		if is_contains:
 			continue
+		# Single word condition filter
+		# block single block parent, base parent of most MC contain gui displays
+		# Air, Barrier, Structure void has no geometry
+		if name in ["block", "air", "barrier", "structure_void", "thin_block"]:
+			continue
+
 		# Filter the "unspawnable_for_now"
 		# Either entity block or block that doesn't good for json
 		blocks = env.json_data.get(
@@ -470,6 +504,7 @@ def update_model_list(context: Context):
 			["bed", "chest", "banner", "campfire"])
 		if name in blocks:
 			continue
+
 		item = scn_props.model_list.add()
 		item.filepath = model
 		item.name = name
