@@ -486,11 +486,7 @@ def update_model_list(context: Context):
 		# - "block" is a base for every block in the game.
 		# - Air, barrier, structure void have no geometry
 		is_contains = re.search(
-			r"template_| orientable| cube_ | \
-			_shulker_box| _sign| \
-			light_0| light_1| \
-			pitcher_crop_top_stage_| custom_fence_| \
-			^block$| ^air$| ^barrier$| ^structure_void$| ^thin_block$",
+			r"template_|orientable|cube_|_shulker_box|_sign|light_0|light_1|pitcher_crop_top_stage_|custom_fence_|^block$|^air$|^barrier$| ^structure_void$|^thin_block$",
 			name
 		)
 		if is_contains:
