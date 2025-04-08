@@ -295,6 +295,7 @@ def add_model(
 	collection.objects.link(obj)  # put the object into the scene (link)
 	view_layer.objects.active = obj  # set as the active object in the scene
 	obj.select_set(True)  # select object
+	obj_mats = obj.data.materials
 
 	bm = bmesh.new()
 
@@ -316,7 +317,6 @@ def add_model(
 				mat = None
 				if "#" not in textures[img]:
 					mat = add_get_material(name, tex_pth, use_name=False)
-				obj_mats = obj.data.materials
 				# Map the "#" reference texture for later use in the assign material
 				# Make sure the same material doesn't get append and ignore reference texture like "#all"
 				if f"#{img}" not in materials and name not in obj_mats and mat is not None:
@@ -360,16 +360,26 @@ def add_model(
 				# Cake and cake slices don't store the UV keys
 				# in the JSON model, which causes issues. This
 				# workaround this fixes those texture issues
+				uv_from = env.json_data.get("block_model_uv")
 				if "cake" in obj_name:
 					if face_mat == "#top":
 						uv_coords = [e['to'][0], e['to'][2], e['from'][0], e['from'][2]]
 					if "side" in face_mat:
 						uv_coords = [e['to'][0], -e['to'][1], e['from'][0], -e['from'][2]]
-				# TODO: handle Hopper and Cauldron uv problem
+				elif "hopper" in obj_name:
+					_uv_from = uv_from.get("hopper")
+					_uv_from = _uv_from.get(f"from,{e['from']}", {"all": [0, 0, 16, 16]})
+					uv_coords = _uv_from.get(face_dir[i], [0, 0, 16, 16])
+				elif "cauldron" in obj_name:
+					_uv_from = uv_from.get("cauldron")
+					_uv_from = _uv_from.get(f"from,{e['from']}", {"all": [0, 0, 16, 16]})
+					uv_coords = _uv_from.get(face_dir[i], [0, 0, 16, 16])
+					if uv_coords == [0, 0, 16, 16]:
+						print(e["from"], face_dir[i])
 
 			# uv in the model is between 0 to 16 regardless of resolution,
 			# in blender its 0 to 1 the y-axis is inverted when compared to
-			# blender uvs, which is why it is subtracted from 1, essentially
+			# blen	der uvs, which is why it is subtracted from 1, essentially
 			# this converts the json uv points to the blender equivelent.
 			uvs = [
 				[uv_coords[2] / 16, 1 - (uv_coords[1] / 16)],  # [x2, y1]
@@ -383,7 +393,7 @@ def add_model(
 			)
 
 			face.normal_update()
-			
+
 			# Give slight offset by normal for overlay geometry
 			if face_mat == "#overlay":
 				bmesh.ops.translate(bm, verts=face.verts,
@@ -395,14 +405,44 @@ def add_model(
 				# will be 2 then 3, 0, 1.
 				face.loops[j][uv_layer].uv = uvs[(j + uv_idx) % len(uvs)]
 
-			# Assign the material on face
-			# using materials_remap to remap the index, used for the block with remapping "#side"
+			# Using materials_remap to remap the index, used for the block with remapping "#side"
+			# Stored material index for getting the texture
+			material_index = 0
 			if face_mat is not None and (face_mat in materials or face_mat in materials_remap):
 				face_mat_ref = materials_remap.get(face_mat)
 				if face_mat_ref is not None and "#" in face_mat_ref:
 					face_mat = face_mat_ref
-				face.material_index = materials.index(face_mat)
+				material_index = materials.index(face_mat)
 
+			# Assign the material on face
+			face.material_index = material_index
+
+			# Adjusting the uv scaling
+			node = obj_mats[material_index].node_tree.nodes.get('Diffuse Texture')
+			if node:
+				img_size = node.image.size
+				scale = 1
+				if img_size[1] != img_size[0]:
+					scale = (img_size[0] / img_size[1])
+				face_pivot = (0, 1)  # OpenGL UV
+				scale_factor_uv = (1, scale)
+
+				# Starts doing uv scaling from a pivot location
+				for loop in face.loops:
+					uv = loop[uv_layer].uv
+					u, v = uv
+
+					# Translate to pivot
+					translated_u = u - face_pivot[0]
+					translated_v = v - face_pivot[1]
+
+					# Scale
+					scaled_u = translated_u * scale_factor_uv[0]
+					scaled_v = translated_v * scale_factor_uv[1]
+
+					# Translate back
+					loop[uv_layer].uv = (scaled_u + face_pivot[0], scaled_v + face_pivot[1])
+				
 	# Quick way to clean the model, hopefully it doesn't cause any UV issues
 	# Ignore model has overlay geometry, causing issue
 	if not textures.get("overlay"):
@@ -413,6 +453,8 @@ def add_model(
 	bm.free()
 	return 0, obj
 
+def Scale2D( v, s, p ):
+    return ( p[0] + s[0]*(v[0] - p[0]), p[1] + s[1]*(v[1] - p[1]) )  
 
 # -----------------------------------------------------------------------------
 # UI and resource pack management.
