@@ -379,7 +379,7 @@ def add_model(
 
 			# uv in the model is between 0 to 16 regardless of resolution,
 			# in blender its 0 to 1 the y-axis is inverted when compared to
-			# blen	der uvs, which is why it is subtracted from 1, essentially
+			# blender uvs, which is why it is subtracted from 1, essentially
 			# this converts the json uv points to the blender equivelent.
 			uvs = [
 				[uv_coords[2] / 16, 1 - (uv_coords[1] / 16)],  # [x2, y1]
@@ -418,30 +418,31 @@ def add_model(
 			face.material_index = material_index
 
 			# Adjusting the uv scaling
-			node = obj_mats[material_index].node_tree.nodes.get('Diffuse Texture')
-			if node:
-				img_size = node.image.size
-				scale = 1
-				if img_size[1] != img_size[0]:
-					scale = (img_size[0] / img_size[1])
-				face_pivot = (0, 1)  # OpenGL UV
-				scale_factor_uv = (1, scale)
+			if len(obj_mats) > 0:
+				node = obj_mats[material_index].node_tree.nodes.get('Diffuse Texture')
+				if node:
+					img_size = node.image.size
+					scale = 1
+					if img_size[1] != img_size[0]:
+						scale = (img_size[0] / img_size[1])
+					face_pivot = (0, 1)  # OpenGL UV
+					scale_factor_uv = (1, scale)
 
-				# Starts doing uv scaling from a pivot location
-				for loop in face.loops:
-					uv = loop[uv_layer].uv
-					u, v = uv
+					# Starts doing uv scaling from a pivot location
+					for loop in face.loops:
+						uv = loop[uv_layer].uv
+						u, v = uv
 
-					# Translate to pivot
-					translated_u = u - face_pivot[0]
-					translated_v = v - face_pivot[1]
+						# Translate to pivot
+						translated_u = u - face_pivot[0]
+						translated_v = v - face_pivot[1]
 
-					# Scale
-					scaled_u = translated_u * scale_factor_uv[0]
-					scaled_v = translated_v * scale_factor_uv[1]
+						# Scale
+						scaled_u = translated_u * scale_factor_uv[0]
+						scaled_v = translated_v * scale_factor_uv[1]
 
-					# Translate back
-					loop[uv_layer].uv = (scaled_u + face_pivot[0], scaled_v + face_pivot[1])
+						# Translate back
+						loop[uv_layer].uv = (scaled_u + face_pivot[0], scaled_v + face_pivot[1])
 				
 	# Quick way to clean the model, hopefully it doesn't cause any UV issues
 	# Ignore model has overlay geometry, causing issue
@@ -525,10 +526,17 @@ def update_model_list(context: Context):
 		# - Shulkers, hanging signs, signs are entities, put it here for now since they have a lot of variants
 		# - "pitcher_crop_top_stage_" is a top part of a double plant. I have no idea why it has no geometry.
 		# - custom_fence_ not sure what even used for
-		# - "block" is a base for every block in the game.
-		# - Air, barrier, structure void have no geometry
+		# - stem_growth and stem_fruit are used for pumpkin and melon stem models
+		# - block is a base for every block in the game. Same for the slab bases
+		# - Air, barrier, structure void, skull have no geometry
 		is_contains = re.search(
-			r"template_|orientable|cube_|_shulker_box|_sign|light_0|light_1|pitcher_crop_top_stage_|custom_fence_|^block$|^air$|^barrier$| ^structure_void$|^thin_block$",
+			r"template_|orientable|cube_|\
+			_shulker_box|_sign|\
+			light_0|light_1|\
+			pitcher_crop_top_stage_|custom_fence_|\
+			stem_growth|^stem_fruit$|\
+			^block$|^air$|^barrier$|^structure_void$|^thin_block$|\
+			^slab$|^slab_top$|^skull$",
 			name
 		)
 		if is_contains:
