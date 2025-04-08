@@ -477,24 +477,23 @@ def update_model_list(context: Context):
 		# Filter out models that can't spawn. Typically those that reference
 		# #fire or the likes in the file.
 		# These blocks just don't make sense to put in the for "unspawnable_for_now"
-		# Template base of that block for example candle, cake with candles
-		# Orient blocks base, cube same as orientable (no texture)
-		# Light blocks are just special no geometry block with 15 states of light levels
-		# Shulkers, Hanging Signs, Signs are entities, put it here for now since they have a lot of variants
-		# pitcher_crop_top_stage_1 is a top part of a double plant. I have no idea why it have no geometry.
+		# - Template base of that block for example candle, cake with candles, fence
+		# - Orient blocks base, cube same as orientable (no texture)
+		# - Light blocks are just special no geometry block with 15 states of light levels
+		# - Shulkers, hanging signs, signs are entities, put it here for now since they have a lot of variants
+		# - "pitcher_crop_top_stage_" is a top part of a double plant. I have no idea why it has no geometry.
+		# - custom_fence_ not sure what even used for
+		# - "block" is a base for every block in the game.
+		# - Air, barrier, structure void have no geometry
 		is_contains = re.search(
 			r"template_| orientable| cube_ | \
 			_shulker_box| _sign| \
 			light_0| light_1| \
-			pitcher_crop_top| custom_fence_",
+			pitcher_crop_top_stage_| custom_fence_| \
+			^block$| ^air$| ^barrier$| ^structure_void$| ^thin_block$",
 			name
 		)
 		if is_contains:
-			continue
-		# Single word condition filter
-		# block single block parent, base parent of most MC contain gui displays
-		# Air, Barrier, Structure void has no geometry
-		if name in ["block", "air", "barrier", "structure_void", "thin_block"]:
 			continue
 
 		# Filter the "unspawnable_for_now"
