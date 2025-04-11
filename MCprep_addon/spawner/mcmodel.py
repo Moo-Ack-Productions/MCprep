@@ -374,8 +374,10 @@ def add_model(
 					_uv_from = uv_from.get("cauldron")
 					_uv_from = _uv_from.get(f"from,{e['from']}", {"all": [0, 0, 16, 16]})
 					uv_coords = _uv_from.get(face_dir[i], [0, 0, 16, 16])
-					if uv_coords == [0, 0, 16, 16]:
-						print(e["from"], face_dir[i])
+				elif "scaffolding" in obj_name:
+					_uv_from = uv_from.get("scaffolding")
+					_uv_from = _uv_from.get(f"from,{e['from']}", {"all": [0, 0, 16, 16]})
+					uv_coords = _uv_from.get(face_dir[i], [0, 0, 16, 16])
 
 			# uv in the model is between 0 to 16 regardless of resolution,
 			# in blender its 0 to 1 the y-axis is inverted when compared to
@@ -397,7 +399,7 @@ def add_model(
 			# Give slight offset by normal for overlay geometry
 			if face_mat == "#overlay":
 				bmesh.ops.translate(bm, verts=face.verts,
-						    vec=0.005 * face.normal)
+						    vec=0.005 * face.normal	)
 
 			for j in range(len(face.loops)):
 				# uv coords order is determened by the rotation of the uv,

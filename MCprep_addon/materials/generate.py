@@ -104,8 +104,6 @@ def get_mc_canonical_name(name: str) -> Tuple[str, Optional[Form]]:
 	if "_stem" in general_name:
 		# For melon/pumpkin stem stage map to only melon_stem/pumpkin_stem
 		general_name = general_name.rsplit("_", 1)[0]
-	if "short_grass" in general_name:
-		general_name = "grass"
 
 	if general_name in env.json_data["blocks"]["block_mapping_mc"]:
 		canon = env.json_data["blocks"]["block_mapping_mc"][general_name]
