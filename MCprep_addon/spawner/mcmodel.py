@@ -399,7 +399,7 @@ def add_model(
 			# Give slight offset by normal for overlay geometry
 			if face_mat == "#overlay":
 				bmesh.ops.translate(bm, verts=face.verts,
-						    vec=0.005 * face.normal	)
+									vec=0.0025 * face.normal)
 
 			for j in range(len(face.loops)):
 				# uv coords order is determened by the rotation of the uv,

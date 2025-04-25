@@ -101,8 +101,9 @@ def get_mc_canonical_name(name: str) -> Tuple[str, Optional[Form]]:
 		# mixed up with the new "water": "painting/water" texture.
 		general_name = "water_still"
 
-	if "_stem" in general_name:
+	if "_stem" in general_name and general_name not in ["pumpkin_stem", "melon_stem", "attached_pumpkin_stem", "attached_melon_stem"]:
 		# For melon/pumpkin stem stage map to only melon_stem/pumpkin_stem
+		# make sure they are not itself and does the split again
 		general_name = general_name.rsplit("_", 1)[0]
 
 	if general_name in env.json_data["blocks"]["block_mapping_mc"]:
@@ -619,6 +620,7 @@ def find_additional_passes(image_file: Path) -> Dict[str, Image]:
 		if os.path.splitext(f)[-1].lower() not in exts:
 			continue
 		filtered_files.append(f)
+
 	# now do narrow matching based on each extention name type
 	for filtered in filtered_files:
 		this_base = os.path.splitext(filtered)[0]

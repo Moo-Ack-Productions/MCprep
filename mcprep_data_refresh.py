@@ -460,7 +460,8 @@ def vanilla_overrides(vanilla_map):
 	outlist = vanilla_map.copy()
 	overrides = {
 		"fire":"fire_0",
-		"Campfire":"campfire_log"
+		"Campfire":"campfire_log",
+		"grass":"grass"
 	}
 	outlist.update(overrides)
 	return outlist
