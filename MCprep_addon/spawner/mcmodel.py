@@ -361,23 +361,21 @@ def add_model(
 				# in the JSON model, which causes issues. This
 				# workaround this fixes those texture issues
 				uv_from = env.json_data.get("block_model_uv")
+				stored_uv_blocks = ("hopper", "cauldron", "scaffolding", "composter")
 				if "cake" in obj_name:
 					if face_mat == "#top":
 						uv_coords = [e['to'][0], e['to'][2], e['from'][0], e['from'][2]]
 					if "side" in face_mat:
 						uv_coords = [e['to'][0], -e['to'][1], e['from'][0], -e['from'][2]]
-				elif "hopper" in obj_name:
-					_uv_from = uv_from.get("hopper")
+				elif uv_from and any(x in obj_name for x in stored_uv_blocks):
+					name = next((x for x in stored_uv_blocks if x in obj_name), False)
+					_uv_from = uv_from.get(name)
 					_uv_from = _uv_from.get(f"from,{e['from']}", {"all": [0, 0, 16, 16]})
-					uv_coords = _uv_from.get(face_dir[i], [0, 0, 16, 16])
-				elif "cauldron" in obj_name:
-					_uv_from = uv_from.get("cauldron")
-					_uv_from = _uv_from.get(f"from,{e['from']}", {"all": [0, 0, 16, 16]})
-					uv_coords = _uv_from.get(face_dir[i], [0, 0, 16, 16])
-				elif "scaffolding" in obj_name:
-					_uv_from = uv_from.get("scaffolding")
-					_uv_from = _uv_from.get(f"from,{e['from']}", {"all": [0, 0, 16, 16]})
-					uv_coords = _uv_from.get(face_dir[i], [0, 0, 16, 16])
+					# special case for composter
+					if e['to'] == [16, 2, 16] and "composter" in obj_name:
+						uv_coords = [0, 0, 16, 16]
+					else:
+						uv_coords = _uv_from.get(face_dir[i], [0, 0, 16, 16])
 
 			# uv in the model is between 0 to 16 regardless of resolution,
 			# in blender its 0 to 1 the y-axis is inverted when compared to
@@ -410,9 +408,9 @@ def add_model(
 			# Using materials_remap to remap the index, used for the block with remapping "#side"
 			# Stored material index for getting the texture
 			material_index = 0
-			if face_mat is not None and (face_mat in materials or face_mat in materials_remap):
+			if face_mat and (face_mat in materials or face_mat in materials_remap):
 				face_mat_ref = materials_remap.get(face_mat)
-				if face_mat_ref is not None and "#" in face_mat_ref:
+				if face_mat_ref and "#" in face_mat_ref:
 					face_mat = face_mat_ref
 				material_index = materials.index(face_mat)
 
