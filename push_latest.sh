@@ -44,7 +44,7 @@ git checkout test_files/test_data/jmc2obj_test_1_15_2.mtl
 git checkout test_files/test_data/mineways_test_combined_1_15_2.mtl
 git checkout test_files/test_data/mineways_test_separated_1_15_2.mtl
 
-python mcprep_data_refresh.py -auto
+python MCprep_addon/mcprep_data_refresh.py -auto
 
 # -----------------------------------------------------------------------------
 # Build releasE with translation updates

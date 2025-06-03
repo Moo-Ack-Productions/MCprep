@@ -225,6 +225,15 @@ class MCPREP_OT_prep_material_legacy(bpy.types.Operator):
 			return {'CANCELLED'}
 		return {'FINISHED'}
 
+class MCPREP_OT_local_refresh(bpy.types.Operator):
+	bl_idname = "mcprep.refresh_data"
+	bl_label = "Locally refresh MCprep data"
+	
+	def execute(self, context):
+		from . import mcprep_data_refresh
+		addon_prefs = util.get_user_preferences(context)
+		mcprep_data_refresh.run_all(auto=True, versions_path=bpy.path.abspath(addon_prefs.minecraft_versions_path))
+		return {'FINISHED'}
 
 # -----------------------------------------------------------------------------
 # Registration
@@ -237,7 +246,8 @@ classes = (
 	MCPREP_OT_open_file,
 	MCPREP_OT_open_folder,
 	MCPREP_OT_open_help,
-	MCPREP_OT_prep_material_legacy
+	MCPREP_OT_prep_material_legacy,
+	MCPREP_OT_local_refresh
 )
 
 
