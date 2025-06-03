@@ -7,7 +7,7 @@ index d3020d4..120185d 100644
  # -----------------------------------------------------------------------------
  
 -IDNAME = "mcprep"
-+IDNAME = "mcprep_rc"
++IDNAME = "mcprep_3-7_mb"
  
  # max data/string lengths to match server-side validation,
  # if exceeded, request will return denied (no data written)
