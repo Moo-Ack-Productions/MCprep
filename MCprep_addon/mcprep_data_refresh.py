@@ -477,7 +477,7 @@ def get_current_json(backup=False):
 
 def read_base_mapping():
 	"""Read in the existing mcprep_data_update.json file shipped with MCprep"""
-	filepath = PARENT_PATH + "/MCprep_resources/" + "UpdateJson/" + "mcprep_data_base.json"
+	filepath = os.path.join(PARENT_PATH, "MCprep_resources", "UpdateJson", "mcprep_data_base.json")
 	if not os.path.isfile(filepath):
 		raise Exception("File missing: "+filepath)
 
@@ -575,7 +575,7 @@ def run_all(auto=False, versions_path=""):
 	# Goal: generate, best we can, the actual mapping file to use for materials
 
 	# save the output
-	fileout = PARENT_PATH + "/MCprep_resources/" + "UpdateJson/" + "mcprep_data_update_staging.json"
+	filepath = os.path.join(PARENT_PATH, "MCprep_resources", "UpdateJson", "mcprep_data_base_update_staging.json")
 	fileout = os.path.abspath(fileout)
 	with open(fileout, "w") as dmp:
 		json.dump(data, dmp, indent="\t", sort_keys=True)
