@@ -367,6 +367,19 @@ def feature_set_update(self, context: Context) -> None:
 	tracking.Tracker.feature_set = self.feature_set
 	tracking.trackUsage("feature_set", param=self.feature_set)
 
+def save_path_default() -> str:
+    """Determine a good default path of the Minecraft 
+    versions folder depending on the operating system"""
+    import platform
+    user_os = platform.system()
+    
+    if user_os == 'Windows':
+        return f"{os.getenv('APPDATA')}\\.minecraft\\versions"
+    elif user_os == 'Darwin':
+        return f"{Path.home()}/Library/Application Support/minecraft/versions"
+    elif user_os == 'Linux':
+        return f"{Path.home()}/.minecraft/versions"
+    return ""
 
 class McprepPreference(bpy.types.AddonPreferences):
 	bl_idname = __package__
@@ -465,13 +478,14 @@ class McprepPreference(bpy.types.AddonPreferences):
 		subtype='FILE_PATH',
 		update=mineways_update,
 		default="Mineways")
+
 	save_folder: bpy.props.StringProperty(
 		name="MC saves folder",
 		description=(
 			"Folder containing Minecraft world saves directories, "
 			"for the direct import bridge"),
 		subtype='FILE_PATH',
-		default='')
+		default=save_path_default())
 	feature_set: bpy.props.EnumProperty(
 		items=[
 			('supported', 'Supported', 'Use only supported features'),
@@ -622,12 +636,19 @@ class McprepPreference(bpy.types.AddonPreferences):
 			col = split.column()
 			col.label(text=env._("Path to Minecraft versions folder"))
 			col = split.column()
-			col.prop(self, "minecraft_versions_path", text="")
+			col.prop(self, "save_folder", text="")
 			split = util.layout_split(box, factor=factor_width)
 			col = split.column()
 			col.label(text=env._("Refresh"))
 			col = split.column()
 			col.operator("mcprep.refresh_data", text=env._("Locally Refresh MCprep JSON data"))
+			col.enabled = False
+			
+			if not os.path.isdir(bpy.path.abspath(self.save_folder)):
+				row = box.row()
+				row.label(text=env._("Saves folder not found"), icon="ERROR")
+			else:
+				col.enabled = True
 
 			row = layout.row()
 			row.scale_y = 0.7

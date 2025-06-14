@@ -98,40 +98,40 @@
 			"iron_trapdoor", "diamond_block","emerald_block", "gold_block"]
 },
 
-"mob_skip_prep": [
-	"Frog",
-	"Simple Villager (2.8+)",
-	"Glow Squid",
-	"Strider",
-	"Warden"
-],
-"unspawnable_for_now": [
-	"banner",
-	"bed",
-	"bell",
-	"brewing_stand",
-	"cauldron",
-	"chest",
-	"double_chest",
-	"ender_chest",
-	"enchanting_table",
-	"end_portal",
-	"hopper",
-	"moving_piston",
-	"piston",
-	"scaffolding",
-	"shulker_box",
-	"sunflower",
-	"water_still",
-	"water"
-],
-"make_real": [
-	"chest",
-	"chest_double"
-],
-"non_color_options": [
-	"Non-Color",
-	"Non-Colour Data",
-	"NONE"
-]
+	"mob_skip_prep": [
+		"Frog",
+		"Simple Villager (2.8+)",
+		"Glow Squid",
+		"Strider",
+		"Warden"
+	],
+	"unspawnable_for_now": [
+		"banner",
+		"bed",
+		"bell",
+		"brewing_stand",
+		"cauldron",
+		"chest",
+		"double_chest",
+		"ender_chest",
+		"enchanting_table",
+		"end_portal",
+		"hopper",
+		"moving_piston",
+		"piston",
+		"scaffolding",
+		"shulker_box",
+		"sunflower",
+		"water_still",
+		"water"
+	],
+	"make_real": [
+		"chest",
+		"chest_double"
+	],
+	"non_color_options": [
+		"Non-Color",
+		"Non-Colour Data",
+		"NONE"
+	]
 }

@@ -232,7 +232,7 @@ class MCPREP_OT_local_refresh(bpy.types.Operator):
 	def execute(self, context):
 		from . import mcprep_data_refresh
 		addon_prefs = util.get_user_preferences(context)
-		mcprep_data_refresh.run_all(auto=True, versions_path=bpy.path.abspath(addon_prefs.minecraft_versions_path))
+		mcprep_data_refresh.run_all(auto=True, versions_path=bpy.path.abspath(addon_prefs.save_folder), copy_file=True)
 		return {'FINISHED'}
 
 # -----------------------------------------------------------------------------
