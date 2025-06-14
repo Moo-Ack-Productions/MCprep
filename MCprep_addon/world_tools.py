@@ -151,6 +151,12 @@ EXPORTER_MAPPING = {
 
 UNSUPPORTED_OR_NONE = (WorldExporter.Unknown, None)
 
+def is_commonmc_obj(context: Context) -> bool:
+	obj = context.object
+	if obj and "COMMONMCOBJ_HEADER" in obj:
+		return True
+	return False
+
 def get_exporter(context: Context) -> Optional[WorldExporter]:
 	"""
 	Return the exporter on the active object if it has

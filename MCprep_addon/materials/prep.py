@@ -489,7 +489,12 @@ class MCPREP_OT_swap_texture_pack(
 			self.report({'ERROR'}, "No materials found on selected objects")
 			return {'CANCELLED'}
 		_ = generate.detect_form(mat_list)
-		invalid_uv, affected_objs = uv_tools.detect_invalid_uvs_from_objs(obj_list)
+		
+		# If we have a commonmcobj header, we don't need 
+		# to check for scaled UVs
+		invalid_uv, affected_objs = (False, [])
+		if not world_tools.is_commonmc_obj(context):
+			invalid_uv, affected_objs = uv_tools.detect_invalid_uvs_from_objs(obj_list)
 
 		# NOTE: This is temporary
 		addon_prefs = util.get_user_preferences(context)
