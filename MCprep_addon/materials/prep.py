@@ -540,8 +540,8 @@ class MCPREP_OT_swap_texture_pack(
 	def preprocess_material(self, material):
 		"""Preprocess materials for special edge cases"""
 
-		# in texture packs, this is actually just a transparent overaly -
-		# but in Mineways export, this is the flattened grass/drit block side
+		# in texture packs, this is actually just a transparent overlay -
+		# but in Mineways export, this is the flattened grass/dirt block side
 		if material.name == "grass_block_side_overlay":
 			material.name = "grass_block_side"
 			env.log("Renamed material: grass_block_side_overlay to grass_block_side")
