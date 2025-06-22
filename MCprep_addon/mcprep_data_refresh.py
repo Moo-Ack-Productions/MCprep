@@ -650,7 +650,13 @@ def run_all(auto=False, versions_path="", copy_file=False):
 
 
 if __name__ == '__main__':
-	if "-auto" in sys.argv:
-		run_all(auto=True)
-	else:
-		run_all()
+	auto = '-auto' in sys.argv
+	copy = '-copy' in sys.argv
+	versions_folder = ""
+	
+	if '-set_ver' in sys.argv:
+		i = sys.argv.index('-set_ver') + 1
+		if i > len(sys.argv)-1:
+			raise Exception("-set_ver requires a path afterwards!")
+		versions_folder = sys.argv[i]
+	run_all(auto=auto, versions_path=versions_folder, copy_file=copy)
