@@ -2,6 +2,7 @@
 
 import json
 import os
+from pathlib import Path
 import shutil
 import sys
 import urllib.request
@@ -381,6 +382,10 @@ def get_vanilla_list(copy_file=False, versions_path=""):
 		raise Exception("Could not get most recent jar version")
 	else:
 		print("Extracting from jar " + jarfile)
+
+	mc_version = Path(jarfile).parent.name
+	with open(os.path.join(PARENT_PATH, "MCprep_resources", "mc_version.txt"), 'w') as f:
+		f.write(mc_version)
 	
 	mcprep_resources = os.path.join(
 		PARENT_PATH, "MCprep_resources",
@@ -460,7 +465,8 @@ def vanilla_overrides(vanilla_map):
 	outlist = vanilla_map.copy()
 	overrides = {
 		"fire":"fire_0",
-		"Campfire":"campfire_log"
+		"Campfire":"campfire_log",
+		"grass":"grass"
 	}
 	outlist.update(overrides)
 	return outlist
@@ -650,7 +656,13 @@ def run_all(auto=False, versions_path="", copy_file=False):
 
 
 if __name__ == '__main__':
-	if "-auto" in sys.argv:
-		run_all(auto=True)
-	else:
-		run_all()
+	auto = '-auto' in sys.argv
+	copy = '-copy' in sys.argv
+	versions_folder = ""
+	
+	if '-set_ver' in sys.argv:
+		i = sys.argv.index('-set_ver') + 1
+		if i > len(sys.argv)-1:
+			raise Exception("-set_ver requires a path afterwards!")
+		versions_folder = sys.argv[i]
+	run_all(auto=auto, versions_path=versions_folder, copy_file=copy)

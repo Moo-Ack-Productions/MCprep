@@ -16,6 +16,7 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from pathlib import Path
 from subprocess import Popen, PIPE
 from typing import List, Optional, Union, Tuple
 import enum
@@ -48,6 +49,20 @@ SPAWNER_EXCLUDE = "Spawner Exclude"
 # -----------------------------------------------------------------------------
 # GENERAL SUPPORTING FUNCTIONS (no registration required)
 # -----------------------------------------------------------------------------
+
+def save_path_default() -> str:
+    """Determine a good default path of the Minecraft 
+    versions folder depending on the operating system"""
+    import platform
+    user_os = platform.system()
+    
+    if user_os == 'Windows':
+        return f"{os.getenv('APPDATA')}\\.minecraft\\versions"
+    elif user_os == 'Darwin':
+        return f"{Path.home()}/Library/Application Support/minecraft/versions"
+    elif user_os == 'Linux':
+        return f"{Path.home()}/.minecraft/versions"
+    return ""
 
 def update_matrices(obj):
 	"""Update mattrices of object so that we can accurately parent, 

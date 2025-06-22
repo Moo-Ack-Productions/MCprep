@@ -22,6 +22,7 @@ import addon_utils
 
 from . import util
 from . import tracking
+from .conf import env
 
 
 # -----------------------------------------------------------------------------
@@ -225,14 +226,23 @@ class MCPREP_OT_prep_material_legacy(bpy.types.Operator):
 			return {'CANCELLED'}
 		return {'FINISHED'}
 
-class MCPREP_OT_local_refresh(bpy.types.Operator):
-	bl_idname = "mcprep.refresh_data"
-	bl_label = "Locally refresh MCprep data"
+class MCPREP_OT_extract_minecract_resources(bpy.types.Operator):
+	bl_idname = "mcprep.extract_minecraft_resources"
+	bl_label = env._("Extract resources from Minecraft")
 	
 	def execute(self, context):
 		from . import mcprep_data_refresh
 		addon_prefs = util.get_user_preferences(context)
-		mcprep_data_refresh.run_all(auto=True, versions_path=bpy.path.abspath(addon_prefs.save_folder), copy_file=True)
+		mcprep_data_refresh.run_all(auto=True, versions_path=bpy.path.abspath(addon_prefs.minecraft_versions_path), copy_file=True)
+		return {'FINISHED'}
+
+class MCPREP_OT_reset_addon_prefs_save_folder(bpy.types.Operator):
+	bl_idname = "mcprep.reset_addon_prefs_save_folder"
+	bl_label = env._("Reset Save Folder Path")
+
+	def execute(self, context):
+		addon_prefs = util.get_user_preferences(context)
+		addon_prefs.minecraft_versions_path = util.save_path_default()
 		return {'FINISHED'}
 
 # -----------------------------------------------------------------------------
@@ -247,7 +257,8 @@ classes = (
 	MCPREP_OT_open_folder,
 	MCPREP_OT_open_help,
 	MCPREP_OT_prep_material_legacy,
-	MCPREP_OT_local_refresh
+	MCPREP_OT_extract_minecract_resources,
+	MCPREP_OT_reset_addon_prefs_save_folder
 )
 
 

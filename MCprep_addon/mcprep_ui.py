@@ -367,20 +367,6 @@ def feature_set_update(self, context: Context) -> None:
 	tracking.Tracker.feature_set = self.feature_set
 	tracking.trackUsage("feature_set", param=self.feature_set)
 
-def save_path_default() -> str:
-    """Determine a good default path of the Minecraft 
-    versions folder depending on the operating system"""
-    import platform
-    user_os = platform.system()
-    
-    if user_os == 'Windows':
-        return f"{os.getenv('APPDATA')}\\.minecraft\\versions"
-    elif user_os == 'Darwin':
-        return f"{Path.home()}/Library/Application Support/minecraft/versions"
-    elif user_os == 'Linux':
-        return f"{Path.home()}/.minecraft/versions"
-    return ""
-
 class McprepPreference(bpy.types.AddonPreferences):
 	bl_idname = __package__
 	scriptdir = bpy.path.abspath(os.path.dirname(__file__))
@@ -421,8 +407,9 @@ class McprepPreference(bpy.types.AddonPreferences):
 		default=f"{scriptdir}/MCprep_resources/resourcepacks/mcprep_default/")
 	minecraft_versions_path: bpy.props.StringProperty(
 		name="Minecraft Versions Path",
-		description="Path containing the installed version of Minecraft",
-		subtype='DIR_PATH')
+		description="Path to the Minecraft versions folder",
+		subtype='DIR_PATH',
+		default=util.save_path_default())
 	skin_path: bpy.props.StringProperty(
 		name="Skin path",
 		description="Folder for skin textures, used in skin swapping",
@@ -484,8 +471,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 		description=(
 			"Folder containing Minecraft world saves directories, "
 			"for the direct import bridge"),
-		subtype='FILE_PATH',
-		default=save_path_default())
+		subtype='FILE_PATH')
 	feature_set: bpy.props.EnumProperty(
 		items=[
 			('supported', 'Supported', 'Use only supported features'),
@@ -630,23 +616,25 @@ class McprepPreference(bpy.types.AddonPreferences):
 			
 			row = layout.row()
 			row.scale_y = 0.7
-			row.label(text=env._("Refresh MCprep data with local Minecraft install"))
+			row.label(text=env._("Extract data/resources from local Minecraft install"))
 			box = layout.box()
 			split = util.layout_split(box, factor=factor_width)
 			col = split.column()
-			col.label(text=env._("Path to Minecraft versions folder"))
+			col.label(text=env._("Minecraft versions"))
 			col = split.column()
-			col.prop(self, "save_folder", text="")
+			col.prop(self, "minecraft_versions_path", text="")
+			col = split.column()
+			col.operator("mcprep.reset_addon_prefs_save_folder", text="", icon="RECOVER_LAST")
 			split = util.layout_split(box, factor=factor_width)
 			col = split.column()
 			col.label(text=env._("Refresh"))
 			col = split.column()
-			col.operator("mcprep.refresh_data", text=env._("Locally Refresh MCprep JSON data"))
+			col.operator("mcprep.extract_minecraft_resources")
 			col.enabled = False
 			
-			if not os.path.isdir(bpy.path.abspath(self.save_folder)):
+			if not os.path.isdir(bpy.path.abspath(self.minecraft_versions_path)):
 				row = box.row()
-				row.label(text=env._("Saves folder not found"), icon="ERROR")
+				row.label(text=env._("Versions folder not found"), icon="ERROR")
 			else:
 				col.enabled = True
 
