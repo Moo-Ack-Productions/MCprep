@@ -26,5 +26,6 @@ MCprep_addon/MCprep_resources/resourcepacks
 MCprep_addon/MCprep_resources/rigs
 MCprep_addon/MCprep_resources/skins
 MCprep_addon/MCprep_resources/textures
+MCprep_addon/MCprep_resources/mc_version.txt
 !MCprep_addon/MCprep_resources/Languages/*
 MCprep_addon/.vscode
