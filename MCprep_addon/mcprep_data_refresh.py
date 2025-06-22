@@ -2,6 +2,7 @@
 
 import json
 import os
+from pathlib import Path
 import shutil
 import sys
 import urllib.request
@@ -19,7 +20,7 @@ MINEWAYS_URL = "https://raw.githubusercontent.com/erich666/Mineways/master/Win/t
 # jmc2obj, it will be less of an issue.
 # JMC_1_13 = "https://raw.githubusercontent.com/jmc2obj/j-mc-2-obj/master/conf/texsplit_1.13.conf"
 JMC_1_13 = "https://raw.githubusercontent.com/jmc2obj/j-mc-2-obj/0fb2bd742f0d64b0f7f0dc3cafdba76ebd3a1cc3/conf/texsplit_1.13.conf"
-
+PARENT_PATH = os.path.dirname(__file__)
 
 def save_file_str(url):
 	"""Save to temp location next to script."""
@@ -339,14 +340,14 @@ def mineways2mc(name, vanilla):
 	return None
 
 
-def get_vanilla_list(copy_file=False):
+def get_vanilla_list(copy_file=False, versions_path=""):
 	"""Get the list of material names from vanilla Minecraft (local install)"""
 	outlist = {}
 
 	# OSX path
 	path = os.path.join(
 		os.path.expanduser('~'),
-		"Library", "Application Support", "minecraft", "versions")
+		"Library", "Application Support", "minecraft", "versions") if versions_path == "" else versions_path
 	if not os.path.isdir(path):
 		raise Exception('Could not get vanilla path')
 
@@ -382,8 +383,12 @@ def get_vanilla_list(copy_file=False):
 	else:
 		print("Extracting from jar " + jarfile)
 
+	mc_version = Path(jarfile).parent.name
+	with open(os.path.join(PARENT_PATH, "MCprep_resources", "mc_version.txt"), 'w') as f:
+		f.write(mc_version)
+	
 	mcprep_resources = os.path.join(
-		"MCprep_addon", "MCprep_resources",
+		PARENT_PATH, "MCprep_resources",
 		"resourcepacks", "mcprep_default")
 	tprefix = os.path.join("assets", "minecraft", "textures")
 	mprefix = os.path.join("assets", "minecraft", "models")
@@ -470,14 +475,14 @@ def get_current_json(backup=False):
 	"""Returns filepath of current json"""
 	suffix = "" if not backup else "backup"
 	filepath = os.path.join(
-		"MCprep_addon", "MCprep_resources",
+		PARENT_PATH, "MCprep_resources",
 		"mcprep_data_update"+suffix+".json")
 	return filepath
 
 
 def read_base_mapping():
 	"""Read in the existing mcprep_data_update.json file shipped with MCprep"""
-	filepath = "mcprep_data_base.json"
+	filepath = os.path.join(PARENT_PATH, "MCprep_resources", "UpdateJson", "mcprep_data_base.json")
 	if not os.path.isfile(filepath):
 		raise Exception("File missing: "+filepath)
 
@@ -498,7 +503,7 @@ def get_cannon_block_mappping():
 	return outlist
 
 
-def run_all(auto=False):
+def run_all(auto=False, versions_path="", copy_file=False):
 	"""Execute getting all of the texture lists and to compare."""
 
 	data = {"blocks": {}}
@@ -507,13 +512,16 @@ def run_all(auto=False):
 	# ie reflection, emission, etc
 	base_override = read_base_mapping()
 
-	if auto:
+	if auto and not copy_file:
 		xin = "n"
+	# For MCprep when the user refreshes the textures
+	elif copy_file:
+		xin = "y"
 	else:
 		xin = input("Copy latest vanilla textures to MCprep? (y): ")
 
 	# consider also passing in pref to get specific version, for old names
-	vanilla = get_vanilla_list(xin=="y")
+	vanilla = get_vanilla_list(xin=="y", versions_path=versions_path)
 	vanilla_map = vanilla_overrides(vanilla) # don't need to return as pass ref?
 
 	# load material lists from online blobs
@@ -575,7 +583,7 @@ def run_all(auto=False):
 	# Goal: generate, best we can, the actual mapping file to use for materials
 
 	# save the output
-	fileout = "mcprep_data_update_staging.json"
+	fileout = os.path.join(PARENT_PATH, "MCprep_resources", "UpdateJson", "mcprep_data_base_update_staging.json")
 	fileout = os.path.abspath(fileout)
 	with open(fileout, "w") as dmp:
 		json.dump(data, dmp, indent="\t", sort_keys=True)
@@ -647,7 +655,13 @@ def run_all(auto=False):
 
 
 if __name__ == '__main__':
-	if "-auto" in sys.argv:
-		run_all(auto=True)
-	else:
-		run_all()
+	auto = '-auto' in sys.argv
+	copy = '-copy' in sys.argv
+	versions_folder = ""
+	
+	if '-set_ver' in sys.argv:
+		i = sys.argv.index('-set_ver') + 1
+		if i > len(sys.argv)-1:
+			raise Exception("-set_ver requires a path afterwards!")
+		versions_folder = sys.argv[i]
+	run_all(auto=auto, versions_path=versions_folder, copy_file=copy)

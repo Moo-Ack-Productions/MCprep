@@ -367,7 +367,6 @@ def feature_set_update(self, context: Context) -> None:
 	tracking.Tracker.feature_set = self.feature_set
 	tracking.trackUsage("feature_set", param=self.feature_set)
 
-
 class McprepPreference(bpy.types.AddonPreferences):
 	bl_idname = __package__
 	scriptdir = bpy.path.abspath(os.path.dirname(__file__))
@@ -406,6 +405,11 @@ class McprepPreference(bpy.types.AddonPreferences):
 			"with material prepping"),
 		subtype='DIR_PATH',
 		default=f"{scriptdir}/MCprep_resources/resourcepacks/mcprep_default/")
+	minecraft_versions_path: bpy.props.StringProperty(
+		name="Minecraft Versions Path",
+		description="Path to the Minecraft versions folder",
+		subtype='DIR_PATH',
+		default=util.save_path_default())
 	skin_path: bpy.props.StringProperty(
 		name="Skin path",
 		description="Folder for skin textures, used in skin swapping",
@@ -461,13 +465,13 @@ class McprepPreference(bpy.types.AddonPreferences):
 		subtype='FILE_PATH',
 		update=mineways_update,
 		default="Mineways")
+
 	save_folder: bpy.props.StringProperty(
 		name="MC saves folder",
 		description=(
 			"Folder containing Minecraft world saves directories, "
 			"for the direct import bridge"),
-		subtype='FILE_PATH',
-		default='')
+		subtype='FILE_PATH')
 	feature_set: bpy.props.EnumProperty(
 		items=[
 			('supported', 'Supported', 'Use only supported features'),
@@ -609,6 +613,30 @@ class McprepPreference(bpy.types.AddonPreferences):
 			col = split.column()
 			p = col.operator("mcprep.openfolder", text=env._("Open texture pack folder"))
 			p.folder = self.custom_texturepack_path
+			
+			row = layout.row()
+			row.scale_y = 0.7
+			row.label(text=env._("Extract data/resources from local Minecraft install"))
+			box = layout.box()
+			split = util.layout_split(box, factor=factor_width)
+			col = split.column()
+			col.label(text=env._("Minecraft versions"))
+			col = split.column()
+			col.prop(self, "minecraft_versions_path", text="")
+			col = split.column()
+			col.operator("mcprep.reset_addon_prefs_save_folder", text="", icon="RECOVER_LAST")
+			split = util.layout_split(box, factor=factor_width)
+			col = split.column()
+			col.label(text=env._("Refresh"))
+			col = split.column()
+			col.operator("mcprep.extract_minecraft_resources")
+			col.enabled = False
+			
+			if not os.path.isdir(bpy.path.abspath(self.minecraft_versions_path)):
+				row = box.row()
+				row.label(text=env._("Versions folder not found"), icon="ERROR")
+			else:
+				col.enabled = True
 
 			row = layout.row()
 			row.scale_y = 0.7
