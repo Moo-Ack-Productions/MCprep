@@ -2171,6 +2171,8 @@ def register():
 		bpy.types.IMAGE_MT_uvs.append(mcprep_uv_tools)
 	# bpy.types.IMAGE_MT_image.append(mcprep_image_tools) # crashes, re-do ops	
 
+	env.vivy_enabled = addon_prefs.exp_vivy_material_system
+
 def unregister():
 	for cls in reversed(classes):
 		bpy.utils.unregister_class(cls)
