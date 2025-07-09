@@ -149,6 +149,7 @@ class MCprepEnv:
 		
 		# The JSON file for Vivy's materials
 		self.vivy_material_json: Dict = {}
+		self.vivy_enabled = False
 
 		# State for name changes in the Vivy config
 		#
@@ -157,7 +158,7 @@ class MCprepEnv:
 
 	def reload_vivy_json(self, path: Path) -> None:
 		json_path = Path(path, "vivy_materials.json")
-		if not json_path.exists():
+		if not json_path.exists() and self.vivy_enabled:
 			json_path.touch()
 			self.vivy_material_json = {
 				"version": VIVY_VERSION,

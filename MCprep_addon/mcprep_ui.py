@@ -380,6 +380,9 @@ class McprepPreference(bpy.types.AddonPreferences):
 		env.reload_vivy_json(path)
 		env.vivy_name_changes = {}
 		env.vivy_cache = None
+	
+	def update_enable_vivy(self, context):
+		env.vivy_enabled = self.exp_vivy_material_system
 
 	meshswap_path: bpy.props.StringProperty(
 		name="Meshswap path",
@@ -484,6 +487,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 		name="Experimental: Experimental Material Templates (Vivy)",
 		description="Enable Vivy material templating features",
 		default=False,
+		update=update_enable_vivy
 	)
 	exp_vivy_file_path: bpy.props.StringProperty(
 		name="Vivy Folder",
@@ -2166,6 +2170,8 @@ def register():
 		env.log("IMAGE_MT_uvs registration!")
 		bpy.types.IMAGE_MT_uvs.append(mcprep_uv_tools)
 	# bpy.types.IMAGE_MT_image.append(mcprep_image_tools) # crashes, re-do ops	
+
+	env.vivy_enabled = addon_prefs.exp_vivy_material_system
 
 def unregister():
 	for cls in reversed(classes):
