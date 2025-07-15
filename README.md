@@ -534,35 +534,6 @@ Under advanced settings, you can change your target entity file to point to anot
   - Snapping dropdown: Snap the placed block to a rounded coordinate. Optional offset by 0.5 as well
   - Make real: Instance the groups so they are made real, thus allowing you to individually modify the objects within the group. Note: this may clear any pre-applied animation.
 
-
-### Cycles Optimizer
-- **Purpose:** To optimize Cycles render settings without sacrificing much quality
-- **Step 1:** Navigate to the World Imports panel and find the "Cycles Optimizer" panel
-- **Step 2:** Select the features you want to use
-- **Step 3:** Hit the "Optimize Scene" button (It is recommended to do this twice. Once when prepping materials and once before rendering your final render)
-
-**Warning**: There is a section called unsafe features which contains options that may cause render issues. These features can being massive performance boosts but it's not recommended to use them unless you know what you're doing. Unsafe options include:
-
-- **Automatic Scrambling Distance:** Improves GPU performance but can cause artifacts. As such, if the optimizer reaches a scrambling multiplier of 0.7+, MCprep will automatically disable it. Please enable this before rendering your final render to reduce the chances of having artifacts:
-    
-- **Preview Scrambling:** Enabled by default if you enable `Automatic Scrambling Distance`. This can cause a lot of flickering in rendered view (which is how Automatic Scrambling Distance works in the first place).
-
-![Optimizer panel](/visuals/optimizer-panel-settings.png?raw=true)
-
-
-#### Cycles Optimizer Node Settings
-
-*NOTE: the Cycles Optimizer is deprecated and will be removed in MCprep 3.6*
-
-The Cycles optimizer also comes with it some special node names to control how it interprets certain nodes. They are the following:
-- `MCPREP_HOMOGENOUS_VOLUME`: if applied to a Volume Scatter, Volume Absorption, or Principled Volume node, it is treated as a homogeneous volume 
-- `MCPREP_NOT_HOMOGENOUS_VOLUME`: if applied to a Volume Scatter, Volume Absorption, or Principled Volume node, it is not treated as a homogeneous volume 
-
-To use these settings, simply click on the node you want to edit, press N, and then edit the Name of the node
-
-**Important:** Make sure you edit the **Name** of the node, not the **Label**
-![Using optimizer node settings](/visuals/optimizer-node-settings.png?raw=true)
-
 Known Bugs
 ======
 See all [known current bugs here](https://github.com/TheDuckCow/MCprep/issues?q=is%3Aissue+is%3Aopen+label%3Abug)
