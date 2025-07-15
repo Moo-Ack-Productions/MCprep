@@ -18,7 +18,7 @@
 
 from pathlib import Path
 from subprocess import Popen, PIPE
-from typing import List, Optional, Union, Tuple
+from typing import List, Optional, Union, Tuple # TODO: Add Literal when we can use Python 3.8
 import enum
 import json
 import operator
@@ -83,6 +83,38 @@ def is_experimental(context) -> bool:
 def is_vivy_enabled(context) -> bool:
 	addon_prefs = get_user_preferences(context)
 	return is_experimental(context) and addon_prefs.exp_vivy_material_system
+
+# TODO: Use Literal["MCPREP_diffuse", "MCPREP_specular", 
+# "MCPREP_normal","MCPREP_displace", "SATURATE"] when
+# we the min version of Blender changes to a version
+# with Python 3.8
+def np_is_mcprep_node_prop(node: Node, prop: str) -> bool:
+	"""
+	Check if the given prop is true on a node.
+	This also handles backwards compatibility by
+	retroactively appying old properties to new ones,
+	and returning the value of the new property.
+
+	Only use this if you're working with MCPREP_diffuse,
+	MCPREP_specular, MCPREP_normal, MCPREP_displace, or SATURATE
+	"""
+	new_prop = prop if prop != "SATURATE" else "MCPREP_saturate"
+	if bv50():
+		# Blender 5.0 removes the old dict-like access
+		# to properties (hence why we moved to the new
+		# system).
+		#
+		# To make things future proof, we enclose
+		# this in a try-except statement
+		try:
+			old_props = tuple(node.bl_system_properties_get().keys())	
+			if prop in old_props:
+				setattr(node.mnp, new_prop, True)	
+		except Exception:
+			print(f"Could not get old {prop} prop")
+	else:
+		setattr(node.mnp, new_prop, prop in node)
+	return getattr(node.mnp, new_prop)
 
 def apply_noncolor_data(node: Node) -> Optional[MCprepError]:
 	"""
@@ -263,9 +295,12 @@ def min_bv(version: Tuple, *, inclusive: bool = True) -> bool:
 
 
 def bv30() -> bool:
-	"""Check if we're dealing with Blender 3.0"""
+	"""Check if we're dealing with Blender 3.X"""
 	return min_bv((3, 00))
 
+def bv50() -> bool:
+	"""Check if we're dealing with Blender 5.X"""
+	return min_bv((5, 00))
 
 def is_atlas_export(context: Context) -> bool:
 	"""Check if the selected objects are textureswap/animate tex compatible.

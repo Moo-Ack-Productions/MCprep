@@ -433,7 +433,7 @@ def set_cycles_texture(
 		is_grayscale = is_image_grayscale(image)
 
 	for node in material.node_tree.nodes:
-		if node.type == "MIX_RGB" and "SATURATE" in node:
+		if node.type == "MIX_RGB" and util.np_is_mcprep_node_prop(node, "SATURATE"):
 			node.mute = not is_grayscale
 			node.hide = not is_grayscale
 			env.log(" mix_rgb to saturate texture")
@@ -442,11 +442,11 @@ def set_cycles_texture(
 		# saved as an attribute on the node
 		if node.type != 'TEX_IMAGE':
 			continue
-		elif "MCPREP_diffuse" in node:
+		elif util.np_is_mcprep_node_prop(node, "MCPREP_diffuse"):
 			node.image = image
 			node.mute = False
 			node.hide = False
-		elif "MCPREP_normal" in node:
+		elif util.np_is_mcprep_node_prop(node, "MCPREP_normal"):
 			if "normal" in img_sets:
 				new_img = util.loadTexture(img_sets["normal"])
 				node.image = new_img
@@ -464,7 +464,7 @@ def set_cycles_texture(
 				# normal_map = node.outputs[0].links[0].to_node
 				# principled = ...
 
-		elif "MCPREP_specular" in node:
+		elif util.np_is_mcprep_node_prop(node, "MCPREP_specular"):
 			if "specular" in img_sets:
 				new_img = util.loadTexture(img_sets["specular"])
 				node.image = new_img
@@ -486,7 +486,7 @@ def set_cycles_texture(
 
 		elif swap_all_imgs is True:
 			# assume all unlabeled texture nodes should be the diffuse pass
-			node["MCPREP_diffuse"] = True  # annotate node for future reference
+			node.mnp.MCPREP_diffuse = True  # annotate node for future reference
 			node.image = image
 			node.mute = False
 			node.hide = False
@@ -508,13 +508,13 @@ def get_node_for_pass(material: Material, pass_name: str) -> Optional[Node]:
 	for node in material.node_tree.nodes:
 		if node.type != "TEX_IMAGE":
 			continue
-		elif "MCPREP_diffuse" in node and pass_name == "diffuse":
+		elif util.np_is_mcprep_node_prop(node, "MCPREP_diffuse") and pass_name == "diffuse":
 			return_node = node
-		elif "MCPREP_normal" in node and pass_name == "normal":
+		elif util.np_is_mcprep_node_prop(node, "MCPREP_normal") and pass_name == "normal":
 			return_node = node
-		elif "MCPREP_specular" in node and pass_name == "specular":
+		elif util.np_is_mcprep_node_prop(node, "MCPREP_specular") and pass_name == "specular":
 			return_node = node
-		elif "MCPREP_displace" in node and pass_name == "displace":
+		elif util.np_is_mcprep_node_prop(node, "MCPREP_displace") and pass_name == "displace":
 			return_node = node
 		else:
 			if not return_node:
@@ -561,11 +561,11 @@ def get_textures(material: Material) -> Dict[str, Image]:
 		for node in material.node_tree.nodes:
 			if node.type != "TEX_IMAGE":
 				continue
-			elif "MCPREP_diffuse" in node:
+			elif util.np_is_mcprep_node_prop(node, "MCPREP_diffuse"):
 				passes["diffuse"] = node.image
-			elif "MCPREP_normal" in node:
+			elif util.np_is_mcprep_node_prop(node, "MCPREP_normal"):
 				passes["normal"] = node.image
-			elif "MCPREP_specular" in node:
+			elif util.np_is_mcprep_node_prop(node, "MCPREP_specular"):
 				passes["specular"] = node.image
 			else:
 				if not passes["diffuse"]:
@@ -786,7 +786,7 @@ def set_saturation_material(mat: Material) -> None:
 	desat_color = env.json_data['blocks']['desaturated'][canon]
 	sat_node = None
 	for node in mat.node_tree.nodes:
-		if "SATURATE" not in node:
+		if not util.np_is_mcprep_node_prop(node, "SATURATE"):
 			continue
 		sat_node = node
 		break
@@ -868,13 +868,13 @@ def copy_texture_animation_pass_settings(mat: Material) -> AnimatedTex:
 			continue
 		if not node.image.source == 'SEQUENCE':
 			continue
-		if "MCPREP_diffuse" in node:
+		if util.np_is_mcprep_node_prop(node, "MCPREP_diffuse"):
 			passname = "diffuse"
-		elif "MCPREP_normal" in node:
+		elif util.np_is_mcprep_node_prop(node, "MCPREP_normal"):
 			passname = "normal"
-		elif "MCPREP_specular" in node:
+		elif util.np_is_mcprep_node_prop(node, "MCPREP_specular"):
 			passname = "specular"
-		elif "MCPREP_displace" in node:
+		elif util.np_is_mcprep_node_prop(node, "MCPREP_displace"):
 			passname = "displace"
 		else:
 			if not animated_data.get("diffuse"):
@@ -1035,12 +1035,12 @@ def texgen_specular(mat: Material, passes: Dict[str, Image], nodeInputs: List, u
 		nodeSaturateMix.hide = False
 
 	# annotate special nodes for finding later, and load images if available
-	nodeTexDiff["MCPREP_diffuse"] = True
-	nodeTexSpec["MCPREP_specular"] = True
-	nodeTexNorm["MCPREP_normal"] = True
+	nodeTexDiff.mnp.MCPREP_diffuse = True
+	nodeTexSpec.mnp.MCPREP_specular = True
+	nodeTexNorm.mnp.MCPREP_normal = True
 	# to also be also muted if no normal tex
-	nodeNormal["MCPREP_normal"] = True
-	nodeSaturateMix["SATURATE"] = True
+	nodeNormal.mnp.MCPREP_normal = True
+	nodeSaturateMix.mnp.MCPREP_saturate = True
 	# nodeTexDisp["MCPREP_disp"] = True
 	nodeTexDiff.image = image_diff
 
@@ -1180,14 +1180,14 @@ def texgen_seus(mat: Material, passes: Dict[str, Image], nodeInputs: List, use_r
 		nodeSaturateMix.inputs[saturateMixIn[2]].default_value = desat_color
 		nodeSaturateMix.mute = False
 		nodeSaturateMix.hide = False
-
+		
 	# annotate special nodes for finding later, and load images if available
-	nodeTexDiff["MCPREP_diffuse"] = True
-	nodeTexSpec["MCPREP_specular"] = True
-	nodeTexNorm["MCPREP_normal"] = True
+	nodeTexDiff.mnp.MCPREP_diffuse = True
+	nodeTexSpec.mnp.MCPREP_specular = True
+	nodeTexNorm.mnp.MCPREP_normal = True
 	# to also be also muted if no normal tex
-	nodeNormal["MCPREP_normal"] = True
-	nodeSaturateMix["SATURATE"] = True
+	nodeNormal.mnp.MCPREP_normal = True
+	nodeSaturateMix.mnp.MCPREP_saturate = True
 	# nodeTexDisp["MCPREP_disp"] = True
 	nodeTexDiff.image = image_diff
 
@@ -1218,7 +1218,7 @@ def generate_base_material(
 			interpolation='Closest',
 			image=image
 		)
-		node_diff["MCPREP_diffuse"] = True
+		node_diff.mnp.MCPREP_diffuse = True
 
 		# The offset and link diffuse is for default no texture setup
 		links = mat.node_tree.links
@@ -1232,9 +1232,9 @@ def generate_base_material(
 		# Initialize extra passes as well
 		if image:
 			node_spec = create_node(nodes, 'ShaderNodeTexImage')
-			node_spec["MCPREP_specular"] = True
+			node_spec.mnp.MCPREP_specular = True
 			node_nrm = create_node(nodes, 'ShaderNodeTexImage')
-			node_nrm["MCPREP_normal"] = True
+			node_nrm.mnp.MCPREP_normal = True
 			# now use standard method to update textures
 			set_cycles_texture(image, mat, extra_passes=useExtraMaps)
 
@@ -1358,8 +1358,8 @@ def matgen_cycles_simple(mat: Material, options: PrepOptions) -> Optional[bool]:
 		nodeSaturateMix.hide = False
 
 	# annotate special nodes for finding later, and load images if available
-	nodeTexDiff["MCPREP_diffuse"] = True
-	nodeSaturateMix["SATURATE"] = True
+	nodeTexDiff.mnp.MCPREP_diffuse = True
+	nodeSaturateMix.mnp.MCPREP_saturate = True
 
 	return 0
 
@@ -1897,9 +1897,9 @@ def matgen_special_water(mat: Material, passes: Dict[str, Image]) -> Optional[bo
 		nodeSaturateMix.hide = False
 
 	# annotate special nodes for finding later, and load images if available
-	nodeTexDiff["MCPREP_diffuse"] = True
-	nodeTexNorm["MCPREP_normal"] = True
-	nodeNormal["MCPREP_normal"] = True  # to also be also muted if no normal tex
+	nodeTexDiff.mnp.MCPREP_diffuse = True
+	nodeTexNorm.mnp.MCPREP_specular = True
+	nodeNormal.mnp.MCPREP_normal = True
 	# nodeTexDisp["MCPREP_disp"] = True
 
 	return 0
@@ -2017,11 +2017,11 @@ def matgen_special_glass(mat: Material, passes: Dict[str, Image]) -> Optional[bo
 
 	# reapply animation data if any to generated nodes
 	apply_texture_animation_pass_settings(mat, animated_data)
-
+	
 	# annotate special nodes for finding later, and load images if available
-	nodeTexDiff["MCPREP_diffuse"] = True
-	nodeTexNorm["MCPREP_normal"] = True
-	nodeNormal["MCPREP_normal"] = True  # to also be also muted if no normal tex
+	nodeTexDiff.mnp.MCPREP_diffuse = True
+	nodeTexNorm.mnp.MCPREP_specular = True
+	nodeNormal.mnp.MCPREP_normal = True
 	# nodeTexDisp["MCPREP_disp"] = True
 
 	return 0  # return 0 once implemented
