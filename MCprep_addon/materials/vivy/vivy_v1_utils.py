@@ -20,7 +20,7 @@ from typing import Dict, List, Optional
 from dataclasses import dataclass
 from enum import Enum
 
-from ..conf import env
+from ...conf import env
 
 # Constants for JSON keys
 VIVY_VERSION					= "version"
