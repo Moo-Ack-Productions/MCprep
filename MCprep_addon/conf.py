@@ -30,6 +30,7 @@ import bpy
 from bpy.utils.previews import ImagePreviewCollection
 import bpy.utils.previews
 
+from .materials.vivy import vivy_v1_json_struct as vjs1
 from .materials.vivy import vivy_v2_json_struct as vjs2
 
 
@@ -150,7 +151,7 @@ class MCprepEnv:
 		self.vivy_cache = None
 		
 		# The JSON file for Vivy's materials
-		self.vivy_material_json: Optional[vjs2.VivyJSON] = None
+		self.vivy_material_json: Union[vjs1.VivyJSON, vjs2.VivyJSON, None] = None
 		self.vivy_enabled = False
 
 		# State for name changes in the Vivy config

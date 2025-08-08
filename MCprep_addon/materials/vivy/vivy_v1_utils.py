@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from ...conf import env
+from . import vivy_v1_json_struct as vjs
 
 # Constants for JSON keys
 VIVY_VERSION					= "version"
@@ -120,7 +121,7 @@ def data_vivy_material(mat: str) -> VivyMaterial:
 		)
 	)
 
-def json_vivy_material(mat: str) -> Dict:
+def json_vivy_material(mat: str) -> vjs.VivyMaterial:
 	"""Return a Vivy material dictionary given a material name.
 
 	This should not be used directly unless absolutely needed.
@@ -133,7 +134,7 @@ def json_vivy_material(mat: str) -> Dict:
 	"""
 	return env.vivy_material_json[VIVY_MATERIALS][mat]
 
-def json_vivy_passes(mat: str) -> Dict:
+def json_vivy_passes(mat: str) -> vjs.VivyPasses:
 	"""Return a set of passes of a given Vivy material
 	
 	This should not be used directly unless absolutely needed.
@@ -146,7 +147,7 @@ def json_vivy_passes(mat: str) -> Dict:
 	"""
 	return json_vivy_material(mat)[VIVY_MATERIALS_PASSES]
 
-def json_vivy_refinements(mat: str) -> Optional[Dict]:
+def json_vivy_refinements(mat: str) -> Optional[vjs.VivyRefinements]:
 	"""Return a set of refinements of a given Vivy material
 	
 	This should not be used directly unless absolutely needed.
@@ -180,7 +181,7 @@ def data_vivy_mappings(mat: str) -> List[VivyMapping]:
 							))
 	return data_mappings
 
-def json_vivy_mappings(mat: str) -> List[Dict]:
+def json_vivy_mappings(mat: str) -> List[vjs.VivyMapping]:
 	"""Returns all mappings for a given Blender material
 		
 	This should not be used directly unless absolutely needed.
