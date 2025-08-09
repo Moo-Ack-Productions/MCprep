@@ -161,7 +161,7 @@ def set_material(context: Context, material: Material, options: VivyOptions) -> 
 def get_vivy_blend() -> Path:
 	"""Return the path of the Vivy material library"""
 	try:
-		return Path(os.path.join(bpy.context.scene.vivy_file_path, "vivy_materials.blend"))
+		return Path(os.path.join(bpy.path.abspath(bpy.context.scene.vivy_file_path), "vivy_materials.blend"))
 	except Exception:
 		return Path("")
 
