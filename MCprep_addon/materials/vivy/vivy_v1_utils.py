@@ -20,7 +20,8 @@ from typing import Dict, List, Optional
 from dataclasses import dataclass
 from enum import Enum
 
-from ..conf import env
+from ...conf import env
+from . import vivy_v1_json_struct as vjs
 
 # Constants for JSON keys
 VIVY_VERSION					= "version"
@@ -106,21 +107,21 @@ def data_vivy_material(mat: str) -> VivyMaterial:
 		desc=json_material[VIVY_MATERIALS_DESC],
 		passes=VivyPasses(
 			diffuse=json_passes[VIVY_MATERIALS_PASSES_DIFFUSE],
-			specular=json_passes[VIVY_MATERIALS_PASSES_SPECULAR] if VIVY_MATERIALS_PASSES_SPECULAR in json_passes else None,
-			normal=json_passes[VIVY_MATERIALS_PASSES_NORMAL] if VIVY_MATERIALS_PASSES_NORMAL in json_passes else None
+			specular=json_passes.get(VIVY_MATERIALS_PASSES_SPECULAR, None),
+			normal=json_passes.get(VIVY_MATERIALS_PASSES_NORMAL, None)
 		),
 		refinements=None if not json_refinements else VivyRefinements(
-			emissive=json_refinements[VIVY_MATERIALS_REFINEMENTS_EMISSIVE] if VIVY_MATERIALS_REFINEMENTS_EMISSIVE in json_refinements else None,
-			reflective=json_refinements[VIVY_MATERIALS_REFINEMENTS_REFLECTIVE] if VIVY_MATERIALS_REFINEMENTS_REFLECTIVE in json_refinements else None,
-			metallic=json_refinements[VIVY_MATERIALS_REFINEMENTS_METALLIC] if VIVY_MATERIALS_REFINEMENTS_METALLIC in json_refinements else None,
-			glass=json_refinements[VIVY_MATERIALS_REFINEMENTS_GLASS] if VIVY_MATERIALS_REFINEMENTS_GLASS in json_refinements else None,
-			fallback_s=json_refinements[VIVY_MATERIALS_REFINEMENTS_FALLBACK_S] if VIVY_MATERIALS_REFINEMENTS_FALLBACK_S in json_refinements else None,
-			fallback_n=json_refinements[VIVY_MATERIALS_REFINEMENTS_FALLBACK_N] if VIVY_MATERIALS_REFINEMENTS_FALLBACK_N in json_refinements else None,
-			fallback=json_refinements[VIVY_MATERIALS_REFINEMENTS_FALLBACK] if VIVY_MATERIALS_REFINEMENTS_FALLBACK in json_refinements else None
+			emissive=json_refinements.get(VIVY_MATERIALS_REFINEMENTS_EMISSIVE, None),
+			reflective=json_refinements.get(VIVY_MATERIALS_REFINEMENTS_REFLECTIVE, None),
+			metallic=json_refinements.get(VIVY_MATERIALS_REFINEMENTS_METALLIC, None),
+			glass=json_refinements.get(VIVY_MATERIALS_REFINEMENTS_GLASS, None),
+			fallback_s=json_refinements.get(VIVY_MATERIALS_REFINEMENTS_FALLBACK_S, None),
+			fallback_n=json_refinements.get(VIVY_MATERIALS_REFINEMENTS_FALLBACK_N, None),
+			fallback=json_refinements.get(VIVY_MATERIALS_REFINEMENTS_FALLBACK, None)
 		)
 	)
 
-def json_vivy_material(mat: str) -> Dict:
+def json_vivy_material(mat: str) -> vjs.VivyMaterial:
 	"""Return a Vivy material dictionary given a material name.
 
 	This should not be used directly unless absolutely needed.
@@ -133,7 +134,7 @@ def json_vivy_material(mat: str) -> Dict:
 	"""
 	return env.vivy_material_json[VIVY_MATERIALS][mat]
 
-def json_vivy_passes(mat: str) -> Dict:
+def json_vivy_passes(mat: str) -> vjs.VivyPasses:
 	"""Return a set of passes of a given Vivy material
 	
 	This should not be used directly unless absolutely needed.
@@ -146,7 +147,7 @@ def json_vivy_passes(mat: str) -> Dict:
 	"""
 	return json_vivy_material(mat)[VIVY_MATERIALS_PASSES]
 
-def json_vivy_refinements(mat: str) -> Optional[Dict]:
+def json_vivy_refinements(mat: str) -> Optional[vjs.VivyRefinements]:
 	"""Return a set of refinements of a given Vivy material
 	
 	This should not be used directly unless absolutely needed.
@@ -159,7 +160,7 @@ def json_vivy_refinements(mat: str) -> Optional[Dict]:
 		None
 	"""
 	json_material = json_vivy_material(mat)
-	return json_material[VIVY_MATERIALS_REFINEMENTS] if VIVY_MATERIALS_REFINEMENTS in json_material else None
+	return json_material.get(VIVY_MATERIALS_REFINEMENTS, None)
 
 def data_vivy_mappings(mat: str) -> List[VivyMapping]:
 	"""Returns mapping data for a given Blender material
@@ -176,11 +177,11 @@ def data_vivy_mappings(mat: str) -> List[VivyMapping]:
 	for mapping in json_mappings:
 		data_mappings.append(VivyMapping(
 								material=data_vivy_material(mapping[VIVY_MAPPING_MATERIAL]),
-								refinement=mapping[VIVY_MAPPING_REFINEMENT] if VIVY_MAPPING_REFINEMENT in mapping else None
+								refinement=mapping.get(VIVY_MAPPING_REFINEMENT, None)
 							))
 	return data_mappings
 
-def json_vivy_mappings(mat: str) -> List[Dict]:
+def json_vivy_mappings(mat: str) -> List[vjs.VivyMapping]:
 	"""Returns all mappings for a given Blender material
 		
 	This should not be used directly unless absolutely needed.
