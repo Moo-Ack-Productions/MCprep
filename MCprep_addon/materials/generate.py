@@ -989,7 +989,31 @@ def texgen_specular(mat: Material, passes: Dict[str, Image], nodeInputs: List, u
 	for i in nodeInputs[0]:
 		links.new(nodeSaturateMix.outputs[saturateMixOut[0]], i)
 	for i in nodeInputs[1]:
-		links.new(nodeTexDiff.outputs["Alpha"], i)
+		# Check for backface culling, since some materials need it,
+		# notably redstone torches
+		if checklist(canon, "backface_culling"):
+			nodeBackfacing = create_node(nodes,
+			"ShaderNodeNewGeometry",
+			name="Backfacing",
+			label="Backfacing",
+			location=(-250, 100),
+			visible_output="Backfacing")
+
+			nodeBackfaceSubtract = create_node(nodes,
+				"ShaderNodeMath",
+				name="Backface Culling",
+				label="Backface Culling",
+				location=(-80, 0),
+				operation="SUBTRACT")
+			
+			# Add a bit more padding
+			nodeTexDiff.location = (-520, 140)
+			
+			links.new(nodeTexDiff.outputs[1], nodeBackfaceSubtract.inputs[0])
+			links.new(nodeBackfacing.outputs["Backfacing"], nodeBackfaceSubtract.inputs[1])
+			links.new(nodeBackfaceSubtract.outputs[0], i)
+		else:
+			links.new(nodeTexDiff.outputs["Alpha"], i)
 	if image_spec and use_reflections:
 		for i in nodeInputs[3]:
 			links.new(nodeSpecInv.outputs["Color"], i)
@@ -1126,7 +1150,31 @@ def texgen_seus(mat: Material, passes: Dict[str, Image], nodeInputs: List, use_r
 			continue
 		links.new(nodeSaturateMix.outputs[saturateMixOut[0]], i)
 	for i in nodeInputs[1]:
-		links.new(nodeTexDiff.outputs["Alpha"], i)
+		# Check for backface culling, since some materials need it,
+		# notably redstone torches
+		if checklist(canon, "backface_culling"):
+			nodeBackfacing = create_node(nodes,
+			"ShaderNodeNewGeometry",
+			name="Backfacing",
+			label="Backfacing",
+			location=(-250, 100),
+			visible_output="Backfacing")
+
+			nodeBackfaceSubtract = create_node(nodes,
+				"ShaderNodeMath",
+				name="Backface Culling",
+				label="Backface Culling",
+				location=(-80, 0),
+				operation="SUBTRACT")
+			
+			# Add a bit more padding
+			nodeTexDiff.location = (-520, 140)
+			
+			links.new(nodeTexDiff.outputs[1], nodeBackfaceSubtract.inputs[0])
+			links.new(nodeBackfacing.outputs["Backfacing"], nodeBackfaceSubtract.inputs[1])
+			links.new(nodeBackfaceSubtract.outputs[0], i)
+		else:
+			links.new(nodeTexDiff.outputs["Alpha"], i)
 	if image_spec and use_reflections:
 		if use_emission:
 			for i in nodeInputs[2]:
@@ -1286,9 +1334,9 @@ def matgen_cycles_simple(mat: Material, options: PrepOptions) -> Optional[bool]:
 		blend_type='MULTIPLY',
 		mute=True,
 		hide=True)
-
+	
 	principled = create_node(nodes, "ShaderNodeBsdfPrincipled", location=(600, 0))
-	node_out = create_node(nodes, "ShaderNodeOutputMaterial", location=(900, 0))
+	node_out = create_node(nodes, "ShaderNodeOutputMaterial", location=(900, 0))	
 
 	# Sets default reflective values
 	if options.use_reflections and checklist(canon, "reflective"):
@@ -1323,6 +1371,31 @@ def matgen_cycles_simple(mat: Material, options: PrepOptions) -> Optional[bool]:
 		principled.distribution = 'GGX'
 		if hasattr(mat, "blend_method"):
 			mat.blend_method = 'OPAQUE'  # eevee setting
+
+	# Check for backface culling, since some materials need it,
+	# notably redstone torches
+	elif checklist(canon, "backface_culling"):
+		nodeBackfacing = create_node(nodes,
+		"ShaderNodeNewGeometry",
+		name="Backfacing",
+		label="Backfacing",
+		location=(0, -300),
+		visible_output="Backfacing")
+
+		nodeBackfaceSubtract = create_node(nodes,
+			"ShaderNodeMath",
+			name="Backface Culling",
+			label="Backface Culling",
+			location=(400, -100),
+			operation="SUBTRACT")
+		
+		# Add a bit more padding
+		nodeTexDiff.location = (-100, 0)
+		
+		links.new(nodeTexDiff.outputs[1], nodeBackfaceSubtract.inputs[0])
+		links.new(nodeBackfacing.outputs["Backfacing"], nodeBackfaceSubtract.inputs[1])
+		links.new(nodeBackfaceSubtract.outputs[0], principled.inputs["Alpha"])
+
 	else:
 		# non-solid (potentially, not necessarily though)
 		links.new(nodeTexDiff.outputs[1], principled.inputs["Alpha"])
