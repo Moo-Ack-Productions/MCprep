@@ -4595,6 +4595,12 @@
 			"water_flow",
 			"water_overlay",
 			"water_still"
+		],
+		"backface_culling": [
+			"redstone_torch",
+			"redstone_torch_on",
+			"repeater_*tick_on*",
+			"comparator_on*"
 		]
 	},
 	"make_real": [
@@ -4632,5 +4638,5 @@
 		"sunflower",
 		"water_still",
 		"water"
-	]
+	]	
 }
