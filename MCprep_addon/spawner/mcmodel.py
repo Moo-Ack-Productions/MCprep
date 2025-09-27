@@ -39,6 +39,11 @@ TexFace = Dict[str, Dict[str, str]]
 Element = Sequence[Union[Dict[str, VectorType], TexFace]]
 Texture = Dict[str, str]
 
+# This is wrapper type that we use for FileHandler, since it's
+# only availible in Blender 4.1 and above. In older versions of
+# Blender, we just set it to the generic object type
+FileHandlerIfSupported = bpy.types.FileHandler if util.min_bv((4, 1)) else object
+
 # -----------------------------------------------------------------------------
 # Core MC model functions and implementation
 # -----------------------------------------------------------------------------
@@ -650,6 +655,7 @@ class MCPREP_OT_import_minecraft_model_file(
 	bl_options = {'REGISTER', 'UNDO'}
 
 	filename_ext = ".json"
+	filepath: bpy.props.StringProperty(subtype='FILE_PATH', options={'SKIP_SAVE'})
 	filter_glob: bpy.props.StringProperty(
 		default="*.json",
 		options={'HIDDEN'},
@@ -683,6 +689,21 @@ class MCPREP_OT_import_minecraft_model_file(
 		self.post_spawn(context, obj)
 		return {'FINISHED'}
 
+	def invoke(self, context, event):
+		if self.filepath:
+			return self.execute(context)
+		context.window_manager.fileselect_add(self)
+		return {'RUNNING_MODAL'}
+
+class MCPREP_FH_import_minecraft_model_file(FileHandlerIfSupported):
+	bl_idname = "MCPREP_FH_import_minecraft_model_file"
+	bl_label = "File handler for JSON import"
+	bl_import_operator = "mcprep.import_model_file"
+	bl_file_extensions = ".json"
+
+	@classmethod
+	def poll_drop(cls, context) -> bool:
+		return (context.area and context.area.type == 'VIEW_3D')
 
 class MCPREP_OT_reload_models(bpy.types.Operator):
 	"""Reload model spawner, use after adding/removing/renaming files in the resource pack folder"""
@@ -706,6 +727,9 @@ def register():
 	for cls in classes:
 		bpy.utils.register_class(cls)
 
+	if util.min_bv((4, 1)):
+		bpy.utils.register_class(MCPREP_FH_import_minecraft_model_file)
+
 	bpy.types.TOPBAR_MT_file_import.append(draw_import_mcmodel)
 
 
@@ -713,3 +737,6 @@ def unregister():
 	bpy.types.TOPBAR_MT_file_import.remove(draw_import_mcmodel)
 	for cls in reversed(classes):
 		bpy.utils.unregister_class(cls)
+	
+	if util.min_bv((4, 1)):
+		bpy.utils.unregister_class(MCPREP_FH_import_minecraft_model_file)
