@@ -10,7 +10,7 @@ index bf002de..bbd8a23 100755
 +	"name": "MCprep MB",
  	"category": "Object",
 -	"version": (3, 6, 1, 3),
-+	"version": (3, 6, 1, 94),
++	"version": (3, 6, 1, 95),
  	"blender": (2, 80, 0),
  	"location": "3D window toolshelf > MCprep tab",
  	"description": "Minecraft workflow addon for rendering and animation",
