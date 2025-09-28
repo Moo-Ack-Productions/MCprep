@@ -39,10 +39,13 @@ TexFace = Dict[str, Dict[str, str]]
 Element = Sequence[Union[Dict[str, VectorType], TexFace]]
 Texture = Dict[str, str]
 
-# This is wrapper type that we use for FileHandler, since it's
-# only availible in Blender 4.1 and above. In older versions of
-# Blender, we just set it to the generic object type
-FileHandlerIfSupported = bpy.types.FileHandler if util.min_bv((4, 1)) else object
+try:
+	from bpy.types import FileHandler
+except ImportError:
+	# This is wrapper type that we use for FileHandler, since it's
+	# only availible in Blender 4.1 and above. In older versions of
+	# Blender, we just set it to the generic object type
+	FileHandler = object
 
 # -----------------------------------------------------------------------------
 # Core MC model functions and implementation
@@ -695,7 +698,7 @@ class MCPREP_OT_import_minecraft_model_file(
 		context.window_manager.fileselect_add(self)
 		return {'RUNNING_MODAL'}
 
-class MCPREP_FH_import_minecraft_model_file(FileHandlerIfSupported):
+class MCPREP_FH_import_minecraft_model_file(FileHandler):
 	bl_idname = "MCPREP_FH_import_minecraft_model_file"
 	bl_label = "File handler for JSON import"
 	bl_import_operator = "mcprep.import_model_file"
