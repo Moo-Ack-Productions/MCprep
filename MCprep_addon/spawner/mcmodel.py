@@ -33,6 +33,7 @@ from ..conf import env, VectorType
 from .. import util
 from .. import tracking
 from ..materials import generate  # TODO: Use this module for mat gen in future
+from .spawner_gizmo import draw_fading_grid
 
 TexFace = Dict[str, Dict[str, str]]
 
@@ -576,6 +577,9 @@ class ModelSpawnBase():
 	location: bpy.props.FloatVectorProperty(
 		default=(0, 0, 0),
 		name="Location")
+	rotation: bpy.props.FloatVectorProperty(
+		default=(0, 0, 0),
+		name="Rotation")
 	snapping: bpy.props.EnumProperty(
 		name="Snapping",
 		items=[
@@ -603,6 +607,8 @@ class ModelSpawnBase():
 		else:
 			obj.location = self.location
 
+		obj.rotation_euler = self.rotation
+
 	def post_spawn(self, context, new_obj):
 		"""Do final consistent cleanup after model is spawned."""
 		for ob in util.get_objects_conext(context):
@@ -620,7 +626,7 @@ class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 		default="",
 		subtype="FILE_PATH",
 		options={'HIDDEN', 'SKIP_SAVE'})
-
+	
 	track_function = "model"
 	track_param = "list"
 	@tracking.report_error
@@ -664,7 +670,7 @@ class MCPREP_OT_import_minecraft_model_file(
 		options={'HIDDEN'},
 		maxlen=255  # Max internal buffer length, longer would be clamped.
 	)
-
+	
 	track_function = "model"
 	track_param = "file"
 	@tracking.report_error
@@ -701,7 +707,7 @@ class MCPREP_OT_import_minecraft_model_file(
 class MCPREP_FH_import_minecraft_model_file(FileHandler):
 	bl_idname = "MCPREP_FH_import_minecraft_model_file"
 	bl_label = "File handler for JSON import"
-	bl_import_operator = "mcprep.import_model_file"
+	bl_import_operator = "mcprep.place_json_model_with_gizmo"
 	bl_file_extensions = ".json"
 
 	@classmethod
@@ -718,6 +724,101 @@ class MCPREP_OT_reload_models(bpy.types.Operator):
 		update_model_list(context)
 		return {'FINISHED'}
 
+class MCPREP_OT_place_json_model_with_gizmo(bpy.types.Operator):
+	bl_idname = "mcprep.place_json_model_with_gizmo"
+	bl_label = "Import Minecraf JSON model and Place"
+	bl_description = "Imports a Minecraft JSON model with location selection"
+	
+	filename_ext = ".json"
+	filepath: bpy.props.StringProperty(subtype='FILE_PATH', options={'SKIP_SAVE'})
+	def invoke(self, context, event):
+		from mathutils import Vector
+
+		self.has_hit = False
+		self.hit_location = Vector((0.0, 0.0, 0.0))
+		self.hit_normal = Vector((0.0, 0.0, 1.0))
+		self.update_raycast(context, event)
+		self.draw_handle = bpy.types.SpaceView3D.draw_handler_add(
+			self.draw_callback, (context,), 'WINDOW', 'POST_VIEW'
+		)
+		context.window_manager.modal_handler_add(self)
+		return {'RUNNING_MODAL'}
+
+	def modal(self, context, event):
+		context.area.tag_redraw()
+		if event.type == 'MOUSEMOVE':
+			self.update_raycast(context, event)
+		elif event.type == 'LEFTMOUSE' and event.value == 'PRESS':
+			if self.has_hit:
+				# Get the difference between Z-up and the normal of the raycast
+				up_axis = Vector((0.0, 0.0, 1.0))
+				rotation_quat = up_axis.rotation_difference(self.hit_normal)
+				bpy.ops.mcprep.import_model_file(filepath=self.filepath,
+												location=self.hit_location,
+												rotation=rotation_quat.to_euler())
+				self.finish(context)
+				return {'FINISHED'}
+			else:
+				self.finish(context)
+				return {'CANCELLED'}
+		elif event.type in {'RIGHTMOUSE', 'ESC'}:
+			self.finish(context)
+			return {'CANCELLED'}
+		return {'RUNNING_MODAL'}
+
+	def finish(self, context):
+		bpy.types.SpaceView3D.draw_handler_remove(self.draw_handle, 'WINDOW')
+		context.area.tag_redraw()
+
+	def update_raycast(self, context, event):
+		from bpy_extras import view3d_utils
+		from mathutils import Vector
+		from mathutils.geometry import intersect_line_plane
+
+		mouse_pos = (event.mouse_region_x, event.mouse_region_y)
+		region, region_3d = context.region, context.space_data.region_3d
+		ray_origin = view3d_utils.region_2d_to_origin_3d(region, region_3d, mouse_pos)
+		ray_direction = view3d_utils.region_2d_to_vector_3d(region, region_3d, mouse_pos)
+		depsgraph = context.evaluated_depsgraph_get()
+		result, location, normal, _, _, _ = context.scene.ray_cast(depsgraph, ray_origin, ray_direction)
+
+		if result:
+			self.has_hit = True
+			self.hit_location, self.hit_normal = location, normal
+		else:
+			intersection = intersect_line_plane(ray_origin, ray_origin + ray_direction, Vector(), Vector((0,0,1)))
+			if intersection:
+				self.has_hit = True
+				self.hit_location, self.hit_normal = intersection, Vector((0,0,1))
+			else:
+				self.has_hit = False
+
+	def draw_callback(self, context):
+		import gpu
+		from mathutils import Vector, Matrix
+
+		if not self.has_hit:
+			return
+
+		shader_info = gpu.shader.from_builtin('UNIFORM_COLOR')
+
+		original_blend = gpu.state.blend_get()
+		original_depth_test = gpu.state.depth_test_get()
+		gpu.state.blend_set('ALPHA')
+		gpu.state.depth_test_set('NONE')
+
+		up_axis = Vector((0.0, 0.0, 1.0))
+		rotation_quat = up_axis.rotation_difference(self.hit_normal)
+		transform_matrix = Matrix.Translation(self.hit_location) @ rotation_quat.to_matrix().to_4x4()
+
+		gpu.matrix.push()
+		gpu.matrix.multiply_matrix(transform_matrix)
+
+		draw_fading_grid(shader_info, size=2.0, subdivisions=20, rings=10, base_color=(0.7, 0.7, 0.7))
+
+		gpu.matrix.pop()
+		gpu.state.blend_set(original_blend)
+		gpu.state.depth_test_set(original_depth_test)
 
 classes = (
 	MCPREP_OT_spawn_minecraft_model,
@@ -732,6 +833,7 @@ def register():
 
 	if util.min_bv((4, 1)):
 		bpy.utils.register_class(MCPREP_FH_import_minecraft_model_file)
+		bpy.utils.register_class(MCPREP_OT_place_json_model_with_gizmo)
 
 	bpy.types.TOPBAR_MT_file_import.append(draw_import_mcmodel)
 
@@ -743,3 +845,4 @@ def unregister():
 	
 	if util.min_bv((4, 1)):
 		bpy.utils.unregister_class(MCPREP_FH_import_minecraft_model_file)
+		bpy.utils.unregister_class(MCPREP_OT_place_json_model_with_gizmo)
