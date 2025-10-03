@@ -731,12 +731,12 @@ class MCPREP_OT_place_json_model_with_gizmo(bpy.types.Operator):
 	filename_ext = ".json"
 	filepath: bpy.props.StringProperty(subtype='FILE_PATH', options={'SKIP_SAVE'})
 	def invoke(self, context, event):
-		from mathutils import Vector
+		from mathutils import Vector, Quaternion
 
 		self.has_hit = False
-		self.hit_location = Vector((0.0, 0.0, 0.0))
-		self.hit_normal = Vector((0.0, 0.0, 1.0))
-		self.update_raycast(context, event)
+		self.hit_location = Vector((0, 0, 0))
+		self.hit_normal = Vector((0, 0, 1))
+		self.rotation_quat = Quaternion()
 		self.draw_handle = bpy.types.SpaceView3D.draw_handler_add(
 			self.draw_callback, (context,), 'WINDOW', 'POST_VIEW'
 		)
@@ -746,15 +746,13 @@ class MCPREP_OT_place_json_model_with_gizmo(bpy.types.Operator):
 	def modal(self, context, event):
 		context.area.tag_redraw()
 		if event.type == 'MOUSEMOVE':
-			self.update_raycast(context, event)
+			from .spawner_gizmo import update_raycast
+			self.has_hit, self.hit_location, self.hit_normal, self.rotation_quat = update_raycast(context, event)
 		elif event.type == 'LEFTMOUSE' and event.value == 'PRESS':
 			if self.has_hit:
-				# Get the difference between Z-up and the normal of the raycast
-				up_axis = Vector((0.0, 0.0, 1.0))
-				rotation_quat = up_axis.rotation_difference(self.hit_normal)
 				bpy.ops.mcprep.import_model_file(filepath=self.filepath,
 												location=self.hit_location,
-												rotation=rotation_quat.to_euler())
+												rotation=self.rotation_quat.to_euler())
 				self.finish(context)
 				return {'FINISHED'}
 			else:
@@ -769,57 +767,13 @@ class MCPREP_OT_place_json_model_with_gizmo(bpy.types.Operator):
 		bpy.types.SpaceView3D.draw_handler_remove(self.draw_handle, 'WINDOW')
 		context.area.tag_redraw()
 
-	def update_raycast(self, context, event):
-		from bpy_extras import view3d_utils
-		from mathutils import Vector
-		from mathutils.geometry import intersect_line_plane
-
-		mouse_pos = (event.mouse_region_x, event.mouse_region_y)
-		region, region_3d = context.region, context.space_data.region_3d
-		ray_origin = view3d_utils.region_2d_to_origin_3d(region, region_3d, mouse_pos)
-		ray_direction = view3d_utils.region_2d_to_vector_3d(region, region_3d, mouse_pos)
-		depsgraph = context.evaluated_depsgraph_get()
-		result, location, normal, _, _, _ = context.scene.ray_cast(depsgraph, ray_origin, ray_direction)
-
-		if result:
-			self.has_hit = True
-			self.hit_location, self.hit_normal = location, normal
-		else:
-			intersection = intersect_line_plane(ray_origin, ray_origin + ray_direction, Vector(), Vector((0,0,1)))
-			if intersection:
-				self.has_hit = True
-				self.hit_location, self.hit_normal = intersection, Vector((0,0,1))
-			else:
-				self.has_hit = False
-
-	def draw_callback(self, context):
-		import gpu
-		from mathutils import Vector, Matrix
-
-		from .spawner_gizmo import draw_fading_grid
+	def draw_callback(self, context) -> None:
+		from .spawner_gizmo import draw_callback
 
 		if not self.has_hit:
 			return
-
-		shader_info = gpu.shader.from_builtin('UNIFORM_COLOR')
-
-		original_blend = gpu.state.blend_get()
-		original_depth_test = gpu.state.depth_test_get()
-		gpu.state.blend_set('ALPHA')
-		gpu.state.depth_test_set('NONE')
-
-		up_axis = Vector((0.0, 0.0, 1.0))
-		rotation_quat = up_axis.rotation_difference(self.hit_normal)
-		transform_matrix = Matrix.Translation(self.hit_location) @ rotation_quat.to_matrix().to_4x4()
-
-		gpu.matrix.push()
-		gpu.matrix.multiply_matrix(transform_matrix)
-
-		draw_fading_grid(shader_info, size=2.0, subdivisions=20, rings=10, base_color=(0.7, 0.7, 0.7))
-
-		gpu.matrix.pop()
-		gpu.state.blend_set(original_blend)
-		gpu.state.depth_test_set(original_depth_test)
+		
+		draw_callback(self.hit_location, self.rotation_quat)
 
 classes = (
 	MCPREP_OT_spawn_minecraft_model,
