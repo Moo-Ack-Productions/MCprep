@@ -33,7 +33,6 @@ from ..conf import env, VectorType
 from .. import util
 from .. import tracking
 from ..materials import generate  # TODO: Use this module for mat gen in future
-from .spawner_gizmo import draw_fading_grid
 
 TexFace = Dict[str, Dict[str, str]]
 
@@ -796,6 +795,8 @@ class MCPREP_OT_place_json_model_with_gizmo(bpy.types.Operator):
 	def draw_callback(self, context):
 		import gpu
 		from mathutils import Vector, Matrix
+
+		from .spawner_gizmo import draw_fading_grid
 
 		if not self.has_hit:
 			return
