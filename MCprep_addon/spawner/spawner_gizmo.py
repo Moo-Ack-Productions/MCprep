@@ -1,4 +1,5 @@
-from typing import Tuple
+from dataclasses import dataclass
+from typing import Optional
 import bpy
 from bpy_extras import view3d_utils
 import gpu
@@ -9,6 +10,12 @@ from mathutils.geometry import intersect_line_plane
 
 ZERO_VECTOR = Vector((0, 0, 0))
 UP_VECTOR = Vector((0, 0, 1))
+
+@dataclass
+class HitVector:
+    location: Vector
+    normal: Vector
+    rotation: Quaternion
 
 def draw_fading_grid(shader_info, size, subdivisions, rings, base_color):
     """Creates a grid with a fading circle gradient"""
@@ -55,7 +62,7 @@ def draw_fading_grid(shader_info, size, subdivisions, rings, base_color):
         shader_info.uniform_float("color", color)
         batch.draw(shader_info)
 
-def draw_callback(hit_location: Vector, rotation_quat: Quaternion) -> None:
+def draw_callback(hit_vector: HitVector) -> None:
     """Callback function to call when drawing the gizmo"""
     shader_info = gpu.shader.from_builtin('UNIFORM_COLOR')
 
@@ -64,7 +71,7 @@ def draw_callback(hit_location: Vector, rotation_quat: Quaternion) -> None:
     gpu.state.blend_set('ALPHA')
     gpu.state.depth_test_set('NONE')
 
-    transform_matrix = Matrix.Translation(hit_location) @ rotation_quat.to_matrix().to_4x4()
+    transform_matrix = Matrix.Translation(hit_vector.location) @ hit_vector.rotation.to_matrix().to_4x4()
 
     gpu.matrix.push()
     gpu.matrix.multiply_matrix(transform_matrix)
@@ -75,7 +82,7 @@ def draw_callback(hit_location: Vector, rotation_quat: Quaternion) -> None:
     gpu.state.blend_set(original_blend)
     gpu.state.depth_test_set(original_depth_test)
 
-def update_raycast(context, event) -> Tuple[bool, Vector, Vector, Quaternion]:
+def update_raycast(context, event) -> Optional[HitVector]:
     """Given the context of the scene, update the location, normal, and rotation of the ray"""
     mouse_pos = (event.mouse_region_x, event.mouse_region_y)
     region, region_3d = context.region, context.space_data.region_3d
@@ -85,10 +92,10 @@ def update_raycast(context, event) -> Tuple[bool, Vector, Vector, Quaternion]:
     result, location, normal, _, _, _ = context.scene.ray_cast(depsgraph, ray_origin, ray_direction)
 
     if result:
-        return True, location, normal, UP_VECTOR.rotation_difference(normal)
+        return HitVector(location, normal, UP_VECTOR.rotation_difference(normal))
     else:
         intersection = intersect_line_plane(ray_origin, ray_origin + ray_direction, ZERO_VECTOR, UP_VECTOR)
         if intersection:
-            return True, intersection, UP_VECTOR, Quaternion()
-        else:
-            return False, ZERO_VECTOR, UP_VECTOR, Quaternion()
+            return HitVector(intersection, UP_VECTOR, Quaternion())
+    # If there is no hit, then don't return a HitVector
+    return None

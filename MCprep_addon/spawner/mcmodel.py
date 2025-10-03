@@ -731,12 +731,10 @@ class MCPREP_OT_place_json_model_with_gizmo(bpy.types.Operator):
 	filename_ext = ".json"
 	filepath: bpy.props.StringProperty(subtype='FILE_PATH', options={'SKIP_SAVE'})
 	def invoke(self, context, event):
-		from mathutils import Vector, Quaternion
+		from .spawner_gizmo import HitVector
 
-		self.has_hit = False
-		self.hit_location = Vector((0, 0, 0))
-		self.hit_normal = Vector((0, 0, 1))
-		self.rotation_quat = Quaternion()
+		self.hit_vector: Optional[HitVector] = None
+
 		self.draw_handle = bpy.types.SpaceView3D.draw_handler_add(
 			self.draw_callback, (context,), 'WINDOW', 'POST_VIEW'
 		)
@@ -747,9 +745,9 @@ class MCPREP_OT_place_json_model_with_gizmo(bpy.types.Operator):
 		context.area.tag_redraw()
 		if event.type == 'MOUSEMOVE':
 			from .spawner_gizmo import update_raycast
-			self.has_hit, self.hit_location, self.hit_normal, self.rotation_quat = update_raycast(context, event)
+			self.hit_vector = update_raycast(context, event)
 		elif event.type == 'LEFTMOUSE' and event.value == 'PRESS':
-			if self.has_hit:
+			if self.hit_vector:
 				bpy.ops.mcprep.import_model_file(filepath=self.filepath,
 												location=self.hit_location,
 												rotation=self.rotation_quat.to_euler())
@@ -773,7 +771,7 @@ class MCPREP_OT_place_json_model_with_gizmo(bpy.types.Operator):
 		if not self.has_hit:
 			return
 		
-		draw_callback(self.hit_location, self.rotation_quat)
+		draw_callback(self.hit_vector)
 
 classes = (
 	MCPREP_OT_spawn_minecraft_model,
