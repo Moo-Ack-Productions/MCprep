@@ -29,7 +29,7 @@ import bmesh
 from bpy.types import Context, Material
 from bpy_extras.io_utils import ImportHelper
 
-from ..conf import env, VectorType
+from ..conf import MCprepError, env, VectorType
 from .. import util
 from .. import tracking
 from ..materials import generate  # TODO: Use this module for mat gen in future
@@ -614,6 +614,28 @@ class ModelSpawnBase():
 			util.select_set(ob, False)
 		util.select_set(new_obj, True)
 
+	def create_and_place_json_model(self, context, filepath: Path) -> Optional[MCprepError]:
+		"""Function that does the entire model creation and placing"""
+		filename = filepath.stem[0]
+		if not filepath or not filepath.exists():
+			line, file = env.current_line_and_file()
+			return MCprepError(FileNotFoundError(), line, file, "File not found")
+		if filepath.suffix != ".json":
+			line, file = env.current_line_and_file()
+			return MCprepError(Exception(), line, file, f"File is not JSON: {filepath}")
+
+		try:
+			r, obj = add_model(filepath, filename)
+			if r:
+				line, file = env.current_line_and_file()
+				return MCprepError(Exception(), line, file, "JSON model does not contain any actual geometry")
+		except ModelException as e:
+			line, file = env.current_line_and_file()
+			return MCprepError(ModelException(), line, file, f"Encountered error: {e}")
+
+		self.place_model(obj)
+		self.post_spawn(context, obj)
+
 
 class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 	"""Import in an MC model from a json file."""
@@ -630,30 +652,11 @@ class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 	track_param = "list"
 	@tracking.report_error
 	def execute(self, context):
-		name = os.path.basename(os.path.splitext(self.filepath)[0])
-		if not self.filepath or not os.path.isfile(self.filepath):
-			self.report({"WARNING"}, "Filepath not found")
-			bpy.ops.mcprep.prompt_reset_spawners('INVOKE_DEFAULT')
+		res = self.create_and_place_json_model(context, Path(self.filepath))
+		if res:
+			self.report({'ERROR'}, res.msg)
 			return {'CANCELLED'}
-		if not self.filepath.lower().endswith(".json"):
-			self.report(
-				{"ERROR"}, f"File is not json: {self.filepath}")
-			return {'CANCELLED'}
-
-		try:
-			r, obj = add_model(os.path.normpath(self.filepath), name)
-			if r:
-				self.report(
-					{"ERROR"}, "The JSON model does not contain any geometry elements")
-				return {'CANCELLED'}
-		except ModelException as e:
-			self.report({"ERROR"}, f"Encountered error: {e}")
-			return {'CANCELLED'}
-
-		self.place_model(obj)
-		self.post_spawn(context, obj)
 		return {'FINISHED'}
-
 
 class MCPREP_OT_import_minecraft_model_file(
 	bpy.types.Operator, ImportHelper, ModelSpawnBase):
@@ -674,27 +677,10 @@ class MCPREP_OT_import_minecraft_model_file(
 	track_param = "file"
 	@tracking.report_error
 	def execute(self, context):
-		filename = os.path.splitext(os.path.basename(self.filepath))[0]
-		if not self.filepath or not os.path.isfile(self.filepath):
-			self.report({"ERROR"}, "Filepath not found")
+		res = self.create_and_place_json_model(context, Path(self.filepath))
+		if res:
+			self.report({'ERROR'}, res.msg)
 			return {'CANCELLED'}
-		if not self.filepath.lower().endswith(".json"):
-			self.report(
-				{"ERROR"}, f"File is not json: {self.filepath}")
-			return {'CANCELLED'}
-
-		try:
-			r, obj = add_model(os.path.normpath(self.filepath), filename)
-			if r:
-				self.report(
-					{"ERROR"}, "The JSON model does not contain any geometry elements")
-				return {'CANCELLED'}
-		except ModelException as e:
-			self.report({"ERROR"}, f"Encountered error: {e}")
-			return {'CANCELLED'}
-
-		self.place_model(obj)
-		self.post_spawn(context, obj)
 		return {'FINISHED'}
 
 	def invoke(self, context, event):
@@ -723,7 +709,7 @@ class MCPREP_OT_reload_models(bpy.types.Operator):
 		update_model_list(context)
 		return {'FINISHED'}
 
-class MCPREP_OT_place_json_model_with_gizmo(bpy.types.Operator):
+class MCPREP_OT_place_json_model_with_gizmo(bpy.types.Operator, ModelSpawnBase):
 	bl_idname = "mcprep.place_json_model_with_gizmo"
 	bl_label = "Import Minecraf JSON model and Place"
 	bl_description = "Imports a Minecraft JSON model with location selection"
@@ -748,9 +734,12 @@ class MCPREP_OT_place_json_model_with_gizmo(bpy.types.Operator):
 			self.hit_vector = update_raycast(context, event)
 		elif event.type == 'LEFTMOUSE' and event.value == 'PRESS':
 			if self.hit_vector:
-				bpy.ops.mcprep.import_model_file(filepath=self.filepath,
-												location=self.hit_location,
-												rotation=self.rotation_quat.to_euler())
+				self.location = self.hit_vector.location
+				self.rotation = self.hit_vector.rotation.to_euler()
+				res = self.create_and_place_json_model(context, Path(self.filepath))
+				if res:
+					self.report({'ERROR'}, res.msg)
+					return {'CANCELLED'}
 				self.finish(context)
 				return {'FINISHED'}
 			else:
@@ -768,7 +757,7 @@ class MCPREP_OT_place_json_model_with_gizmo(bpy.types.Operator):
 	def draw_callback(self, context) -> None:
 		from .spawner_gizmo import draw_callback
 
-		if not self.has_hit:
+		if not self.hit_vector:
 			return
 		
 		draw_callback(self.hit_vector)
