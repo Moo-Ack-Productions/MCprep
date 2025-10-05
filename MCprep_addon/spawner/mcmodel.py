@@ -616,7 +616,7 @@ class ModelSpawnBase():
 
 	def create_and_place_json_model(self, context, filepath: Path) -> Optional[MCprepError]:
 		"""Function that does the entire model creation and placing"""
-		filename = filepath.stem[0]
+		filename = filepath.stem
 		if not filepath or not filepath.exists():
 			line, file = env.current_line_and_file()
 			return MCprepError(FileNotFoundError(), line, file, "File not found")
