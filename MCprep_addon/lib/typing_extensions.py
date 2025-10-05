@@ -1,3 +1,20 @@
+# Sourcing Info
+# Version: 4.7.1
+# Commit ID: b518f6a64400fd5a25e5b72668370b9792ef9ae6
+# GitHub Link: https://github.com/python/typing_extensions/commit/b518f6a64400fd5a25e5b72668370b9792ef9ae6
+# 
+# This is required for:
+# - TypedDict until Python 3.8
+# - NotRequired until Python 3.11
+#
+# Once Python 3.11 is our minimum, we can remove this
+# entirely, as those types will be included in the
+# Python standard library
+#
+# TODO: If we upgrade our minimum Python version, we also
+# need to update this file. While not technically required,
+# it's good practice nonetheless.
+
 import abc
 import collections
 import collections.abc
