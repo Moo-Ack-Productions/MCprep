@@ -1,4 +1,898 @@
 {
+	"block_model_uv": {
+		"cauldron": {
+			"from,[0, 0, 0]": {
+				"down": [
+					0,
+					14,
+					4,
+					16
+				],
+				"east": [
+					14,
+					13,
+					16,
+					16
+				],
+				"north": [
+					12,
+					13,
+					16,
+					16
+				],
+				"south": [
+					0,
+					13,
+					4,
+					16
+				],
+				"west": [
+					0,
+					13,
+					2,
+					16
+				]
+			},
+			"from,[0, 0, 12]": {
+				"down": [
+					0,
+					2,
+					2,
+					4
+				],
+				"east": [
+					2,
+					13,
+					4,
+					16
+				],
+				"north": [
+					14,
+					13,
+					16,
+					16
+				],
+				"west": [
+					12,
+					13,
+					14,
+					16
+				]
+			},
+			"from,[0, 0, 14]": {
+				"down": [
+					0,
+					0,
+					4,
+					2
+				],
+				"east": [
+					0,
+					13,
+					2,
+					16
+				],
+				"north": [
+					12,
+					13,
+					16,
+					16
+				],
+				"south": [
+					0,
+					13,
+					4,
+					16
+				],
+				"west": [
+					14,
+					13,
+					16,
+					16
+				]
+			},
+			"from,[0, 0, 2]": {
+				"down": [
+					0,
+					12,
+					2,
+					14
+				],
+				"east": [
+					12,
+					13,
+					14,
+					16
+				],
+				"south": [
+					0,
+					13,
+					2,
+					16
+				],
+				"west": [
+					2,
+					13,
+					4,
+					16
+				]
+			},
+			"from,[0, 3, 0]": {
+				"down": [
+					0,
+					0,
+					2,
+					16
+				],
+				"east": [
+					0,
+					0,
+					16,
+					13
+				],
+				"north": [
+					14,
+					0,
+					16,
+					13
+				],
+				"south": [
+					0,
+					0,
+					2,
+					13
+				],
+				"up": [
+					0,
+					0,
+					2,
+					16
+				],
+				"west": [
+					0,
+					0,
+					16,
+					13
+				]
+			},
+			"from,[12, 0, 0]": {
+				"down": [
+					12,
+					14,
+					16,
+					16
+				],
+				"east": [
+					14,
+					13,
+					16,
+					16
+				],
+				"north": [
+					0,
+					13,
+					4,
+					16
+				],
+				"south": [
+					12,
+					13,
+					16,
+					16
+				],
+				"west": [
+					0,
+					13,
+					2,
+					16
+				]
+			},
+			"from,[12, 0, 14]": {
+				"down": [
+					12,
+					0,
+					16,
+					2
+				],
+				"east": [
+					0,
+					13,
+					2,
+					16
+				],
+				"north": [
+					0,
+					13,
+					4,
+					16
+				],
+				"south": [
+					12,
+					13,
+					16,
+					16
+				],
+				"west": [
+					14,
+					13,
+					16,
+					16
+				]
+			},
+			"from,[14, 0, 12]": {
+				"down": [
+					14,
+					2,
+					16,
+					4
+				],
+				"east": [
+					2,
+					13,
+					4,
+					16
+				],
+				"north": [
+					0,
+					13,
+					2,
+					16
+				],
+				"west": [
+					12,
+					13,
+					14,
+					16
+				]
+			},
+			"from,[14, 0, 2]": {
+				"down": [
+					14,
+					12,
+					16,
+					14
+				],
+				"east": [
+					12,
+					13,
+					14,
+					16
+				],
+				"south": [
+					14,
+					13,
+					16,
+					16
+				],
+				"west": [
+					2,
+					13,
+					4,
+					16
+				]
+			},
+			"from,[14, 3, 0]": {
+				"down": [
+					14,
+					0,
+					16,
+					16
+				],
+				"east": [
+					0,
+					0,
+					16,
+					13
+				],
+				"north": [
+					0,
+					0,
+					2,
+					13
+				],
+				"south": [
+					14,
+					0,
+					16,
+					13
+				],
+				"up": [
+					14,
+					0,
+					16,
+					16
+				],
+				"west": [
+					0,
+					0,
+					16,
+					13
+				]
+			},
+			"from,[2, 3, 0]": {
+				"down": [
+					2,
+					14,
+					14,
+					16
+				],
+				"north": [
+					2,
+					0,
+					14,
+					13
+				],
+				"south": [
+					2,
+					0,
+					14,
+					13
+				],
+				"up": [
+					2,
+					0,
+					14,
+					2
+				]
+			},
+			"from,[2, 3, 14]": {
+				"down": [
+					2,
+					0,
+					14,
+					2
+				],
+				"north": [
+					2,
+					0,
+					14,
+					13
+				],
+				"south": [
+					2,
+					0,
+					14,
+					13
+				],
+				"up": [
+					2,
+					14,
+					14,
+					16
+				]
+			},
+			"from,[2, 3, 2]": {
+				"down": [
+					2,
+					2,
+					14,
+					14
+				],
+				"up": [
+					2,
+					2,
+					14,
+					14
+				]
+			}
+		},
+		"composter": {
+			"from,[0, 0, 0]": {
+				"down": [
+					0,
+					0,
+					16,
+					16
+				],
+				"east": [
+					0,
+					0,
+					16,
+					16
+				],
+				"north": [
+					14,
+					0,
+					16,
+					16
+				],
+				"south": [
+					0,
+					0,
+					2,
+					16
+				],
+				"up": [
+					0,
+					0,
+					2,
+					16
+				],
+				"west": [
+					0,
+					0,
+					16,
+					16
+				]
+			},
+			"from,[14, 0, 0]": {
+				"east": [
+					0,
+					0,
+					16,
+					16
+				],
+				"north": [
+					0,
+					0,
+					2,
+					16
+				],
+				"south": [
+					14,
+					0,
+					16,
+					16
+				],
+				"up": [
+					14,
+					0,
+					16,
+					16
+				],
+				"west": [
+					0,
+					0,
+					16,
+					16
+				]
+			},
+			"from,[2, 0, 0]": {
+				"north": [
+					2,
+					0,
+					14,
+					16
+				],
+				"south": [
+					2,
+					0,
+					14,
+					16
+				],
+				"up": [
+					2,
+					0,
+					14,
+					2
+				]
+			},
+			"from,[2, 0, 14]": {
+				"north": [
+					2,
+					0,
+					14,
+					16
+				],
+				"south": [
+					2,
+					0,
+					14,
+					16
+				],
+				"up": [
+					2,
+					14,
+					14,
+					16
+				]
+			}
+		},
+		"hopper": {
+			"from,[0, 10, 0]": {
+				"down": [
+					0,
+					0,
+					16,
+					16
+				],
+				"side": [
+					0,
+					5,
+					16,
+					6
+				],
+				"up": [
+					0,
+					0,
+					16,
+					16
+				]
+			},
+			"from,[0, 11, 0]": {
+				"east": [
+					0,
+					0,
+					16,
+					5
+				],
+				"north": [
+					14,
+					0,
+					16,
+					5
+				],
+				"south": [
+					0,
+					0,
+					2,
+					5
+				],
+				"up": [
+					0,
+					0,
+					2,
+					16
+				],
+				"west": [
+					0,
+					0,
+					16,
+					5
+				]
+			},
+			"from,[14, 11, 0]": {
+				"east": [
+					0,
+					0,
+					16,
+					5
+				],
+				"north": [
+					0,
+					0,
+					2,
+					5
+				],
+				"south": [
+					14,
+					0,
+					16,
+					5
+				],
+				"up": [
+					14,
+					0,
+					16,
+					16
+				],
+				"west": [
+					0,
+					0,
+					16,
+					5
+				]
+			},
+			"from,[2, 11, 0]": {
+				"north": [
+					2,
+					0,
+					14,
+					5
+				],
+				"south": [
+					1,
+					0,
+					13,
+					5
+				],
+				"up": [
+					2,
+					0,
+					14,
+					2
+				]
+			},
+			"from,[2, 11, 14]": {
+				"north": [
+					2,
+					0,
+					14,
+					5
+				],
+				"south": [
+					2,
+					0,
+					14,
+					5
+				],
+				"up": [
+					2,
+					14,
+					14,
+					16
+				]
+			},
+			"from,[4, 4, 4]": {
+				"all": [
+					4,
+					6,
+					12,
+					12
+				]
+			},
+			"from,[6, 0, 6]": {
+				"down": [
+					6,
+					6,
+					10,
+					10
+				],
+				"side": [
+					6,
+					12,
+					10,
+					16
+				]
+			},
+			"from,[6, 4, 0]": {
+				"down": [
+					6,
+					12,
+					10,
+					16
+				],
+				"east": [
+					12,
+					8,
+					16,
+					12
+				],
+				"north": [
+					6,
+					8,
+					10,
+					12
+				],
+				"up": [
+					6,
+					0,
+					10,
+					4
+				],
+				"west": [
+					0,
+					8,
+					4,
+					12
+				]
+			}
+		},
+		"scaffolding": {
+			"from,[0, 0, 0]": {
+				"down": [
+					0,
+					14,
+					2,
+					16
+				],
+				"east": [
+					14,
+					0,
+					16,
+					16
+				],
+				"north": [
+					14,
+					0,
+					16,
+					16
+				],
+				"south": [
+					0,
+					0,
+					2,
+					16
+				],
+				"west": [
+					0,
+					0,
+					2,
+					16
+				]
+			},
+			"from,[0, 0, 14]": {
+				"down": [
+					0,
+					0,
+					2,
+					2
+				],
+				"east": [
+					0,
+					0,
+					2,
+					16
+				],
+				"north": [
+					14,
+					0,
+					16,
+					16
+				],
+				"south": [
+					0,
+					0,
+					2,
+					16
+				],
+				"west": [
+					14,
+					0,
+					16,
+					16
+				]
+			},
+			"from,[0, 14, 2]": {
+				"down": [
+					0,
+					2,
+					2,
+					14
+				],
+				"east": [
+					2,
+					0,
+					14,
+					2
+				],
+				"west": [
+					14,
+					0,
+					2,
+					2
+				]
+			},
+			"from,[0, 15.99, 0]": {
+				"down": [
+					0,
+					16,
+					16,
+					0
+				],
+				"up": [
+					0,
+					0,
+					16,
+					16
+				]
+			},
+			"from,[14, 0, 0]": {
+				"down": [
+					14,
+					14,
+					16,
+					16
+				],
+				"east": [
+					14,
+					0,
+					16,
+					16
+				],
+				"north": [
+					0,
+					0,
+					2,
+					16
+				],
+				"south": [
+					14,
+					0,
+					16,
+					16
+				],
+				"west": [
+					0,
+					0,
+					2,
+					16
+				]
+			},
+			"from,[14, 0, 14]": {
+				"down": [
+					14,
+					0,
+					16,
+					2
+				],
+				"east": [
+					0,
+					0,
+					2,
+					16
+				],
+				"north": [
+					0,
+					0,
+					2,
+					16
+				],
+				"south": [
+					14,
+					0,
+					16,
+					16
+				],
+				"west": [
+					14,
+					0,
+					16,
+					16
+				]
+			},
+			"from,[14, 14, 2]": {
+				"down": [
+					14,
+					2,
+					16,
+					14
+				],
+				"east": [
+					14,
+					0,
+					2,
+					2
+				],
+				"west": [
+					14,
+					2,
+					2,
+					4
+				]
+			},
+			"from,[2, 14, 0]": {
+				"down": [
+					2,
+					14,
+					14,
+					16
+				],
+				"north": [
+					2,
+					0,
+					14,
+					2
+				],
+				"south": [
+					2,
+					2,
+					14,
+					4
+				]
+			},
+			"from,[2, 14, 14]": {
+				"down": [
+					2,
+					0,
+					14,
+					2
+				],
+				"north": [
+					14,
+					0,
+					2,
+					2
+				],
+				"south": [
+					2,
+					0,
+					14,
+					2
+				]
+			}
+		}
+	},
 	"blocks": {
 		"animated_mineways_index": {
 			"Stationary_Lava": {
@@ -20,6 +914,12 @@
 				14
 			]
 		},
+		"backface_culling": [
+			"redstone_torch",
+			"redstone_torch_on",
+			"repeater_*tick_on*",
+			"comparator_on*"
+		],
 		"block_mapping_jmc": {
 			"acacia_planks": "acacia_planks",
 			"acacia_trapdoor": "acacia_trapdoor",
@@ -869,7 +1769,7 @@
 			"absorbing_hardcore_half": "gui/sprites/hud/heart/absorbing_hardcore_half",
 			"absorbing_hardcore_half_blinking": "gui/sprites/hud/heart/absorbing_hardcore_half_blinking",
 			"absorption": "mob_effect/absorption",
-			"acacia": "gui/hanging_signs/acacia",
+			"acacia": "entity/signs/acacia",
 			"acacia_door_bottom": "acacia_door_bottom",
 			"acacia_door_top": "acacia_door_top",
 			"acacia_leaves": "acacia_leaves",
@@ -889,14 +1789,16 @@
 			"aggressive_panda": "entity/panda/aggressive_panda",
 			"air": "gui/sprites/hud/air",
 			"air_bursting": "gui/sprites/hud/air_bursting",
+			"air_empty": "gui/sprites/hud/air_empty",
 			"alban": "painting/alban",
-			"alex": "entity/player/slim/alex",
+			"alex": "entity/player/wide/alex",
 			"all_black": "entity/cat/all_black",
 			"allay": "entity/allay/allay",
 			"allium": "allium",
 			"amethyst": "trims/color_palettes/amethyst",
 			"amethyst_block": "amethyst_block",
 			"amethyst_cluster": "amethyst_cluster",
+			"amethyst_shard": "gui/sprites/container/slot/amethyst_shard",
 			"ancient_debris_side": "ancient_debris_side",
 			"ancient_debris_top": "ancient_debris_top",
 			"andesite": "andesite",
@@ -905,13 +1807,14 @@
 			"anvil": "anvil",
 			"anvil_top": "anvil_top",
 			"archer_pottery_pattern": "entity/decorated_pot/archer_pottery_pattern",
-			"ari": "entity/player/slim/ari",
+			"ari": "entity/player/wide/ari",
 			"armadillo": "entity/armadillo",
+			"armadillo_scute": "entity/equipment/wolf_body/armadillo_scute",
+			"armadillo_scute_overlay": "entity/equipment/wolf_body/armadillo_scute_overlay",
 			"armor_empty": "gui/sprites/hud/armor_empty",
 			"armor_full": "gui/sprites/hud/armor_full",
 			"armor_half": "gui/sprites/hud/armor_half",
-			"armor_slot": "gui/sprites/container/horse/armor_slot",
-			"armorer": "entity/villager/profession/armorer",
+			"armorer": "entity/zombie_villager/profession/armorer",
 			"arms_up_pottery_pattern": "entity/decorated_pot/arms_up_pottery_pattern",
 			"arrow": "entity/projectiles/arrow",
 			"ascii": "font/ascii",
@@ -919,6 +1822,7 @@
 			"asciillager": "font/asciillager",
 			"attached_melon_stem": "attached_melon_stem",
 			"attached_pumpkin_stem": "attached_pumpkin_stem",
+			"axe": "gui/sprites/container/slot/axe",
 			"axolotl_blue": "entity/axolotl/axolotl_blue",
 			"axolotl_cyan": "entity/axolotl/axolotl_cyan",
 			"axolotl_gold": "entity/axolotl/axolotl_gold",
@@ -932,10 +1836,10 @@
 			"aztec2": "painting/aztec2",
 			"azure_bluet": "azure_bluet",
 			"back": "painting/back",
-			"background": "gui/sprites/container/bundle/background",
+			"background": "gui/sprites/social_interactions/background",
 			"backyard": "painting/backyard",
 			"bad_omen": "mob_effect/bad_omen",
-			"bamboo": "gui/hanging_signs/bamboo",
+			"bamboo": "entity/signs/bamboo",
 			"bamboo_block": "bamboo_block",
 			"bamboo_block_top": "bamboo_block_top",
 			"bamboo_door_bottom": "bamboo_door_bottom",
@@ -952,8 +1856,9 @@
 			"bamboo_stage0": "bamboo_stage0",
 			"bamboo_stalk": "bamboo_stalk",
 			"bamboo_trapdoor": "bamboo_trapdoor",
+			"banner": "gui/sprites/container/slot/banner",
 			"banner_base": "entity/banner_base",
-			"banner_slot": "gui/sprites/container/loom/banner_slot",
+			"banner_pattern": "gui/sprites/container/slot/banner_pattern",
 			"baroque": "painting/baroque",
 			"barrel_bottom": "barrel_bottom",
 			"barrel_side": "barrel_side",
@@ -961,7 +1866,7 @@
 			"barrel_top_open": "barrel_top_open",
 			"basalt_side": "basalt_side",
 			"basalt_top": "basalt_top",
-			"base": "entity/conduit/base",
+			"base": "entity/shield/base",
 			"bat": "entity/bat",
 			"beacon": "beacon",
 			"beacon_beam": "entity/beacon_beam",
@@ -1005,7 +1910,7 @@
 			"big_smoke_7": "particle/big_smoke_7",
 			"big_smoke_8": "particle/big_smoke_8",
 			"big_smoke_9": "particle/big_smoke_9",
-			"birch": "gui/hanging_signs/birch",
+			"birch": "entity/signs/birch",
 			"birch_door_bottom": "birch_door_bottom",
 			"birch_door_top": "birch_door_top",
 			"birch_leaves": "birch_leaves",
@@ -1014,13 +1919,14 @@
 			"birch_planks": "birch_planks",
 			"birch_sapling": "birch_sapling",
 			"birch_trapdoor": "birch_trapdoor",
-			"black": "entity/llama/decor/black",
+			"black": "entity/rabbit/black",
 			"black_banner": "map/decorations/black_banner",
 			"black_candle": "black_candle",
 			"black_candle_lit": "black_candle_lit",
 			"black_concrete": "black_concrete",
 			"black_concrete_powder": "black_concrete_powder",
 			"black_glazed_terracotta": "black_glazed_terracotta",
+			"black_harness": "entity/equipment/happy_ghast_body/black_harness",
 			"black_shulker_box": "black_shulker_box",
 			"black_stained_glass": "black_stained_glass",
 			"black_stained_glass_pane_top": "black_stained_glass_pane_top",
@@ -1037,8 +1943,7 @@
 			"blaze": "entity/blaze",
 			"blindness": "mob_effect/blindness",
 			"block_mined": "gui/sprites/statistics/block_mined",
-			"blocked_slot": "gui/sprites/container/bundle/blocked_slot",
-			"blue": "entity/llama/decor/blue",
+			"blue": "entity/bed/blue",
 			"blue_background": "gui/sprites/boss_bar/blue_background",
 			"blue_banner": "map/decorations/blue_banner",
 			"blue_candle": "blue_candle",
@@ -1046,6 +1951,7 @@
 			"blue_concrete": "blue_concrete",
 			"blue_concrete_powder": "blue_concrete_powder",
 			"blue_glazed_terracotta": "blue_glazed_terracotta",
+			"blue_harness": "entity/equipment/happy_ghast_body/blue_harness",
 			"blue_ice": "blue_ice",
 			"blue_marker": "map/decorations/blue_marker",
 			"blue_orchid": "blue_orchid",
@@ -1057,16 +1963,17 @@
 			"blue_wool": "blue_wool",
 			"bogged": "entity/skeleton/bogged",
 			"bogged_overlay": "entity/skeleton/bogged_overlay",
-			"bolt": "trims/models/armor/bolt",
-			"bolt_leggings": "trims/models/armor/bolt_leggings",
+			"bolt": "trims/entity/humanoid_leggings/bolt",
 			"bomb": "painting/bomb",
 			"bone_block_side": "bone_block_side",
 			"bone_block_top": "bone_block_top",
 			"book": "gui/book",
 			"bookshelf": "bookshelf",
+			"boots": "gui/sprites/container/slot/boots",
 			"boots_trim": "trims/items/boots_trim",
 			"border": "entity/shield/border",
 			"bouquet": "painting/bouquet",
+			"bowtie": "gui/sprites/hud/locator_bar_dot/bowtie",
 			"box_obtained": "gui/sprites/advancements/box_obtained",
 			"box_unobtained": "gui/sprites/advancements/box_unobtained",
 			"brain_coral": "brain_coral",
@@ -1078,17 +1985,19 @@
 			"breeze_wind": "entity/breeze/breeze_wind",
 			"brew_progress": "gui/sprites/container/brewing_stand/brew_progress",
 			"brewer_pottery_pattern": "entity/decorated_pot/brewer_pottery_pattern",
+			"brewing_fuel": "gui/sprites/container/slot/brewing_fuel",
 			"brewing_stand": "brewing_stand",
 			"brewing_stand_base": "brewing_stand_base",
 			"bricks": "bricks",
 			"british_shorthair": "entity/cat/british_shorthair",
-			"brown": "entity/llama/brown",
+			"brown": "entity/rabbit/brown",
 			"brown_banner": "map/decorations/brown_banner",
 			"brown_candle": "brown_candle",
 			"brown_candle_lit": "brown_candle_lit",
 			"brown_concrete": "brown_concrete",
 			"brown_concrete_powder": "brown_concrete_powder",
 			"brown_glazed_terracotta": "brown_glazed_terracotta",
+			"brown_harness": "entity/equipment/happy_ghast_body/brown_harness",
 			"brown_mooshroom": "entity/cow/brown_mooshroom",
 			"brown_mushroom": "brown_mushroom",
 			"brown_mushroom_block": "brown_mushroom_block",
@@ -1109,16 +2018,21 @@
 			"bubble_pop_4": "particle/bubble_pop_4",
 			"bubbles": "gui/sprites/container/brewing_stand/bubbles",
 			"budding_amethyst": "budding_amethyst",
+			"bundle_progressbar_border": "gui/sprites/container/bundle/bundle_progressbar_border",
+			"bundle_progressbar_fill": "gui/sprites/container/bundle/bundle_progressbar_fill",
+			"bundle_progressbar_full": "gui/sprites/container/bundle/bundle_progressbar_full",
 			"burn_pottery_pattern": "entity/decorated_pot/burn_pottery_pattern",
-			"burn_progress": "gui/sprites/container/furnace/burn_progress",
+			"burn_progress": "gui/sprites/container/smoker/burn_progress",
 			"burning_skull": "painting/burning_skull",
+			"bush": "bush",
 			"bust": "painting/bust",
-			"butcher": "entity/villager/profession/butcher",
-			"button": "gui/sprites/container/beacon/button",
-			"button_disabled": "gui/sprites/container/beacon/button_disabled",
-			"button_highlighted": "gui/sprites/container/beacon/button_highlighted",
+			"butcher": "entity/zombie_villager/profession/butcher",
+			"button": "gui/sprites/recipe_book/button",
+			"button_disabled": "gui/sprites/widget/button_disabled",
+			"button_highlighted": "gui/sprites/recipe_book/button_highlighted",
 			"button_selected": "gui/sprites/container/beacon/button_selected",
 			"cactus_bottom": "cactus_bottom",
+			"cactus_flower": "cactus_flower",
 			"cactus_side": "cactus_side",
 			"cactus_top": "cactus_top",
 			"caerbannog": "entity/rabbit/caerbannog",
@@ -1143,7 +2057,7 @@
 			"carrots_stage1": "carrots_stage1",
 			"carrots_stage2": "carrots_stage2",
 			"carrots_stage3": "carrots_stage3",
-			"cartographer": "entity/villager/profession/cartographer",
+			"cartographer": "entity/zombie_villager/profession/cartographer",
 			"cartography_table": "gui/container/cartography_table",
 			"cartography_table_side1": "cartography_table_side1",
 			"cartography_table_side2": "cartography_table_side2",
@@ -1166,8 +2080,7 @@
 			"chain_command_block_conditional": "chain_command_block_conditional",
 			"chain_command_block_front": "chain_command_block_front",
 			"chain_command_block_side": "chain_command_block_side",
-			"chainmail_layer_1": "models/armor/chainmail_layer_1",
-			"chainmail_layer_2": "models/armor/chainmail_layer_2",
+			"chainmail": "entity/equipment/humanoid_leggings/chainmail",
 			"challenge_frame_obtained": "gui/sprites/advancements/challenge_frame_obtained",
 			"challenge_frame_unobtained": "gui/sprites/advancements/challenge_frame_unobtained",
 			"changing": "painting/changing",
@@ -1177,7 +2090,7 @@
 			"checkbox_selected": "gui/sprites/widget/checkbox_selected",
 			"checkbox_selected_highlighted": "gui/sprites/widget/checkbox_selected_highlighted",
 			"checkmark": "gui/sprites/icon/checkmark",
-			"cherry": "gui/hanging_signs/cherry",
+			"cherry": "entity/signs/cherry",
 			"cherry_0": "particle/cherry_0",
 			"cherry_1": "particle/cherry_1",
 			"cherry_10": "particle/cherry_10",
@@ -1199,8 +2112,8 @@
 			"cherry_sapling": "cherry_sapling",
 			"cherry_trapdoor": "cherry_trapdoor",
 			"chest_slots": "gui/sprites/container/horse/chest_slots",
+			"chestplate": "gui/sprites/container/slot/chestplate",
 			"chestplate_trim": "trims/items/chestplate_trim",
-			"chicken": "entity/chicken",
 			"chipped_anvil_top": "chipped_anvil_top",
 			"chiseled_bookshelf_empty": "chiseled_bookshelf_empty",
 			"chiseled_bookshelf_occupied": "chiseled_bookshelf_occupied",
@@ -1213,6 +2126,7 @@
 			"chiseled_quartz_block": "chiseled_quartz_block",
 			"chiseled_quartz_block_top": "chiseled_quartz_block_top",
 			"chiseled_red_sandstone": "chiseled_red_sandstone",
+			"chiseled_resin_bricks": "chiseled_resin_bricks",
 			"chiseled_sandstone": "chiseled_sandstone",
 			"chiseled_stone_bricks": "chiseled_stone_bricks",
 			"chiseled_tuff": "chiseled_tuff",
@@ -1227,16 +2141,16 @@
 			"christmas_right": "entity/chest/christmas_right",
 			"circle": "entity/shield/circle",
 			"clay": "clay",
-			"cleric": "entity/villager/profession/cleric",
+			"cleric": "entity/zombie_villager/profession/cleric",
 			"close": "gui/sprites/spectator/close",
 			"closed": "gui/sprites/realm_status/closed",
 			"closed_eye": "entity/conduit/closed_eye",
+			"closed_eyeblossom": "closed_eyeblossom",
 			"clouds": "environment/clouds",
 			"coal_block": "coal_block",
 			"coal_ore": "coal_ore",
 			"coarse_dirt": "coarse_dirt",
-			"coast": "trims/models/armor/coast",
-			"coast_leggings": "trims/models/armor/coast_leggings",
+			"coast": "trims/entity/humanoid_leggings/coast",
 			"cobbled_deepslate": "cobbled_deepslate",
 			"cobblestone": "cobblestone",
 			"cobweb": "cobweb",
@@ -1244,7 +2158,10 @@
 			"cocoa_stage1": "cocoa_stage1",
 			"cocoa_stage2": "cocoa_stage2",
 			"cod": "entity/fish/cod",
+			"cold_chicken": "entity/chicken/cold_chicken",
+			"cold_cow": "entity/cow/cold_cow",
 			"cold_frog": "entity/frog/cold_frog",
+			"cold_pig": "entity/pig/cold_pig",
 			"command_block_back": "command_block_back",
 			"command_block_conditional": "command_block_conditional",
 			"command_block_front": "command_block_front",
@@ -1277,7 +2194,6 @@
 			"cornflower": "cornflower",
 			"cotan": "painting/cotan",
 			"courbet": "painting/courbet",
-			"cow": "entity/cow/cow",
 			"cracked_deepslate_bricks": "cracked_deepslate_bricks",
 			"cracked_deepslate_tiles": "cracked_deepslate_tiles",
 			"cracked_nether_bricks": "cracked_nether_bricks",
@@ -1306,12 +2222,20 @@
 			"crafting_table_front": "crafting_table_front",
 			"crafting_table_side": "crafting_table_side",
 			"crafting_table_top": "crafting_table_top",
+			"creaking": "entity/creaking/creaking",
+			"creaking_eyes": "entity/creaking/creaking_eyes",
+			"creaking_heart": "creaking_heart",
+			"creaking_heart_awake": "creaking_heart_awake",
+			"creaking_heart_dormant": "creaking_heart_dormant",
+			"creaking_heart_top": "creaking_heart_top",
+			"creaking_heart_top_awake": "creaking_heart_top_awake",
+			"creaking_heart_top_dormant": "creaking_heart_top_dormant",
 			"creamy": "entity/llama/creamy",
 			"credits_vignette": "misc/credits_vignette",
 			"creebet": "painting/creebet",
-			"creeper": "entity/creeper/creeper",
+			"creeper": "entity/shield/creeper",
 			"creeper_armor": "entity/creeper/creeper_armor",
-			"crimson": "gui/hanging_signs/crimson",
+			"crimson": "entity/signs/crimson",
 			"crimson_door_bottom": "crimson_door_bottom",
 			"crimson_door_top": "crimson_door_top",
 			"crimson_fungus": "crimson_fungus",
@@ -1336,13 +2260,14 @@
 			"cut_copper": "cut_copper",
 			"cut_red_sandstone": "cut_red_sandstone",
 			"cut_sandstone": "cut_sandstone",
-			"cyan": "entity/llama/decor/cyan",
+			"cyan": "entity/bed/cyan",
 			"cyan_banner": "map/decorations/cyan_banner",
 			"cyan_candle": "cyan_candle",
 			"cyan_candle_lit": "cyan_candle_lit",
 			"cyan_concrete": "cyan_concrete",
 			"cyan_concrete_powder": "cyan_concrete_powder",
 			"cyan_glazed_terracotta": "cyan_glazed_terracotta",
+			"cyan_harness": "entity/equipment/happy_ghast_body/cyan_harness",
 			"cyan_shulker_box": "cyan_shulker_box",
 			"cyan_stained_glass": "cyan_stained_glass",
 			"cyan_stained_glass_pane_top": "cyan_stained_glass_pane_top",
@@ -1352,7 +2277,7 @@
 			"damaged_anvil_top": "damaged_anvil_top",
 			"dandelion": "dandelion",
 			"danger_pottery_pattern": "entity/decorated_pot/danger_pottery_pattern",
-			"dark_oak": "gui/hanging_signs/dark_oak",
+			"dark_oak": "entity/signs/hanging/dark_oak",
 			"dark_oak_door_bottom": "dark_oak_door_bottom",
 			"dark_oak_door_top": "dark_oak_door_top",
 			"dark_oak_leaves": "dark_oak_leaves",
@@ -1398,8 +2323,13 @@
 			"deepslate_redstone_ore": "deepslate_redstone_ore",
 			"deepslate_tiles": "deepslate_tiles",
 			"deepslate_top": "deepslate_top",
+			"default_0": "gui/sprites/hud/locator_bar_dot/default_0",
+			"default_1": "gui/sprites/hud/locator_bar_dot/default_1",
+			"default_2": "gui/sprites/hud/locator_bar_dot/default_2",
+			"default_3": "gui/sprites/hud/locator_bar_dot/default_3",
 			"demo_background": "gui/demo_background",
-			"desert": "entity/villager/type/desert",
+			"dennis": "painting/dennis",
+			"desert": "entity/zombie_villager/type/desert",
 			"desert_village": "map/decorations/desert_village",
 			"destroy_stage_0": "destroy_stage_0",
 			"destroy_stage_1": "destroy_stage_1",
@@ -1417,11 +2347,9 @@
 			"diagonal_right": "entity/shield/diagonal_right",
 			"diagonal_up_left": "entity/shield/diagonal_up_left",
 			"diagonal_up_right": "entity/shield/diagonal_up_right",
-			"diamond": "trims/color_palettes/diamond",
+			"diamond": "entity/zombie_villager/profession_level/diamond",
 			"diamond_block": "diamond_block",
 			"diamond_darker": "trims/color_palettes/diamond_darker",
-			"diamond_layer_1": "models/armor/diamond_layer_1",
-			"diamond_layer_2": "models/armor/diamond_layer_2",
 			"diamond_ore": "diamond_ore",
 			"diorite": "diorite",
 			"dirt": "dirt",
@@ -1443,6 +2371,34 @@
 			"dragon_exploding": "entity/enderdragon/dragon_exploding",
 			"dragon_eyes": "entity/enderdragon/dragon_eyes",
 			"dragon_fireball": "entity/enderdragon/dragon_fireball",
+			"dried_ghast_hydration_0_bottom": "dried_ghast_hydration_0_bottom",
+			"dried_ghast_hydration_0_east": "dried_ghast_hydration_0_east",
+			"dried_ghast_hydration_0_north": "dried_ghast_hydration_0_north",
+			"dried_ghast_hydration_0_south": "dried_ghast_hydration_0_south",
+			"dried_ghast_hydration_0_tentacles": "dried_ghast_hydration_0_tentacles",
+			"dried_ghast_hydration_0_top": "dried_ghast_hydration_0_top",
+			"dried_ghast_hydration_0_west": "dried_ghast_hydration_0_west",
+			"dried_ghast_hydration_1_bottom": "dried_ghast_hydration_1_bottom",
+			"dried_ghast_hydration_1_east": "dried_ghast_hydration_1_east",
+			"dried_ghast_hydration_1_north": "dried_ghast_hydration_1_north",
+			"dried_ghast_hydration_1_south": "dried_ghast_hydration_1_south",
+			"dried_ghast_hydration_1_tentacles": "dried_ghast_hydration_1_tentacles",
+			"dried_ghast_hydration_1_top": "dried_ghast_hydration_1_top",
+			"dried_ghast_hydration_1_west": "dried_ghast_hydration_1_west",
+			"dried_ghast_hydration_2_bottom": "dried_ghast_hydration_2_bottom",
+			"dried_ghast_hydration_2_east": "dried_ghast_hydration_2_east",
+			"dried_ghast_hydration_2_north": "dried_ghast_hydration_2_north",
+			"dried_ghast_hydration_2_south": "dried_ghast_hydration_2_south",
+			"dried_ghast_hydration_2_tentacles": "dried_ghast_hydration_2_tentacles",
+			"dried_ghast_hydration_2_top": "dried_ghast_hydration_2_top",
+			"dried_ghast_hydration_2_west": "dried_ghast_hydration_2_west",
+			"dried_ghast_hydration_3_bottom": "dried_ghast_hydration_3_bottom",
+			"dried_ghast_hydration_3_east": "dried_ghast_hydration_3_east",
+			"dried_ghast_hydration_3_north": "dried_ghast_hydration_3_north",
+			"dried_ghast_hydration_3_south": "dried_ghast_hydration_3_south",
+			"dried_ghast_hydration_3_tentacles": "dried_ghast_hydration_3_tentacles",
+			"dried_ghast_hydration_3_top": "dried_ghast_hydration_3_top",
+			"dried_ghast_hydration_3_west": "dried_ghast_hydration_3_west",
 			"dried_kelp_bottom": "dried_kelp_bottom",
 			"dried_kelp_side": "dried_kelp_side",
 			"dried_kelp_top": "dried_kelp_top",
@@ -1454,13 +2410,13 @@
 			"dropper_front_vertical": "dropper_front_vertical",
 			"drowned": "entity/zombie/drowned",
 			"drowned_outer_layer": "entity/zombie/drowned_outer_layer",
-			"dune": "trims/models/armor/dune",
-			"dune_leggings": "trims/models/armor/dune_leggings",
+			"dry_foliage": "colormap/dry_foliage",
+			"dune": "trims/entity/humanoid_leggings/dune",
 			"duplicated_map": "gui/sprites/container/cartography_table/duplicated_map",
-			"dye_slot": "gui/sprites/container/loom/dye_slot",
+			"dye": "gui/sprites/container/slot/dye",
 			"earth": "painting/earth",
 			"edition": "gui/title/edition",
-			"efe": "entity/player/slim/efe",
+			"efe": "entity/player/wide/efe",
 			"effect_0": "particle/effect_0",
 			"effect_1": "particle/effect_1",
 			"effect_2": "particle/effect_2",
@@ -1473,12 +2429,12 @@
 			"effect_background_ambient": "gui/sprites/hud/effect_background_ambient",
 			"effect_background_large": "gui/sprites/container/inventory/effect_background_large",
 			"effect_background_small": "gui/sprites/container/inventory/effect_background_small",
-			"elytra": "entity/elytra",
-			"emerald": "trims/color_palettes/emerald",
+			"elytra": "entity/equipment/wings/elytra",
+			"emerald": "entity/zombie_villager/profession_level/emerald",
 			"emerald_block": "emerald_block",
 			"emerald_ore": "emerald_ore",
 			"empty_frame": "gui/realms/empty_frame",
-			"enchanted_glint_entity": "misc/enchanted_glint_entity",
+			"enchanted_glint_armor": "misc/enchanted_glint_armor",
 			"enchanted_glint_item": "misc/enchanted_glint_item",
 			"enchanted_hit": "particle/enchanted_hit",
 			"enchanting_table": "gui/container/enchanting_table",
@@ -1511,7 +2467,7 @@
 			"evoker": "entity/illager/evoker",
 			"evoker_fangs": "entity/illager/evoker_fangs",
 			"experience": "gui/realms/experience",
-			"experience_bar_background": "gui/sprites/container/villager/experience_bar_background",
+			"experience_bar_background": "gui/sprites/hud/experience_bar_background",
 			"experience_bar_current": "gui/sprites/container/villager/experience_bar_current",
 			"experience_bar_progress": "gui/sprites/hud/experience_bar_progress",
 			"experience_bar_result": "gui/sprites/container/villager/experience_bar_result",
@@ -1546,9 +2502,8 @@
 			"exposed_copper_grate": "exposed_copper_grate",
 			"exposed_copper_trapdoor": "exposed_copper_trapdoor",
 			"exposed_cut_copper": "exposed_cut_copper",
-			"eye": "trims/models/armor/eye",
-			"eye_leggings": "trims/models/armor/eye_leggings",
-			"farmer": "entity/villager/profession/farmer",
+			"eye": "trims/entity/humanoid_leggings/eye",
+			"farmer": "entity/zombie_villager/profession/farmer",
 			"farmland": "farmland",
 			"farmland_moist": "farmland_moist",
 			"fern": "fern",
@@ -1565,16 +2520,18 @@
 			"fire_coral_block": "fire_coral_block",
 			"fire_coral_fan": "fire_coral_fan",
 			"fire_resistance": "mob_effect/fire_resistance",
-			"fisherman": "entity/villager/profession/fisherman",
+			"firefly": "particle/firefly",
+			"firefly_bush": "firefly_bush",
+			"firefly_bush_emissive": "firefly_bush_emissive",
+			"fisherman": "entity/zombie_villager/profession/fisherman",
 			"fishing_hook": "entity/fishing_hook",
 			"flame": "particle/flame",
 			"flash": "particle/flash",
-			"fletcher": "entity/villager/profession/fletcher",
+			"fletcher": "entity/zombie_villager/profession/fletcher",
 			"fletching_table_front": "fletching_table_front",
 			"fletching_table_side": "fletching_table_side",
 			"fletching_table_top": "fletching_table_top",
-			"flow": "trims/models/armor/flow",
-			"flow_leggings": "trims/models/armor/flow_leggings",
+			"flow": "entity/shield/flow",
 			"flow_pottery_pattern": "entity/decorated_pot/flow_pottery_pattern",
 			"flower": "entity/shield/flower",
 			"flower_pot": "flower_pot",
@@ -1592,7 +2549,7 @@
 			"forcefield": "misc/forcefield",
 			"fox": "entity/fox/fox",
 			"fox_sleep": "entity/fox/fox_sleep",
-			"frame": "map/decorations/frame",
+			"frame": "gui/sprites/tooltip/frame",
 			"friend_pottery_pattern": "entity/decorated_pot/friend_pottery_pattern",
 			"frogspawn": "frogspawn",
 			"frosted_ice_0": "frosted_ice_0",
@@ -1657,11 +2614,9 @@
 			"goal_frame_obtained": "gui/sprites/advancements/goal_frame_obtained",
 			"goal_frame_unobtained": "gui/sprites/advancements/goal_frame_unobtained",
 			"goat": "entity/goat/goat",
-			"gold": "trims/color_palettes/gold",
+			"gold": "entity/rabbit/gold",
 			"gold_block": "gold_block",
 			"gold_darker": "trims/color_palettes/gold_darker",
-			"gold_layer_1": "models/armor/gold_layer_1",
-			"gold_layer_2": "models/armor/gold_layer_2",
 			"gold_ore": "gold_ore",
 			"goldheart_0": "particle/goldheart_0",
 			"goldheart_1": "particle/goldheart_1",
@@ -1670,25 +2625,26 @@
 			"gradient_up": "entity/shield/gradient_up",
 			"graham": "painting/graham",
 			"granite": "granite",
-			"grass": "colormap/grass",
+			"grass": "grass",
 			"grass_block_side": "grass_block_side",
 			"grass_block_side_overlay": "grass_block_side_overlay",
 			"grass_block_snow": "grass_block_snow",
 			"grass_block_top": "grass_block_top",
 			"gravel": "gravel",
-			"gray": "entity/llama/gray",
+			"gray": "entity/bed/gray",
 			"gray_banner": "map/decorations/gray_banner",
 			"gray_candle": "gray_candle",
 			"gray_candle_lit": "gray_candle_lit",
 			"gray_concrete": "gray_concrete",
 			"gray_concrete_powder": "gray_concrete_powder",
 			"gray_glazed_terracotta": "gray_glazed_terracotta",
+			"gray_harness": "entity/equipment/happy_ghast_body/gray_harness",
 			"gray_shulker_box": "gray_shulker_box",
 			"gray_stained_glass": "gray_stained_glass",
 			"gray_stained_glass_pane_top": "gray_stained_glass_pane_top",
 			"gray_terracotta": "gray_terracotta",
 			"gray_wool": "gray_wool",
-			"green": "entity/llama/decor/green",
+			"green": "entity/bed/green",
 			"green_background": "gui/sprites/boss_bar/green_background",
 			"green_banner": "map/decorations/green_banner",
 			"green_candle": "green_candle",
@@ -1696,6 +2652,7 @@
 			"green_concrete": "green_concrete",
 			"green_concrete_powder": "green_concrete_powder",
 			"green_glazed_terracotta": "green_glazed_terracotta",
+			"green_harness": "entity/equipment/happy_ghast_body/green_harness",
 			"green_progress": "gui/sprites/boss_bar/green_progress",
 			"green_shulker_box": "green_shulker_box",
 			"green_stained_glass": "green_stained_glass",
@@ -1730,6 +2687,9 @@
 			"half_vertical": "entity/shield/half_vertical",
 			"half_vertical_right": "entity/shield/half_vertical_right",
 			"hanging_roots": "hanging_roots",
+			"happy_ghast": "entity/ghast/happy_ghast",
+			"happy_ghast_baby": "entity/ghast/happy_ghast_baby",
+			"happy_ghast_ropes": "entity/ghast/happy_ghast_ropes",
 			"hardcore_full": "gui/sprites/hud/heart/hardcore_full",
 			"hardcore_full_blinking": "gui/sprites/hud/heart/hardcore_full_blinking",
 			"hardcore_half": "gui/sprites/hud/heart/hardcore_half",
@@ -1744,8 +2704,10 @@
 			"heart_pottery_pattern": "entity/decorated_pot/heart_pottery_pattern",
 			"heartbreak_pottery_pattern": "entity/decorated_pot/heartbreak_pottery_pattern",
 			"heavy_core": "heavy_core",
+			"helmet": "gui/sprites/container/slot/helmet",
 			"helmet_trim": "trims/items/helmet_trim",
 			"hero_of_the_village": "mob_effect/hero_of_the_village",
+			"hoe": "gui/sprites/container/slot/hoe",
 			"hoglin": "entity/hoglin/hoglin",
 			"honey_block_bottom": "honey_block_bottom",
 			"honey_block_side": "honey_block_side",
@@ -1759,10 +2721,7 @@
 			"horn_coral_block": "horn_coral_block",
 			"horn_coral_fan": "horn_coral_fan",
 			"horse": "gui/container/horse",
-			"horse_armor_diamond": "entity/horse/armor/horse_armor_diamond",
-			"horse_armor_gold": "entity/horse/armor/horse_armor_gold",
-			"horse_armor_iron": "entity/horse/armor/horse_armor_iron",
-			"horse_armor_leather": "entity/horse/armor/horse_armor_leather",
+			"horse_armor": "gui/sprites/container/slot/horse_armor",
 			"horse_black": "entity/horse/horse_black",
 			"horse_brown": "entity/horse/horse_brown",
 			"horse_chestnut": "entity/horse/horse_chestnut",
@@ -1776,8 +2735,7 @@
 			"horse_skeleton": "entity/horse/horse_skeleton",
 			"horse_white": "entity/horse/horse_white",
 			"horse_zombie": "entity/horse/horse_zombie",
-			"host": "trims/models/armor/host",
-			"host_leggings": "trims/models/armor/host_leggings",
+			"host": "trims/entity/humanoid_leggings/host",
 			"hotbar": "gui/sprites/hud/hotbar",
 			"hotbar_attack_indicator_background": "gui/sprites/hud/hotbar_attack_indicator_background",
 			"hotbar_attack_indicator_progress": "gui/sprites/hud/hotbar_attack_indicator_progress",
@@ -1794,6 +2752,7 @@
 			"incompatible": "gui/sprites/server_list/incompatible",
 			"infested": "mob_effect/infested",
 			"info": "gui/sprites/icon/info",
+			"ingot": "gui/sprites/container/slot/ingot",
 			"inspiration": "gui/realms/inspiration",
 			"instant_damage": "mob_effect/instant_damage",
 			"instant_health": "mob_effect/instant_health",
@@ -1804,7 +2763,7 @@
 			"inworld_header_separator": "gui/inworld_header_separator",
 			"inworld_menu_background": "gui/inworld_menu_background",
 			"inworld_menu_list_background": "gui/inworld_menu_list_background",
-			"iron": "trims/color_palettes/iron",
+			"iron": "entity/zombie_villager/profession_level/iron",
 			"iron_bars": "iron_bars",
 			"iron_block": "iron_block",
 			"iron_darker": "trims/color_palettes/iron_darker",
@@ -1814,8 +2773,6 @@
 			"iron_golem_crackiness_high": "entity/iron_golem/iron_golem_crackiness_high",
 			"iron_golem_crackiness_low": "entity/iron_golem/iron_golem_crackiness_low",
 			"iron_golem_crackiness_medium": "entity/iron_golem/iron_golem_crackiness_medium",
-			"iron_layer_1": "models/armor/iron_layer_1",
-			"iron_layer_2": "models/armor/iron_layer_2",
 			"iron_ore": "iron_ore",
 			"iron_trapdoor": "iron_trapdoor",
 			"isles": "gui/presets/isles",
@@ -1839,7 +2796,7 @@
 			"jump_bar_cooldown": "gui/sprites/hud/jump_bar_cooldown",
 			"jump_bar_progress": "gui/sprites/hud/jump_bar_progress",
 			"jump_boost": "mob_effect/jump_boost",
-			"jungle": "gui/hanging_signs/jungle",
+			"jungle": "entity/zombie_villager/type/jungle",
 			"jungle_door_bottom": "jungle_door_bottom",
 			"jungle_door_top": "jungle_door_top",
 			"jungle_leaves": "jungle_leaves",
@@ -1849,7 +2806,7 @@
 			"jungle_sapling": "jungle_sapling",
 			"jungle_temple": "map/decorations/jungle_temple",
 			"jungle_trapdoor": "jungle_trapdoor",
-			"kai": "entity/player/slim/kai",
+			"kai": "entity/player/wide/kai",
 			"kebab": "painting/kebab",
 			"kelp": "kelp",
 			"kelp_plant": "kelp_plant",
@@ -1858,6 +2815,7 @@
 			"lantern": "lantern",
 			"lapis": "trims/color_palettes/lapis",
 			"lapis_block": "lapis_block",
+			"lapis_lazuli": "gui/sprites/container/slot/lapis_lazuli",
 			"lapis_ore": "lapis_ore",
 			"large_amethyst_bud": "large_amethyst_bud",
 			"large_fern_bottom": "large_fern_bottom",
@@ -1866,15 +2824,27 @@
 			"lava_still": "lava_still",
 			"lazy_panda": "entity/panda/lazy_panda",
 			"lead_knot": "entity/lead_knot",
-			"leather_layer_1": "models/armor/leather_layer_1",
-			"leather_layer_1_overlay": "models/armor/leather_layer_1_overlay",
-			"leather_layer_2": "models/armor/leather_layer_2",
-			"leather_layer_2_overlay": "models/armor/leather_layer_2_overlay",
-			"leatherworker": "entity/villager/profession/leatherworker",
+			"leaf_0": "particle/leaf_0",
+			"leaf_1": "particle/leaf_1",
+			"leaf_10": "particle/leaf_10",
+			"leaf_11": "particle/leaf_11",
+			"leaf_2": "particle/leaf_2",
+			"leaf_3": "particle/leaf_3",
+			"leaf_4": "particle/leaf_4",
+			"leaf_5": "particle/leaf_5",
+			"leaf_6": "particle/leaf_6",
+			"leaf_7": "particle/leaf_7",
+			"leaf_8": "particle/leaf_8",
+			"leaf_9": "particle/leaf_9",
+			"leaf_litter": "leaf_litter",
+			"leather": "entity/equipment/humanoid_leggings/leather",
+			"leather_overlay": "entity/equipment/humanoid_leggings/leather_overlay",
+			"leatherworker": "entity/zombie_villager/profession/leatherworker",
 			"lectern_base": "lectern_base",
 			"lectern_front": "lectern_front",
 			"lectern_sides": "lectern_sides",
 			"lectern_top": "lectern_top",
+			"leggings": "gui/sprites/container/slot/leggings",
 			"leggings_trim": "trims/items/leggings_trim",
 			"level_1": "gui/sprites/container/enchanting_table/level_1",
 			"level_1_disabled": "gui/sprites/container/enchanting_table/level_1_disabled",
@@ -1884,26 +2854,28 @@
 			"level_3_disabled": "gui/sprites/container/enchanting_table/level_3_disabled",
 			"lever": "lever",
 			"levitation": "mob_effect/levitation",
-			"librarian": "entity/villager/profession/librarian",
-			"light_blue": "entity/llama/decor/light_blue",
+			"librarian": "entity/zombie_villager/profession/librarian",
+			"light_blue": "entity/bed/light_blue",
 			"light_blue_banner": "map/decorations/light_blue_banner",
 			"light_blue_candle": "light_blue_candle",
 			"light_blue_candle_lit": "light_blue_candle_lit",
 			"light_blue_concrete": "light_blue_concrete",
 			"light_blue_concrete_powder": "light_blue_concrete_powder",
 			"light_blue_glazed_terracotta": "light_blue_glazed_terracotta",
+			"light_blue_harness": "entity/equipment/happy_ghast_body/light_blue_harness",
 			"light_blue_shulker_box": "light_blue_shulker_box",
 			"light_blue_stained_glass": "light_blue_stained_glass",
 			"light_blue_stained_glass_pane_top": "light_blue_stained_glass_pane_top",
 			"light_blue_terracotta": "light_blue_terracotta",
 			"light_blue_wool": "light_blue_wool",
-			"light_gray": "entity/llama/decor/light_gray",
+			"light_gray": "entity/bed/light_gray",
 			"light_gray_banner": "map/decorations/light_gray_banner",
 			"light_gray_candle": "light_gray_candle",
 			"light_gray_candle_lit": "light_gray_candle_lit",
 			"light_gray_concrete": "light_gray_concrete",
 			"light_gray_concrete_powder": "light_gray_concrete_powder",
 			"light_gray_glazed_terracotta": "light_gray_glazed_terracotta",
+			"light_gray_harness": "entity/equipment/happy_ghast_body/light_gray_harness",
 			"light_gray_shulker_box": "light_gray_shulker_box",
 			"light_gray_stained_glass": "light_gray_stained_glass",
 			"light_gray_stained_glass_pane_top": "light_gray_stained_glass_pane_top",
@@ -1915,13 +2887,14 @@
 			"lilac_top": "lilac_top",
 			"lily_of_the_valley": "lily_of_the_valley",
 			"lily_pad": "lily_pad",
-			"lime": "entity/llama/decor/lime",
+			"lime": "entity/bed/lime",
 			"lime_banner": "map/decorations/lime_banner",
 			"lime_candle": "lime_candle",
 			"lime_candle_lit": "lime_candle_lit",
 			"lime_concrete": "lime_concrete",
 			"lime_concrete_powder": "lime_concrete_powder",
 			"lime_glazed_terracotta": "lime_glazed_terracotta",
+			"lime_harness": "entity/equipment/happy_ghast_body/lime_harness",
 			"lime_shulker_box": "lime_shulker_box",
 			"lime_stained_glass": "lime_stained_glass",
 			"lime_stained_glass_pane_top": "lime_stained_glass_pane_top",
@@ -1929,8 +2902,11 @@
 			"lime_wool": "lime_wool",
 			"link": "gui/sprites/icon/link",
 			"link_highlighted": "gui/sprites/icon/link_highlighted",
-			"lit_progress": "gui/sprites/container/furnace/lit_progress",
-			"llama_armor_slot": "gui/sprites/container/horse/llama_armor_slot",
+			"lit_progress": "gui/sprites/container/smoker/lit_progress",
+			"llama_armor": "gui/sprites/container/slot/llama_armor",
+			"locator_bar_arrow_down": "gui/sprites/hud/locator_bar_arrow_down",
+			"locator_bar_arrow_up": "gui/sprites/hud/locator_bar_arrow_up",
+			"locator_bar_background": "gui/sprites/hud/locator_bar_background",
 			"locked": "gui/sprites/container/cartography_table/locked",
 			"locked_button": "gui/sprites/widget/locked_button",
 			"locked_button_disabled": "gui/sprites/widget/locked_button_disabled",
@@ -1944,13 +2920,14 @@
 			"loom_top": "loom_top",
 			"lowmist": "painting/lowmist",
 			"luck": "mob_effect/luck",
-			"magenta": "entity/llama/decor/magenta",
+			"magenta": "entity/bed/magenta",
 			"magenta_banner": "map/decorations/magenta_banner",
 			"magenta_candle": "magenta_candle",
 			"magenta_candle_lit": "magenta_candle_lit",
 			"magenta_concrete": "magenta_concrete",
 			"magenta_concrete_powder": "magenta_concrete_powder",
 			"magenta_glazed_terracotta": "magenta_glazed_terracotta",
+			"magenta_harness": "entity/equipment/happy_ghast_body/magenta_harness",
 			"magenta_shulker_box": "magenta_shulker_box",
 			"magenta_stained_glass": "magenta_stained_glass",
 			"magenta_stained_glass_pane_top": "magenta_stained_glass_pane_top",
@@ -1959,8 +2936,8 @@
 			"magma": "magma",
 			"magmacube": "entity/slime/magmacube",
 			"make_operator": "gui/sprites/player_list/make_operator",
-			"makena": "entity/player/slim/makena",
-			"mangrove": "gui/hanging_signs/mangrove",
+			"makena": "entity/player/wide/makena",
+			"mangrove": "entity/signs/hanging/mangrove",
 			"mangrove_door_bottom": "mangrove_door_bottom",
 			"mangrove_door_top": "mangrove_door_top",
 			"mangrove_leaves": "mangrove_leaves",
@@ -1977,7 +2954,7 @@
 			"map_background_checkerboard": "map/map_background_checkerboard",
 			"marked_join": "gui/sprites/world_list/marked_join",
 			"marked_join_highlighted": "gui/sprites/world_list/marked_join_highlighted",
-			"mason": "entity/villager/profession/mason",
+			"mason": "entity/zombie_villager/profession/mason",
 			"match": "painting/match",
 			"meditative": "painting/meditative",
 			"medium_amethyst_bud": "medium_amethyst_bud",
@@ -2012,6 +2989,7 @@
 			"mule": "entity/horse/mule",
 			"mushroom_block_inside": "mushroom_block_inside",
 			"mushroom_stem": "mushroom_stem",
+			"music_notes": "gui/sprites/icon/music_notes",
 			"mute_button": "gui/sprites/social_interactions/mute_button",
 			"mute_button_highlighted": "gui/sprites/social_interactions/mute_button_highlighted",
 			"mycelium_side": "mycelium_side",
@@ -2028,20 +3006,18 @@
 			"nether_wart_stage0": "nether_wart_stage0",
 			"nether_wart_stage1": "nether_wart_stage1",
 			"nether_wart_stage2": "nether_wart_stage2",
-			"netherite": "trims/color_palettes/netherite",
+			"netherite": "entity/equipment/humanoid_leggings/netherite",
 			"netherite_block": "netherite_block",
 			"netherite_darker": "trims/color_palettes/netherite_darker",
-			"netherite_layer_1": "models/armor/netherite_layer_1",
-			"netherite_layer_2": "models/armor/netherite_layer_2",
 			"netherrack": "netherrack",
 			"new_realm": "gui/sprites/icon/new_realm",
 			"new_world": "gui/realms/new_world",
 			"news": "gui/sprites/icon/news",
 			"night_vision": "mob_effect/night_vision",
-			"nitwit": "entity/villager/profession/nitwit",
+			"nitwit": "entity/zombie_villager/profession/nitwit",
 			"no_realms": "gui/realms/no_realms",
 			"nonlatin_european": "font/nonlatin_european",
-			"noor": "entity/player/slim/noor",
+			"noor": "entity/player/wide/noor",
 			"normal": "entity/chest/normal",
 			"normal_left": "entity/chest/normal_left",
 			"normal_right": "entity/chest/normal_right",
@@ -2055,7 +3031,8 @@
 			"notched_6_progress": "gui/sprites/boss_bar/notched_6_progress",
 			"note": "particle/note",
 			"note_block": "note_block",
-			"oak": "gui/hanging_signs/oak",
+			"now_playing": "gui/sprites/toast/now_playing",
+			"oak": "entity/signs/oak",
 			"oak_door_bottom": "oak_door_bottom",
 			"oak_door_top": "oak_door_top",
 			"oak_leaves": "oak_leaves",
@@ -2078,13 +3055,16 @@
 			"oozing": "mob_effect/oozing",
 			"open": "gui/sprites/realm_status/open",
 			"open_eye": "entity/conduit/open_eye",
-			"orange": "entity/llama/decor/orange",
+			"open_eyeblossom": "open_eyeblossom",
+			"open_eyeblossom_emissive": "open_eyeblossom_emissive",
+			"orange": "entity/bed/orange",
 			"orange_banner": "map/decorations/orange_banner",
 			"orange_candle": "orange_candle",
 			"orange_candle_lit": "orange_candle_lit",
 			"orange_concrete": "orange_concrete",
 			"orange_concrete_powder": "orange_concrete_powder",
 			"orange_glazed_terracotta": "orange_glazed_terracotta",
+			"orange_harness": "entity/equipment/happy_ghast_body/orange_harness",
 			"orange_shulker_box": "orange_shulker_box",
 			"orange_stained_glass": "orange_stained_glass",
 			"orange_stained_glass_pane_top": "orange_stained_glass_pane_top",
@@ -2114,6 +3094,33 @@
 			"page_backward_highlighted": "gui/sprites/recipe_book/page_backward_highlighted",
 			"page_forward": "gui/sprites/recipe_book/page_forward",
 			"page_forward_highlighted": "gui/sprites/recipe_book/page_forward_highlighted",
+			"pale_hanging_moss": "pale_hanging_moss",
+			"pale_hanging_moss_tip": "pale_hanging_moss_tip",
+			"pale_moss_block": "pale_moss_block",
+			"pale_moss_carpet": "pale_moss_carpet",
+			"pale_moss_carpet_side_small": "pale_moss_carpet_side_small",
+			"pale_moss_carpet_side_tall": "pale_moss_carpet_side_tall",
+			"pale_oak": "entity/signs/hanging/pale_oak",
+			"pale_oak_0": "particle/pale_oak_0",
+			"pale_oak_1": "particle/pale_oak_1",
+			"pale_oak_10": "particle/pale_oak_10",
+			"pale_oak_11": "particle/pale_oak_11",
+			"pale_oak_2": "particle/pale_oak_2",
+			"pale_oak_3": "particle/pale_oak_3",
+			"pale_oak_4": "particle/pale_oak_4",
+			"pale_oak_5": "particle/pale_oak_5",
+			"pale_oak_6": "particle/pale_oak_6",
+			"pale_oak_7": "particle/pale_oak_7",
+			"pale_oak_8": "particle/pale_oak_8",
+			"pale_oak_9": "particle/pale_oak_9",
+			"pale_oak_door_bottom": "pale_oak_door_bottom",
+			"pale_oak_door_top": "pale_oak_door_top",
+			"pale_oak_leaves": "pale_oak_leaves",
+			"pale_oak_log": "pale_oak_log",
+			"pale_oak_log_top": "pale_oak_log_top",
+			"pale_oak_planks": "pale_oak_planks",
+			"pale_oak_sapling": "pale_oak_sapling",
+			"pale_oak_trapdoor": "pale_oak_trapdoor",
 			"panda": "entity/panda/panda",
 			"panorama_0": "gui/title/background/panorama_0",
 			"panorama_1": "gui/title/background/panorama_1",
@@ -2131,7 +3138,6 @@
 			"pattern": "gui/sprites/container/loom/pattern",
 			"pattern_highlighted": "gui/sprites/container/loom/pattern_highlighted",
 			"pattern_selected": "gui/sprites/container/loom/pattern_selected",
-			"pattern_slot": "gui/sprites/container/loom/pattern_slot",
 			"pearlescent_froglight_side": "pearlescent_froglight_side",
 			"pearlescent_froglight_top": "pearlescent_froglight_top",
 			"peony_bottom": "peony_bottom",
@@ -2139,8 +3145,7 @@
 			"persian": "entity/cat/persian",
 			"phantom": "entity/phantom",
 			"phantom_eyes": "entity/phantom_eyes",
-			"pig": "entity/pig/pig",
-			"pig_saddle": "entity/pig/pig_saddle",
+			"pickaxe": "gui/sprites/container/slot/pickaxe",
 			"piglin": "entity/piglin/piglin",
 			"piglin_brute": "entity/piglin/piglin_brute",
 			"pigscene": "painting/pigscene",
@@ -2156,7 +3161,7 @@
 			"pinging_3": "gui/sprites/server_list/pinging_3",
 			"pinging_4": "gui/sprites/server_list/pinging_4",
 			"pinging_5": "gui/sprites/server_list/pinging_5",
-			"pink": "entity/llama/decor/pink",
+			"pink": "entity/bed/pink",
 			"pink_background": "gui/sprites/boss_bar/pink_background",
 			"pink_banner": "map/decorations/pink_banner",
 			"pink_candle": "pink_candle",
@@ -2164,6 +3169,7 @@
 			"pink_concrete": "pink_concrete",
 			"pink_concrete_powder": "pink_concrete_powder",
 			"pink_glazed_terracotta": "pink_glazed_terracotta",
+			"pink_harness": "entity/equipment/happy_ghast_body/pink_harness",
 			"pink_petals": "pink_petals",
 			"pink_petals_stem": "pink_petals_stem",
 			"pink_progress": "gui/sprites/boss_bar/pink_progress",
@@ -2187,7 +3193,7 @@
 			"pitcher_crop_top": "pitcher_crop_top",
 			"pitcher_crop_top_stage_3": "pitcher_crop_top_stage_3",
 			"pitcher_crop_top_stage_4": "pitcher_crop_top_stage_4",
-			"plains": "entity/villager/type/plains",
+			"plains": "entity/zombie_villager/type/plains",
 			"plains_village": "map/decorations/plains_village",
 			"plant": "painting/plant",
 			"player": "map/decorations/player",
@@ -2234,6 +3240,7 @@
 			"potatoes_stage1": "potatoes_stage1",
 			"potatoes_stage2": "potatoes_stage2",
 			"potatoes_stage3": "potatoes_stage3",
+			"potion": "gui/sprites/container/slot/potion",
 			"potted_azalea_bush_plant": "potted_azalea_bush_plant",
 			"potted_azalea_bush_side": "potted_azalea_bush_side",
 			"potted_azalea_bush_top": "potted_azalea_bush_top",
@@ -2254,7 +3261,7 @@
 			"pumpkin_stem": "pumpkin_stem",
 			"pumpkin_top": "pumpkin_top",
 			"pumpkinblur": "misc/pumpkinblur",
-			"purple": "entity/llama/decor/purple",
+			"purple": "entity/bed/purple",
 			"purple_background": "gui/sprites/boss_bar/purple_background",
 			"purple_banner": "map/decorations/purple_banner",
 			"purple_candle": "purple_candle",
@@ -2262,6 +3269,7 @@
 			"purple_concrete": "purple_concrete",
 			"purple_concrete_powder": "purple_concrete_powder",
 			"purple_glazed_terracotta": "purple_glazed_terracotta",
+			"purple_harness": "entity/equipment/happy_ghast_body/purple_harness",
 			"purple_progress": "gui/sprites/boss_bar/purple_progress",
 			"purple_shulker_box": "purple_shulker_box",
 			"purple_stained_glass": "purple_stained_glass",
@@ -2283,18 +3291,17 @@
 			"rail": "rail",
 			"rail_corner": "rail_corner",
 			"rain": "environment/rain",
-			"raiser": "trims/models/armor/raiser",
-			"raiser_leggings": "trims/models/armor/raiser_leggings",
+			"raiser": "trims/entity/humanoid_leggings/raiser",
 			"ravager": "entity/illager/ravager",
 			"raw_copper_block": "raw_copper_block",
 			"raw_gold_block": "raw_gold_block",
 			"raw_iron_block": "raw_iron_block",
 			"realms": "gui/title/realms",
-			"recipe": "gui/sprites/container/stonecutter/recipe",
+			"recipe": "gui/sprites/toast/recipe",
 			"recipe_book": "gui/recipe_book",
 			"recipe_highlighted": "gui/sprites/container/stonecutter/recipe_highlighted",
 			"recipe_selected": "gui/sprites/container/stonecutter/recipe_selected",
-			"red": "entity/llama/decor/red",
+			"red": "entity/bed/red",
 			"red_background": "gui/sprites/boss_bar/red_background",
 			"red_banner": "map/decorations/red_banner",
 			"red_candle": "red_candle",
@@ -2302,6 +3309,7 @@
 			"red_concrete": "red_concrete",
 			"red_concrete_powder": "red_concrete_powder",
 			"red_glazed_terracotta": "red_glazed_terracotta",
+			"red_harness": "entity/equipment/happy_ghast_body/red_harness",
 			"red_marker": "map/decorations/red_marker",
 			"red_mooshroom": "entity/cow/red_mooshroom",
 			"red_mushroom": "red_mushroom",
@@ -2321,6 +3329,7 @@
 			"red_x": "map/decorations/red_x",
 			"redstone": "trims/color_palettes/redstone",
 			"redstone_block": "redstone_block",
+			"redstone_dust": "gui/sprites/container/slot/redstone_dust",
 			"redstone_dust_dot": "redstone_dust_dot",
 			"redstone_dust_line0": "redstone_dust_line0",
 			"redstone_dust_line1": "redstone_dust_line1",
@@ -2347,6 +3356,10 @@
 			"report_button": "gui/sprites/social_interactions/report_button",
 			"report_button_disabled": "gui/sprites/social_interactions/report_button_disabled",
 			"report_button_highlighted": "gui/sprites/social_interactions/report_button_highlighted",
+			"resin": "trims/color_palettes/resin",
+			"resin_block": "resin_block",
+			"resin_bricks": "resin_bricks",
+			"resin_clump": "resin_clump",
 			"resistance": "mob_effect/resistance",
 			"respawn_anchor_bottom": "respawn_anchor_bottom",
 			"respawn_anchor_side0": "respawn_anchor_side0",
@@ -2357,13 +3370,12 @@
 			"respawn_anchor_top": "respawn_anchor_top",
 			"respawn_anchor_top_off": "respawn_anchor_top_off",
 			"rhombus": "entity/shield/rhombus",
-			"rib": "trims/models/armor/rib",
-			"rib_leggings": "trims/models/armor/rib_leggings",
+			"rib": "trims/entity/humanoid_leggings/rib",
 			"right_click": "gui/sprites/toast/right_click",
 			"rooted_dirt": "rooted_dirt",
 			"rose_bush_bottom": "rose_bush_bottom",
 			"rose_bush_top": "rose_bush_top",
-			"saddle_slot": "gui/sprites/container/horse/saddle_slot",
+			"saddle": "entity/equipment/strider_saddle/saddle",
 			"salmon": "entity/fish/salmon",
 			"salt": "entity/rabbit/salt",
 			"sand": "sand",
@@ -2371,7 +3383,7 @@
 			"sandstone_bottom": "sandstone_bottom",
 			"sandstone_top": "sandstone_top",
 			"saturation": "mob_effect/saturation",
-			"savanna": "entity/villager/type/savanna",
+			"savanna": "entity/zombie_villager/type/savanna",
 			"savanna_village": "map/decorations/savanna_village",
 			"scaffolding_bottom": "scaffolding_bottom",
 			"scaffolding_side": "scaffolding_side",
@@ -2380,7 +3392,7 @@
 			"scrape_pottery_pattern": "entity/decorated_pot/scrape_pottery_pattern",
 			"scroll_left": "gui/sprites/spectator/scroll_left",
 			"scroll_right": "gui/sprites/spectator/scroll_right",
-			"scroller": "gui/sprites/container/stonecutter/scroller",
+			"scroller": "gui/sprites/widget/scroller",
 			"scroller_background": "gui/sprites/widget/scroller_background",
 			"scroller_disabled": "gui/sprites/container/stonecutter/scroller_disabled",
 			"sculk": "sculk",
@@ -2430,8 +3442,7 @@
 			"select": "gui/sprites/transferable_list/select",
 			"select_highlighted": "gui/sprites/transferable_list/select_highlighted",
 			"selection": "gui/sprites/gamemode_switcher/selection",
-			"sentry": "trims/models/armor/sentry",
-			"sentry_leggings": "trims/models/armor/sentry_leggings",
+			"sentry": "trims/entity/humanoid_leggings/sentry",
 			"sga_a": "particle/sga_a",
 			"sga_b": "particle/sga_b",
 			"sga_c": "particle/sga_c",
@@ -2459,16 +3470,19 @@
 			"sga_y": "particle/sga_y",
 			"sga_z": "particle/sga_z",
 			"shadow": "misc/shadow",
-			"shaper": "trims/models/armor/shaper",
-			"shaper_leggings": "trims/models/armor/shaper_leggings",
+			"shaper": "trims/entity/humanoid_leggings/shaper",
 			"sheaf_pottery_pattern": "entity/decorated_pot/sheaf_pottery_pattern",
 			"sheep": "entity/sheep/sheep",
-			"sheep_fur": "entity/sheep/sheep_fur",
+			"sheep_wool": "entity/sheep/sheep_wool",
+			"sheep_wool_undercoat": "entity/sheep/sheep_wool_undercoat",
 			"shelter_pottery_pattern": "entity/decorated_pot/shelter_pottery_pattern",
-			"shepherd": "entity/villager/profession/shepherd",
+			"shepherd": "entity/zombie_villager/profession/shepherd",
+			"shield": "gui/sprites/container/slot/shield",
 			"shield_base": "entity/shield_base",
 			"shield_base_nopattern": "entity/shield_base_nopattern",
+			"short_dry_grass": "short_dry_grass",
 			"short_grass": "short_grass",
+			"shovel": "gui/sprites/container/slot/shovel",
 			"shriek": "particle/shriek",
 			"shroomlight": "shroomlight",
 			"shulker": "entity/shulker/shulker",
@@ -2490,10 +3504,9 @@
 			"shulker_white": "entity/shulker/shulker_white",
 			"shulker_yellow": "entity/shulker/shulker_yellow",
 			"siamese": "entity/cat/siamese",
-			"silence": "trims/models/armor/silence",
-			"silence_leggings": "trims/models/armor/silence_leggings",
+			"silence": "trims/entity/humanoid_leggings/silence",
 			"silverfish": "entity/silverfish",
-			"skeleton": "painting/skeleton",
+			"skeleton": "entity/skeleton/skeleton",
 			"skull": "entity/shield/skull",
 			"skull_and_roses": "painting/skull_and_roses",
 			"skull_pottery_pattern": "entity/decorated_pot/skull_pottery_pattern",
@@ -2504,8 +3517,11 @@
 			"slime": "entity/slime/slime",
 			"slime_block": "slime_block",
 			"slot": "gui/sprites/gamemode_switcher/slot",
+			"slot_background": "gui/sprites/container/bundle/slot_background",
 			"slot_craftable": "gui/sprites/recipe_book/slot_craftable",
 			"slot_frame": "gui/sprites/widget/slot_frame",
+			"slot_highlight_back": "gui/sprites/container/slot_highlight_back",
+			"slot_highlight_front": "gui/sprites/container/slot_highlight_front",
 			"slot_many_craftable": "gui/sprites/recipe_book/slot_many_craftable",
 			"slot_many_uncraftable": "gui/sprites/recipe_book/slot_many_uncraftable",
 			"slot_uncraftable": "gui/sprites/recipe_book/slot_uncraftable",
@@ -2529,6 +3545,8 @@
 			"smithing_table_front": "smithing_table_front",
 			"smithing_table_side": "smithing_table_side",
 			"smithing_table_top": "smithing_table_top",
+			"smithing_template_armor_trim": "gui/sprites/container/slot/smithing_template_armor_trim",
+			"smithing_template_netherite_upgrade": "gui/sprites/container/slot/smithing_template_netherite_upgrade",
 			"smoker": "gui/container/smoker",
 			"smoker_bottom": "smoker_bottom",
 			"smoker_front": "smoker_front",
@@ -2559,8 +3577,7 @@
 			"sniffer_egg_very_cracked_top": "sniffer_egg_very_cracked_top",
 			"sniffer_egg_very_cracked_west": "sniffer_egg_very_cracked_west",
 			"snort_pottery_pattern": "entity/decorated_pot/snort_pottery_pattern",
-			"snout": "trims/models/armor/snout",
-			"snout_leggings": "trims/models/armor/snout_leggings",
+			"snout": "trims/entity/humanoid_leggings/snout",
 			"snow": "snow",
 			"snow_fox": "entity/fox/snow_fox",
 			"snow_fox_sleep": "entity/fox/snow_fox_sleep",
@@ -2627,8 +3644,7 @@
 			"spell_7": "particle/spell_7",
 			"spider": "entity/spider/spider",
 			"spider_eyes": "entity/spider_eyes",
-			"spire": "trims/models/armor/spire",
-			"spire_leggings": "trims/models/armor/spire_leggings",
+			"spire": "trims/entity/humanoid_leggings/spire",
 			"spit": "entity/llama/spit",
 			"splash_0": "particle/splash_0",
 			"splash_1": "particle/splash_1",
@@ -2637,7 +3653,7 @@
 			"sponge": "sponge",
 			"spore_blossom": "spore_blossom",
 			"spore_blossom_base": "spore_blossom_base",
-			"spruce": "gui/hanging_signs/spruce",
+			"spruce": "entity/signs/spruce",
 			"spruce_door_bottom": "spruce_door_bottom",
 			"spruce_door_top": "spruce_door_top",
 			"spruce_leaves": "spruce_leaves",
@@ -2653,7 +3669,7 @@
 			"square_top_right": "entity/shield/square_top_right",
 			"squid": "entity/squid/squid",
 			"stage": "painting/stage",
-			"steve": "entity/player/slim/steve",
+			"steve": "entity/player/wide/steve",
 			"stone": "stone",
 			"stone_bricks": "stone_bricks",
 			"stonecutter": "gui/container/stonecutter",
@@ -2667,7 +3683,6 @@
 			"strength": "mob_effect/strength",
 			"strider": "entity/strider/strider",
 			"strider_cold": "entity/strider/strider_cold",
-			"strider_saddle": "entity/strider/strider_saddle",
 			"stripe_bottom": "entity/shield/stripe_bottom",
 			"stripe_center": "entity/shield/stripe_center",
 			"stripe_downleft": "entity/shield/stripe_downleft",
@@ -2694,6 +3709,8 @@
 			"stripped_mangrove_log_top": "stripped_mangrove_log_top",
 			"stripped_oak_log": "stripped_oak_log",
 			"stripped_oak_log_top": "stripped_oak_log_top",
+			"stripped_pale_oak_log": "stripped_pale_oak_log",
+			"stripped_pale_oak_log_top": "stripped_pale_oak_log_top",
 			"stripped_spruce_log": "stripped_spruce_log",
 			"stripped_spruce_log_top": "stripped_spruce_log_top",
 			"stripped_warped_stem": "stripped_warped_stem",
@@ -2710,7 +3727,7 @@
 			"sunflower_front": "sunflower_front",
 			"sunflower_top": "sunflower_top",
 			"sunflowers": "painting/sunflowers",
-			"sunny": "entity/player/slim/sunny",
+			"sunny": "entity/player/wide/sunny",
 			"sunset": "painting/sunset",
 			"survival_spawn": "gui/realms/survival_spawn",
 			"suspicious_gravel_0": "suspicious_gravel_0",
@@ -2721,7 +3738,7 @@
 			"suspicious_sand_1": "suspicious_sand_1",
 			"suspicious_sand_2": "suspicious_sand_2",
 			"suspicious_sand_3": "suspicious_sand_3",
-			"swamp": "entity/villager/type/swamp",
+			"swamp": "entity/zombie_villager/type/swamp",
 			"swamp_hut": "map/decorations/swamp_hut",
 			"sweep_0": "particle/sweep_0",
 			"sweep_1": "particle/sweep_1",
@@ -2735,6 +3752,7 @@
 			"sweet_berry_bush_stage1": "sweet_berry_bush_stage1",
 			"sweet_berry_bush_stage2": "sweet_berry_bush_stage2",
 			"sweet_berry_bush_stage3": "sweet_berry_bush_stage3",
+			"sword": "gui/sprites/container/slot/sword",
 			"system": "gui/sprites/toast/system",
 			"tab": "gui/sprites/recipe_book/tab",
 			"tab_above_left": "gui/sprites/advancements/tab_above_left",
@@ -2798,8 +3816,9 @@
 			"tab_top_unselected_7": "gui/sprites/container/creative_inventory/tab_top_unselected_7",
 			"tabby": "entity/cat/tabby",
 			"tadpole": "entity/tadpole/tadpole",
-			"taiga": "entity/villager/type/taiga",
+			"taiga": "entity/zombie_villager/type/taiga",
 			"taiga_village": "map/decorations/taiga_village",
+			"tall_dry_grass": "tall_dry_grass",
 			"tall_grass_bottom": "tall_grass_bottom",
 			"tall_grass_top": "tall_grass_top",
 			"tall_seagrass_bottom": "tall_seagrass_bottom",
@@ -2812,13 +3831,20 @@
 			"task_frame_unobtained": "gui/sprites/advancements/task_frame_unobtained",
 			"teleport_to_player": "gui/sprites/spectator/teleport_to_player",
 			"teleport_to_team": "gui/sprites/spectator/teleport_to_team",
+			"temperate_chicken": "entity/chicken/temperate_chicken",
+			"temperate_cow": "entity/cow/temperate_cow",
 			"temperate_frog": "entity/frog/temperate_frog",
+			"temperate_pig": "entity/pig/temperate_pig",
 			"terracotta": "terracotta",
-			"text_field": "gui/sprites/container/anvil/text_field",
+			"test_block_accept": "test_block_accept",
+			"test_block_fail": "test_block_fail",
+			"test_block_log": "test_block_log",
+			"test_block_start": "test_block_start",
+			"test_instance_block": "test_instance_block",
+			"text_field": "gui/sprites/widget/text_field",
 			"text_field_disabled": "gui/sprites/container/anvil/text_field_disabled",
 			"text_field_highlighted": "gui/sprites/widget/text_field_highlighted",
-			"tide": "trims/models/armor/tide",
-			"tide_leggings": "trims/models/armor/tide_leggings",
+			"tide": "trims/entity/humanoid_leggings/tide",
 			"tides": "painting/tides",
 			"tinted_glass": "tinted_glass",
 			"tipped_arrow": "entity/projectiles/tipped_arrow",
@@ -2827,14 +3853,14 @@
 			"tnt_side": "tnt_side",
 			"tnt_top": "tnt_top",
 			"toast": "entity/rabbit/toast",
-			"toolsmith": "entity/villager/profession/toolsmith",
+			"toolsmith": "entity/zombie_villager/profession/toolsmith",
 			"torch": "torch",
 			"torchflower": "torchflower",
 			"torchflower_crop_stage0": "torchflower_crop_stage0",
 			"torchflower_crop_stage1": "torchflower_crop_stage1",
 			"trade_arrow": "gui/sprites/container/villager/trade_arrow",
 			"trade_arrow_out_of_stock": "gui/sprites/container/villager/trade_arrow_out_of_stock",
-			"trader_llama": "entity/llama/decor/trader_llama",
+			"trader_llama": "entity/equipment/llama_body/trader_llama",
 			"trapped": "entity/chest/trapped",
 			"trapped_left": "entity/chest/trapped_left",
 			"trapped_right": "entity/chest/trapped_right",
@@ -2894,7 +3920,7 @@
 			"turtle_egg": "turtle_egg",
 			"turtle_egg_slightly_cracked": "turtle_egg_slightly_cracked",
 			"turtle_egg_very_cracked": "turtle_egg_very_cracked",
-			"turtle_layer_1": "models/armor/turtle_layer_1",
+			"turtle_scute": "entity/equipment/humanoid/turtle_scute",
 			"tutorial": "gui/sprites/toast/tutorial",
 			"twisting_vines": "twisting_vines",
 			"twisting_vines_plant": "twisting_vines_plant",
@@ -2936,30 +3962,34 @@
 			"vehicle_half": "gui/sprites/hud/heart/vehicle_half",
 			"verdant_froglight_side": "verdant_froglight_side",
 			"verdant_froglight_top": "verdant_froglight_top",
-			"vex": "trims/models/armor/vex",
+			"vex": "entity/illager/vex",
 			"vex_charging": "entity/illager/vex_charging",
-			"vex_leggings": "trims/models/armor/vex_leggings",
 			"vibration": "particle/vibration",
 			"video_link": "gui/sprites/icon/video_link",
 			"video_link_highlighted": "gui/sprites/icon/video_link_highlighted",
 			"vignette": "misc/vignette",
-			"villager": "gui/container/villager",
+			"villager": "entity/villager/villager",
 			"vindicator": "entity/illager/vindicator",
 			"vine": "vine",
 			"void": "painting/void",
 			"wanderer": "painting/wanderer",
 			"wandering_trader": "entity/wandering_trader",
-			"ward": "trims/models/armor/ward",
-			"ward_leggings": "trims/models/armor/ward_leggings",
+			"ward": "trims/entity/humanoid_leggings/ward",
 			"warden": "entity/warden/warden",
 			"warden_bioluminescent_layer": "entity/warden/warden_bioluminescent_layer",
 			"warden_heart": "entity/warden/warden_heart",
 			"warden_pulsating_spots_1": "entity/warden/warden_pulsating_spots_1",
 			"warden_pulsating_spots_2": "entity/warden/warden_pulsating_spots_2",
+			"warm_chicken": "entity/chicken/warm_chicken",
+			"warm_cow": "entity/cow/warm_cow",
 			"warm_frog": "entity/frog/warm_frog",
+			"warm_pig": "entity/pig/warm_pig",
 			"warning": "gui/sprites/world_list/warning",
+			"warning_button": "gui/sprites/dialog/warning_button",
+			"warning_button_disabled": "gui/sprites/dialog/warning_button_disabled",
+			"warning_button_highlighted": "gui/sprites/dialog/warning_button_highlighted",
 			"warning_highlighted": "gui/sprites/world_list/warning_highlighted",
-			"warped": "gui/hanging_signs/warped",
+			"warped": "entity/signs/warped",
 			"warped_door_bottom": "warped_door_bottom",
 			"warped_door_top": "warped_door_top",
 			"warped_fungus": "warped_fungus",
@@ -2978,11 +4008,10 @@
 			"water_flow": "water_flow",
 			"water_overlay": "water_overlay",
 			"water_still": "water_still",
-			"wayfinder": "trims/models/armor/wayfinder",
-			"wayfinder_leggings": "trims/models/armor/wayfinder_leggings",
+			"wayfinder": "trims/entity/humanoid_leggings/wayfinder",
 			"weak_panda": "entity/panda/weak_panda",
 			"weakness": "mob_effect/weakness",
-			"weaponsmith": "entity/villager/profession/weaponsmith",
+			"weaponsmith": "entity/zombie_villager/profession/weaponsmith",
 			"weathered_chiseled_copper": "weathered_chiseled_copper",
 			"weathered_copper": "weathered_copper",
 			"weathered_copper_bulb": "weathered_copper_bulb",
@@ -3006,7 +4035,7 @@
 			"wheat_stage5": "wheat_stage5",
 			"wheat_stage6": "wheat_stage6",
 			"wheat_stage7": "wheat_stage7",
-			"white": "entity/llama/decor/white",
+			"white": "entity/rabbit/white",
 			"white_background": "gui/sprites/boss_bar/white_background",
 			"white_banner": "map/decorations/white_banner",
 			"white_candle": "white_candle",
@@ -3014,6 +4043,7 @@
 			"white_concrete": "white_concrete",
 			"white_concrete_powder": "white_concrete_powder",
 			"white_glazed_terracotta": "white_glazed_terracotta",
+			"white_harness": "entity/equipment/happy_ghast_body/white_harness",
 			"white_progress": "gui/sprites/boss_bar/white_progress",
 			"white_shulker_box": "white_shulker_box",
 			"white_splotched": "entity/rabbit/white_splotched",
@@ -3022,9 +4052,10 @@
 			"white_terracotta": "white_terracotta",
 			"white_tulip": "white_tulip",
 			"white_wool": "white_wool",
-			"wild": "trims/models/armor/wild",
-			"wild_leggings": "trims/models/armor/wild_leggings",
-			"wind": "painting/wind",
+			"wild": "trims/entity/humanoid_leggings/wild",
+			"wildflowers": "wildflowers",
+			"wildflowers_stem": "wildflowers_stem",
+			"wind": "entity/conduit/wind",
 			"wind_charge": "entity/projectiles/wind_charge",
 			"wind_charged": "mob_effect/wind_charged",
 			"wind_vertical": "entity/conduit/wind_vertical",
@@ -3045,11 +4076,9 @@
 			"withered_hardcore_half_blinking": "gui/sprites/hud/heart/withered_hardcore_half_blinking",
 			"wolf": "entity/wolf/wolf",
 			"wolf_angry": "entity/wolf/wolf_angry",
-			"wolf_armor": "entity/wolf/wolf_armor",
 			"wolf_armor_crackiness_high": "entity/wolf/wolf_armor_crackiness_high",
 			"wolf_armor_crackiness_low": "entity/wolf/wolf_armor_crackiness_low",
 			"wolf_armor_crackiness_medium": "entity/wolf/wolf_armor_crackiness_medium",
-			"wolf_armor_overlay": "entity/wolf/wolf_armor_overlay",
 			"wolf_ashen": "entity/wolf/wolf_ashen",
 			"wolf_ashen_angry": "entity/wolf/wolf_ashen_angry",
 			"wolf_ashen_tame": "entity/wolf/wolf_ashen_tame",
@@ -3080,7 +4109,7 @@
 			"wooden_planks": "gui/sprites/toast/wooden_planks",
 			"woodland_mansion": "map/decorations/woodland_mansion",
 			"worried_panda": "entity/panda/worried_panda",
-			"yellow": "entity/llama/decor/yellow",
+			"yellow": "entity/bed/yellow",
 			"yellow_background": "gui/sprites/boss_bar/yellow_background",
 			"yellow_banner": "map/decorations/yellow_banner",
 			"yellow_candle": "yellow_candle",
@@ -3088,6 +4117,7 @@
 			"yellow_concrete": "yellow_concrete",
 			"yellow_concrete_powder": "yellow_concrete_powder",
 			"yellow_glazed_terracotta": "yellow_glazed_terracotta",
+			"yellow_harness": "entity/equipment/happy_ghast_body/yellow_harness",
 			"yellow_progress": "gui/sprites/boss_bar/yellow_progress",
 			"yellow_shulker_box": "yellow_shulker_box",
 			"yellow_stained_glass": "yellow_stained_glass",
@@ -3098,7 +4128,7 @@
 			"zombie": "entity/zombie/zombie",
 			"zombie_villager": "entity/zombie_villager/zombie_villager",
 			"zombified_piglin": "entity/piglin/zombified_piglin",
-			"zuri": "entity/player/slim/zuri"
+			"zuri": "entity/player/wide/zuri"
 		},
 		"block_mapping_mineways": {
 			"": "",
@@ -3348,7 +4378,9 @@
 			"bubble_coral_block": "bubble_coral_block",
 			"bubble_coral_fan": "bubble_coral_fan",
 			"budding_amethyst": "budding_amethyst",
+			"bush": "bush",
 			"cactus_bottom": "cactus_bottom",
+			"cactus_flower": "cactus_flower",
 			"cactus_side": "cactus_side",
 			"cactus_top": "cactus_top",
 			"cake_bottom": "cake_bottom",
@@ -3406,6 +4438,7 @@
 			"chiseled_quartz_block": "chiseled_quartz_block",
 			"chiseled_quartz_block_top": "chiseled_quartz_block_top",
 			"chiseled_red_sandstone": "chiseled_red_sandstone",
+			"chiseled_resin_bricks": "chiseled_resin_bricks",
 			"chiseled_sandstone": "chiseled_sandstone",
 			"chiseled_stone_bricks": "chiseled_stone_bricks",
 			"chiseled_tuff": "chiseled_tuff",
@@ -3416,6 +4449,7 @@
 			"chorus_flower_dead": "chorus_flower_dead",
 			"chorus_plant": "chorus_plant",
 			"clay": "clay",
+			"closed_eyeblossom": "closed_eyeblossom",
 			"coal_block": "coal_block",
 			"coal_ore": "coal_ore",
 			"coarse_dirt": "coarse_dirt",
@@ -3470,6 +4504,12 @@
 			"crafting_table_front": "crafting_table_front",
 			"crafting_table_side": "crafting_table_side",
 			"crafting_table_top": "crafting_table_top",
+			"creaking_heart": "creaking_heart",
+			"creaking_heart_awake": "creaking_heart_awake",
+			"creaking_heart_dormant": "creaking_heart_dormant",
+			"creaking_heart_top": "creaking_heart_top",
+			"creaking_heart_top_awake": "creaking_heart_top_awake",
+			"creaking_heart_top_dormant": "creaking_heart_top_dormant",
 			"crimson_door_bottom": "crimson_door_bottom",
 			"crimson_door_top": "crimson_door_top",
 			"crimson_fungus": "crimson_fungus",
@@ -3549,6 +4589,34 @@
 			"dispenser_front": "dispenser_front",
 			"dispenser_front_vertical": "dispenser_front_vertical",
 			"dragon_egg": "dragon_egg",
+			"dried_ghast_hydration_0_bottom": "dried_ghast_hydration_0_bottom",
+			"dried_ghast_hydration_0_east": "dried_ghast_hydration_0_east",
+			"dried_ghast_hydration_0_north": "dried_ghast_hydration_0_north",
+			"dried_ghast_hydration_0_south": "dried_ghast_hydration_0_south",
+			"dried_ghast_hydration_0_tentacles": "dried_ghast_hydration_0_tentacles",
+			"dried_ghast_hydration_0_top": "dried_ghast_hydration_0_top",
+			"dried_ghast_hydration_0_west": "dried_ghast_hydration_0_west",
+			"dried_ghast_hydration_1_bottom": "dried_ghast_hydration_1_bottom",
+			"dried_ghast_hydration_1_east": "dried_ghast_hydration_1_east",
+			"dried_ghast_hydration_1_north": "dried_ghast_hydration_1_north",
+			"dried_ghast_hydration_1_south": "dried_ghast_hydration_1_south",
+			"dried_ghast_hydration_1_tentacles": "dried_ghast_hydration_1_tentacles",
+			"dried_ghast_hydration_1_top": "dried_ghast_hydration_1_top",
+			"dried_ghast_hydration_1_west": "dried_ghast_hydration_1_west",
+			"dried_ghast_hydration_2_bottom": "dried_ghast_hydration_2_bottom",
+			"dried_ghast_hydration_2_east": "dried_ghast_hydration_2_east",
+			"dried_ghast_hydration_2_north": "dried_ghast_hydration_2_north",
+			"dried_ghast_hydration_2_south": "dried_ghast_hydration_2_south",
+			"dried_ghast_hydration_2_tentacles": "dried_ghast_hydration_2_tentacles",
+			"dried_ghast_hydration_2_top": "dried_ghast_hydration_2_top",
+			"dried_ghast_hydration_2_west": "dried_ghast_hydration_2_west",
+			"dried_ghast_hydration_3_bottom": "dried_ghast_hydration_3_bottom",
+			"dried_ghast_hydration_3_east": "dried_ghast_hydration_3_east",
+			"dried_ghast_hydration_3_north": "dried_ghast_hydration_3_north",
+			"dried_ghast_hydration_3_south": "dried_ghast_hydration_3_south",
+			"dried_ghast_hydration_3_tentacles": "dried_ghast_hydration_3_tentacles",
+			"dried_ghast_hydration_3_top": "dried_ghast_hydration_3_top",
+			"dried_ghast_hydration_3_west": "dried_ghast_hydration_3_west",
 			"dried_kelp_bottom": "dried_kelp_bottom",
 			"dried_kelp_side": "dried_kelp_side",
 			"dried_kelp_top": "dried_kelp_top",
@@ -3584,6 +4652,8 @@
 			"fire_coral": "fire_coral",
 			"fire_coral_block": "fire_coral_block",
 			"fire_coral_fan": "fire_coral_fan",
+			"firefly_bush": "firefly_bush",
+			"firefly_bush_emissive": "firefly_bush_emissive",
 			"fletching_table_front": "fletching_table_front",
 			"fletching_table_side": "fletching_table_side",
 			"fletching_table_top": "fletching_table_top",
@@ -3608,7 +4678,6 @@
 			"gold_block": "gold_block",
 			"gold_ore": "gold_ore",
 			"granite": "granite",
-			"grass": "grass",
 			"grass_block_side": "grass_block_side",
 			"grass_block_side_overlay": "grass_block_side_overlay",
 			"grass_block_snow": "grass_block_snow",
@@ -3684,6 +4753,7 @@
 			"large_fern_top": "large_fern_top",
 			"lava_flow": "lava_flow",
 			"lava_still": "lava_still",
+			"leaf_litter": "leaf_litter",
 			"lectern_base": "lectern_base",
 			"lectern_front": "lectern_front",
 			"lectern_sides": "lectern_sides",
@@ -3796,6 +4866,8 @@
 			"obsidian": "obsidian",
 			"ochre_froglight_side": "ochre_froglight_side",
 			"ochre_froglight_top": "ochre_froglight_top",
+			"open_eyeblossom": "open_eyeblossom",
+			"open_eyeblossom_emissive": "open_eyeblossom_emissive",
 			"orange_candle": "orange_candle",
 			"orange_candle_lit": "orange_candle_lit",
 			"orange_concrete": "orange_concrete",
@@ -3821,6 +4893,20 @@
 			"oxidized_cut_copper": "oxidized_cut_copper",
 			"packed_ice": "packed_ice",
 			"packed_mud": "packed_mud",
+			"pale_hanging_moss": "pale_hanging_moss",
+			"pale_hanging_moss_tip": "pale_hanging_moss_tip",
+			"pale_moss_block": "pale_moss_block",
+			"pale_moss_carpet": "pale_moss_carpet",
+			"pale_moss_carpet_side_small": "pale_moss_carpet_side_small",
+			"pale_moss_carpet_side_tall": "pale_moss_carpet_side_tall",
+			"pale_oak_door_bottom": "pale_oak_door_bottom",
+			"pale_oak_door_top": "pale_oak_door_top",
+			"pale_oak_leaves": "pale_oak_leaves",
+			"pale_oak_log": "pale_oak_log",
+			"pale_oak_log_top": "pale_oak_log_top",
+			"pale_oak_planks": "pale_oak_planks",
+			"pale_oak_sapling": "pale_oak_sapling",
+			"pale_oak_trapdoor": "pale_oak_trapdoor",
 			"pearlescent_froglight_side": "pearlescent_froglight_side",
 			"pearlescent_froglight_top": "pearlescent_froglight_top",
 			"peony_bottom": "peony_bottom",
@@ -3953,6 +5039,9 @@
 			"repeating_command_block_conditional": "repeating_command_block_conditional",
 			"repeating_command_block_front": "repeating_command_block_front",
 			"repeating_command_block_side": "repeating_command_block_side",
+			"resin_block": "resin_block",
+			"resin_bricks": "resin_bricks",
+			"resin_clump": "resin_clump",
 			"respawn_anchor_bottom": "respawn_anchor_bottom",
 			"respawn_anchor_side0": "respawn_anchor_side0",
 			"respawn_anchor_side1": "respawn_anchor_side1",
@@ -3991,6 +5080,8 @@
 			"sea_lantern": "sea_lantern",
 			"sea_pickle": "sea_pickle",
 			"seagrass": "seagrass",
+			"short_dry_grass": "short_dry_grass",
+			"short_grass": "short_grass",
 			"shroomlight": "shroomlight",
 			"shulker_bottom_black": "shulker_bottom_black",
 			"shulker_bottom_blue": "shulker_bottom_blue",
@@ -4106,6 +5197,8 @@
 			"stripped_mangrove_log_top": "stripped_mangrove_log_top",
 			"stripped_oak_log": "stripped_oak_log",
 			"stripped_oak_log_top": "stripped_oak_log_top",
+			"stripped_pale_oak_log": "stripped_pale_oak_log",
+			"stripped_pale_oak_log_top": "stripped_pale_oak_log_top",
 			"stripped_spruce_log": "stripped_spruce_log",
 			"stripped_spruce_log_top": "stripped_spruce_log_top",
 			"stripped_warped_stem": "stripped_warped_stem",
@@ -4131,6 +5224,7 @@
 			"sweet_berry_bush_stage1": "sweet_berry_bush_stage1",
 			"sweet_berry_bush_stage2": "sweet_berry_bush_stage2",
 			"sweet_berry_bush_stage3": "sweet_berry_bush_stage3",
+			"tall_dry_grass": "tall_dry_grass",
 			"tall_grass_bottom": "tall_grass_bottom",
 			"tall_grass_top": "tall_grass_top",
 			"tall_seagrass_bottom": "tall_seagrass_bottom",
@@ -4138,6 +5232,11 @@
 			"target_side": "target_side",
 			"target_top": "target_top",
 			"terracotta": "terracotta",
+			"test_block_accept": "test_block_accept",
+			"test_block_fail": "test_block_fail",
+			"test_block_log": "test_block_log",
+			"test_block_start": "test_block_start",
+			"test_instance_block": "test_instance_block",
 			"tinted_glass": "tinted_glass",
 			"tnt_bottom": "tnt_bottom",
 			"tnt_side": "tnt_side",
@@ -4236,6 +5335,8 @@
 			"white_terracotta": "white_terracotta",
 			"white_tulip": "white_tulip",
 			"white_wool": "white_wool",
+			"wildflowers": "wildflowers",
+			"wildflowers_stem": "wildflowers_stem",
 			"wither_rose": "wither_rose",
 			"yellow_candle": "yellow_candle",
 			"yellow_candle_lit": "yellow_candle_lit",
@@ -4274,11 +5375,6 @@
 				0.614651,
 				0.089036
 			],
-			"colormap/grass": [
-				0.227161,
-				0.614651,
-				0.089036
-			],
 			"dark_oak_leaves": [
 				0.227161,
 				0.614651,
@@ -4294,7 +5390,7 @@
 				0.614651,
 				0.089036
 			],
-			"grass_block_side_overlay": [
+			"grass_block_overlay": [
 				0.227161,
 				0.614651,
 				0.089036
@@ -4358,6 +5454,11 @@
 				0.3,
 				0,
 				0
+			],
+			"short_grass": [
+				0.227161,
+				0.614651,
+				0.089036
 			],
 			"spruce_leaves": [
 				0.227161,
@@ -4618,19 +5719,17 @@
 		"bed",
 		"bell",
 		"brewing_stand",
-		"cauldron",
 		"chest",
 		"double_chest",
 		"ender_chest",
 		"enchanting_table",
 		"end_portal",
-		"hopper",
 		"moving_piston",
 		"piston",
 		"scaffolding",
-		"shulker_box",
 		"sunflower",
 		"water_still",
-		"water"
+		"water",
+		"conduit"
 	]
 }
