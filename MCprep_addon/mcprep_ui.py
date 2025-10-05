@@ -2062,6 +2062,15 @@ class McprepProps(bpy.types.PropertyGroup):
 	effects_list_index: bpy.props.IntProperty(default=0)
 
 
+# Create a new "namespace" for node properties
+class MCprepNodeProps(bpy.types.PropertyGroup):
+	MCPREP_diffuse: bpy.props.BoolProperty(default=False)
+	MCPREP_specular: bpy.props.BoolProperty(default=False)
+	MCPREP_normal: bpy.props.BoolProperty(default=False)
+	MCPREP_displace: bpy.props.BoolProperty(default=False)
+	MCPREP_saturate: bpy.props.BoolProperty(default=False)
+
+
 # -----------------------------------------------------------------------------
 # Register functions
 # -----------------------------------------------------------------------------
@@ -2070,6 +2079,7 @@ class McprepProps(bpy.types.PropertyGroup):
 classes = (
 	McprepPreference,
 	McprepProps,
+	MCprepNodeProps,
 	MCPREP_MT_mob_spawner,
 	MCPREP_MT_meshswap_place,
 	MCPREP_MT_item_spawn,
@@ -2107,6 +2117,13 @@ def register():
 		bpy.utils.register_class(cls)
 
 	bpy.types.Scene.mcprep_props = bpy.props.PointerProperty(type=McprepProps)
+
+	# Apply node props to all nodes to make adding new properties
+	# simpler for developers, and to allow colsoledating eerything
+	# into one class.
+	#
+	# We also abbreviate it to reduce the amount of typing needed
+	bpy.types.Node.mnp = bpy.props.PointerProperty(type=MCprepNodeProps)
 	bpy.app.handlers.load_post.append(defer_vivy_init)
 
 	# scene settings (later re-attempt to put into props group)
@@ -2188,6 +2205,7 @@ def unregister():
 	# bpy.types.IMAGE_MT_image.remove(mcprep_image_tools)
 
 	del bpy.types.Scene.mcprep_props
+	del bpy.types.Node.mnp
 	del bpy.types.Scene.mcprep_mob_path
 	del bpy.types.Scene.meshswap_path
 	del bpy.types.Scene.entity_path
