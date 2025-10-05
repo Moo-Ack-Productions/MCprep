@@ -711,8 +711,9 @@ class MCPREP_OT_reload_models(bpy.types.Operator):
 
 class MCPREP_OT_place_json_model_with_gizmo(bpy.types.Operator, ModelSpawnBase):
 	bl_idname = "mcprep.place_json_model_with_gizmo"
-	bl_label = "Import Minecraf JSON model and Place"
+	bl_label = "Import Minecraft JSON model and Place"
 	bl_description = "Imports a Minecraft JSON model with location selection"
+	bl_options = {'REGISTER', 'UNDO'}
 	
 	filename_ext = ".json"
 	filepath: bpy.props.StringProperty(subtype='FILE_PATH', options={'SKIP_SAVE'})
@@ -726,6 +727,18 @@ class MCPREP_OT_place_json_model_with_gizmo(bpy.types.Operator, ModelSpawnBase):
 		)
 		context.window_manager.modal_handler_add(self)
 		return {'RUNNING_MODAL'}
+	
+	def execute(self, context):
+		if self.hit_vector:
+			self.location = self.hit_vector.location
+			self.rotation = self.hit_vector.rotation.to_euler()
+			res = self.create_and_place_json_model(context, Path(self.filepath))
+			if res:
+				self.report({'ERROR'}, res.msg)
+				return {'CANCELLED'}
+		else:
+			return {'CANCELLED'}
+		return {'FINISHED'}
 
 	def modal(self, context, event):
 		context.area.tag_redraw()
@@ -733,18 +746,9 @@ class MCPREP_OT_place_json_model_with_gizmo(bpy.types.Operator, ModelSpawnBase):
 			from .spawner_gizmo import update_raycast
 			self.hit_vector = update_raycast(context, event)
 		elif event.type == 'LEFTMOUSE' and event.value == 'PRESS':
-			if self.hit_vector:
-				self.location = self.hit_vector.location
-				self.rotation = self.hit_vector.rotation.to_euler()
-				res = self.create_and_place_json_model(context, Path(self.filepath))
-				if res:
-					self.report({'ERROR'}, res.msg)
-					return {'CANCELLED'}
-				self.finish(context)
-				return {'FINISHED'}
-			else:
-				self.finish(context)
-				return {'CANCELLED'}
+			res = self.execute(context)			
+			self.finish(context)
+			return res
 		elif event.type in {'RIGHTMOUSE', 'ESC'}:
 			self.finish(context)
 			return {'CANCELLED'}
