@@ -30,6 +30,9 @@ import bpy
 from bpy.utils.previews import ImagePreviewCollection
 import bpy.utils.previews
 
+from .materials.vivy import vivy_v1_json_struct as vjs1
+from .materials.vivy import vivy_v2_json_struct as vjs2
+
 
 # -----------------------------------------------------------------------------
 # TYPING UTILITIES
@@ -148,7 +151,7 @@ class MCprepEnv:
 		self.vivy_cache = None
 		
 		# The JSON file for Vivy's materials
-		self.vivy_material_json: Dict = {}
+		self.vivy_material_json: Union[vjs1.VivyJSON, vjs2.VivyJSON, None] = None
 		self.vivy_enabled = False
 
 		# State for name changes in the Vivy config
@@ -160,17 +163,14 @@ class MCprepEnv:
 		json_path = Path(path, "vivy_materials.json")
 		if not json_path.exists() and self.vivy_enabled:
 			json_path.touch()
-			self.vivy_material_json = {
-				"version": VIVY_VERSION,
-				"materials": {}
-			}
+			self.vivy_material_json = None
 			with open(json_path, 'w') as f:
 				json.dump(self.vivy_material_json, f)
 		elif not self.vivy_enabled:
 			return
 		else: 
 			with open(json_path, 'r') as f:
-				self.vivy_material_json = json.load(f) if json_path.stat().st_size != 0 else {}
+				self.vivy_material_json = json.load(f) if json_path.stat().st_size != 0 else None
 
 	def _load_translations(self) -> None:
 		"""Loads in mo file translation maps"""
