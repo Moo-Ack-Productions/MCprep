@@ -34,6 +34,12 @@ AnimatedTex = Dict[str, int]
 NO_DIFFUSE_NODE = 1
 IMG_MISSING = 2
 
+MCPREP_DIFFUSE = "MCPREP_diffuse"
+MCPREP_SPECULAR = "MCPREP_specular"
+MCPREP_NORMAL = "MCPREP_normal"
+MCPREP_DISPLACE = "MCPREP_displace"
+SATURATE = "SATURATE"
+
 
 class PackFormat(Enum):
 	SIMPLE = 0
@@ -433,7 +439,7 @@ def set_cycles_texture(
 		is_grayscale = is_image_grayscale(image)
 
 	for node in material.node_tree.nodes:
-		if node.type == "MIX_RGB" and util.np_is_mcprep_node_prop(node, "SATURATE"):
+		if node.type == "MIX_RGB" and util.np_is_mcprep_node_prop(node, SATURATE):
 			node.mute = not is_grayscale
 			node.hide = not is_grayscale
 			env.log(" mix_rgb to saturate texture")
@@ -442,11 +448,11 @@ def set_cycles_texture(
 		# saved as an attribute on the node
 		if node.type != 'TEX_IMAGE':
 			continue
-		elif util.np_is_mcprep_node_prop(node, "MCPREP_diffuse"):
+		elif util.np_is_mcprep_node_prop(node, MCPREP_DIFFUSE):
 			node.image = image
 			node.mute = False
 			node.hide = False
-		elif util.np_is_mcprep_node_prop(node, "MCPREP_normal"):
+		elif util.np_is_mcprep_node_prop(node, MCPREP_NORMAL):
 			if "normal" in img_sets:
 				new_img = util.loadTexture(img_sets["normal"])
 				node.image = new_img
@@ -464,7 +470,7 @@ def set_cycles_texture(
 				# normal_map = node.outputs[0].links[0].to_node
 				# principled = ...
 
-		elif util.np_is_mcprep_node_prop(node, "MCPREP_specular"):
+		elif util.np_is_mcprep_node_prop(node, MCPREP_SPECULAR):
 			if "specular" in img_sets:
 				new_img = util.loadTexture(img_sets["specular"])
 				node.image = new_img
@@ -508,13 +514,13 @@ def get_node_for_pass(material: Material, pass_name: str) -> Optional[Node]:
 	for node in material.node_tree.nodes:
 		if node.type != "TEX_IMAGE":
 			continue
-		elif util.np_is_mcprep_node_prop(node, "MCPREP_diffuse") and pass_name == "diffuse":
+		elif util.np_is_mcprep_node_prop(node, MCPREP_DIFFUSE) and pass_name == "diffuse":
 			return_node = node
-		elif util.np_is_mcprep_node_prop(node, "MCPREP_normal") and pass_name == "normal":
+		elif util.np_is_mcprep_node_prop(node, MCPREP_NORMAL) and pass_name == "normal":
 			return_node = node
-		elif util.np_is_mcprep_node_prop(node, "MCPREP_specular") and pass_name == "specular":
+		elif util.np_is_mcprep_node_prop(node, MCPREP_SPECULAR) and pass_name == "specular":
 			return_node = node
-		elif util.np_is_mcprep_node_prop(node, "MCPREP_displace") and pass_name == "displace":
+		elif util.np_is_mcprep_node_prop(node, MCPREP_DISPLACE) and pass_name == "displace":
 			return_node = node
 		else:
 			if not return_node:
@@ -561,11 +567,11 @@ def get_textures(material: Material) -> Dict[str, Image]:
 		for node in material.node_tree.nodes:
 			if node.type != "TEX_IMAGE":
 				continue
-			elif util.np_is_mcprep_node_prop(node, "MCPREP_diffuse"):
+			elif util.np_is_mcprep_node_prop(node, MCPREP_DIFFUSE):
 				passes["diffuse"] = node.image
-			elif util.np_is_mcprep_node_prop(node, "MCPREP_normal"):
+			elif util.np_is_mcprep_node_prop(node, MCPREP_NORMAL):
 				passes["normal"] = node.image
-			elif util.np_is_mcprep_node_prop(node, "MCPREP_specular"):
+			elif util.np_is_mcprep_node_prop(node, MCPREP_SPECULAR):
 				passes["specular"] = node.image
 			else:
 				if not passes["diffuse"]:
@@ -786,7 +792,7 @@ def set_saturation_material(mat: Material) -> None:
 	desat_color = env.json_data['blocks']['desaturated'][canon]
 	sat_node = None
 	for node in mat.node_tree.nodes:
-		if not util.np_is_mcprep_node_prop(node, "SATURATE"):
+		if not util.np_is_mcprep_node_prop(node, SATURATE):
 			continue
 		sat_node = node
 		break
@@ -868,13 +874,13 @@ def copy_texture_animation_pass_settings(mat: Material) -> AnimatedTex:
 			continue
 		if not node.image.source == 'SEQUENCE':
 			continue
-		if util.np_is_mcprep_node_prop(node, "MCPREP_diffuse"):
+		if util.np_is_mcprep_node_prop(node, MCPREP_DIFFUSE):
 			passname = "diffuse"
-		elif util.np_is_mcprep_node_prop(node, "MCPREP_normal"):
+		elif util.np_is_mcprep_node_prop(node, MCPREP_NORMAL):
 			passname = "normal"
-		elif util.np_is_mcprep_node_prop(node, "MCPREP_specular"):
+		elif util.np_is_mcprep_node_prop(node, MCPREP_SPECULAR):
 			passname = "specular"
-		elif util.np_is_mcprep_node_prop(node, "MCPREP_displace"):
+		elif util.np_is_mcprep_node_prop(node, MCPREP_DISPLACE):
 			passname = "displace"
 		else:
 			if not animated_data.get("diffuse"):
