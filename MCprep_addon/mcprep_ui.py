@@ -836,6 +836,9 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		col.operator(
 			"mcprep.import_world_split",
 			text=env._("OBJ world import")).filepath = wpath
+		col.operator(
+			"mcprep.import_objs_as_chunks",
+			text=env._("Import OBJs as Chunks")).directory = wpath
 
 		split = layout.split()
 		col = split.column(align=True)
