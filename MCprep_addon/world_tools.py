@@ -30,7 +30,7 @@ import bpy
 from bpy.types import Context, Camera
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
-from .conf import MCprepError, env, VectorType
+from .conf import MCprepError, MCprepWarning, env, VectorType
 from . import util
 from . import tracking
 from .materials import generate
@@ -568,50 +568,42 @@ class MCPREP_OT_install_mineways(bpy.types.Operator):
 # Additional world tools
 # -----------------------------------------------------------------------------
 
-class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
-	"""Imports an obj file, and auto splits it by material"""
-	bl_idname = "mcprep.import_world_split"
-	bl_label = "Import World"
-	bl_options = {'REGISTER', 'UNDO'}
+class WorldImporterBase:
+	"""Base world importer class with core functions"""
 
-	filter_glob: bpy.props.StringProperty(
-		default="*.obj;*.mtl",
-		options={'HIDDEN'})
-	fileselectparams = "use_filter_blender"
-	skipUsage: bpy.props.BoolProperty(
-		default=False,
-		options={'HIDDEN'})
-
-	track_function = "import_split"
-	track_exporter = None
-	@tracking.report_error
-	def execute(self, context):
-		# for consistency with the built in one, only import the active path
-		if self.filepath.lower().endswith(".mtl"):
-			filename = Path(self.filepath)
-			new_filename = filename.with_suffix(".obj")
+	def validate_and_return_header(self, filepath: Path) -> Union[Tuple[Path, Union[ObjHeaderOptions, CommonMCOBJ]], MCprepError]:
+		path = filepath
+		if path.suffix == ".mtl" :
+			new_filename = filepath.with_suffix(".obj")
 			# Auto change from MTL to OBJ, latet if's will check if existing.
-			self.filepath = str(new_filename)
-		if not self.filepath:
-			self.report({"ERROR"}, f"File not found, could not import obj \'{self.filepath}\'")
-			return {'CANCELLED'}
-		if not os.path.isfile(self.filepath):
-			self.report({"ERROR"}, f"File not found, could not import obj \'{self.filepath}\'")
-			return {'CANCELLED'}
-		if not self.filepath.lower().endswith(".obj"):
-			self.report({"ERROR"}, "You must select a .obj file to import")
-			return {'CANCELLED'}
+			path = new_filename
+		if not path:
+			line, file = env.current_line_and_file()
+			return MCprepError(FileNotFoundError(), line, file, f"File not found, could not import obj \'{str(filepath)}\'")
+		if not path.exists():
+			line, file = env.current_line_and_file()
+			return MCprepError(FileNotFoundError(), line, file, f"File not found, could not import obj \'{filepath}\'")
+		if path.suffix != ".obj":
+			line, file = env.current_line_and_file()
+			return MCprepError(Exception(), line, file, "You must select a .obj file to import")
+		return (path, detect_world_exporter(path))
 
+	def import_obj_file(self,
+					 context: Context,
+					 filepath: Path,
+					 header: Union[ObjHeaderOptions, CommonMCOBJ],
+					 offsets: Optional[Tuple[float, float, float]]) -> Union[None, List[MCprepError], MCprepError]:
+		# TODO: Create a more elegant way to handle warnings
+		propogated_warnings: List[MCprepError] = []
 		res = enable_obj_importer()
 		if res is OBJImportCode.ALREADY_ENABLED:
 			pass
 		elif res is OBJImportCode.DISABLED:
-			self.report(
-				{"INFO"},
-				"FYI: had to enable OBJ imports in user preferences")
+			line, file = env.current_line_and_file()
+			propogated_warnings.append(MCprepError(MCprepWarning(), line, file, "FYI: had to enable OBJ imports in user preferences"))
 		elif isinstance(res, MCprepError):
-			self.report({"ERROR"}, res.msg)
-			return {'CANCELLED'}
+			line, file = env.current_line_and_file()
+			return MCprepError(Exception(), line, file, res.msg)
 
 		# There are a number of bug reports that come from the generic call
 		# of obj importing. If this fails, should notify the user to try again
@@ -629,44 +621,45 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			"Memory error during OBJ import, try exporting a smaller world")
 
 		# First let's convert the MTL if needed
-		conv_res = convert_mtl(self.filepath)
+		file_as_str = str(filepath)
+		conv_res = convert_mtl(file_as_str)
 		try:
 			if isinstance(conv_res, MCprepError):
+				line, file = env.current_line_and_file()
 				if isinstance(conv_res.err_type, FileNotFoundError):
-					self.report({"WARNING"}, "MTL not found!")
-				elif conv_res.msg is not None:
-					self.report({"WARNING"}, conv_res.msg)
+					propogated_warnings.append(MCprepError(MCprepWarning(), line, file, "MTL not found!"))
 				else:
-					self.report({"WARNING"}, conv_res.err_type)
+					conv_res.err_type = MCprepWarning()
+					propogated_warnings.append(conv_res)
 
 			res = None
 			if util.min_bv((3, 5)):
 				res = bpy.ops.wm.obj_import(
-					filepath=self.filepath, use_split_groups=True)
+					filepath=file_as_str, use_split_groups=True)
 			else:
 				res = bpy.ops.import_scene.obj(
-					filepath=self.filepath, use_split_groups=True)
+					filepath=file_as_str, use_split_groups=True)
 
 		except MemoryError as err:
 			print("Memory error during import OBJ:")
 			print(err)
-			self.report({"ERROR"}, obj_import_mem_msg)
-			return {'CANCELLED'}
+			line, file = env.current_line_and_file()
+			return MCprepError(err, line, file, obj_import_mem_msg)
 		except ValueError as err:
 			if "could not convert string" in str(err):
 				# Error such as:
 				#   vec[:] = [float_func(v) for v in line_split[1:]]
 				#   ValueError: could not convert string to float: b'6848/28'
 				print(err)
-				self.report({"ERROR"}, obj_import_err_msg)
-				return {'CANCELLED'}
+				line, file = env.current_line_and_file()
+				return MCprepError(err, line, file, obj_import_err_msg)
 			elif "invalid literal for int() with base" in str(err):
 				# Error such as:
 				#   idx = int(obj_vert[0])
 				#   ValueError: invalid literal for int() with base 10: b'4semtl'
 				print(err)
-				self.report({"ERROR"}, obj_import_err_msg)
-				return {'CANCELLED'}
+				line, file = env.current_line_and_file()
+				return MCprepError(err, line, file, obj_import_err_msg)
 			else:
 				raise err
 		except IndexError as err:
@@ -675,8 +668,8 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 				#   verts_split.append(verts_loc[vert_idx])
 				#   IndexError: list index out of range
 				print(err)
-				self.report({"ERROR"}, obj_import_err_msg)
-				return {'CANCELLED'}
+				line, file = env.current_line_and_file()
+				return MCprepError(err, line, file, obj_import_err_msg)
 			else:
 				raise err
 		except UnicodeDecodeError as err:
@@ -686,8 +679,8 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 				#   UnicodeDecodeError: 'utf-8' codec can't decode byte 0xc4 in
 				#     position 24: invalid continuation byte
 				print(err)
-				self.report({"ERROR"}, obj_import_err_msg)
-				return {'CANCELLED'}
+				line, file = env.current_line_and_file()
+				return MCprepError(err, line, file, obj_import_err_msg)
 			else:
 				raise err
 		except TypeError as err:
@@ -696,8 +689,8 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 				#   enum "Non-Color" not found in ('AppleP3 Filmic Log Encoding',
 				#  'AppleP3 sRGB OETF', ...
 				print(err)
-				self.report({"ERROR"}, obj_import_err_msg)
-				return {'CANCELLED'}
+				line, file = env.current_line_and_file()
+				return MCprepError(err, line, file, obj_import_err_msg)
 			else:
 				raise err
 		except AttributeError as err:
@@ -706,57 +699,74 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 				#   nodetex.image = image
 				#   AttributeError: 'NoneType' object has no attribute 'image'
 				print(err)
-				self.report({"ERROR"}, obj_import_err_msg)
-				return {'CANCELLED'}
+				line, file = env.current_line_and_file()
+				return MCprepError(err, line, file, obj_import_err_msg)
 			else:
 				raise err
 		except RuntimeError as err:
 			# Possible this is the more broad error that even the abvoe
 			# items are wrapped under. Generally just prompt user to re-export.
 			print(err)
-			self.report({"ERROR"}, obj_import_err_msg)
-			return {'CANCELLED'}
+			line, file = env.current_line_and_file()
+			return MCprepError(err, line, file, obj_import_err_msg)
 
 		if res != {'FINISHED'}:
-			self.report({"ERROR"}, "Issue encountered while importing world")
-			return {'CANCELLED'}
+			line, file = env.current_line_and_file()
+			return MCprepError(Exception(), line, file, "Issue encountered while importing world")
 
-		prefs = util.get_user_preferences(context)
-		header = detect_world_exporter(Path(self.filepath))
+		prefs = util.get_user_preferences(context)	
+
+		if offsets and isinstance(header, ObjHeaderOptions):
+			line, file = env.current_line_and_file()
+			return MCprepError(Exception(), line, file, "Automatic offsets require CommonMCOBJ headers!")
 
 		if isinstance(header, ObjHeaderOptions):
 			prefs.MCprep_exporter_type = header.exporter()
 
+		if offsets and isinstance(header, CommonMCOBJ):
+			offset_x, offset_y, offset_z = offsets
+			for obj in context.selected_objects:
+				# Undo the offset, including the origin offset, then
+				# add the new offset. Since we calculate based on MC
+				# coords, we need to also translate them to Blender
+				obj.location = (obj.location[0] - header.export_offset[0] - header.block_origin_offset[0] - offset_x,
+								obj.location[1] - (-header.export_offset[2]) - (-header.block_origin_offset[2]) - (-offset_z),
+								obj.location[2] - header.export_offset[1] - header.block_origin_offset[1] - offset_y)
+
 		# Create empty at the center of the OBJ
 		empty = None
 		if isinstance(header, CommonMCOBJ):
-			# Get actual 3D space coordinates of the full bounding box
-			#
-			# These are in Minecraft coordinates, so they translate
-			# from (X, Y, Z) to (X, -Z, Y)
-			max_pair =   (header.export_bounds_max[0]  + header.export_offset[0], 
-						(-header.export_bounds_max[2]) + (-header.export_offset[2]), 
-					 	  header.export_bounds_max[1]  + header.export_offset[1])
+			if offsets:
+				offset_x, offset_y, offset_z = offsets
+				location = (offset_x, -offset_z, offset_y)
+			else:
+				# Get actual 3D space coordinates of the full bounding box
+				#
+				# These are in Minecraft coordinates, so they translate
+				# from (X, Y, Z) to (X, -Z, Y)
+				max_pair =   (header.export_bounds_max[0]  + header.export_offset[0], 
+							(-header.export_bounds_max[2]) + (-header.export_offset[2]), 
+							  header.export_bounds_max[1]  + header.export_offset[1])
 
-			min_pair =   (header.export_bounds_min[0]  + header.export_offset[0], 
-						(-header.export_bounds_min[2]) + (-header.export_offset[2]), 
-						  header.export_bounds_min[1]  + header.export_offset[1])
+				min_pair =   (header.export_bounds_min[0]  + header.export_offset[0], 
+							(-header.export_bounds_min[2]) + (-header.export_offset[2]), 
+							  header.export_bounds_min[1]  + header.export_offset[1])
 
-			# Calculate the center of the bounding box
-			#
-			# We do this by taking the average of the given
-			# points, so:
-			# (x1 + x2) / 2
-			# (y1 + y2) / 2
-			# (z1 + z2) / 2
-			#
-			# This will give us the midpoints of these
-			# coordinates, which in turn will correspond
-			# to the center of the bounding box
-			location = (
-				(max_pair[0] + min_pair[0]) / 2,
-				(max_pair[1] + min_pair[1]) / 2,
-				(max_pair[2] + min_pair[2]) / 2)
+				# Calculate the center of the bounding box
+				#
+				# We do this by taking the average of the given
+				# points, so:
+				# (x1 + x2) / 2
+				# (y1 + y2) / 2
+				# (z1 + z2) / 2
+				#
+				# This will give us the midpoints of these
+				# coordinates, which in turn will correspond
+				# to the center of the bounding box
+				location = (
+					(max_pair[0] + min_pair[0]) / 2,
+					(max_pair[1] + min_pair[1]) / 2,
+					(max_pair[2] + min_pair[2]) / 2)
 			empty = bpy.data.objects.new(
 				name=header.world_name + "_mcprep_empty", object_data=None)
 			empty.empty_display_size = 2
@@ -771,7 +781,6 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 					empty[field.name] = getattr(header, field.name).value
 				else:
 					empty[field.name] = getattr(header, field.name)
-
 		else:
 			empty = bpy.data.objects.new("mcprep_obj_empty", object_data=None)
 			empty.empty_display_size = 2
@@ -787,7 +796,6 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 				obj.parent = empty
 				obj.matrix_parent_inverse = empty.matrix_world.inverted()  # don't transform object
 				self.track_exporter = header.exporter
-
 			elif isinstance(header, ObjHeaderOptions):
 				obj["MCPREP_OBJ_HEADER"] = True
 				obj["MCPREP_OBJ_FILE_TYPE"] = header.texture_type()
@@ -809,7 +817,8 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 		new_col = self.split_world_by_material(context)
 		new_col.objects.link(empty)  # parent empty
 
-		return {'FINISHED'}
+		if len(propogated_warnings):
+			return propogated_warnings
 
 	def obj_name_to_material(self, obj):
 		"""Update an objects name based on its first material"""
@@ -846,7 +855,43 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, ImportHelper):
 			self.obj_name_to_material(obj)
 		return worldg
 
-class MCPREP_OT_import_objs_as_chunks(bpy.types.Operator, ImportHelper):
+
+class MCPREP_OT_import_world_split(bpy.types.Operator, WorldImporterBase, ImportHelper):
+	"""Imports an obj file, and auto splits it by material"""
+	bl_idname = "mcprep.import_world_split"
+	bl_label = "Import World"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	filter_glob: bpy.props.StringProperty(
+		default="*.obj;*.mtl",
+		options={'HIDDEN'})
+	fileselectparams = "use_filter_blender"
+	skipUsage: bpy.props.BoolProperty(
+		default=False,
+		options={'HIDDEN'})
+
+	track_function = "import_split"
+	track_exporter = None
+	@tracking.report_error
+	def execute(self, context):
+		path_res = self.validate_and_return_header(Path(self.filepath))
+		
+		if isinstance(path_res, MCprepError):
+			self.report({"ERROR"}, path_res.msg)
+			return {'CANCELLED'}
+
+		path, header = path_res
+		res = self.import_obj_file(context, path, header, None)
+		if isinstance(res, MCprepError):
+			self.report({"ERROR"}, res.msg)
+			return {'CANCELLED'}
+		elif res is not None: # warnings
+			for ret in res:
+				self.report({"INFO"}, ret.msg)
+		return {'FINISHED'}
+
+	
+class MCPREP_OT_import_objs_as_chunks(bpy.types.Operator, WorldImporterBase, ImportHelper):
 	"""Imports multiple OBJs and sorts them as chunks"""
 	bl_idname = "mcprep.import_objs_as_chunks"
 	bl_label = "Import Multiple OBJs as Chunks"
@@ -888,36 +933,21 @@ class MCPREP_OT_import_objs_as_chunks(bpy.types.Operator, ImportHelper):
 		files_and_headers: List[Tuple[Path, CommonMCOBJ]] = []
 		for file in self.files:
 			current_file = Path(self.directory, file.name)
-			if current_file.suffix == '.mtl':
-				filename = Path(self)
-				# Auto change from MTL to OBJ, latet if's will check if existing.
-				current_file = current_file.with_suffix(".obj")
-			if not file:
-				self.report({"ERROR"}, f"File not found, could not import obj \'{str(current_file)}\'")
-				return {'CANCELLED'}
-			if not current_file.is_file() or not current_file.exists():
-				self.report({"ERROR"}, f"File not found, could not import obj \'{str(current_file)}\'")
+			path_res = self.validate_and_return_header(current_file)
+
+			if isinstance(path_res, MCprepError):
+				self.report({"ERROR"}, path_res.msg)
 				return {'CANCELLED'}
 
-			header = detect_world_exporter(current_file)
+			path, header = path_res
+			
 			if isinstance(header, ObjHeaderOptions):
-				self.report({"ERROR"}, f"OBJ doesn't use the CommonMCOBJ spec: \'{str(current_file)}\'")
+				self.report({"ERROR"}, f"OBJ doesn't use the CommonMCOBJ spec: \'{str(path)}\'")
 				return
 			
 			# To handle users selecting both the OBJs and MTLs
 			# in a large selection
-			files_and_headers.append((current_file, header))
-
-		res = enable_obj_importer()
-		if res is OBJImportCode.ALREADY_ENABLED:
-			pass
-		elif res is OBJImportCode.DISABLED:
-			self.report(
-				{"INFO"},
-				"FYI: had to enable OBJ imports in user preferences")
-		elif isinstance(res, MCprepError):
-			self.report({"ERROR"}, res.msg)
-			return {'CANCELLED'}
+			files_and_headers.append((path, header))
 
 		x_values: List[int] = []
 		y_values: List[int] = []
@@ -947,198 +977,16 @@ class MCPREP_OT_import_objs_as_chunks(bpy.types.Operator, ImportHelper):
 			offset_z = (new_export_bounds_min[2] + new_export_bounds_max[2]) / 2
 		if self.center_assembly == 'XYZ':
 			offset_y = (new_export_bounds_min[1] + new_export_bounds_max[1]) / 2
-
-		# There are a number of bug reports that come from the generic call
-		# of obj importing. If this fails, should notify the user to try again
-		# or try exporting again.
-		#
-		# In order to not overly supress error messages, below we only capture
-		# very tight specific errors possible, so that other errors still get
-		# reported so it may be passed off to blender devs. It is understood the
-		# below errors are not internationalized, so someone with another lang
-		# set will get the raw bubbled up traceback.
-		obj_import_err_msg = (
-			"Blender's OBJ importer error, try re-exporting your world and "
-			"import again.")
-		obj_import_mem_msg = (
-			"Memory error during OBJ import, try exporting a smaller world")
 		
-		# Now import the OBJs and apply everything
 		for file, header in files_and_headers:
-			# First let's convert the MTL if needed
-			file_as_str = str(file)
-			conv_res = convert_mtl(file_as_str)
-			try:
-				if isinstance(conv_res, MCprepError):
-					if isinstance(conv_res.err_type, FileNotFoundError):
-						self.report({"WARNING"}, "MTL not found!")
-					elif conv_res.msg is not None:
-						self.report({"WARNING"}, conv_res.msg)
-					else:
-						self.report({"WARNING"}, conv_res.err_type)
-
-				res = None
-				if util.min_bv((3, 5)):
-					res = bpy.ops.wm.obj_import(
-						filepath=file_as_str, use_split_groups=True)
-				else:
-					res = bpy.ops.import_scene.obj(
-						filepath=file_as_str, use_split_groups=True)
-
-			except MemoryError as err:
-				print("Memory error during import OBJ:")
-				print(err)
-				self.report({"ERROR"}, obj_import_mem_msg)
+			res = self.import_obj_file(context, file, header, (offset_x, offset_y, offset_z))
+			if isinstance(res, MCprepError):
+				self.report({"ERROR"}, res.msg)
 				return {'CANCELLED'}
-			except ValueError as err:
-				if "could not convert string" in str(err):
-					# Error such as:
-					#   vec[:] = [float_func(v) for v in line_split[1:]]
-					#   ValueError: could not convert string to float: b'6848/28'
-					print(err)
-					self.report({"ERROR"}, obj_import_err_msg)
-					return {'CANCELLED'}
-				elif "invalid literal for int() with base" in str(err):
-					# Error such as:
-					#   idx = int(obj_vert[0])
-					#   ValueError: invalid literal for int() with base 10: b'4semtl'
-					print(err)
-					self.report({"ERROR"}, obj_import_err_msg)
-					return {'CANCELLED'}
-				else:
-					raise err
-			except IndexError as err:
-				if "list index out of range" in str(err):
-					# Error such as:
-					#   verts_split.append(verts_loc[vert_idx])
-					#   IndexError: list index out of range
-					print(err)
-					self.report({"ERROR"}, obj_import_err_msg)
-					return {'CANCELLED'}
-				else:
-					raise err
-			except UnicodeDecodeError as err:
-				if "codec can't decode byte" in str(err):
-					# Error such as:
-					#   keywords["relpath"] = os.path.dirname(bpy.data.filepath)
-					#   UnicodeDecodeError: 'utf-8' codec can't decode byte 0xc4 in
-					#     position 24: invalid continuation byte
-					print(err)
-					self.report({"ERROR"}, obj_import_err_msg)
-					return {'CANCELLED'}
-				else:
-					raise err
-			except TypeError as err:
-				if "enum" in str(err) and "not found in" in str(err):
-					# Error such as:
-					#   enum "Non-Color" not found in ('AppleP3 Filmic Log Encoding',
-					#  'AppleP3 sRGB OETF', ...
-					print(err)
-					self.report({"ERROR"}, obj_import_err_msg)
-					return {'CANCELLED'}
-				else:
-					raise err
-			except AttributeError as err:
-				if "object has no attribute 'image'" in str(err):
-					# Error such as:
-					#   nodetex.image = image
-					#   AttributeError: 'NoneType' object has no attribute 'image'
-					print(err)
-					self.report({"ERROR"}, obj_import_err_msg)
-					return {'CANCELLED'}
-				else:
-					raise err
-			except RuntimeError as err:
-				# Possible this is the more broad error that even the abvoe
-				# items are wrapped under. Generally just prompt user to re-export.
-				print(err)
-				self.report({"ERROR"}, obj_import_err_msg)
-				return {'CANCELLED'}
-
-			if res != {'FINISHED'}:
-				self.report({"ERROR"}, "Issue encountered while importing world")
-				return {'CANCELLED'}
-
-			for obj in context.selected_objects:
-				# Undo the offset, including the origin offset, then
-				# add the new offset. Since we calculate based on MC
-				# coords, we need to also translate them to Blender
-				obj.location = (obj.location[0] - header.export_offset[0] - header.block_origin_offset[0] - offset_x,
-								obj.location[1] - (-header.export_offset[2]) - (-header.block_origin_offset[2]) - (-offset_z),
-								obj.location[2] - header.export_offset[1] - header.block_origin_offset[1] - offset_y)
-
-			# Create empty at the center of the OBJ
-			empty = None
-			if isinstance(header, CommonMCOBJ):
-				location = (offset_x, -offset_z, offset_y)
-				empty = bpy.data.objects.new(
-					name=header.world_name + "_mcprep_empty", object_data=None)
-				empty.empty_display_size = 2
-				empty.empty_display_type = 'PLAIN_AXES'
-				empty.location = location
-				empty.hide_viewport = True  # Hide empty globally
-				util.update_matrices(empty)
-				for field in fields(header):
-					if getattr(header, field.name) is None:
-						continue
-					if field.type == CommonMCOBJTextureType:
-						empty[field.name] = getattr(header, field.name).value
-					else:
-						empty[field.name] = getattr(header, field.name)
-
-			addon_prefs = util.get_user_preferences(context)
-
-			for obj in context.selected_objects:
-				if isinstance(header, CommonMCOBJ):
-					obj["COMMONMCOBJ_HEADER"] = True
-					obj["PARENTED_EMPTY"] = empty
-					obj.parent = empty
-					obj.matrix_parent_inverse = empty.matrix_world.inverted()  # don't transform object
-					self.track_exporter = header.exporter
-
-			# One final assignment of the preferences, to avoid doing each loop
-			val = header.exporter
-			addon_prefs.MCprep_exporter_type = "Mineways" if val.lower().startswith("mineways") else "jmc2obj"
-
-			new_col = self.split_world_by_material(context)
-			new_col.objects.link(empty)  # parent empty
-
+			elif res is not None: # warnings
+				for ret in res:
+					self.report({"INFO"}, ret.msg)	
 		return {'FINISHED'}
-
-	def obj_name_to_material(self, obj):
-		"""Update an objects name based on its first material"""
-		if not obj:
-			return
-		mat = obj.active_material
-		if not mat and not obj.material_slots:
-			return
-		else:
-			mat = obj.material_slots[0].material
-		if not mat:
-			return
-		obj.name = util.nameGeneralize(mat.name)
-
-	def split_world_by_material(self, context: Context) -> bpy.types.Collection:
-		"""2.8-only function, split combined object into parts by material"""
-		world_name = os.path.basename(self.filepath)
-		world_name = os.path.splitext(world_name)[0]
-
-		# Create the new world collection
-		prefs = util.get_user_preferences(context)
-		if prefs is not None and prefs.MCprep_exporter_type != '(choose)':
-			name = f"{prefs.MCprep_exporter_type} world: {world_name}"
-		else:
-			name = f"minecraft_world: {world_name}"
-		worldg = util.collections().new(name=name)
-		context.scene.collection.children.link(worldg)  # Add to outliner.
-
-		for obj in context.selected_objects:
-			util.move_to_collection(obj, worldg)
-
-		# Force renames based on material, as default names are not useful.
-		for obj in worldg.objects:
-			self.obj_name_to_material(obj)
-		return worldg
 
 class MCPREP_OT_prep_world(bpy.types.Operator):
 	"""Class to prep world settings to appropriate default"""

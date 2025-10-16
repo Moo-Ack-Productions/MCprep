@@ -353,6 +353,9 @@ class MCprepError(object):
 	file: str
 	msg: Optional[str] = None
 
+class MCprepWarning(BaseException):
+	"""Dummy exception class that denotes a warning"""
+	pass
 
 def updater_select_link_function(self, tag):
 	"""Indicates what zip file to use for updating from a tag structure.
