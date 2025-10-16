@@ -29,7 +29,7 @@ import bmesh
 from bpy.types import Context, Material
 from bpy_extras.io_utils import ImportHelper
 
-from ..conf import env, VectorType
+from ..conf import MCprepError, env, VectorType
 from .. import util
 from .. import tracking
 from ..materials import generate  # TODO: Use this module for mat gen in future
@@ -38,6 +38,14 @@ TexFace = Dict[str, Dict[str, str]]
 
 Element = Sequence[Union[Dict[str, VectorType], TexFace]]
 Texture = Dict[str, str]
+
+try:
+	from bpy.types import FileHandler
+except ImportError:
+	# This is wrapper type that we use for FileHandler, since it's
+	# only availible in Blender 4.1 and above. In older versions of
+	# Blender, we just set it to the generic object type
+	FileHandler = object
 
 # -----------------------------------------------------------------------------
 # Core MC model functions and implementation
@@ -568,6 +576,9 @@ class ModelSpawnBase():
 	location: bpy.props.FloatVectorProperty(
 		default=(0, 0, 0),
 		name="Location")
+	rotation: bpy.props.FloatVectorProperty(
+		default=(0, 0, 0),
+		name="Rotation")
 	snapping: bpy.props.EnumProperty(
 		name="Snapping",
 		items=[
@@ -595,11 +606,35 @@ class ModelSpawnBase():
 		else:
 			obj.location = self.location
 
+		obj.rotation_euler = self.rotation
+
 	def post_spawn(self, context, new_obj):
 		"""Do final consistent cleanup after model is spawned."""
 		for ob in util.get_objects_conext(context):
 			util.select_set(ob, False)
 		util.select_set(new_obj, True)
+
+	def create_and_place_json_model(self, context, filepath: Path) -> Optional[MCprepError]:
+		"""Function that does the entire model creation and placing"""
+		filename = filepath.stem
+		if not filepath or not filepath.exists():
+			line, file = env.current_line_and_file()
+			return MCprepError(FileNotFoundError(), line, file, "File not found")
+		if filepath.suffix != ".json":
+			line, file = env.current_line_and_file()
+			return MCprepError(Exception(), line, file, f"File is not JSON: {filepath}")
+
+		try:
+			r, obj = add_model(filepath, filename)
+			if r:
+				line, file = env.current_line_and_file()
+				return MCprepError(Exception(), line, file, "JSON model does not contain any actual geometry")
+		except ModelException as e:
+			line, file = env.current_line_and_file()
+			return MCprepError(ModelException(), line, file, f"Encountered error: {e}")
+
+		self.place_model(obj)
+		self.post_spawn(context, obj)
 
 
 class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
@@ -612,35 +647,16 @@ class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 		default="",
 		subtype="FILE_PATH",
 		options={'HIDDEN', 'SKIP_SAVE'})
-
+	
 	track_function = "model"
 	track_param = "list"
 	@tracking.report_error
 	def execute(self, context):
-		name = os.path.basename(os.path.splitext(self.filepath)[0])
-		if not self.filepath or not os.path.isfile(self.filepath):
-			self.report({"WARNING"}, "Filepath not found")
-			bpy.ops.mcprep.prompt_reset_spawners('INVOKE_DEFAULT')
+		res = self.create_and_place_json_model(context, Path(self.filepath))
+		if res:
+			self.report({'ERROR'}, res.msg)
 			return {'CANCELLED'}
-		if not self.filepath.lower().endswith(".json"):
-			self.report(
-				{"ERROR"}, f"File is not json: {self.filepath}")
-			return {'CANCELLED'}
-
-		try:
-			r, obj = add_model(os.path.normpath(self.filepath), name)
-			if r:
-				self.report(
-					{"ERROR"}, "The JSON model does not contain any geometry elements")
-				return {'CANCELLED'}
-		except ModelException as e:
-			self.report({"ERROR"}, f"Encountered error: {e}")
-			return {'CANCELLED'}
-
-		self.place_model(obj)
-		self.post_spawn(context, obj)
 		return {'FINISHED'}
-
 
 class MCPREP_OT_import_minecraft_model_file(
 	bpy.types.Operator, ImportHelper, ModelSpawnBase):
@@ -650,39 +666,38 @@ class MCPREP_OT_import_minecraft_model_file(
 	bl_options = {'REGISTER', 'UNDO'}
 
 	filename_ext = ".json"
+	filepath: bpy.props.StringProperty(subtype='FILE_PATH', options={'SKIP_SAVE'})
 	filter_glob: bpy.props.StringProperty(
 		default="*.json",
 		options={'HIDDEN'},
 		maxlen=255  # Max internal buffer length, longer would be clamped.
 	)
-
+	
 	track_function = "model"
 	track_param = "file"
 	@tracking.report_error
 	def execute(self, context):
-		filename = os.path.splitext(os.path.basename(self.filepath))[0]
-		if not self.filepath or not os.path.isfile(self.filepath):
-			self.report({"ERROR"}, "Filepath not found")
+		res = self.create_and_place_json_model(context, Path(self.filepath))
+		if res:
+			self.report({'ERROR'}, res.msg)
 			return {'CANCELLED'}
-		if not self.filepath.lower().endswith(".json"):
-			self.report(
-				{"ERROR"}, f"File is not json: {self.filepath}")
-			return {'CANCELLED'}
-
-		try:
-			r, obj = add_model(os.path.normpath(self.filepath), filename)
-			if r:
-				self.report(
-					{"ERROR"}, "The JSON model does not contain any geometry elements")
-				return {'CANCELLED'}
-		except ModelException as e:
-			self.report({"ERROR"}, f"Encountered error: {e}")
-			return {'CANCELLED'}
-
-		self.place_model(obj)
-		self.post_spawn(context, obj)
 		return {'FINISHED'}
 
+	def invoke(self, context, event):
+		if self.filepath:
+			return self.execute(context)
+		context.window_manager.fileselect_add(self)
+		return {'RUNNING_MODAL'}
+
+class MCPREP_FH_import_minecraft_model_file(FileHandler):
+	bl_idname = "MCPREP_FH_import_minecraft_model_file"
+	bl_label = "File handler for JSON import"
+	bl_import_operator = "mcprep.place_json_model_with_gizmo"
+	bl_file_extensions = ".json"
+
+	@classmethod
+	def poll_drop(cls, context) -> bool:
+		return (context.area and context.area.type == 'VIEW_3D')
 
 class MCPREP_OT_reload_models(bpy.types.Operator):
 	"""Reload model spawner, use after adding/removing/renaming files in the resource pack folder"""
@@ -694,6 +709,62 @@ class MCPREP_OT_reload_models(bpy.types.Operator):
 		update_model_list(context)
 		return {'FINISHED'}
 
+class MCPREP_OT_place_json_model_with_gizmo(bpy.types.Operator, ModelSpawnBase):
+	bl_idname = "mcprep.place_json_model_with_gizmo"
+	bl_label = "Import Minecraft JSON model and Place"
+	bl_description = "Imports a Minecraft JSON model with location selection"
+	bl_options = {'REGISTER', 'UNDO'}
+	
+	filename_ext = ".json"
+	filepath: bpy.props.StringProperty(subtype='FILE_PATH', options={'SKIP_SAVE'})
+	def invoke(self, context, event):
+		from .spawner_gizmo import HitVector
+
+		self.hit_vector: Optional[HitVector] = None
+
+		self.draw_handle = bpy.types.SpaceView3D.draw_handler_add(
+			self.draw_callback, (context,), 'WINDOW', 'POST_VIEW'
+		)
+		context.window_manager.modal_handler_add(self)
+		return {'RUNNING_MODAL'}
+	
+	def execute(self, context):
+		if self.hit_vector:
+			self.location = self.hit_vector.location
+			self.rotation = self.hit_vector.rotation.to_euler()
+			res = self.create_and_place_json_model(context, Path(self.filepath))
+			if res:
+				self.report({'ERROR'}, res.msg)
+				return {'CANCELLED'}
+		else:
+			return {'CANCELLED'}
+		return {'FINISHED'}
+
+	def modal(self, context, event):
+		context.area.tag_redraw()
+		if event.type == 'MOUSEMOVE':
+			from .spawner_gizmo import update_raycast
+			self.hit_vector = update_raycast(context, event)
+		elif event.type == 'LEFTMOUSE' and event.value == 'PRESS':
+			res = self.execute(context)			
+			self.finish(context)
+			return res
+		elif event.type in {'RIGHTMOUSE', 'ESC'}:
+			self.finish(context)
+			return {'CANCELLED'}
+		return {'RUNNING_MODAL'}
+
+	def finish(self, context):
+		bpy.types.SpaceView3D.draw_handler_remove(self.draw_handle, 'WINDOW')
+		context.area.tag_redraw()
+
+	def draw_callback(self, context) -> None:
+		from .spawner_gizmo import draw_callback
+
+		if not self.hit_vector:
+			return
+		
+		draw_callback(self.hit_vector)
 
 classes = (
 	MCPREP_OT_spawn_minecraft_model,
@@ -706,6 +777,10 @@ def register():
 	for cls in classes:
 		bpy.utils.register_class(cls)
 
+	if util.min_bv((4, 1)):
+		bpy.utils.register_class(MCPREP_FH_import_minecraft_model_file)
+		bpy.utils.register_class(MCPREP_OT_place_json_model_with_gizmo)
+
 	bpy.types.TOPBAR_MT_file_import.append(draw_import_mcmodel)
 
 
@@ -713,3 +788,7 @@ def unregister():
 	bpy.types.TOPBAR_MT_file_import.remove(draw_import_mcmodel)
 	for cls in reversed(classes):
 		bpy.utils.unregister_class(cls)
+	
+	if util.min_bv((4, 1)):
+		bpy.utils.unregister_class(MCPREP_FH_import_minecraft_model_file)
+		bpy.utils.unregister_class(MCPREP_OT_place_json_model_with_gizmo)

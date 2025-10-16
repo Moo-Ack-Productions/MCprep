@@ -166,6 +166,8 @@ class MCprepEnv:
 			}
 			with open(json_path, 'w') as f:
 				json.dump(self.vivy_material_json, f)
+		elif not self.vivy_enabled:
+			return
 		else: 
 			with open(json_path, 'r') as f:
 				self.vivy_material_json = json.load(f) if json_path.stat().st_size != 0 else {}
