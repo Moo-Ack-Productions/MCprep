@@ -651,7 +651,7 @@ class MaterialsTest(unittest.TestCase):
             ".emit": ".emit",
         }
         jmc_to_canon = {
-            "grass": "colormap/grass",
+            "grass": "grass",
             "grass_block_top": "grass_block_top",
             "mushroom_red": "red_mushroom",
             # "slime": "slime_block",  # KNOWN jmc, need to address
