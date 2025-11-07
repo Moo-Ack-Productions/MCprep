@@ -331,6 +331,8 @@ def add_model(
 					obj_mats.append(mat)
 					materials.append(f"#{img}")
 
+	face_dir = ["north", "south", "up", "down", "west", "east"]
+	
 	for e in elements:
 		rotation = e.get("rotation")
 		if rotation is None:
@@ -339,8 +341,7 @@ def add_model(
 		element = add_element(
 			e['from'], e['to'], rotation['origin'], rotation['axis'], rotation['angle'])
 		verts = [bm.verts.new(v) for v in element[0]]  # add a new vert
-		uvs = [[1, 1], [0, 1], [0, 0], [1, 0]]
-		face_dir = ["north", "south", "up", "down", "west", "east"]
+		
 		faces = e.get("faces")
 		for i in range(len(element[2])):
 			f = element[2][i]
@@ -363,55 +364,129 @@ def add_model(
 			uv_idx = int(uv_rot / 90)
 
 			uv_coords = d_face.get("uv")  # in the format [x1, y1, x2, y2]
+			face_name = face_dir[i]
+			
 			if uv_coords is None:
-				uv_coords = [0, 0, 16, 16]
-				# Cake and cake slices don't store the UV keys
-				# in the JSON model, which causes issues. This
-				# workaround this fixes those texture issues
-				uv_from = env.json_data.get("block_model_uv")
-				stored_uv_blocks = ("hopper", "cauldron", "scaffolding", "composter")
-				if "cake" in obj_name:
-					if face_mat == "#top":
-						uv_coords = [e['to'][0], e['to'][2], e['from'][0], e['from'][2]]
-					if "side" in face_mat:
-						uv_coords = [e['to'][0], -e['to'][1], e['from'][0], -e['from'][2]]
-				elif uv_from and any(x in obj_name for x in stored_uv_blocks):
-					name = next((x for x in stored_uv_blocks if x in obj_name), False)
-					_uv_from = uv_from.get(name)
-					_uv_from = _uv_from.get(f"from,{e['from']}", {"all": [0, 0, 16, 16]})
-					# special case for composter
-					if e['to'] == [16, 2, 16] and "composter" in obj_name:
-						uv_coords = [0, 0, 16, 16]
-					else:
-						uv_coords = _uv_from.get(face_dir[i], [0, 0, 16, 16])
+				# Auto-calculate proportional UVs (0-16 scale) based on element bounds
+				f_bounds = e['from']  # [x1, y1, z1]
+				t_bounds = e['to']	  # [x2, y2, z2]
+				
+				# MC UV convention: (u_min, v_min, u_max, v_max). V is measured from 0 at the top.
+				if face_name in ("north", "south"):
+					# U maps to X, V maps to Y (height). V is 16-Y (flipped V for MC texture coords).
+					uv_coords = [f_bounds[0], 16 - t_bounds[1], t_bounds[0], 16 - f_bounds[1]]
+				elif face_name in ("west", "east"):
+					# U maps to Z, V maps to Y (height). V is 16-Y (flipped V for MC texture coords).
+					uv_coords = [f_bounds[2], 16 - t_bounds[1], t_bounds[2], 16 - f_bounds[1]]
+				elif face_name in ("up", "down"):
+					# U maps to X, V maps to Z (depth).
+					uv_coords = [f_bounds[0], f_bounds[2], t_bounds[0], t_bounds[2]]
+				else:
+					uv_coords = [0, 0, 16, 16]
 
-			# uv in the model is between 0 to 16 regardless of resolution,
-			# in blender its 0 to 1 the y-axis is inverted when compared to
-			# blender uvs, which is why it is subtracted from 1, essentially
-			# this converts the json uv points to the blender equivelent.
-			uvs = [
-				[uv_coords[2] / 16, 1 - (uv_coords[1] / 16)],  # [x2, y1]
-				[uv_coords[0] / 16, 1 - (uv_coords[1] / 16)],  # [x1, y1]
-				[uv_coords[0] / 16, 1 - (uv_coords[3] / 16)],  # [x1, y2]
-				[uv_coords[2] / 16, 1 - (uv_coords[3] / 16)]   # [x2, y2]
-			]
+			# = UV Corner Definition =
+			# Convert MC UV (0-16) to Blender UV (0-1) and flip V accordingly.
+			u_min = uv_coords[0] / 16.0
+			u_max = uv_coords[2] / 16.0
+			v_max = 1.0 - (uv_coords[1] / 16.0)  # Blender Top V
+			v_min = 1.0 - (uv_coords[3] / 16.0)  # Blender Bottom V
 
-			face = bm.faces.new(
-				(verts[f[0]], verts[f[1]], verts[f[2]], verts[f[3]])
-			)
+			# Define the four corners
+			p_TL = (u_min, v_max) # Top Left
+			p_TR = (u_max, v_max) # Top Right
+			p_BR = (u_max, v_min) # Bottom Right
+			p_BL = (u_min, v_min) # Bottom Left
+
+			# Face-specific base ordering (maps Tex-corners -> face loop positions)
+			if face_name == "up": # Y+ (V-flip and U-flip)
+				uvs_base = [p_TR, p_TL, p_BL, p_BR]
+			elif face_name == "down": # Y- (V-flip and U-flip)
+				uvs_base = [p_BL, p_BR, p_TR, p_TL]
+			elif face_name == "north": # Z- (V-flip)
+				uvs_base = [p_TL, p_TR, p_BR, p_BL]
+			elif face_name == "south": # Z+ (V-flip and U-flip)
+				uvs_base = [p_BR, p_BL, p_TL, p_TR]
+			elif face_name == "east": # X+ (V-flip and U-flip)
+				uvs_base = [p_BR, p_BL, p_TL, p_TR]
+			elif face_name == "west": # X- (V-flip)
+				uvs_base = [p_TL, p_TR, p_BR, p_BL]
+			else:
+				# Default fallback (should not happen, just in case though)
+				uvs_base = [p_TL, p_TR, p_BR, p_BL]
+
+			# Reverse vertex order for downward faces before creation — keeps UVs intact
+			f_for_face = list(f)
+			if face_name == "down":
+				f_for_face = list(reversed(f_for_face))
+
+			try:
+				face = bm.faces.new(
+					(verts[f_for_face[0]], verts[f_for_face[1]], verts[f_for_face[2]], verts[f_for_face[3]])
+				)
+			except ValueError:
+				# If face cannot be created, skip it
+				continue
 
 			face.normal_update()
 
 			# Give slight offset by normal for overlay geometry
 			if face_mat == "#overlay":
-				bmesh.ops.translate(bm, verts=face.verts,
-									vec=0.0025 * face.normal)
+				bmesh.ops.translate(bm, verts=face.verts, vec=0.0025 * face.normal)
 
-			for j in range(len(face.loops)):
-				# uv coords order is determened by the rotation of the uv,
-				# e.g. if the uv is rotated by 180 degrees, the first index
-				# will be 2 then 3, 0, 1.
-				face.loops[j][uv_layer].uv = uvs[(j + uv_idx) % len(uvs)]
+			# Apply rotation shift (uv_idx)
+			uvs_rot = [uvs_base[(k + uv_idx) % len(uvs_base)] for k in range(len(uvs_base))]
+
+			# Mirror axis per-face (to fix convention mismatches)
+			mirror_axis = None
+			if face_name == "north":
+				mirror_axis = "Y"
+			elif face_name == "east":
+				mirror_axis = "X"
+			elif face_name == "south":
+				mirror_axis = "X"
+			elif face_name == "west":
+				mirror_axis = "Y"
+			elif face_name == "down":
+				mirror_axis = "Y"
+			# up -> no mirroring
+
+			# If mirroring, get UV island median and mirror around point.
+			if mirror_axis is not None:
+				mx = sum(p[0] for p in uvs_rot) / len(uvs_rot)
+				my = sum(p[1] for p in uvs_rot) / len(uvs_rot)
+				uvs_final = []
+				for (x, y) in uvs_rot:
+					if mirror_axis == "X":
+						nx = 2 * mx - x
+						ny = y
+					else:
+						nx = x
+						ny = 2 * my - y
+					uvs_final.append((nx, ny))
+			else:
+				uvs_final = uvs_rot
+
+			# For cardinal faces (north/south/east/west) mirror over both axes
+			if face_name in {"north", "south", "east", "west"}:
+				mx = sum(p[0] for p in uvs_final) / len(uvs_final)
+				my = sum(p[1] for p in uvs_final) / len(uvs_final)
+				mirrored_xy = []
+				for (x, y) in uvs_final:
+					nx = 2 * mx - x
+					ny = 2 * my - y
+					mirrored_xy.append((nx, ny))
+
+				uvs_final = mirrored_xy
+
+			# Flip UV for 'down' face (V-axis flip)
+			if face_name == "down":
+				mx = sum(p[0] for p in uvs_final) / len(uvs_final)
+				my = sum(p[1] for p in uvs_final) / len(uvs_final)
+				uvs_final = [(x, 2 * my - y) for (x, y) in uvs_final]
+
+			# Assign the final computed UVs to the face loops
+			for j, loop in enumerate(face.loops):
+				loop[uv_layer].uv = uvs_final[j % len(uvs_final)]
 
 			# Using materials_remap to remap the index, used for the block with remapping "#side"
 			# Stored material index for getting the texture
@@ -451,7 +526,7 @@ def add_model(
 
 						# Translate back
 						loop[uv_layer].uv = (scaled_u + face_pivot[0], scaled_v + face_pivot[1])
-				
+
 	# Quick way to clean the model, hopefully it doesn't cause any UV issues
 	# Ignore model has overlay geometry, causing issue
 	if not textures.get("overlay"):
