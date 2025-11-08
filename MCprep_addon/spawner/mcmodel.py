@@ -47,6 +47,16 @@ except ImportError:
 	# Blender, we just set it to the generic object type
 	FileHandler = object
 
+# Constants for Directions and Faces
+NORTH_DIR = "north"
+SOUTH_DIR = "south"
+UP_DIR = "up"
+DOWN_DIR = "down"
+WEST_DIR = "west"
+EAST_DIR = "east"
+
+FACE_DIRECTIONS = (NORTH_DIR, SOUTH_DIR, UP_DIR, DOWN_DIR, WEST_DIR, EAST_DIR)
+
 # -----------------------------------------------------------------------------
 # Core MC model functions and implementation
 # -----------------------------------------------------------------------------
@@ -330,16 +340,27 @@ def add_model(
 				if f"#{img}" not in materials and name not in obj_mats and mat is not None:
 					obj_mats.append(mat)
 					materials.append(f"#{img}")
-
-	face_dir = ["north", "south", "up", "down", "west", "east"]
 	
 	for e in elements:
+		# Check if 'from' and 'to' bounds are present
+		if 'from' not in e or 'to' not in e:
+			raise ModelException(f"Element is missing required 'from' or 'to' bounds: {e}")
+		
+		f_bounds = e['from']  # [x1, y1, z1]
+		t_bounds = e['to']	  # [x2, y2, z2]
+		
+		# Check if bounds are lists of 3 points
+		if not isinstance(f_bounds, list) or len(f_bounds) != 3:
+			raise ModelException(f"Invalid 'from' bounds format: {f_bounds}")
+		if not isinstance(t_bounds, list) or len(t_bounds) != 3:
+			raise ModelException(f"Invalid 'to' bounds format: {t_bounds}")
+
 		rotation = e.get("rotation")
 		if rotation is None:
 			# rotation default
 			rotation = {"angle": 0, "axis": "y", "origin": [8, 8, 8]}
 		element = add_element(
-			e['from'], e['to'], rotation['origin'], rotation['axis'], rotation['angle'])
+			f_bounds, t_bounds, rotation['origin'], rotation['axis'], rotation['angle'])
 		verts = [bm.verts.new(v) for v in element[0]]  # add a new vert
 		
 		faces = e.get("faces")
@@ -349,7 +370,8 @@ def add_model(
 			if not faces:
 				continue
 
-			d_face = faces.get(face_dir[i])
+			face_name = FACE_DIRECTIONS[i]
+			d_face = faces.get(face_name)
 			if not d_face:
 				continue
 
@@ -364,32 +386,39 @@ def add_model(
 			uv_idx = int(uv_rot / 90)
 
 			uv_coords = d_face.get("uv")  # in the format [x1, y1, x2, y2]
-			face_name = face_dir[i]
 			
-			if uv_coords is None:
+			# --- UV Calculation Algorithm Overview ---
+			# Minecraft UVs use a 0-16 scale, where V=0 is the top edge (Y-max).
+			# 1. Auto-UV: Calculates UV [u_min, v_min, u_max, v_max] based on the element's bounding box ('from'/'to' vectors).
+			# 2. Conversion: Converts Minecraft's 0-16 UV scale to Blender's 0-1 UV scale. Note that the V-axis is flipped (1 - MC_V ÷ 16) to match Blender's convention (V=1 at the top).
+			# 3. Corner Definition: Defines the four corners (TL, TR, BR, BL) in 0-1 Blender UV space.
+			# 4. Base Ordering: Defines the initial ordering of these corners (uvs_base) for the specific face direction, accounting for MC's default face-to-UV mapping conventions.
+			# 5. Rotation: Applies the `uv_rot` (0, 90, 180, 270) by cyclically shifting the corner order (uvs_rot).
+			# 6. Mirroring/Flipping: Applies face-specific mirroring (X and/or Y axes) to correct orientation between MC model format and Blender's mesh structure.
+			# ---------------------------------------
+
+			if uv_coords is None:				
 				# Auto-calculate proportional UVs (0-16 scale) based on element bounds
-				f_bounds = e['from']  # [x1, y1, z1]
-				t_bounds = e['to']	  # [x2, y2, z2]
-				
 				# MC UV convention: (u_min, v_min, u_max, v_max). V is measured from 0 at the top.
-				if face_name in ("north", "south"):
+				if face_name in (NORTH_DIR, SOUTH_DIR):
 					# U maps to X, V maps to Y (height). V is 16-Y (flipped V for MC texture coords).
 					uv_coords = [f_bounds[0], 16 - t_bounds[1], t_bounds[0], 16 - f_bounds[1]]
-				elif face_name in ("west", "east"):
+				elif face_name in (WEST_DIR, EAST_DIR):
 					# U maps to Z, V maps to Y (height). V is 16-Y (flipped V for MC texture coords).
 					uv_coords = [f_bounds[2], 16 - t_bounds[1], t_bounds[2], 16 - f_bounds[1]]
-				elif face_name in ("up", "down"):
+				elif face_name in (UP_DIR, DOWN_DIR):
 					# U maps to X, V maps to Z (depth).
 					uv_coords = [f_bounds[0], f_bounds[2], t_bounds[0], t_bounds[2]]
 				else:
+					env.log(f"Unknown face direction '{face_name}'. Defaulting UV mapping")
 					uv_coords = [0, 0, 16, 16]
 
 			# = UV Corner Definition =
 			# Convert MC UV (0-16) to Blender UV (0-1) and flip V accordingly.
-			u_min = uv_coords[0] / 16.0
-			u_max = uv_coords[2] / 16.0
-			v_max = 1.0 - (uv_coords[1] / 16.0)  # Blender Top V
-			v_min = 1.0 - (uv_coords[3] / 16.0)  # Blender Bottom V
+			u_min = uv_coords[0] / 16
+			u_max = uv_coords[2] / 16
+			v_max = 1 - (uv_coords[1] / 16)  # Blender Top V
+			v_min = 1 - (uv_coords[3] / 16)  # Blender Bottom V
 
 			# Define the four corners
 			p_TL = (u_min, v_max) # Top Left
@@ -398,17 +427,17 @@ def add_model(
 			p_BL = (u_min, v_min) # Bottom Left
 
 			# Face-specific base ordering (maps Tex-corners -> face loop positions)
-			if face_name == "up": # Y+ (V-flip and U-flip)
+			if face_name == UP_DIR: # Y+ (V-flip and U-flip)
 				uvs_base = [p_TR, p_TL, p_BL, p_BR]
-			elif face_name == "down": # Y- (V-flip and U-flip)
+			elif face_name == DOWN_DIR: # Y- (V-flip and U-flip)
 				uvs_base = [p_BL, p_BR, p_TR, p_TL]
-			elif face_name == "north": # Z- (V-flip)
+			elif face_name == NORTH_DIR: # Z- (V-flip)
 				uvs_base = [p_TL, p_TR, p_BR, p_BL]
-			elif face_name == "south": # Z+ (V-flip and U-flip)
+			elif face_name == SOUTH_DIR: # Z+ (V-flip and U-flip)
 				uvs_base = [p_BR, p_BL, p_TL, p_TR]
-			elif face_name == "east": # X+ (V-flip and U-flip)
+			elif face_name == EAST_DIR: # X+ (V-flip and U-flip)
 				uvs_base = [p_BR, p_BL, p_TL, p_TR]
-			elif face_name == "west": # X- (V-flip)
+			elif face_name == WEST_DIR: # X- (V-flip)
 				uvs_base = [p_TL, p_TR, p_BR, p_BL]
 			else:
 				# Default fallback (should not happen, just in case though)
@@ -416,15 +445,28 @@ def add_model(
 
 			# Reverse vertex order for downward faces before creation — keeps UVs intact
 			f_for_face = list(f)
-			if face_name == "down":
+			if face_name == DOWN_DIR:
 				f_for_face = list(reversed(f_for_face))
 
+			if len(f_for_face) != 4:
+				env.log(f"Face vertex index list expected 4 elements, but got {len(f_for_face)}. Skipping face.")
+				continue
+
 			try:
-				face = bm.faces.new(
-					(verts[f_for_face[0]], verts[f_for_face[1]], verts[f_for_face[2]], verts[f_for_face[3]])
-				)
-			except ValueError:
+				face_verts = []
+				for vert_idx in f_for_face:
+					if vert_idx < 0 or vert_idx >= len(verts):
+						env.log(f"Vertex index {vert_idx} is out of bounds (0 to {len(verts)-1}). Skipping face.")
+						raise IndexError("Vertex index out of bounds")
+					face_verts.append(verts[vert_idx])
+
+				face = bm.faces.new(tuple(face_verts))
+			except ValueError as e:
 				# If face cannot be created, skip it
+				env.log(f"Failed to create BMesh face: {e}. Skipping.")
+				continue
+			except IndexError:
+				# Catch the custom index error from the bounds check
 				continue
 
 			face.normal_update()
@@ -438,15 +480,15 @@ def add_model(
 
 			# Mirror axis per-face (to fix convention mismatches)
 			mirror_axis = None
-			if face_name == "north":
+			if face_name == NORTH_DIR:
 				mirror_axis = "Y"
-			elif face_name == "east":
+			elif face_name == EAST_DIR:
 				mirror_axis = "X"
-			elif face_name == "south":
+			elif face_name == SOUTH_DIR:
 				mirror_axis = "X"
-			elif face_name == "west":
+			elif face_name == WEST_DIR:
 				mirror_axis = "Y"
-			elif face_name == "down":
+			elif face_name == DOWN_DIR:
 				mirror_axis = "Y"
 			# up -> no mirroring
 
@@ -467,7 +509,7 @@ def add_model(
 				uvs_final = uvs_rot
 
 			# For cardinal faces (north/south/east/west) mirror over both axes
-			if face_name in {"north", "south", "east", "west"}:
+			if face_name in {NORTH_DIR, SOUTH_DIR, EAST_DIR, WEST_DIR}:
 				mx = sum(p[0] for p in uvs_final) / len(uvs_final)
 				my = sum(p[1] for p in uvs_final) / len(uvs_final)
 				mirrored_xy = []
@@ -479,13 +521,17 @@ def add_model(
 				uvs_final = mirrored_xy
 
 			# Flip UV for 'down' face (V-axis flip)
-			if face_name == "down":
+			if face_name == DOWN_DIR:
 				mx = sum(p[0] for p in uvs_final) / len(uvs_final)
 				my = sum(p[1] for p in uvs_final) / len(uvs_final)
 				uvs_final = [(x, 2 * my - y) for (x, y) in uvs_final]
 
 			# Assign the final computed UVs to the face loops
 			for j, loop in enumerate(face.loops):
+				# Bounds check before assignment
+				if j >= len(uvs_final):
+					env.log(f"UV index {j} is out of bounds for computed UVs (size: {len(uvs_final)}). Skipping assignment.")
+					break
 				loop[uv_layer].uv = uvs_final[j % len(uvs_final)]
 
 			# Using materials_remap to remap the index, used for the block with remapping "#side"
@@ -526,7 +572,7 @@ def add_model(
 
 						# Translate back
 						loop[uv_layer].uv = (scaled_u + face_pivot[0], scaled_v + face_pivot[1])
-
+					
 	# Quick way to clean the model, hopefully it doesn't cause any UV issues
 	# Ignore model has overlay geometry, causing issue
 	if not textures.get("overlay"):
