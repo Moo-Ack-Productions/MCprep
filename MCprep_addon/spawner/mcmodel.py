@@ -475,8 +475,12 @@ def add_model(
 			if face_mat == "#overlay":
 				bmesh.ops.translate(bm, verts=face.verts, vec=0.0025 * face.normal)
 
-			# Apply rotation shift (uv_idx)
-			uvs_rot = [uvs_base[(k + uv_idx) % len(uvs_base)] for k in range(len(uvs_base))]
+			# Apply rotation shift (uv_idx) with bounds check
+			if uvs_base and len(uvs_base) > 0:
+				uvs_rot = [uvs_base[(k + uv_idx) % len(uvs_base)] for k in range(len(uvs_base))]
+			else:
+				env.log("Warning: Empty uvs_base, skipping UV rotation.")
+				uvs_rot = []
 
 			# Mirror axis per-face (to fix convention mismatches)
 			mirror_axis = None
@@ -499,17 +503,17 @@ def add_model(
 				uvs_final = []
 				for (x, y) in uvs_rot:
 					if mirror_axis == "X":
-						nx = 2 * mx - x
+						nx = 2 * mx - x		# mirror horizontally
 						ny = y
 					else:
 						nx = x
-						ny = 2 * my - y
+						ny = 2 * my - y		  # mirror vertically
 					uvs_final.append((nx, ny))
 			else:
 				uvs_final = uvs_rot
 
 			# For cardinal faces (north/south/east/west) mirror over both axes
-			if face_name in {NORTH_DIR, SOUTH_DIR, EAST_DIR, WEST_DIR}:
+			if face_name in (NORTH_DIR, SOUTH_DIR, EAST_DIR, WEST_DIR):
 				mx = sum(p[0] for p in uvs_final) / len(uvs_final)
 				my = sum(p[1] for p in uvs_final) / len(uvs_final)
 				mirrored_xy = []
@@ -527,12 +531,21 @@ def add_model(
 				uvs_final = [(x, 2 * my - y) for (x, y) in uvs_final]
 
 			# Assign the final computed UVs to the face loops
-			for j, loop in enumerate(face.loops):
-				# Bounds check before assignment
-				if j >= len(uvs_final):
-					env.log(f"UV index {j} is out of bounds for computed UVs (size: {len(uvs_final)}). Skipping assignment.")
-					break
-				loop[uv_layer].uv = uvs_final[j % len(uvs_final)]
+			if not uvs_final:
+				env.log("Warning: Empty uvs_final, skipping UV assignment for this face.")
+			else:
+				for j, loop in enumerate(face.loops):
+					# Bounds check before assignment
+					if j >= len(uvs_final):
+						env.log(f"UV index {j} out of bounds for computed UVs (size: {len(uvs_final)}). Skipping assignment.")
+						break
+
+					try:
+						loop[uv_layer].uv = uvs_final[j % len(uvs_final)]
+					except KeyError:
+						env.log("Warning: UV layer not found on loop; skipping UV assignment.")
+					except Exception as e:
+						env.log(f"Error assigning UV to loop {j}: {e}")
 
 			# Using materials_remap to remap the index, used for the block with remapping "#side"
 			# Stored material index for getting the texture
