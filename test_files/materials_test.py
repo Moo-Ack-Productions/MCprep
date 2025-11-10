@@ -347,6 +347,10 @@ class MaterialsTest(unittest.TestCase):
             "redstone_dust_line0": True,
             "water_flow": True,
 
+            # Non-canonical names
+            "dirt_grass_top": True,  # older jmc2obj mapping
+            "minecraft_block-grass_block_top": True,  # newer jmc2obj mapping
+
             # Sample of textures already saturated
             "grass_block_side": False,
             "glowstone": False
@@ -355,7 +359,8 @@ class MaterialsTest(unittest.TestCase):
         for tex in list(should_saturate):
             do_sat = should_saturate[tex]
             with self.subTest(f"Assert {tex} saturate is {do_sat}"):
-                img_file = self._get_canon_texture_image(tex, test_pack=False)
+                canon_tex, _ = get_mc_canonical_name(tex)
+                img_file = self._get_canon_texture_image(canon_tex, test_pack=False)
                 self.assertTrue(
                     os.path.isfile(img_file),
                     f"Failed to get test file {img_file}")
@@ -365,6 +370,10 @@ class MaterialsTest(unittest.TestCase):
                 if do_sat:
                     self.assertTrue(
                         res, f"Should detect {tex} as grayscale")
+
+                    res = generate.checklist(canon_tex, "desaturated")
+                    self.assertTrue(
+                        res, f"Canonical {canon_tex} mapped from input {tex} should be in desaturated list")
                 else:
                     self.assertFalse(
                         res, f"Should not detect {tex} as grayscale")
@@ -655,6 +664,8 @@ class MaterialsTest(unittest.TestCase):
             "grass_block_top": "grass_block_top",
             "mushroom_red": "red_mushroom",
             # "slime": "slime_block",  # KNOWN jmc, need to address
+            "dirt_grass_top": "grass_block_top",  # jmc with 1.16.4
+            "minecraft_block-grass_block_top": "grass_block_top"  # Newer jmc2obj/mc
         }
         mineways_to_canon = {}
 
