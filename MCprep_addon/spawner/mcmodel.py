@@ -389,12 +389,20 @@ def add_model(
 			
 			# --- UV Calculation Algorithm Overview ---
 			# Minecraft UVs use a 0-16 scale, where V=0 is the top edge (Y-max).
-			# 1. Auto-UV: Calculates UV [u_min, v_min, u_max, v_max] based on the element's bounding box ('from'/'to' vectors).
-			# 2. Conversion: Converts Minecraft's 0-16 UV scale to Blender's 0-1 UV scale. Note that the V-axis is flipped (1 - MC_V ÷ 16) to match Blender's convention (V=1 at the top).
-			# 3. Corner Definition: Defines the four corners (TL, TR, BR, BL) in 0-1 Blender UV space.
-			# 4. Base Ordering: Defines the initial ordering of these corners (uvs_base) for the specific face direction, accounting for MC's default face-to-UV mapping conventions.
-			# 5. Rotation: Applies the `uv_rot` (0, 90, 180, 270) by cyclically shifting the corner order (uvs_rot).
-			# 6. Mirroring/Flipping: Applies face-specific mirroring (X and/or Y axes) to correct orientation between MC model format and Blender's mesh structure.
+			# 1. Auto-UV: Calculates UV [u_min, v_min, u_max, v_max] based on the
+			#	 element's bounding box ('from'/'to' vectors).
+			# 2. Conversion: Converts Minecraft's 0-16 UV scale to Blender's 0-1 UV
+			#	 scale. Note that the V-axis is flipped (1 - MC_V ÷ 16) to match Blender's
+			#	 convention (V=1 at the top).
+			# 3. Corner Definition: Defines the four corners (TL, TR, BR, BL) in 0-1 Blender
+			#	 UV space.
+			# 4. Base Ordering: Defines the initial ordering of these corners (uvs_base) for
+			#	 the specific face direction, accounting for MC's default face-to-UV mapping
+			#	 conventions.
+			# 5. Rotation: Applies the `uv_rot` (0, 90, 180, 270) by cyclically shifting the
+			#	 corner order (uvs_rot).
+			# 6. Mirroring/Flipping: Applies face-specific mirroring (X and/or Y axes) to correct
+			#	 orientation between MC model format and Blender's mesh structure.
 			# ---------------------------------------
 
 			if uv_coords is None:				
@@ -585,7 +593,7 @@ def add_model(
 
 						# Translate back
 						loop[uv_layer].uv = (scaled_u + face_pivot[0], scaled_v + face_pivot[1])
-					
+
 	# Quick way to clean the model, hopefully it doesn't cause any UV issues
 	# Ignore model has overlay geometry, causing issue
 	if not textures.get("overlay"):
