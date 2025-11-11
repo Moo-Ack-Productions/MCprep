@@ -34,6 +34,7 @@ from bpy.types import (
 	Preferences,
 	Context,
 	Collection,
+	LayerCollection,
 	Material,
 	Image,
 	Node,
@@ -617,7 +618,7 @@ def move_to_collection(obj: bpy.types.Object, collection: Collection) -> None:
 	collection.objects.link(obj)
 
 
-def get_or_create_viewlayer(context: Context, collection_name: str) -> Collection:
+def get_or_create_viewlayer(context: Context, collection_name: str) -> LayerCollection:
 	"""Returns or creates the view layer for a given name. 2.8 only.
 
 	Only searches within same viewlayer; not exact match but a non-case
@@ -850,15 +851,22 @@ def scene_update(context: Optional[Context] = None) -> None:
 
 def move_assets_to_excluded_layer(context: Context, collections: List[Collection]) -> None:
 	"""Utility to move source collections to excluded layer to not be rendered"""
-	initial_view_coll:Collection = context.view_layer.active_layer_collection
+	initial_view_coll: LayerCollection = context.view_layer.active_layer_collection
 
 	# Then, setup the exclude view layer
-	spawner_exclude_vl:Collection = get_or_create_viewlayer(
+	spawner_exclude_vl: LayerCollection = get_or_create_viewlayer(
 		context, SPAWNER_EXCLUDE)
 	spawner_exclude_vl.exclude = True
 
+	did_update_vl = False
 	for grp in collections:
 		if grp.name not in initial_view_coll.collection.children:
 			continue  # not linked, likely a sub-group not added to scn
 		spawner_exclude_vl.collection.children.link(grp)
 		initial_view_coll.collection.children.unlink(grp)
+		did_update_vl = True
+
+	if did_update_vl:
+		for vl_child in spawner_exclude_vl.children:
+			if vl_child.collection == grp:
+				vl_child.exclude = True
