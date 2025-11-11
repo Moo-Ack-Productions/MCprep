@@ -1122,7 +1122,7 @@ def texgen_seus(mat: Material, passes: Dict[str, Image], nodeInputs: List, use_r
 		label="Smooth Inverse",
 		location=(-80, -280))
 	nodeSeperate = create_node(
-		nodes, "ShaderNodeSeparateRGB",
+		nodes, "ShaderNodeSeparateRGB" if util.min_bv((5, 0)) else "ShaderNodeSeparateColor",
 		name="RGB Seperation",
 		label="RGB Seperation",
 		location=(-280, -280))
@@ -1145,11 +1145,14 @@ def texgen_seus(mat: Material, passes: Dict[str, Image], nodeInputs: List, use_r
 	saturateMixOut = get_node_socket(nodeSaturateMix, is_input=False)
 
 	# Links the nodes to the reroute nodes.
+	RED = "R" if util.min_bv((5, 0)) else "Red"
+	BLUE = "B" if util.min_bv((5, 0)) else "Blue"
+	GREEN = "G" if util.min_bv((5, 0)) else "Green"
 	links.new(nodeTexDiff.outputs["Color"], nodeSaturateMix.inputs[saturateMixIn[1]])
 	links.new(nodeTexNorm.outputs["Color"], nodeNormalInv.inputs["Color"])
 	links.new(nodeNormalInv.outputs["Color"], nodeNormal.inputs["Color"])
-	links.new(nodeTexSpec.outputs["Color"], nodeSeperate.inputs["Image"])
-	links.new(nodeSeperate.outputs["R"], nodeSpecInv.inputs["Color"])
+	links.new(nodeTexSpec.outputs["Color"], nodeSeperate.inputs[0])  # "Color" as of 5.0, "Image" before
+	links.new(nodeSeperate.outputs[RED], nodeSpecInv.inputs["Color"])
 
 	for i in nodeInputs[0]:
 		if i == nodeSaturateMix.outputs[saturateMixOut[0]]:
@@ -1159,23 +1162,25 @@ def texgen_seus(mat: Material, passes: Dict[str, Image], nodeInputs: List, use_r
 		# Check for backface culling, since some materials need it,
 		# notably redstone torches
 		if checklist(canon, "backface_culling"):
-			nodeBackfacing = create_node(nodes,
-			"ShaderNodeNewGeometry",
-			name="Backfacing",
-			label="Backfacing",
-			location=(-250, 100),
-			visible_output="Backfacing")
+			nodeBackfacing = create_node(
+				nodes,
+				"ShaderNodeNewGeometry",
+				name="Backfacing",
+				label="Backfacing",
+				location=(-250, 100),
+				visible_output="Backfacing")
 
-			nodeBackfaceSubtract = create_node(nodes,
+			nodeBackfaceSubtract = create_node(
+				nodes,
 				"ShaderNodeMath",
 				name="Backface Culling",
 				label="Backface Culling",
 				location=(-80, 0),
 				operation="SUBTRACT")
-			
+
 			# Add a bit more padding
 			nodeTexDiff.location = (-520, 140)
-			
+
 			links.new(nodeTexDiff.outputs[1], nodeBackfaceSubtract.inputs[0])
 			links.new(nodeBackfacing.outputs["Backfacing"], nodeBackfaceSubtract.inputs[1])
 			links.new(nodeBackfaceSubtract.outputs[0], i)
@@ -1184,9 +1189,9 @@ def texgen_seus(mat: Material, passes: Dict[str, Image], nodeInputs: List, use_r
 	if image_spec and use_reflections:
 		if use_emission:
 			for i in nodeInputs[2]:
-				links.new(nodeSeperate.outputs["B"], i)
+				links.new(nodeSeperate.outputs[BLUE], i)
 		for i in nodeInputs[4]:
-			links.new(nodeSeperate.outputs["G"], i)
+			links.new(nodeSeperate.outputs[GREEN], i)
 		for i in nodeInputs[3]:
 			links.new(nodeSpecInv.outputs["Color"], i)
 	for i in nodeInputs[6]:
