@@ -542,9 +542,12 @@ def add_model(
 						env.log(f"UV index {j} out of bounds for computed UVs (size: {len(uvs_final)}). Skipping assignment.")
 						break
 
-					if not uv_layer in loop:
+					try:
+						loop_uv = loop[uv_layer]
+					except KeyError:
 						env.log("Warning: UV layer not found on loop; skipping UV assignment.")
 						continue
+						
 					if (j % len(uvs_final)) < 0 or (j % len(uvs_final)) >= len(uvs_final):
 						env.log(f"Error assigning UV to loop {j}: Out of Bounds")
 						continue
