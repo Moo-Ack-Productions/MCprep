@@ -7,7 +7,7 @@ extension_settings:
 
 install_versions:
   - 4.4+
-  - 2.83..4.4
+  - 2.83..4.3
 
 build_actions:
   default: 

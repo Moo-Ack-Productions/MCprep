@@ -91,24 +91,6 @@ def getMeshswapList(context: Context) -> List[Tuple[str, str, str]]:
 		for itm in context.scene.mcprep_props.meshswap_list]
 
 
-def move_assets_to_excluded_layer(context: Context, collections: List[Collection]) -> None:
-	"""Utility to move source collections to excluded layer to not be rendered"""
-	initial_view_coll = context.view_layer.active_layer_collection
-
-	# Then, setup the exclude view layer
-	meshswap_exclude_vl = util.get_or_create_viewlayer(
-		context, "Meshswap Exclude")
-	meshswap_exclude_vl.collection.hide_viewport = True
-	meshswap_exclude_vl.collection.hide_render = True
-
-	for grp in collections:
-		if grp.name not in initial_view_coll.collection.children:
-			continue  # not linked, likely a sub-group not added to scn
-		initial_view_coll.collection.children.unlink(grp)
-		if grp.name not in meshswap_exclude_vl.collection.children:
-			meshswap_exclude_vl.collection.children.link(grp)
-
-
 def update_meshswap_path(self, context: Context) -> None:
 	"""for UI list path callback"""
 	env.log("Updating meshswap path", vv_only=True)
