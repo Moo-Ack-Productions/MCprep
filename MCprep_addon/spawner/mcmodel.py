@@ -33,6 +33,7 @@ from ..conf import MCprepError, env, VectorType
 from .. import util
 from .. import tracking
 from ..materials import generate  # TODO: Use this module for mat gen in future
+from .spawner_gizmo import draw_callback
 
 TexFace = Dict[str, Dict[str, str]]
 
@@ -340,15 +341,15 @@ def add_model(
 				if f"#{img}" not in materials and name not in obj_mats and mat is not None:
 					obj_mats.append(mat)
 					materials.append(f"#{img}")
-	
+
 	for e in elements:
 		# Check if 'from' and 'to' bounds are present
 		if 'from' not in e or 'to' not in e:
 			raise ModelException(f"Element is missing required 'from' or 'to' bounds: {e}")
-		
+
 		f_bounds = e['from']  # [x1, y1, z1]
 		t_bounds = e['to']	  # [x2, y2, z2]
-		
+
 		# Check if bounds are lists of 3 points
 		if not isinstance(f_bounds, list) or len(f_bounds) != 3:
 			raise ModelException(f"Invalid 'from' bounds format: {f_bounds}")
@@ -362,7 +363,7 @@ def add_model(
 		element = add_element(
 			f_bounds, t_bounds, rotation['origin'], rotation['axis'], rotation['angle'])
 		verts = [bm.verts.new(v) for v in element[0]]  # add a new vert
-		
+
 		faces = e.get("faces")
 		for i in range(len(element[2])):
 			f = element[2][i]
@@ -386,26 +387,26 @@ def add_model(
 			uv_idx = int(uv_rot / 90)
 
 			uv_coords = d_face.get("uv")  # in the format [x1, y1, x2, y2]
-			
+
 			# --- UV Calculation Algorithm Overview ---
 			# Minecraft UVs use a 0-16 scale, where V=0 is the top edge (Y-max).
 			# 1. Auto-UV: Calculates UV [u_min, v_min, u_max, v_max] based on the
-			#	 element's bounding box ('from'/'to' vectors).
+			#    element's bounding box ('from'/'to' vectors).
 			# 2. Conversion: Converts Minecraft's 0-16 UV scale to Blender's 0-1 UV
-			#	 scale. Note that the V-axis is flipped (1 - MC_V ÷ 16) to match Blender's
-			#	 convention (V=1 at the top).
+			#    scale. Note that the V-axis is flipped (1 - MC_V ÷ 16) to match Blender's
+			#    convention (V=1 at the top).
 			# 3. Corner Definition: Defines the four corners (TL, TR, BR, BL) in 0-1 Blender
-			#	 UV space.
+			#    UV space.
 			# 4. Base Ordering: Defines the initial ordering of these corners (uvs_base) for
-			#	 the specific face direction, accounting for MC's default face-to-UV mapping
-			#	 conventions.
+			#    the specific face direction, accounting for MC's default face-to-UV mapping
+			#    conventions.
 			# 5. Rotation: Applies the `uv_rot` (0, 90, 180, 270) by cyclically shifting the
-			#	 corner order (uvs_rot).
+			#    corner order (uvs_rot).
 			# 6. Mirroring/Flipping: Applies face-specific mirroring (X and/or Y axes) to correct
-			#	 orientation between MC model format and Blender's mesh structure.
+			#    orientation between MC model format and Blender's mesh structure.
 			# ---------------------------------------
 
-			if uv_coords is None:				
+			if uv_coords is None:
 				# Auto-calculate proportional UVs (0-16 scale) based on element bounds
 				# MC UV convention: (u_min, v_min, u_max, v_max). V is measured from 0 at the top.
 				if face_name in (NORTH_DIR, SOUTH_DIR):
@@ -429,26 +430,27 @@ def add_model(
 			v_min = 1 - (uv_coords[3] / 16)  # Blender Bottom V
 
 			# Define the four corners
-			p_TL = (u_min, v_max) # Top Left
-			p_TR = (u_max, v_max) # Top Right
-			p_BR = (u_max, v_min) # Bottom Right
-			p_BL = (u_min, v_min) # Bottom Left
+			p_TL = (u_min, v_max)  # Top Left
+			p_TR = (u_max, v_max)  # Top Right
+			p_BR = (u_max, v_min)  # Bottom Right
+			p_BL = (u_min, v_min)  # Bottom Left
 
 			# Face-specific base ordering (maps Tex-corners -> face loop positions)
-			if face_name == UP_DIR: # Y+ (V-flip and U-flip)
+			if face_name == UP_DIR:  # Y+ (V-flip and U-flip)
 				uvs_base = [p_TR, p_TL, p_BL, p_BR]
-			elif face_name == DOWN_DIR: # Y- (V-flip and U-flip)
+			elif face_name == DOWN_DIR:  # Y- (V-flip and U-flip)
 				uvs_base = [p_BL, p_BR, p_TR, p_TL]
-			elif face_name == NORTH_DIR: # Z- (V-flip)
+			elif face_name == NORTH_DIR:  # Z- (V-flip)
 				uvs_base = [p_TL, p_TR, p_BR, p_BL]
-			elif face_name == SOUTH_DIR: # Z+ (V-flip and U-flip)
+			elif face_name == SOUTH_DIR:  # Z+ (V-flip and U-flip)
 				uvs_base = [p_BR, p_BL, p_TL, p_TR]
-			elif face_name == EAST_DIR: # X+ (V-flip and U-flip)
+			elif face_name == EAST_DIR:  # X+ (V-flip and U-flip)
 				uvs_base = [p_BR, p_BL, p_TL, p_TR]
-			elif face_name == WEST_DIR: # X- (V-flip)
+			elif face_name == WEST_DIR:  # X- (V-flip)
 				uvs_base = [p_TL, p_TR, p_BR, p_BL]
 			else:
 				# Default fallback (should not happen, just in case though)
+				env.log(f"Used default fallback for UV base on {obj_name}")
 				uvs_base = [p_TL, p_TR, p_BR, p_BL]
 
 			# Reverse vertex order for downward faces before creation — keeps UVs intact
@@ -460,21 +462,21 @@ def add_model(
 				env.log(f"Face vertex index list expected 4 elements, but got {len(f_for_face)}. Skipping face.")
 				continue
 
-			try:
-				face_verts = []
-				for vert_idx in f_for_face:
-					if vert_idx < 0 or vert_idx >= len(verts):
-						env.log(f"Vertex index {vert_idx} is out of bounds (0 to {len(verts)-1}). Skipping face.")
-						raise IndexError("Vertex index out of bounds")
+			face_verts = []
+			out_of_bounds = False
+			for vert_idx in f_for_face:
+				if 0 <= vert_idx < len(verts):
 					face_verts.append(verts[vert_idx])
-
+				else:
+					env.log(f"Vertex index {vert_idx} is out of bounds (0 to {len(verts) - 1}). Skipping face.")
+					out_of_bounds = True
+					break  # No need to keep checking this face
+			if out_of_bounds:
+				continue
+			try:
 				face = bm.faces.new(tuple(face_verts))
 			except ValueError as e:
-				# If face cannot be created, skip it
 				env.log(f"Failed to create BMesh face: {e}. Skipping.")
-				continue
-			except IndexError:
-				# Catch the custom index error from the bounds check
 				continue
 
 			face.normal_update()
@@ -543,11 +545,11 @@ def add_model(
 						break
 
 					try:
-						loop_uv = loop[uv_layer]
+						_ = loop[uv_layer]
 					except KeyError:
 						env.log("Warning: UV layer not found on loop; skipping UV assignment.")
 						continue
-						
+
 					if (j % len(uvs_final)) < 0 or (j % len(uvs_final)) >= len(uvs_final):
 						env.log(f"Error assigning UV to loop {j}: Out of Bounds")
 						continue
@@ -787,7 +789,7 @@ class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 		default="",
 		subtype="FILE_PATH",
 		options={'HIDDEN', 'SKIP_SAVE'})
-	
+
 	track_function = "model"
 	track_param = "list"
 	@tracking.report_error
@@ -797,6 +799,7 @@ class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 			self.report({'ERROR'}, res.msg)
 			return {'CANCELLED'}
 		return {'FINISHED'}
+
 
 class MCPREP_OT_import_minecraft_model_file(
 	bpy.types.Operator, ImportHelper, ModelSpawnBase):
@@ -812,7 +815,7 @@ class MCPREP_OT_import_minecraft_model_file(
 		options={'HIDDEN'},
 		maxlen=255  # Max internal buffer length, longer would be clamped.
 	)
-	
+
 	track_function = "model"
 	track_param = "file"
 	@tracking.report_error
@@ -829,6 +832,7 @@ class MCPREP_OT_import_minecraft_model_file(
 		context.window_manager.fileselect_add(self)
 		return {'RUNNING_MODAL'}
 
+
 class MCPREP_FH_import_minecraft_model_file(FileHandler):
 	bl_idname = "MCPREP_FH_import_minecraft_model_file"
 	bl_label = "File handler for JSON import"
@@ -838,6 +842,7 @@ class MCPREP_FH_import_minecraft_model_file(FileHandler):
 	@classmethod
 	def poll_drop(cls, context) -> bool:
 		return (context.area and context.area.type == 'VIEW_3D')
+
 
 class MCPREP_OT_reload_models(bpy.types.Operator):
 	"""Reload model spawner, use after adding/removing/renaming files in the resource pack folder"""
@@ -849,14 +854,16 @@ class MCPREP_OT_reload_models(bpy.types.Operator):
 		update_model_list(context)
 		return {'FINISHED'}
 
+
 class MCPREP_OT_place_json_model_with_gizmo(bpy.types.Operator, ModelSpawnBase):
 	bl_idname = "mcprep.place_json_model_with_gizmo"
 	bl_label = "Import Minecraft JSON model and Place"
 	bl_description = "Imports a Minecraft JSON model with location selection"
 	bl_options = {'REGISTER', 'UNDO'}
-	
+
 	filename_ext = ".json"
 	filepath: bpy.props.StringProperty(subtype='FILE_PATH', options={'SKIP_SAVE'})
+
 	def invoke(self, context, event):
 		from .spawner_gizmo import HitVector
 
@@ -867,7 +874,7 @@ class MCPREP_OT_place_json_model_with_gizmo(bpy.types.Operator, ModelSpawnBase):
 		)
 		context.window_manager.modal_handler_add(self)
 		return {'RUNNING_MODAL'}
-	
+
 	def execute(self, context):
 		if self.hit_vector:
 			self.location = self.hit_vector.location
@@ -886,7 +893,7 @@ class MCPREP_OT_place_json_model_with_gizmo(bpy.types.Operator, ModelSpawnBase):
 			from .spawner_gizmo import update_raycast
 			self.hit_vector = update_raycast(context, event)
 		elif event.type == 'LEFTMOUSE' and event.value == 'PRESS':
-			res = self.execute(context)			
+			res = self.execute(context)
 			self.finish(context)
 			return res
 		elif event.type in {'RIGHTMOUSE', 'ESC'}:
@@ -899,12 +906,11 @@ class MCPREP_OT_place_json_model_with_gizmo(bpy.types.Operator, ModelSpawnBase):
 		context.area.tag_redraw()
 
 	def draw_callback(self, context) -> None:
-		from .spawner_gizmo import draw_callback
-
 		if not self.hit_vector:
 			return
-		
+
 		draw_callback(self.hit_vector)
+
 
 classes = (
 	MCPREP_OT_spawn_minecraft_model,
@@ -928,7 +934,7 @@ def unregister():
 	bpy.types.TOPBAR_MT_file_import.remove(draw_import_mcmodel)
 	for cls in reversed(classes):
 		bpy.utils.unregister_class(cls)
-	
+
 	if util.min_bv((4, 1)):
 		bpy.utils.unregister_class(MCPREP_FH_import_minecraft_model_file)
 		bpy.utils.unregister_class(MCPREP_OT_place_json_model_with_gizmo)
