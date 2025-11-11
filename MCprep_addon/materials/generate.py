@@ -1122,9 +1122,7 @@ def texgen_seus(mat: Material, passes: Dict[str, Image], nodeInputs: List, use_r
 		label="Smooth Inverse",
 		location=(-80, -280))
 	sep_node = ""
-	if util.min_bv((5, 0)):
-		sep_node = "ShaderNodeSeparateRGB"
-	elif util.min_bv((3, 3)):
+	if util.min_bv((3, 3)):
 		sep_node = "ShaderNodeSeparateColor"
 	else:
 		sep_node = "ShaderNodeSeparateRGB"
@@ -1153,9 +1151,10 @@ def texgen_seus(mat: Material, passes: Dict[str, Image], nodeInputs: List, use_r
 	saturateMixOut = get_node_socket(nodeSaturateMix, is_input=False)
 
 	# Links the nodes to the reroute nodes.
-	RED = "Red" if (3, 3) < bpy.app.version < (5, 0) else "R"
-	BLUE = "Blue" if (3, 3) < bpy.app.version < (5, 0) else "B"
-	GREEN = "Green" if (3, 3) < bpy.app.version < (5, 0) else "G"
+	_longhand = util.min_bv((3, 3))
+	RED = "Red" if _longhand else "R"
+	BLUE = "Blue" if _longhand else "B"
+	GREEN = "Green" if _longhand else "G"
 	links.new(nodeTexDiff.outputs["Color"], nodeSaturateMix.inputs[saturateMixIn[1]])
 	links.new(nodeTexNorm.outputs["Color"], nodeNormalInv.inputs["Color"])
 	links.new(nodeNormalInv.outputs["Color"], nodeNormal.inputs["Color"])
