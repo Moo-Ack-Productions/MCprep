@@ -44,7 +44,7 @@ git checkout test_files/test_data/jmc2obj_test_1_15_2.mtl
 git checkout test_files/test_data/mineways_test_combined_1_15_2.mtl
 git checkout test_files/test_data/mineways_test_separated_1_15_2.mtl
 
-python mcprep_data_refresh.py -auto
+python MCprep_addon/mcprep_data_refresh.py -auto
 
 # -----------------------------------------------------------------------------
 # Build releasE with translation updates
@@ -95,6 +95,7 @@ echo ""
 # Extract the numbers between parentheses, replace comma and space with period
 BASE_VER=$(grep "\"version\":" MCprep_addon/__init__.py | awk -F"[()]" '{print $2}' | tr ',' '.' | tr -d ' ')
 NEW_TAG="${BASE_VER}"
+PREVIOUS_TAG="$(git describe --tags --abbrev=0)"
 
 ALL_TAGS=$(git tag -l)
 if [[ $ALL_TAGS == *$NEW_TAG* ]]; then
@@ -117,6 +118,11 @@ gh release create "$NEW_TAG" \
     --generate-notes \
     -t "v${BASE_VER} | (Update)" \
     "./build/$NEW_NAME"
+
+echo ""
+echo "Updating GitHub CI workflows"
+cat .github/workflows/run_tests.yaml | sed -e "s/wget -nv \"https://github.com/Moo-Ack-Productions/MCprep/releases/download/$PREVIOUS_TAG/MCprep_addon_$PREVIOUS_TAG.zip\"/wget -nv \"https://github.com/Moo-Ack-Productions/MCprep/releases/download/$NEW_TAG/MCprep_addon_$NEW_TAG.zip\"/" > .github/workflows/run_tests-tmp.yaml
+mv .github/workflows/run_tests-tmp.yaml .github/workflows/run_tests.yaml
 
 echo ""
 echo "Complete release by going to the link above, and updating these pages:"

@@ -17,6 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import os
+from pathlib import Path
 import time
 
 # library imports
@@ -28,7 +29,7 @@ from . import addon_updater_ops
 from . import tracking
 from . import util
 from . import world_tools
-from .materials import material_manager
+from .materials import material_manager, vivy_materials
 from .materials.generate import update_mcprep_texturepack_path
 from .materials.skin import update_skin_path
 from .spawner import effects
@@ -366,13 +367,22 @@ def feature_set_update(self, context: Context) -> None:
 	tracking.Tracker.feature_set = self.feature_set
 	tracking.trackUsage("feature_set", param=self.feature_set)
 
-
 class McprepPreference(bpy.types.AddonPreferences):
 	bl_idname = __package__
 	scriptdir = bpy.path.abspath(os.path.dirname(__file__))
 
 	def change_verbose(self, context):
 		env.verbose = self.verbose
+
+	def update_exp_vivy_file_path(self, context):
+		"""Update important Vivy variables when setting Vivy file path"""
+		path = Path(bpy.path.abspath(self.exp_vivy_file_path))
+		env.reload_vivy_json(path)
+		env.vivy_name_changes = {}
+		env.vivy_cache = None
+	
+	def update_enable_vivy(self, context):
+		env.vivy_enabled = self.exp_vivy_material_system
 
 	meshswap_path: bpy.props.StringProperty(
 		name="Meshswap path",
@@ -398,6 +408,11 @@ class McprepPreference(bpy.types.AddonPreferences):
 			"with material prepping"),
 		subtype='DIR_PATH',
 		default=f"{scriptdir}/MCprep_resources/resourcepacks/mcprep_default/")
+	minecraft_versions_path: bpy.props.StringProperty(
+		name="Minecraft Versions Path",
+		description="Path to the Minecraft versions folder",
+		subtype='DIR_PATH',
+		default=util.save_path_default())
 	skin_path: bpy.props.StringProperty(
 		name="Skin path",
 		description="Folder for skin textures, used in skin swapping",
@@ -453,19 +468,34 @@ class McprepPreference(bpy.types.AddonPreferences):
 		subtype='FILE_PATH',
 		update=mineways_update,
 		default="Mineways")
+
 	save_folder: bpy.props.StringProperty(
 		name="MC saves folder",
 		description=(
 			"Folder containing Minecraft world saves directories, "
 			"for the direct import bridge"),
-		subtype='FILE_PATH',
-		default='')
+		subtype='FILE_PATH')
 	feature_set: bpy.props.EnumProperty(
 		items=[
 			('supported', 'Supported', 'Use only supported features'),
 			('experimental', 'Experimental', 'Enable experimental features')],
 		name="Feature set",
 		update=feature_set_update)
+	
+	# WARNING: EXPERIMENTAL FEATURES
+	exp_vivy_material_system: bpy.props.BoolProperty(
+		name="Experimental: Experimental Material Templates (Vivy)",
+		description="Enable Vivy material templating features",
+		default=False,
+		update=update_enable_vivy
+	)
+	exp_vivy_file_path: bpy.props.StringProperty(
+		name="Vivy Folder",
+		description="Folder to source Vivy materials",
+		subtype='DIR_PATH',
+		default='//',
+		update=update_exp_vivy_file_path
+		)
 
 	# addon updater preferences
 
@@ -560,6 +590,16 @@ class McprepPreference(bpy.types.AddonPreferences):
 				row = box.row()
 				row.label(text=env._("Effects folder not found"), icon="ERROR")
 
+			if util.is_vivy_enabled(context):
+				split = util.layout_split(box, factor=factor_width)
+				col = split.column()
+				col.label(text=env._("Vivy Path"))
+				col = split.column()
+				col.prop(self, "exp_vivy_file_path", text="")
+				if not os.path.isdir(bpy.path.abspath(self.exp_vivy_file_path)):
+					row = box.row()
+					row.label(text=env._("Vivy folder not found"), icon="ERROR")
+
 			row = layout.row()
 			row.scale_y = 0.7
 			row.label(text=env._("Texture / Resource packs"))
@@ -577,6 +617,30 @@ class McprepPreference(bpy.types.AddonPreferences):
 			col = split.column()
 			p = col.operator("mcprep.openfolder", text=env._("Open texture pack folder"))
 			p.folder = self.custom_texturepack_path
+			
+			row = layout.row()
+			row.scale_y = 0.7
+			row.label(text=env._("Extract data/resources from local Minecraft install"))
+			box = layout.box()
+			split = util.layout_split(box, factor=factor_width)
+			col = split.column()
+			col.label(text=env._("Minecraft versions"))
+			col = split.column()
+			col.prop(self, "minecraft_versions_path", text="")
+			col = split.column()
+			col.operator("mcprep.reset_addon_prefs_save_folder", text="", icon="RECOVER_LAST")
+			split = util.layout_split(box, factor=factor_width)
+			col = split.column()
+			col.label(text=env._("Refresh"))
+			col = split.column()
+			col.operator("mcprep.extract_minecraft_resources")
+			col.enabled = False
+			
+			if not os.path.isdir(bpy.path.abspath(self.minecraft_versions_path)):
+				row = box.row()
+				row.label(text=env._("Versions folder not found"), icon="ERROR")
+			else:
+				col.enabled = True
 
 			row = layout.row()
 			row.scale_y = 0.7
@@ -642,6 +706,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 				box.label(text=env._("Using MCprep in experimental mode!"), icon="ERROR")
 				box.label(text=env._("Early access features and requests for feedback"))
 				box.label(text=env._("will be made visible. Thank you for contributing."))
+				box.prop(self, "exp_vivy_material_system")
 
 		elif self.preferences_tab == "tutorials":
 			layout.label(
@@ -774,8 +839,14 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 
 		split = layout.split()
 		col = split.column(align=True)
-		col.label(text=env._("MCprep tools"))
-		col.operator("mcprep.prep_materials", text=env._("Prep Materials"))
+
+		if util.is_vivy_enabled(context):
+			col.label(text="Vivy tools")
+			col.operator("vivy.prep_materials", text="Prep materials")
+			col.operator("mcprep.open_file", text="Edit Vivy Material Library").file=str(vivy_materials.get_vivy_blend())
+		else:
+			col.label(text=env._("MCprep tools"))
+			col.operator("mcprep.prep_materials", text=env._("Prep Materials"))
 
 		if not util.is_atlas_export(context):
 			row = col.row()
@@ -783,7 +854,7 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 				"mcprep.open_help", text="", icon="QUESTION", emboss=False
 			).url = "https://github.com/TheDuckCow/MCprep/blob/master/docs/common_errors.md#common-error-messages-and-what-they-mean"
 			row.label(text=env._("OBJ incompatible with textureswap"))
-		p = col.operator("mcprep.swap_texture_pack")
+		p = col.operator("vivy.swap_texture_pack") if util.is_vivy_enabled(context) else col.operator("mcprep.swap_texture_pack")
 		p.filepath = context.scene.mcprep_texturepack_path
 		if context.mode == "OBJECT":
 			col.operator("mcprep.meshswap", text=env._("Mesh Swap"))
@@ -840,6 +911,13 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			row.prop(context.scene, "mcprep_texturepack_path", text="")
 			row.operator("mcprep.reset_texture_path", text="", icon=LOAD_FACTORY)
 
+			if util.is_vivy_enabled(context):
+				b_row = box.row()
+				b_col = b_row.column(align=False)
+				b_col.label(text=env._("Vivy Path"))
+				row = b_col.row(align=True)
+				row.prop(context.scene, "vivy_file_path", text="")
+
 			b_row = box.row()
 			b_col = b_row.column(align=True)
 			sync_row = b_col.row(align=True)
@@ -854,6 +932,9 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 				text=env._("Combine Materials")).selection_only = True
 			if bpy.app.version > (2, 77):
 				b_col.operator("mcprep.combine_images", text=env._("Combine Images"))
+			b_col.operator(
+				"mcprep.import_objs_as_chunks",
+				text=env._("Import OBJs as Chunks")).directory = wpath
 
 			b_col.label(text=env._("Meshswap source:"))
 			subrow = b_col.row(align=True)
@@ -1905,6 +1986,12 @@ def mcprep_image_tools(self, context: Context) -> None:
 	else:
 		row.operator("mcprep.spawn_item", text=txt).filepath = path
 
+def update_vivy_variables(self, context: Context) -> None:
+	"""Update all Vivy related variables when changing the file"""
+	path = Path(bpy.path.abspath(context.scene.vivy_file_path))
+	env.reload_vivy_json(path)
+	env.vivy_name_changes = {}
+	env.vivy_cache = None
 
 # -----------------------------------------------
 # Addon wide properties (aside from user preferences)
@@ -1978,6 +2065,15 @@ class McprepProps(bpy.types.PropertyGroup):
 	effects_list_index: bpy.props.IntProperty(default=0)
 
 
+# Create a new "namespace" for node properties
+class MCprepNodeProps(bpy.types.PropertyGroup):
+	MCPREP_diffuse: bpy.props.BoolProperty(default=False)
+	MCPREP_specular: bpy.props.BoolProperty(default=False)
+	MCPREP_normal: bpy.props.BoolProperty(default=False)
+	MCPREP_displace: bpy.props.BoolProperty(default=False)
+	MCPREP_saturate: bpy.props.BoolProperty(default=False)
+
+
 # -----------------------------------------------------------------------------
 # Register functions
 # -----------------------------------------------------------------------------
@@ -1986,6 +2082,7 @@ class McprepProps(bpy.types.PropertyGroup):
 classes = (
 	McprepPreference,
 	McprepProps,
+	MCprepNodeProps,
 	MCPREP_MT_mob_spawner,
 	MCPREP_MT_meshswap_place,
 	MCPREP_MT_item_spawn,
@@ -2008,12 +2105,29 @@ classes = (
 	MCPREP_PT_materials_subsettings,
 )
 
+# This handler we make not persistent since
+# we only need it to defer initialization
+# long enough for addon preferences to be ready
+def defer_vivy_init(_):
+	addon_prefs = util.get_user_preferences()
+	path = Path(bpy.path.abspath(addon_prefs.exp_vivy_file_path))
+	env.reload_vivy_json(path)
+	env.vivy_name_changes = {}
+	env.vivy_cache = None
 
 def register():
 	for cls in classes:
 		bpy.utils.register_class(cls)
 
 	bpy.types.Scene.mcprep_props = bpy.props.PointerProperty(type=McprepProps)
+
+	# Apply node props to all nodes to make adding new properties
+	# simpler for developers, and to allow colsoledating eerything
+	# into one class.
+	#
+	# We also abbreviate it to reduce the amount of typing needed
+	bpy.types.Node.mnp = bpy.props.PointerProperty(type=MCprepNodeProps)
+	bpy.app.handlers.load_post.append(defer_vivy_init)
 
 	# scene settings (later re-attempt to put into props group)
 	addon_prefs = util.get_user_preferences()
@@ -2061,7 +2175,12 @@ def register():
 			"with material prepping"),
 		update=update_mcprep_texturepack_path,
 		default=addon_prefs.custom_texturepack_path)
-
+	bpy.types.Scene.vivy_file_path = bpy.props.StringProperty(
+		name="Vivy Folder",
+		description="Folder to source Vivy materials",
+		subtype='DIR_PATH',
+		update=update_vivy_variables,
+		default=addon_prefs.exp_vivy_file_path)
 	env.verbose = addon_prefs.verbose
 	if hasattr(bpy.types, "VIEW3D_MT_add"):  # 2.8
 		bpy.types.VIEW3D_MT_add.append(draw_mcprepadd)
@@ -2070,12 +2189,16 @@ def register():
 		# this is a dropdown menu for UVs, not a panel
 		env.log("IMAGE_MT_uvs registration!")
 		bpy.types.IMAGE_MT_uvs.append(mcprep_uv_tools)
-	# bpy.types.IMAGE_MT_image.append(mcprep_image_tools) # crashes, re-do ops
+	# bpy.types.IMAGE_MT_image.append(mcprep_image_tools) # crashes, re-do ops	
 
+	env.vivy_enabled = addon_prefs.exp_vivy_material_system
 
 def unregister():
 	for cls in reversed(classes):
 		bpy.utils.unregister_class(cls)
+	
+	if defer_vivy_init in bpy.app.handlers.load_post:
+		bpy.app.handlers.load_post.remove(defer_vivy_init)
 
 	if hasattr(bpy.types, "VIEW3D_MT_add"):  # 2.8
 		bpy.types.VIEW3D_MT_add.remove(draw_mcprepadd)
@@ -2085,8 +2208,10 @@ def unregister():
 	# bpy.types.IMAGE_MT_image.remove(mcprep_image_tools)
 
 	del bpy.types.Scene.mcprep_props
+	del bpy.types.Node.mnp
 	del bpy.types.Scene.mcprep_mob_path
 	del bpy.types.Scene.meshswap_path
 	del bpy.types.Scene.entity_path
 	del bpy.types.Scene.mcprep_skin_path
 	del bpy.types.Scene.mcprep_texturepack_path
+	del bpy.types.Scene.vivy_file_path

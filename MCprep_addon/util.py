@@ -16,8 +16,9 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from pathlib import Path
 from subprocess import Popen, PIPE
-from typing import List, Optional, Union, Tuple
+from typing import List, Optional, Union, Tuple # TODO: Add Literal when we can use Python 3.8
 import enum
 import json
 import operator
@@ -33,6 +34,7 @@ from bpy.types import (
 	Preferences,
 	Context,
 	Collection,
+	LayerCollection,
 	Material,
 	Image,
 	Node,
@@ -49,6 +51,20 @@ SPAWNER_EXCLUDE = "Spawner Exclude"
 # GENERAL SUPPORTING FUNCTIONS (no registration required)
 # -----------------------------------------------------------------------------
 
+def save_path_default() -> str:
+    """Determine a good default path of the Minecraft 
+    versions folder depending on the operating system"""
+    import platform
+    user_os = platform.system()
+    
+    if user_os == 'Windows':
+        return f"{os.getenv('APPDATA')}\\.minecraft\\versions"
+    elif user_os == 'Darwin':
+        return f"{Path.home()}/Library/Application Support/minecraft/versions"
+    elif user_os == 'Linux':
+        return f"{Path.home()}/.minecraft/versions"
+    return ""
+
 def update_matrices(obj):
 	"""Update mattrices of object so that we can accurately parent, 
 	because for some stupid reason, Blender doesn't do this by default"""
@@ -60,6 +76,46 @@ def update_matrices(obj):
 						   obj.matrix_parent_inverse * \
 						   obj.matrix_basis
 
+def is_experimental(context) -> bool:
+	"""Returns whether experimental features are enabled or not"""
+	addon_prefs = get_user_preferences(context)
+	return addon_prefs.feature_set == "experimental"
+
+def is_vivy_enabled(context) -> bool:
+	addon_prefs = get_user_preferences(context)
+	return is_experimental(context) and addon_prefs.exp_vivy_material_system
+
+# TODO: Use Literal["MCPREP_diffuse", "MCPREP_specular", 
+# "MCPREP_normal","MCPREP_displace", "SATURATE"] when
+# we the min version of Blender changes to a version
+# with Python 3.8
+def np_is_mcprep_node_prop(node: Node, prop: str) -> bool:
+	"""
+	Check if the given prop is true on a node.
+	This also handles backwards compatibility by
+	retroactively appying old properties to new ones,
+	and returning the value of the new property.
+
+	Only use this if you're working with MCPREP_diffuse,
+	MCPREP_specular, MCPREP_normal, MCPREP_displace, or SATURATE
+	"""
+	new_prop = prop if prop != "SATURATE" else "MCPREP_saturate"
+	if bv50():
+		# Blender 5.0 removes the old dict-like access
+		# to properties (hence why we moved to the new
+		# system).
+		#
+		# To make things future proof, we enclose
+		# this in a try-except statement
+		try:
+			old_props = tuple(node.bl_system_properties_get().keys())	
+			if prop in old_props:
+				setattr(node.mnp, new_prop, True)	
+		except Exception:
+			print(f"Could not get old {prop} prop")
+	else:
+		setattr(node.mnp, new_prop, prop in node)
+	return getattr(node.mnp, new_prop)
 
 def apply_noncolor_data(node: Node) -> Optional[MCprepError]:
 	"""
@@ -240,9 +296,12 @@ def min_bv(version: Tuple, *, inclusive: bool = True) -> bool:
 
 
 def bv30() -> bool:
-	"""Check if we're dealing with Blender 3.0"""
+	"""Check if we're dealing with Blender 3.X"""
 	return min_bv((3, 00))
 
+def bv50() -> bool:
+	"""Check if we're dealing with Blender 5.X"""
+	return min_bv((5, 00))
 
 def is_atlas_export(context: Context) -> bool:
 	"""Check if the selected objects are textureswap/animate tex compatible.
@@ -559,7 +618,7 @@ def move_to_collection(obj: bpy.types.Object, collection: Collection) -> None:
 	collection.objects.link(obj)
 
 
-def get_or_create_viewlayer(context: Context, collection_name: str) -> Collection:
+def get_or_create_viewlayer(context: Context, collection_name: str) -> LayerCollection:
 	"""Returns or creates the view layer for a given name. 2.8 only.
 
 	Only searches within same viewlayer; not exact match but a non-case
@@ -792,15 +851,22 @@ def scene_update(context: Optional[Context] = None) -> None:
 
 def move_assets_to_excluded_layer(context: Context, collections: List[Collection]) -> None:
 	"""Utility to move source collections to excluded layer to not be rendered"""
-	initial_view_coll:Collection = context.view_layer.active_layer_collection
+	initial_view_coll: LayerCollection = context.view_layer.active_layer_collection
 
 	# Then, setup the exclude view layer
-	spawner_exclude_vl:Collection = get_or_create_viewlayer(
+	spawner_exclude_vl: LayerCollection = get_or_create_viewlayer(
 		context, SPAWNER_EXCLUDE)
 	spawner_exclude_vl.exclude = True
 
+	did_update_vl = False
 	for grp in collections:
 		if grp.name not in initial_view_coll.collection.children:
 			continue  # not linked, likely a sub-group not added to scn
 		spawner_exclude_vl.collection.children.link(grp)
 		initial_view_coll.collection.children.unlink(grp)
+		did_update_vl = True
+
+	if did_update_vl:
+		for vl_child in spawner_exclude_vl.children:
+			if vl_child.collection == grp:
+				vl_child.exclude = True

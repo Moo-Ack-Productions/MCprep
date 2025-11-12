@@ -34,6 +34,12 @@ AnimatedTex = Dict[str, int]
 NO_DIFFUSE_NODE = 1
 IMG_MISSING = 2
 
+MCPREP_DIFFUSE = "MCPREP_diffuse"
+MCPREP_SPECULAR = "MCPREP_specular"
+MCPREP_NORMAL = "MCPREP_normal"
+MCPREP_DISPLACE = "MCPREP_displace"
+SATURATE = "SATURATE"
+
 
 class PackFormat(Enum):
 	SIMPLE = 0
@@ -100,6 +106,11 @@ def get_mc_canonical_name(name: str) -> Tuple[str, Optional[Form]]:
 		# Improves connection with older exports, without getting
 		# mixed up with the new "water": "painting/water" texture.
 		general_name = "water_still"
+
+	if "_stem" in general_name and general_name not in ("pumpkin_stem", "melon_stem", "attached_pumpkin_stem", "attached_melon_stem"):
+		# For melon/pumpkin stem stage map to only melon_stem/pumpkin_stem
+		# make sure they are not itself and does the split again
+		general_name = general_name.rsplit("_", 1)[0]
 
 	if general_name in env.json_data["blocks"]["block_mapping_mc"]:
 		canon = env.json_data["blocks"]["block_mapping_mc"][general_name]
@@ -428,7 +439,7 @@ def set_cycles_texture(
 		is_grayscale = is_image_grayscale(image)
 
 	for node in material.node_tree.nodes:
-		if node.type == "MIX_RGB" and "SATURATE" in node:
+		if node.type == "MIX_RGB" and util.np_is_mcprep_node_prop(node, SATURATE):
 			node.mute = not is_grayscale
 			node.hide = not is_grayscale
 			env.log(" mix_rgb to saturate texture")
@@ -437,11 +448,11 @@ def set_cycles_texture(
 		# saved as an attribute on the node
 		if node.type != 'TEX_IMAGE':
 			continue
-		elif "MCPREP_diffuse" in node:
+		elif util.np_is_mcprep_node_prop(node, MCPREP_DIFFUSE):
 			node.image = image
 			node.mute = False
 			node.hide = False
-		elif "MCPREP_normal" in node:
+		elif util.np_is_mcprep_node_prop(node, MCPREP_NORMAL):
 			if "normal" in img_sets:
 				new_img = util.loadTexture(img_sets["normal"])
 				node.image = new_img
@@ -459,7 +470,7 @@ def set_cycles_texture(
 				# normal_map = node.outputs[0].links[0].to_node
 				# principled = ...
 
-		elif "MCPREP_specular" in node:
+		elif util.np_is_mcprep_node_prop(node, MCPREP_SPECULAR):
 			if "specular" in img_sets:
 				new_img = util.loadTexture(img_sets["specular"])
 				node.image = new_img
@@ -481,7 +492,7 @@ def set_cycles_texture(
 
 		elif swap_all_imgs is True:
 			# assume all unlabeled texture nodes should be the diffuse pass
-			node["MCPREP_diffuse"] = True  # annotate node for future reference
+			node.mnp.MCPREP_diffuse = True  # annotate node for future reference
 			node.image = image
 			node.mute = False
 			node.hide = False
@@ -503,13 +514,13 @@ def get_node_for_pass(material: Material, pass_name: str) -> Optional[Node]:
 	for node in material.node_tree.nodes:
 		if node.type != "TEX_IMAGE":
 			continue
-		elif "MCPREP_diffuse" in node and pass_name == "diffuse":
+		elif util.np_is_mcprep_node_prop(node, MCPREP_DIFFUSE) and pass_name == "diffuse":
 			return_node = node
-		elif "MCPREP_normal" in node and pass_name == "normal":
+		elif util.np_is_mcprep_node_prop(node, MCPREP_NORMAL) and pass_name == "normal":
 			return_node = node
-		elif "MCPREP_specular" in node and pass_name == "specular":
+		elif util.np_is_mcprep_node_prop(node, MCPREP_SPECULAR) and pass_name == "specular":
 			return_node = node
-		elif "MCPREP_displace" in node and pass_name == "displace":
+		elif util.np_is_mcprep_node_prop(node, MCPREP_DISPLACE) and pass_name == "displace":
 			return_node = node
 		else:
 			if not return_node:
@@ -556,11 +567,11 @@ def get_textures(material: Material) -> Dict[str, Image]:
 		for node in material.node_tree.nodes:
 			if node.type != "TEX_IMAGE":
 				continue
-			elif "MCPREP_diffuse" in node:
+			elif util.np_is_mcprep_node_prop(node, MCPREP_DIFFUSE):
 				passes["diffuse"] = node.image
-			elif "MCPREP_normal" in node:
+			elif util.np_is_mcprep_node_prop(node, MCPREP_NORMAL):
 				passes["normal"] = node.image
-			elif "MCPREP_specular" in node:
+			elif util.np_is_mcprep_node_prop(node, MCPREP_SPECULAR):
 				passes["specular"] = node.image
 			else:
 				if not passes["diffuse"]:
@@ -781,7 +792,7 @@ def set_saturation_material(mat: Material) -> None:
 	desat_color = env.json_data['blocks']['desaturated'][canon]
 	sat_node = None
 	for node in mat.node_tree.nodes:
-		if "SATURATE" not in node:
+		if not util.np_is_mcprep_node_prop(node, SATURATE):
 			continue
 		sat_node = node
 		break
@@ -863,13 +874,13 @@ def copy_texture_animation_pass_settings(mat: Material) -> AnimatedTex:
 			continue
 		if not node.image.source == 'SEQUENCE':
 			continue
-		if "MCPREP_diffuse" in node:
+		if util.np_is_mcprep_node_prop(node, MCPREP_DIFFUSE):
 			passname = "diffuse"
-		elif "MCPREP_normal" in node:
+		elif util.np_is_mcprep_node_prop(node, MCPREP_NORMAL):
 			passname = "normal"
-		elif "MCPREP_specular" in node:
+		elif util.np_is_mcprep_node_prop(node, MCPREP_SPECULAR):
 			passname = "specular"
-		elif "MCPREP_displace" in node:
+		elif util.np_is_mcprep_node_prop(node, MCPREP_DISPLACE):
 			passname = "displace"
 		else:
 			if not animated_data.get("diffuse"):
@@ -984,7 +995,31 @@ def texgen_specular(mat: Material, passes: Dict[str, Image], nodeInputs: List, u
 	for i in nodeInputs[0]:
 		links.new(nodeSaturateMix.outputs[saturateMixOut[0]], i)
 	for i in nodeInputs[1]:
-		links.new(nodeTexDiff.outputs["Alpha"], i)
+		# Check for backface culling, since some materials need it,
+		# notably redstone torches
+		if checklist(canon, "backface_culling"):
+			nodeBackfacing = create_node(nodes,
+			"ShaderNodeNewGeometry",
+			name="Backfacing",
+			label="Backfacing",
+			location=(-250, 100),
+			visible_output="Backfacing")
+
+			nodeBackfaceSubtract = create_node(nodes,
+				"ShaderNodeMath",
+				name="Backface Culling",
+				label="Backface Culling",
+				location=(-80, 0),
+				operation="SUBTRACT")
+			
+			# Add a bit more padding
+			nodeTexDiff.location = (-520, 140)
+			
+			links.new(nodeTexDiff.outputs[1], nodeBackfaceSubtract.inputs[0])
+			links.new(nodeBackfacing.outputs["Backfacing"], nodeBackfaceSubtract.inputs[1])
+			links.new(nodeBackfaceSubtract.outputs[0], i)
+		else:
+			links.new(nodeTexDiff.outputs["Alpha"], i)
 	if image_spec and use_reflections:
 		for i in nodeInputs[3]:
 			links.new(nodeSpecInv.outputs["Color"], i)
@@ -1030,12 +1065,12 @@ def texgen_specular(mat: Material, passes: Dict[str, Image], nodeInputs: List, u
 		nodeSaturateMix.hide = False
 
 	# annotate special nodes for finding later, and load images if available
-	nodeTexDiff["MCPREP_diffuse"] = True
-	nodeTexSpec["MCPREP_specular"] = True
-	nodeTexNorm["MCPREP_normal"] = True
+	nodeTexDiff.mnp.MCPREP_diffuse = True
+	nodeTexSpec.mnp.MCPREP_specular = True
+	nodeTexNorm.mnp.MCPREP_normal = True
 	# to also be also muted if no normal tex
-	nodeNormal["MCPREP_normal"] = True
-	nodeSaturateMix["SATURATE"] = True
+	nodeNormal.mnp.MCPREP_normal = True
+	nodeSaturateMix.mnp.MCPREP_saturate = True
 	# nodeTexDisp["MCPREP_disp"] = True
 	nodeTexDiff.image = image_diff
 
@@ -1086,8 +1121,14 @@ def texgen_seus(mat: Material, passes: Dict[str, Image], nodeInputs: List, use_r
 		name="Smooth Inverse",
 		label="Smooth Inverse",
 		location=(-80, -280))
+	sep_node = ""
+	if util.min_bv((3, 3)):
+		sep_node = "ShaderNodeSeparateColor"
+	else:
+		sep_node = "ShaderNodeSeparateRGB"
 	nodeSeperate = create_node(
-		nodes, "ShaderNodeSeparateRGB",
+		nodes,
+		sep_node,
 		name="RGB Seperation",
 		label="RGB Seperation",
 		location=(-280, -280))
@@ -1110,24 +1151,54 @@ def texgen_seus(mat: Material, passes: Dict[str, Image], nodeInputs: List, use_r
 	saturateMixOut = get_node_socket(nodeSaturateMix, is_input=False)
 
 	# Links the nodes to the reroute nodes.
+	_longhand = util.min_bv((3, 3))
+	RED = "Red" if _longhand else "R"
+	BLUE = "Blue" if _longhand else "B"
+	GREEN = "Green" if _longhand else "G"
 	links.new(nodeTexDiff.outputs["Color"], nodeSaturateMix.inputs[saturateMixIn[1]])
 	links.new(nodeTexNorm.outputs["Color"], nodeNormalInv.inputs["Color"])
 	links.new(nodeNormalInv.outputs["Color"], nodeNormal.inputs["Color"])
-	links.new(nodeTexSpec.outputs["Color"], nodeSeperate.inputs["Image"])
-	links.new(nodeSeperate.outputs["R"], nodeSpecInv.inputs["Color"])
+	links.new(nodeTexSpec.outputs["Color"], nodeSeperate.inputs[0])  # "Color" as of 5.0, "Image" before
+	links.new(nodeSeperate.outputs[RED], nodeSpecInv.inputs["Color"])
 
 	for i in nodeInputs[0]:
 		if i == nodeSaturateMix.outputs[saturateMixOut[0]]:
 			continue
 		links.new(nodeSaturateMix.outputs[saturateMixOut[0]], i)
 	for i in nodeInputs[1]:
-		links.new(nodeTexDiff.outputs["Alpha"], i)
+		# Check for backface culling, since some materials need it,
+		# notably redstone torches
+		if checklist(canon, "backface_culling"):
+			nodeBackfacing = create_node(
+				nodes,
+				"ShaderNodeNewGeometry",
+				name="Backfacing",
+				label="Backfacing",
+				location=(-250, 100),
+				visible_output="Backfacing")
+
+			nodeBackfaceSubtract = create_node(
+				nodes,
+				"ShaderNodeMath",
+				name="Backface Culling",
+				label="Backface Culling",
+				location=(-80, 0),
+				operation="SUBTRACT")
+
+			# Add a bit more padding
+			nodeTexDiff.location = (-520, 140)
+
+			links.new(nodeTexDiff.outputs[1], nodeBackfaceSubtract.inputs[0])
+			links.new(nodeBackfacing.outputs["Backfacing"], nodeBackfaceSubtract.inputs[1])
+			links.new(nodeBackfaceSubtract.outputs[0], i)
+		else:
+			links.new(nodeTexDiff.outputs["Alpha"], i)
 	if image_spec and use_reflections:
 		if use_emission:
 			for i in nodeInputs[2]:
-				links.new(nodeSeperate.outputs["B"], i)
+				links.new(nodeSeperate.outputs[BLUE], i)
 		for i in nodeInputs[4]:
-			links.new(nodeSeperate.outputs["G"], i)
+			links.new(nodeSeperate.outputs[GREEN], i)
 		for i in nodeInputs[3]:
 			links.new(nodeSpecInv.outputs["Color"], i)
 	for i in nodeInputs[6]:
@@ -1175,14 +1246,14 @@ def texgen_seus(mat: Material, passes: Dict[str, Image], nodeInputs: List, use_r
 		nodeSaturateMix.inputs[saturateMixIn[2]].default_value = desat_color
 		nodeSaturateMix.mute = False
 		nodeSaturateMix.hide = False
-
+		
 	# annotate special nodes for finding later, and load images if available
-	nodeTexDiff["MCPREP_diffuse"] = True
-	nodeTexSpec["MCPREP_specular"] = True
-	nodeTexNorm["MCPREP_normal"] = True
+	nodeTexDiff.mnp.MCPREP_diffuse = True
+	nodeTexSpec.mnp.MCPREP_specular = True
+	nodeTexNorm.mnp.MCPREP_normal = True
 	# to also be also muted if no normal tex
-	nodeNormal["MCPREP_normal"] = True
-	nodeSaturateMix["SATURATE"] = True
+	nodeNormal.mnp.MCPREP_normal = True
+	nodeSaturateMix.mnp.MCPREP_saturate = True
 	# nodeTexDisp["MCPREP_disp"] = True
 	nodeTexDiff.image = image_diff
 
@@ -1213,7 +1284,7 @@ def generate_base_material(
 			interpolation='Closest',
 			image=image
 		)
-		node_diff["MCPREP_diffuse"] = True
+		node_diff.mnp.MCPREP_diffuse = True
 
 		# The offset and link diffuse is for default no texture setup
 		links = mat.node_tree.links
@@ -1227,9 +1298,9 @@ def generate_base_material(
 		# Initialize extra passes as well
 		if image:
 			node_spec = create_node(nodes, 'ShaderNodeTexImage')
-			node_spec["MCPREP_specular"] = True
+			node_spec.mnp.MCPREP_specular = True
 			node_nrm = create_node(nodes, 'ShaderNodeTexImage')
-			node_nrm["MCPREP_normal"] = True
+			node_nrm.mnp.MCPREP_normal = True
 			# now use standard method to update textures
 			set_cycles_texture(image, mat, extra_passes=useExtraMaps)
 
@@ -1281,9 +1352,9 @@ def matgen_cycles_simple(mat: Material, options: PrepOptions) -> Optional[bool]:
 		blend_type='MULTIPLY',
 		mute=True,
 		hide=True)
-
+	
 	principled = create_node(nodes, "ShaderNodeBsdfPrincipled", location=(600, 0))
-	node_out = create_node(nodes, "ShaderNodeOutputMaterial", location=(900, 0))
+	node_out = create_node(nodes, "ShaderNodeOutputMaterial", location=(900, 0))	
 
 	# Sets default reflective values
 	if options.use_reflections and checklist(canon, "reflective"):
@@ -1318,6 +1389,31 @@ def matgen_cycles_simple(mat: Material, options: PrepOptions) -> Optional[bool]:
 		principled.distribution = 'GGX'
 		if hasattr(mat, "blend_method"):
 			mat.blend_method = 'OPAQUE'  # eevee setting
+
+	# Check for backface culling, since some materials need it,
+	# notably redstone torches
+	elif checklist(canon, "backface_culling"):
+		nodeBackfacing = create_node(nodes,
+		"ShaderNodeNewGeometry",
+		name="Backfacing",
+		label="Backfacing",
+		location=(0, -300),
+		visible_output="Backfacing")
+
+		nodeBackfaceSubtract = create_node(nodes,
+			"ShaderNodeMath",
+			name="Backface Culling",
+			label="Backface Culling",
+			location=(400, -100),
+			operation="SUBTRACT")
+		
+		# Add a bit more padding
+		nodeTexDiff.location = (-100, 0)
+		
+		links.new(nodeTexDiff.outputs[1], nodeBackfaceSubtract.inputs[0])
+		links.new(nodeBackfacing.outputs["Backfacing"], nodeBackfaceSubtract.inputs[1])
+		links.new(nodeBackfaceSubtract.outputs[0], principled.inputs["Alpha"])
+
 	else:
 		# non-solid (potentially, not necessarily though)
 		links.new(nodeTexDiff.outputs[1], principled.inputs["Alpha"])
@@ -1353,8 +1449,8 @@ def matgen_cycles_simple(mat: Material, options: PrepOptions) -> Optional[bool]:
 		nodeSaturateMix.hide = False
 
 	# annotate special nodes for finding later, and load images if available
-	nodeTexDiff["MCPREP_diffuse"] = True
-	nodeSaturateMix["SATURATE"] = True
+	nodeTexDiff.mnp.MCPREP_diffuse = True
+	nodeSaturateMix.mnp.MCPREP_saturate = True
 
 	return 0
 
@@ -1892,9 +1988,9 @@ def matgen_special_water(mat: Material, passes: Dict[str, Image]) -> Optional[bo
 		nodeSaturateMix.hide = False
 
 	# annotate special nodes for finding later, and load images if available
-	nodeTexDiff["MCPREP_diffuse"] = True
-	nodeTexNorm["MCPREP_normal"] = True
-	nodeNormal["MCPREP_normal"] = True  # to also be also muted if no normal tex
+	nodeTexDiff.mnp.MCPREP_diffuse = True
+	nodeTexNorm.mnp.MCPREP_specular = True
+	nodeNormal.mnp.MCPREP_normal = True
 	# nodeTexDisp["MCPREP_disp"] = True
 
 	return 0
@@ -2012,11 +2108,11 @@ def matgen_special_glass(mat: Material, passes: Dict[str, Image]) -> Optional[bo
 
 	# reapply animation data if any to generated nodes
 	apply_texture_animation_pass_settings(mat, animated_data)
-
+	
 	# annotate special nodes for finding later, and load images if available
-	nodeTexDiff["MCPREP_diffuse"] = True
-	nodeTexNorm["MCPREP_normal"] = True
-	nodeNormal["MCPREP_normal"] = True  # to also be also muted if no normal tex
+	nodeTexDiff.mnp.MCPREP_diffuse = True
+	nodeTexNorm.mnp.MCPREP_specular = True
+	nodeNormal.mnp.MCPREP_normal = True
 	# nodeTexDisp["MCPREP_disp"] = True
 
 	return 0  # return 0 once implemented

@@ -22,6 +22,7 @@ import addon_utils
 
 from . import util
 from . import tracking
+from .conf import env
 
 
 # -----------------------------------------------------------------------------
@@ -125,6 +126,24 @@ class MCPREP_OT_show_preferences(bpy.types.Operator):
 		addon_prefs.preferences_tab = self.tab
 		return {'FINISHED'}
 
+class MCPREP_OT_open_file(bpy.types.Operator):
+	"""Support operator for opening file in UI, but indicating through popup
+	text that it is a supporting/help button"""
+	bl_idname = "mcprep.open_file"
+	bl_label = "Open file"
+	bl_description = "Click to open a file"
+
+	file: bpy.props.StringProperty(
+		name="File",
+		default="")
+
+	@tracking.report_error
+	def execute(self, context):
+		if self.file == "":
+			return {'CANCELLED'}
+		else:
+			bpy.ops.wm.open_mainfile(filepath=self.file)
+		return {'FINISHED'}
 
 class MCPREP_OT_open_folder(bpy.types.Operator):
 	"""Open a folder in the host operating system"""
@@ -207,6 +226,24 @@ class MCPREP_OT_prep_material_legacy(bpy.types.Operator):
 			return {'CANCELLED'}
 		return {'FINISHED'}
 
+class MCPREP_OT_extract_minecract_resources(bpy.types.Operator):
+	bl_idname = "mcprep.extract_minecraft_resources"
+	bl_label = env._("Extract resources from Minecraft")
+	
+	def execute(self, context):
+		from . import mcprep_data_refresh
+		addon_prefs = util.get_user_preferences(context)
+		mcprep_data_refresh.run_all(auto=True, versions_path=bpy.path.abspath(addon_prefs.minecraft_versions_path), copy_file=True)
+		return {'FINISHED'}
+
+class MCPREP_OT_reset_addon_prefs_save_folder(bpy.types.Operator):
+	bl_idname = "mcprep.reset_addon_prefs_save_folder"
+	bl_label = env._("Reset Save Folder Path")
+
+	def execute(self, context):
+		addon_prefs = util.get_user_preferences(context)
+		addon_prefs.minecraft_versions_path = util.save_path_default()
+		return {'FINISHED'}
 
 # -----------------------------------------------------------------------------
 # Registration
@@ -216,9 +253,12 @@ class MCPREP_OT_prep_material_legacy(bpy.types.Operator):
 classes = (
 	MCPREP_OT_improve_ui,
 	MCPREP_OT_show_preferences,
+	MCPREP_OT_open_file,
 	MCPREP_OT_open_folder,
 	MCPREP_OT_open_help,
-	MCPREP_OT_prep_material_legacy
+	MCPREP_OT_prep_material_legacy,
+	MCPREP_OT_extract_minecract_resources,
+	MCPREP_OT_reset_addon_prefs_save_folder
 )
 
 

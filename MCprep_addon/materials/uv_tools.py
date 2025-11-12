@@ -216,13 +216,19 @@ class MCPREP_OT_scale_uv(bpy.types.Operator):
 				# The vertex data that loop entry refers to:
 				# v = ob.data.vertices[l.vertex_index]
 				# isolate to specific UV already used
-				if not uv.data[loop_ind].select and self.selected_only is True:
+				if util.bv50() or self.selected_only is False:
+					# Blender 5.0 mandates poly + UV selection are the same anyways
+					pass
+				elif not uv.data[loop_ind].select:
 					continue
 				x += uv.data[loop_ind].uv[0]
 				y += uv.data[loop_ind].uv[1]
 				n += 1
 			for loop_ind in f.loop_indices:
-				if not uv.data[loop_ind].select and self.selected_only is True:
+				if util.bv50() or self.selected_only is False:
+					# Blender 5.0 mandates poly + UV selection are the same anyways
+					pass
+				elif not uv.data[loop_ind].select:
 					continue
 				uv.data[loop_ind].uv[0] = uv.data[loop_ind].uv[0]*(1-factor)+x/n*(factor)
 				uv.data[loop_ind].uv[1] = uv.data[loop_ind].uv[1]*(1-factor)+y/n*(factor)

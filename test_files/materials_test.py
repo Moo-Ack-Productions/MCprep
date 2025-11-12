@@ -347,6 +347,10 @@ class MaterialsTest(unittest.TestCase):
             "redstone_dust_line0": True,
             "water_flow": True,
 
+            # Non-canonical names
+            "dirt_grass_top": True,  # older jmc2obj mapping
+            "minecraft_block-grass_block_top": True,  # newer jmc2obj mapping
+
             # Sample of textures already saturated
             "grass_block_side": False,
             "glowstone": False
@@ -355,7 +359,8 @@ class MaterialsTest(unittest.TestCase):
         for tex in list(should_saturate):
             do_sat = should_saturate[tex]
             with self.subTest(f"Assert {tex} saturate is {do_sat}"):
-                img_file = self._get_canon_texture_image(tex, test_pack=False)
+                canon_tex, _ = get_mc_canonical_name(tex)
+                img_file = self._get_canon_texture_image(canon_tex, test_pack=False)
                 self.assertTrue(
                     os.path.isfile(img_file),
                     f"Failed to get test file {img_file}")
@@ -365,6 +370,10 @@ class MaterialsTest(unittest.TestCase):
                 if do_sat:
                     self.assertTrue(
                         res, f"Should detect {tex} as grayscale")
+
+                    res = generate.checklist(canon_tex, "desaturated")
+                    self.assertTrue(
+                        res, f"Canonical {canon_tex} mapped from input {tex} should be in desaturated list")
                 else:
                     self.assertFalse(
                         res, f"Should not detect {tex} as grayscale")
@@ -651,10 +660,12 @@ class MaterialsTest(unittest.TestCase):
             ".emit": ".emit",
         }
         jmc_to_canon = {
-            "grass": "colormap/grass",
+            "grass": "grass",
             "grass_block_top": "grass_block_top",
             "mushroom_red": "red_mushroom",
             # "slime": "slime_block",  # KNOWN jmc, need to address
+            "dirt_grass_top": "grass_block_top",  # jmc with 1.16.4
+            "minecraft_block-grass_block_top": "grass_block_top"  # Newer jmc2obj/mc
         }
         mineways_to_canon = {}
 
@@ -953,6 +964,42 @@ class MaterialsTest(unittest.TestCase):
                 filepath=bpy.context.scene.mcprep_texturepack_path,
                 prepMaterials=True)
             self.assertTrue(res, {"FINISHED"})
+
+    def test_combine_materials(self):
+        mat1 = bpy.data.materials.new("CombineMat")
+        init_count = len(bpy.data.materials)
+        mat2 = bpy.data.materials.new("CombineMat")  # Gets name CombineMat.001
+        self.assertNotEqual(mat1.id_data, mat2.id_data)
+        bpy.ops.mcprep.combine_materials(selection_only=False)
+        self.assertEqual(len(bpy.data.materials), init_count)
+        # TODO: add test for ensuring selection_only=True also works
+
+    def test_combine_images(self):
+        img1 = bpy.data.images.new("CombineImages", width=1, height=1)
+        init_count = len(bpy.data.images)
+        img2 = bpy.data.images.new("CombineImages", width=1, height=1)
+        self.assertNotEqual(img1.id_data, img2.id_data)
+        bpy.ops.mcprep.combine_images()
+        self.assertEqual(init_count, len(bpy.data.images))
+
+    def test_uv_scale(self):
+        bpy.ops.mesh.primitive_plane_add()
+        bpy.ops.object.editmode_toggle()
+        bpy.ops.uv.select_all(action='SELECT')
+        bpy.ops.mcprep.scale_uv()
+        # TODO: test that actually had an impact
+
+    def test_uv_alpha_select(self):
+        bpy.ops.mesh.primitive_plane_add()
+        obj = bpy.context.object
+        new_mat, _ = self._create_canon_mat()
+        obj.active_material = new_mat
+        self.assertIsNotNone(obj.active_material, "Material should be applied")
+
+        bpy.ops.object.editmode_toggle()
+        bpy.ops.mcprep.select_alpha_faces()
+        # TODO: Improve test by actually appling a tex with alpha and seek
+        # specific proportion of subdivided faces selected.
 
 
 if __name__ == '__main__':

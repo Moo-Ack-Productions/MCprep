@@ -489,7 +489,12 @@ class MCPREP_OT_swap_texture_pack(
 			self.report({'ERROR'}, "No materials found on selected objects")
 			return {'CANCELLED'}
 		_ = generate.detect_form(mat_list)
-		invalid_uv, affected_objs = uv_tools.detect_invalid_uvs_from_objs(obj_list)
+		
+		# If we have a commonmcobj header, we don't need 
+		# to check for scaled UVs
+		invalid_uv, affected_objs = (False, [])
+		if not world_tools.is_commonmc_obj(context):
+			invalid_uv, affected_objs = uv_tools.detect_invalid_uvs_from_objs(obj_list)
 
 		# NOTE: This is temporary
 		addon_prefs = util.get_user_preferences(context)
@@ -540,8 +545,8 @@ class MCPREP_OT_swap_texture_pack(
 	def preprocess_material(self, material):
 		"""Preprocess materials for special edge cases"""
 
-		# in texture packs, this is actually just a transparent overaly -
-		# but in Mineways export, this is the flattened grass/drit block side
+		# in texture packs, this is actually just a transparent overlay -
+		# but in Mineways export, this is the flattened grass/dirt block side
 		if material.name == "grass_block_side_overlay":
 			material.name = "grass_block_side"
 			env.log("Renamed material: grass_block_side_overlay to grass_block_side")

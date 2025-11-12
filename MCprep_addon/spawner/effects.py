@@ -730,15 +730,27 @@ def offset_animation_to_frame(collection: Collection, frame: int) -> None:
 
 	# Finally, perform the main operation of shifting keyframes.
 	for action in actions:
-		for fcurve in action.fcurves:
-			# Ensure we move points in reverse order, otherwise adjacent frames
-			# will overwrite each other.
-			points = list(fcurve.keyframe_points)
-			points.sort(key=lambda x: x.co.x)
-			for point in points:
-				point.co.x += frame
-				point.handle_left.x += frame
-				point.handle_right.x += frame
+		if util.bv50():
+			# Must search across slots to get individual fcurves
+			for _layer in action.layers:
+				for _strip in _layer.strips:
+					for _chbag in _strip.channelbags:
+						for _fcurve in _chbag.fcurves:
+							_offset_fcurve(_fcurve, frame)
+		else:
+			for _fcurve in action.fcurves:
+				_offset_fcurve(_fcurve, frame)
+
+
+def _offset_fcurve(fcurve: bpy.types.FCurve, offset: int) -> None:
+	# Ensure we move points in reverse order, otherwise adjacent frames
+	# will overwrite each other.
+	points = list(fcurve.keyframe_points)
+	points.sort(key=lambda x: x.co.x)
+	for point in points:
+		point.co.x += offset
+		point.handle_left.x += offset
+		point.handle_right.x += offset
 
 
 # -----------------------------------------------------------------------------

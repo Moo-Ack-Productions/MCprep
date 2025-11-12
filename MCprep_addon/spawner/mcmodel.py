@@ -22,21 +22,41 @@ from mathutils import Vector
 from math import sin, cos, radians
 from pathlib import Path
 from typing import Dict, Optional, Tuple, Union, Sequence
+import re
 
 import bpy
 import bmesh
 from bpy.types import Context, Material
 from bpy_extras.io_utils import ImportHelper
 
-from ..conf import env, VectorType
+from ..conf import MCprepError, env, VectorType
 from .. import util
 from .. import tracking
 from ..materials import generate  # TODO: Use this module for mat gen in future
+from .spawner_gizmo import draw_callback
 
 TexFace = Dict[str, Dict[str, str]]
 
 Element = Sequence[Union[Dict[str, VectorType], TexFace]]
 Texture = Dict[str, str]
+
+try:
+	from bpy.types import FileHandler
+except ImportError:
+	# This is wrapper type that we use for FileHandler, since it's
+	# only availible in Blender 4.1 and above. In older versions of
+	# Blender, we just set it to the generic object type
+	FileHandler = object
+
+# Constants for Directions and Faces
+NORTH_DIR = "north"
+SOUTH_DIR = "south"
+UP_DIR = "up"
+DOWN_DIR = "down"
+WEST_DIR = "west"
+EAST_DIR = "east"
+
+FACE_DIRECTIONS = (NORTH_DIR, SOUTH_DIR, UP_DIR, DOWN_DIR, WEST_DIR, EAST_DIR)
 
 # -----------------------------------------------------------------------------
 # Core MC model functions and implementation
@@ -116,11 +136,14 @@ def add_element(
 	return verts, edges, faces
 
 
-def add_material(
+def add_get_material(
 	name: str = "material", path: str = "", use_name: bool = False
 ) -> Optional[Material]:
-	"""Creates a simple material with an image texture from path."""
+	"""Creates or get an existing created simple material with an image texture from path."""
 	engine = bpy.context.scene.render.engine
+	mat = bpy.data.materials.get(name)
+	if mat:
+		return mat
 
 	# Create the base material node tree setup
 	mat, err = generate.generate_base_material(bpy.context, name, path, False)
@@ -291,6 +314,7 @@ def add_model(
 	collection.objects.link(obj)  # put the object into the scene (link)
 	view_layer.objects.active = obj  # set as the active object in the scene
 	obj.select_set(True)  # select object
+	obj_mats = obj.data.materials
 
 	bm = bmesh.new()
 
@@ -298,26 +322,48 @@ def add_model(
 	uv_layer = bm.loops.layers.uv.verify()
 
 	materials = []
+	materials_remap = {}
 	if textures:
 		for img in textures:
 			if img != "particle":
 				tex_pth = locate_image(bpy.context, textures, img, model_filepath)
-				mat = add_material(f"{obj_name}_{img}", tex_pth, use_name=False)
-				obj_mats = obj.data.materials
-				if f"#{img}" not in materials:
+				# Ensure the material name json file only use 1 material or having "all" texture
+				if (len(textures) < 3 or textures.get("all")):
+					name = f"{obj_name}"
+				else:
+					name = f"{obj_name}_{img}"
+					materials_remap[f"#{img}"] = textures[img]
+				mat = None
+				if "#" not in textures[img]:
+					mat = add_get_material(name, tex_pth, use_name=False)
+				# Map the "#" reference texture for later use in the assign material
+				# Make sure the same material doesn't get append and ignore reference texture like "#all"
+				if f"#{img}" not in materials and name not in obj_mats and mat is not None:
 					obj_mats.append(mat)
 					materials.append(f"#{img}")
 
 	for e in elements:
+		# Check if 'from' and 'to' bounds are present
+		if 'from' not in e or 'to' not in e:
+			raise ModelException(f"Element is missing required 'from' or 'to' bounds: {e}")
+
+		f_bounds = e['from']  # [x1, y1, z1]
+		t_bounds = e['to']	  # [x2, y2, z2]
+
+		# Check if bounds are lists of 3 points
+		if not isinstance(f_bounds, list) or len(f_bounds) != 3:
+			raise ModelException(f"Invalid 'from' bounds format: {f_bounds}")
+		if not isinstance(t_bounds, list) or len(t_bounds) != 3:
+			raise ModelException(f"Invalid 'to' bounds format: {t_bounds}")
+
 		rotation = e.get("rotation")
 		if rotation is None:
 			# rotation default
 			rotation = {"angle": 0, "axis": "y", "origin": [8, 8, 8]}
 		element = add_element(
-			e['from'], e['to'], rotation['origin'], rotation['axis'], rotation['angle'])
+			f_bounds, t_bounds, rotation['origin'], rotation['axis'], rotation['angle'])
 		verts = [bm.verts.new(v) for v in element[0]]  # add a new vert
-		uvs = [[1, 1], [0, 1], [0, 0], [1, 0]]
-		face_dir = ["north", "south", "up", "down", "west", "east"]
+
 		faces = e.get("faces")
 		for i in range(len(element[2])):
 			f = element[2][i]
@@ -325,7 +371,8 @@ def add_model(
 			if not faces:
 				continue
 
-			d_face = faces.get(face_dir[i])
+			face_name = FACE_DIRECTIONS[i]
+			d_face = faces.get(face_name)
 			if not d_face:
 				continue
 
@@ -340,48 +387,212 @@ def add_model(
 			uv_idx = int(uv_rot / 90)
 
 			uv_coords = d_face.get("uv")  # in the format [x1, y1, x2, y2]
+
+			# --- UV Calculation Algorithm Overview ---
+			# Minecraft UVs use a 0-16 scale, where V=0 is the top edge (Y-max).
+			# 1. Auto-UV: Calculates UV [u_min, v_min, u_max, v_max] based on the
+			#    element's bounding box ('from'/'to' vectors).
+			# 2. Conversion: Converts Minecraft's 0-16 UV scale to Blender's 0-1 UV
+			#    scale. Note that the V-axis is flipped (1 - MC_V ÷ 16) to match Blender's
+			#    convention (V=1 at the top).
+			# 3. Corner Definition: Defines the four corners (TL, TR, BR, BL) in 0-1 Blender
+			#    UV space.
+			# 4. Base Ordering: Defines the initial ordering of these corners (uvs_base) for
+			#    the specific face direction, accounting for MC's default face-to-UV mapping
+			#    conventions.
+			# 5. Rotation: Applies the `uv_rot` (0, 90, 180, 270) by cyclically shifting the
+			#    corner order (uvs_rot).
+			# 6. Mirroring/Flipping: Applies face-specific mirroring (X and/or Y axes) to correct
+			#    orientation between MC model format and Blender's mesh structure.
+			# ---------------------------------------
+
 			if uv_coords is None:
-				uv_coords = [0, 0, 16, 16]
-				# Cake and cake slices don't store the UV keys
-				# in the JSON model, which causes issues. This
-				# workaround this fixes those texture issues
-				if "cake" in obj_name:
-					if face_mat == "#top":
-						uv_coords = [e['to'][0], e['to'][2], e['from'][0], e['from'][2]]
-					if "side" in face_mat:
-						uv_coords = [e['to'][0], -e['to'][1], e['from'][0], -e['from'][2]]
+				# Auto-calculate proportional UVs (0-16 scale) based on element bounds
+				# MC UV convention: (u_min, v_min, u_max, v_max). V is measured from 0 at the top.
+				if face_name in (NORTH_DIR, SOUTH_DIR):
+					# U maps to X, V maps to Y (height). V is 16-Y (flipped V for MC texture coords).
+					uv_coords = [f_bounds[0], 16 - t_bounds[1], t_bounds[0], 16 - f_bounds[1]]
+				elif face_name in (WEST_DIR, EAST_DIR):
+					# U maps to Z, V maps to Y (height). V is 16-Y (flipped V for MC texture coords).
+					uv_coords = [f_bounds[2], 16 - t_bounds[1], t_bounds[2], 16 - f_bounds[1]]
+				elif face_name in (UP_DIR, DOWN_DIR):
+					# U maps to X, V maps to Z (depth).
+					uv_coords = [f_bounds[0], f_bounds[2], t_bounds[0], t_bounds[2]]
+				else:
+					env.log(f"Unknown face direction '{face_name}'. Defaulting UV mapping")
+					uv_coords = [0, 0, 16, 16]
 
-			# uv in the model is between 0 to 16 regardless of resolution,
-			# in blender its 0 to 1 the y-axis is inverted when compared to
-			# blender uvs, which is why it is subtracted from 1, essentially
-			# this converts the json uv points to the blender equivelent.
-			uvs = [
-				[uv_coords[2] / 16, 1 - (uv_coords[1] / 16)],  # [x2, y1]
-				[uv_coords[0] / 16, 1 - (uv_coords[1] / 16)],  # [x1, y1]
-				[uv_coords[0] / 16, 1 - (uv_coords[3] / 16)],  # [x1, y2]
-				[uv_coords[2] / 16, 1 - (uv_coords[3] / 16)]   # [x2, y2]
-			]
+			# = UV Corner Definition =
+			# Convert MC UV (0-16) to Blender UV (0-1) and flip V accordingly.
+			u_min = uv_coords[0] / 16
+			u_max = uv_coords[2] / 16
+			v_max = 1 - (uv_coords[1] / 16)  # Blender Top V
+			v_min = 1 - (uv_coords[3] / 16)  # Blender Bottom V
 
-			face = bm.faces.new(
-				(verts[f[0]], verts[f[1]], verts[f[2]], verts[f[3]])
-			)
+			# Define the four corners
+			p_TL = (u_min, v_max)  # Top Left
+			p_TR = (u_max, v_max)  # Top Right
+			p_BR = (u_max, v_min)  # Bottom Right
+			p_BL = (u_min, v_min)  # Bottom Left
+
+			# Face-specific base ordering (maps Tex-corners -> face loop positions)
+			if face_name == UP_DIR:  # Y+ (V-flip and U-flip)
+				uvs_base = [p_TR, p_TL, p_BL, p_BR]
+			elif face_name == DOWN_DIR:  # Y- (V-flip and U-flip)
+				uvs_base = [p_BL, p_BR, p_TR, p_TL]
+			elif face_name == NORTH_DIR:  # Z- (V-flip)
+				uvs_base = [p_TL, p_TR, p_BR, p_BL]
+			elif face_name == SOUTH_DIR:  # Z+ (V-flip and U-flip)
+				uvs_base = [p_BR, p_BL, p_TL, p_TR]
+			elif face_name == EAST_DIR:  # X+ (V-flip and U-flip)
+				uvs_base = [p_BR, p_BL, p_TL, p_TR]
+			elif face_name == WEST_DIR:  # X- (V-flip)
+				uvs_base = [p_TL, p_TR, p_BR, p_BL]
+			else:
+				# Default fallback (should not happen, just in case though)
+				env.log(f"Used default fallback for UV base on {obj_name}")
+				uvs_base = [p_TL, p_TR, p_BR, p_BL]
+
+			# Reverse vertex order for downward faces before creation — keeps UVs intact
+			f_for_face = list(f)
+			if face_name == DOWN_DIR:
+				f_for_face = list(reversed(f_for_face))
+
+			if len(f_for_face) != 4:
+				env.log(f"Face vertex index list expected 4 elements, but got {len(f_for_face)}. Skipping face.")
+				continue
+
+			face_verts = []
+			out_of_bounds = False
+			for vert_idx in f_for_face:
+				if 0 <= vert_idx < len(verts):
+					face_verts.append(verts[vert_idx])
+				else:
+					env.log(f"Vertex index {vert_idx} is out of bounds (0 to {len(verts) - 1}). Skipping face.")
+					out_of_bounds = True
+					break  # No need to keep checking this face
+			if out_of_bounds:
+				continue
+			try:
+				face = bm.faces.new(tuple(face_verts))
+			except ValueError as e:
+				env.log(f"Failed to create BMesh face: {e}. Skipping.")
+				continue
 
 			face.normal_update()
-			
+
 			# Give slight offset by normal for overlay geometry
 			if face_mat == "#overlay":
-				bmesh.ops.translate(bm, verts=face.verts,
-						    vec=0.02 * face.normal)
+				bmesh.ops.translate(bm, verts=face.verts, vec=0.0025 * face.normal)
 
-			for j in range(len(face.loops)):
-				# uv coords order is determened by the rotation of the uv,
-				# e.g. if the uv is rotated by 180 degrees, the first index
-				# will be 2 then 3, 0, 1.
-				face.loops[j][uv_layer].uv = uvs[(j + uv_idx) % len(uvs)]
+			# Apply rotation shift (uv_idx) with bounds check
+			uvs_rot = []
+			if uvs_base and len(uvs_base) > 0:
+				uvs_rot = [uvs_base[(k + uv_idx) % len(uvs_base)] for k in range(len(uvs_base))]
+			else:
+				env.log("Warning: Empty uvs_base, skipping UV rotation.")
+
+			# Mirror axis per-face (to fix convention mismatches)
+			mirror_axis = None
+			if face_name == NORTH_DIR:
+				mirror_axis = "Y"
+			elif face_name == EAST_DIR:
+				mirror_axis = "X"
+			elif face_name == SOUTH_DIR:
+				mirror_axis = "X"
+			elif face_name == WEST_DIR:
+				mirror_axis = "Y"
+			elif face_name == DOWN_DIR:
+				mirror_axis = "Y"
+			# up -> no mirroring
+
+			# If mirroring, get UV island median and mirror around point.
+			if mirror_axis is not None:
+				mx = sum(p[0] for p in uvs_rot) / len(uvs_rot)
+				my = sum(p[1] for p in uvs_rot) / len(uvs_rot)
+				uvs_final = []
+				for (x, y) in uvs_rot:
+					if mirror_axis == "X":
+						nx = 2 * mx - x		# mirror horizontally
+						ny = y
+					else:
+						nx = x
+						ny = 2 * my - y		  # mirror vertically
+					uvs_final.append((nx, ny))
+			else:
+				uvs_final = uvs_rot
+
+			# For cardinal faces (north/south/east/west) mirror over both axes
+			if face_name in (NORTH_DIR, SOUTH_DIR, EAST_DIR, WEST_DIR):
+				mx = sum(p[0] for p in uvs_final) / len(uvs_final)
+				my = sum(p[1] for p in uvs_final) / len(uvs_final)
+				uvs_final = [(2 * mx - x, 2 * my - y) for x, y in uvs_final]
+
+			# Flip UV for 'down' face (V-axis flip)
+			if face_name == DOWN_DIR:
+				mx = sum(p[0] for p in uvs_final) / len(uvs_final)
+				my = sum(p[1] for p in uvs_final) / len(uvs_final)
+				uvs_final = [(x, 2 * my - y) for (x, y) in uvs_final]
+
+			# Assign the final computed UVs to the face loops
+			if not uvs_final:
+				env.log("Warning: Empty uvs_final, skipping UV assignment for this face.")
+			else:
+				for j, loop in enumerate(face.loops):
+					# Bounds check before assignment
+					if j >= len(uvs_final):
+						env.log(f"UV index {j} out of bounds for computed UVs (size: {len(uvs_final)}). Skipping assignment.")
+						break
+
+					try:
+						_ = loop[uv_layer]
+					except KeyError:
+						env.log("Warning: UV layer not found on loop; skipping UV assignment.")
+						continue
+
+					if (j % len(uvs_final)) < 0 or (j % len(uvs_final)) >= len(uvs_final):
+						env.log(f"Error assigning UV to loop {j}: Out of Bounds")
+						continue
+					loop[uv_layer].uv = uvs_final[j % len(uvs_final)]
+
+			# Using materials_remap to remap the index, used for the block with remapping "#side"
+			# Stored material index for getting the texture
+			material_index = 0
+			if face_mat and (face_mat in materials or face_mat in materials_remap):
+				face_mat_ref = materials_remap.get(face_mat)
+				if face_mat_ref and "#" in face_mat_ref:
+					face_mat = face_mat_ref
+				material_index = materials.index(face_mat)
 
 			# Assign the material on face
-			if face_mat is not None and face_mat in materials:
-				face.material_index = materials.index(face_mat)
+			face.material_index = material_index
+
+			# Adjusting the uv scaling
+			if len(obj_mats) > 0:
+				node = obj_mats[material_index].node_tree.nodes.get('Diffuse Texture')
+				if node:
+					img_size = node.image.size
+					scale = 1
+					if img_size[1] != img_size[0]:
+						scale = (img_size[0] / img_size[1])
+					face_pivot = (0, 1)  # OpenGL UV
+					scale_factor_uv = (1, scale)
+
+					# Starts doing uv scaling from a pivot location
+					for loop in face.loops:
+						uv = loop[uv_layer].uv
+						u, v = uv
+
+						# Translate to pivot
+						translated_u = u - face_pivot[0]
+						translated_v = v - face_pivot[1]
+
+						# Scale
+						scaled_u = translated_u * scale_factor_uv[0]
+						scaled_v = translated_v * scale_factor_uv[1]
+
+						# Translate back
+						loop[uv_layer].uv = (scaled_u + face_pivot[0], scaled_v + face_pivot[1])
 
 	# Quick way to clean the model, hopefully it doesn't cause any UV issues
 	# Ignore model has overlay geometry, causing issue
@@ -392,7 +603,6 @@ def add_model(
 	bm.to_mesh(mesh)
 	bm.free()
 	return 0, obj
-
 
 # -----------------------------------------------------------------------------
 # UI and resource pack management.
@@ -456,8 +666,29 @@ def update_model_list(context: Context):
 
 		# Filter out models that can't spawn. Typically those that reference
 		# #fire or the likes in the file.
-		if "template" in name:
+		# These blocks just don't make sense to put in the for "unspawnable_for_now"
+		# - Template base of that block for example candle, cake with candles, fence
+		# - Orient blocks base, cube same as orientable (no texture)
+		# - Light blocks are just special no geometry block with 15 states of light levels
+		# - Shulkers, hanging signs, signs are entities, put it here for now since they have a lot of variants
+		# - "pitcher_crop_top_stage_" is a top part of a double plant. I have no idea why it has no geometry.
+		# - custom_fence_ not sure what even used for
+		# - stem_growth and stem_fruit are used for pumpkin and melon stem models
+		# - block is a base for every block in the game. Same for the slab bases
+		# - Air, barrier, structure void, skull have no geometry
+		is_contains = re.search(
+			r"template_|orientable|cube_|\
+			_shulker_box|_sign|\
+			light_0|light_1|\
+			pitcher_crop_top_stage_|custom_fence_|\
+			stem_growth|^stem_fruit$|\
+			^block$|^air$|^barrier$|^structure_void$|^thin_block$|\
+			^slab$|^slab_top$|^skull$",
+			name
+		)
+		if is_contains:
 			continue
+
 		# Filter the "unspawnable_for_now"
 		# Either entity block or block that doesn't good for json
 		blocks = env.json_data.get(
@@ -465,6 +696,7 @@ def update_model_list(context: Context):
 			["bed", "chest", "banner", "campfire"])
 		if name in blocks:
 			continue
+
 		item = scn_props.model_list.add()
 		item.filepath = model
 		item.name = name
@@ -486,6 +718,9 @@ class ModelSpawnBase():
 	location: bpy.props.FloatVectorProperty(
 		default=(0, 0, 0),
 		name="Location")
+	rotation: bpy.props.FloatVectorProperty(
+		default=(0, 0, 0),
+		name="Rotation")
 	snapping: bpy.props.EnumProperty(
 		name="Snapping",
 		items=[
@@ -513,11 +748,35 @@ class ModelSpawnBase():
 		else:
 			obj.location = self.location
 
+		obj.rotation_euler = self.rotation
+
 	def post_spawn(self, context, new_obj):
 		"""Do final consistent cleanup after model is spawned."""
 		for ob in util.get_objects_conext(context):
 			util.select_set(ob, False)
 		util.select_set(new_obj, True)
+
+	def create_and_place_json_model(self, context, filepath: Path) -> Optional[MCprepError]:
+		"""Function that does the entire model creation and placing"""
+		filename = filepath.stem
+		if not filepath or not filepath.exists():
+			line, file = env.current_line_and_file()
+			return MCprepError(FileNotFoundError(), line, file, "File not found")
+		if filepath.suffix != ".json":
+			line, file = env.current_line_and_file()
+			return MCprepError(Exception(), line, file, f"File is not JSON: {filepath}")
+
+		try:
+			r, obj = add_model(filepath, filename)
+			if r:
+				line, file = env.current_line_and_file()
+				return MCprepError(Exception(), line, file, "JSON model does not contain any actual geometry")
+		except ModelException as e:
+			line, file = env.current_line_and_file()
+			return MCprepError(ModelException(), line, file, f"Encountered error: {e}")
+
+		self.place_model(obj)
+		self.post_spawn(context, obj)
 
 
 class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
@@ -535,28 +794,10 @@ class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 	track_param = "list"
 	@tracking.report_error
 	def execute(self, context):
-		name = os.path.basename(os.path.splitext(self.filepath)[0])
-		if not self.filepath or not os.path.isfile(self.filepath):
-			self.report({"WARNING"}, "Filepath not found")
-			bpy.ops.mcprep.prompt_reset_spawners('INVOKE_DEFAULT')
+		res = self.create_and_place_json_model(context, Path(self.filepath))
+		if res:
+			self.report({'ERROR'}, res.msg)
 			return {'CANCELLED'}
-		if not self.filepath.lower().endswith(".json"):
-			self.report(
-				{"ERROR"}, f"File is not json: {self.filepath}")
-			return {'CANCELLED'}
-
-		try:
-			r, obj = add_model(os.path.normpath(self.filepath), name)
-			if r:
-				self.report(
-					{"ERROR"}, "The JSON model does not contain any geometry elements")
-				return {'CANCELLED'}
-		except ModelException as e:
-			self.report({"ERROR"}, f"Encountered error: {e}")
-			return {'CANCELLED'}
-
-		self.place_model(obj)
-		self.post_spawn(context, obj)
 		return {'FINISHED'}
 
 
@@ -568,6 +809,7 @@ class MCPREP_OT_import_minecraft_model_file(
 	bl_options = {'REGISTER', 'UNDO'}
 
 	filename_ext = ".json"
+	filepath: bpy.props.StringProperty(subtype='FILE_PATH', options={'SKIP_SAVE'})
 	filter_glob: bpy.props.StringProperty(
 		default="*.json",
 		options={'HIDDEN'},
@@ -578,28 +820,28 @@ class MCPREP_OT_import_minecraft_model_file(
 	track_param = "file"
 	@tracking.report_error
 	def execute(self, context):
-		filename = os.path.splitext(os.path.basename(self.filepath))[0]
-		if not self.filepath or not os.path.isfile(self.filepath):
-			self.report({"ERROR"}, "Filepath not found")
+		res = self.create_and_place_json_model(context, Path(self.filepath))
+		if res:
+			self.report({'ERROR'}, res.msg)
 			return {'CANCELLED'}
-		if not self.filepath.lower().endswith(".json"):
-			self.report(
-				{"ERROR"}, f"File is not json: {self.filepath}")
-			return {'CANCELLED'}
-
-		try:
-			r, obj = add_model(os.path.normpath(self.filepath), filename)
-			if r:
-				self.report(
-					{"ERROR"}, "The JSON model does not contain any geometry elements")
-				return {'CANCELLED'}
-		except ModelException as e:
-			self.report({"ERROR"}, f"Encountered error: {e}")
-			return {'CANCELLED'}
-
-		self.place_model(obj)
-		self.post_spawn(context, obj)
 		return {'FINISHED'}
+
+	def invoke(self, context, event):
+		if self.filepath:
+			return self.execute(context)
+		context.window_manager.fileselect_add(self)
+		return {'RUNNING_MODAL'}
+
+
+class MCPREP_FH_import_minecraft_model_file(FileHandler):
+	bl_idname = "MCPREP_FH_import_minecraft_model_file"
+	bl_label = "File handler for JSON import"
+	bl_import_operator = "mcprep.place_json_model_with_gizmo"
+	bl_file_extensions = ".json"
+
+	@classmethod
+	def poll_drop(cls, context) -> bool:
+		return (context.area and context.area.type == 'VIEW_3D')
 
 
 class MCPREP_OT_reload_models(bpy.types.Operator):
@@ -613,6 +855,63 @@ class MCPREP_OT_reload_models(bpy.types.Operator):
 		return {'FINISHED'}
 
 
+class MCPREP_OT_place_json_model_with_gizmo(bpy.types.Operator, ModelSpawnBase):
+	bl_idname = "mcprep.place_json_model_with_gizmo"
+	bl_label = "Import Minecraft JSON model and Place"
+	bl_description = "Imports a Minecraft JSON model with location selection"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	filename_ext = ".json"
+	filepath: bpy.props.StringProperty(subtype='FILE_PATH', options={'SKIP_SAVE'})
+
+	def invoke(self, context, event):
+		from .spawner_gizmo import HitVector
+
+		self.hit_vector: Optional[HitVector] = None
+
+		self.draw_handle = bpy.types.SpaceView3D.draw_handler_add(
+			self.draw_callback, (context,), 'WINDOW', 'POST_VIEW'
+		)
+		context.window_manager.modal_handler_add(self)
+		return {'RUNNING_MODAL'}
+
+	def execute(self, context):
+		if self.hit_vector:
+			self.location = self.hit_vector.location
+			self.rotation = self.hit_vector.rotation.to_euler()
+			res = self.create_and_place_json_model(context, Path(self.filepath))
+			if res:
+				self.report({'ERROR'}, res.msg)
+				return {'CANCELLED'}
+		else:
+			return {'CANCELLED'}
+		return {'FINISHED'}
+
+	def modal(self, context, event):
+		context.area.tag_redraw()
+		if event.type == 'MOUSEMOVE':
+			from .spawner_gizmo import update_raycast
+			self.hit_vector = update_raycast(context, event)
+		elif event.type == 'LEFTMOUSE' and event.value == 'PRESS':
+			res = self.execute(context)
+			self.finish(context)
+			return res
+		elif event.type in {'RIGHTMOUSE', 'ESC'}:
+			self.finish(context)
+			return {'CANCELLED'}
+		return {'RUNNING_MODAL'}
+
+	def finish(self, context):
+		bpy.types.SpaceView3D.draw_handler_remove(self.draw_handle, 'WINDOW')
+		context.area.tag_redraw()
+
+	def draw_callback(self, context) -> None:
+		if not self.hit_vector:
+			return
+
+		draw_callback(self.hit_vector)
+
+
 classes = (
 	MCPREP_OT_spawn_minecraft_model,
 	MCPREP_OT_import_minecraft_model_file,
@@ -624,6 +923,10 @@ def register():
 	for cls in classes:
 		bpy.utils.register_class(cls)
 
+	if util.min_bv((4, 1)):
+		bpy.utils.register_class(MCPREP_FH_import_minecraft_model_file)
+		bpy.utils.register_class(MCPREP_OT_place_json_model_with_gizmo)
+
 	bpy.types.TOPBAR_MT_file_import.append(draw_import_mcmodel)
 
 
@@ -631,3 +934,7 @@ def unregister():
 	bpy.types.TOPBAR_MT_file_import.remove(draw_import_mcmodel)
 	for cls in reversed(classes):
 		bpy.utils.unregister_class(cls)
+
+	if util.min_bv((4, 1)):
+		bpy.utils.unregister_class(MCPREP_FH_import_minecraft_model_file)
+		bpy.utils.unregister_class(MCPREP_OT_place_json_model_with_gizmo)
