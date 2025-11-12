@@ -965,6 +965,42 @@ class MaterialsTest(unittest.TestCase):
                 prepMaterials=True)
             self.assertTrue(res, {"FINISHED"})
 
+    def test_combine_materials(self):
+        mat1 = bpy.data.materials.new("CombineMat")
+        init_count = len(bpy.data.materials)
+        mat2 = bpy.data.materials.new("CombineMat")  # Gets name CombineMat.001
+        self.assertNotEqual(mat1.id_data, mat2.id_data)
+        bpy.ops.mcprep.combine_materials(selection_only=False)
+        self.assertEqual(len(bpy.data.materials), init_count)
+        # TODO: add test for ensuring selection_only=True also works
+
+    def test_combine_images(self):
+        img1 = bpy.data.images.new("CombineImages", width=1, height=1)
+        init_count = len(bpy.data.images)
+        img2 = bpy.data.images.new("CombineImages", width=1, height=1)
+        self.assertNotEqual(img1.id_data, img2.id_data)
+        bpy.ops.mcprep.combine_images()
+        self.assertEqual(init_count, len(bpy.data.images))
+
+    def test_uv_scale(self):
+        bpy.ops.mesh.primitive_plane_add()
+        bpy.ops.object.editmode_toggle()
+        bpy.ops.uv.select_all(action='SELECT')
+        bpy.ops.mcprep.scale_uv()
+        # TODO: test that actually had an impact
+
+    def test_uv_alpha_select(self):
+        bpy.ops.mesh.primitive_plane_add()
+        obj = bpy.context.object
+        new_mat, _ = self._create_canon_mat()
+        obj.active_material = new_mat
+        self.assertIsNotNone(obj.active_material, "Material should be applied")
+
+        bpy.ops.object.editmode_toggle()
+        bpy.ops.mcprep.select_alpha_faces()
+        # TODO: Improve test by actually appling a tex with alpha and seek
+        # specific proportion of subdivided faces selected.
+
 
 if __name__ == '__main__':
     unittest.main(exit=False)
