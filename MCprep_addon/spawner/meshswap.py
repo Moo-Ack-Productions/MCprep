@@ -785,7 +785,8 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 				'enchant_table_bottom', 'enchant_table_side', 'furnace_side',
 				'furnace_top', 'pumpkin_side_lit', 'pumpkin_top_lit', 'sunflower_back',
 				'sunflower_front', 'sunflower_top', 'tnt_bottom', 'tnt_side',
-				'torch_flame', 'workbench_back', 'workbench_front'
+				'torch_flame', 'workbench_back', 'workbench_front', 'tall_grass_top',
+				'crafting_table_side', 'crafting_table_front'
 			]
 		elif self.track_exporter == "Mineways":
 			rmable = [
@@ -799,9 +800,9 @@ class MCPREP_OT_meshswap(bpy.types.Operator):
 			# need to select one of the exporters!
 			return False  # {'CANCELLED'}
 		# delete unnecessary ones first
-		if name in rmable:
+		if name.replace("minecraft_block-", "") in rmable:
 			removable = True
-			env.log("Removable!")
+			env.log(f"Removable meshswap non-primary block: {name}")
 			return {'removable': removable}
 
 		# check the actual name against the library
