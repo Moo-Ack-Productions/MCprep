@@ -323,7 +323,7 @@ def read_model(
 	"""
 	try:
 		with open(model_filepath, 'r') as f:
-			obj_data = json.load(f)
+			obj_data = json.load(open(model_filepath, encoding="utf-8-sig"))
 	except PermissionError as e:
 		print(e)
 		raise ModelException("Permission error, try running as admin") from e
