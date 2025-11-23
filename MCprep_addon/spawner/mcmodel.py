@@ -271,40 +271,38 @@ def normalize_texture_path(
 
 	return path
 
-def get_final_texture_key(
-	texture_ref: str, textures: Dict[str, str], visited: Optional[set] = None) -> Optional[str]:
+def get_final_texture_key(texture_ref, textures, visited=None):
 	"""
-	Recursively resolves a texture reference (e.g., '#down' -> '#bottom' -> 'top')
-	to the final texture key (e.g., 'top') that directly maps to a texture path.
-
-	Example: If textures is {'down': '#bottom', 'bottom': '#top', 'top': 'block/stone'},
-	calling with 'down' returns 'top' (since 'top' is the first key whose value is NOT a reference).
+	Permissive texture resolver.
+	Follows recursive '#key' chains until a valid path is found.
 	"""
 	if visited is None:
 		visited = set()
 
-	# Strip leading '#' for key lookup
+	# Strip '#' prefix
 	key = texture_ref[1:] if texture_ref.startswith('#') else texture_ref
 
+	# Avoid infinite recursion
 	if key in visited:
-		# Detected circular dependency and break recursion (e.g., '#a' -> '#b' -> '#a')
-		env.log(f"Circular texture reference detected for key: {key}")
-		return None
-
+		# env.log(f"Circular texture reference detected for key: {key}")
+		line, file = env.current_line_and_file()
+		return MCprepError(
+			ValueError("Circular texture reference"),
+			line,
+			file,
+			f"Circular texture reference detected for key: {key}")
 	visited.add(key)
 
+	# If key exists
 	if key in textures:
 		value = textures[key]
-		if value.startswith('#'):
-			# The value is another reference, recurse
-			return get_final_texture_key(value, textures, visited)
-		else:
-			# The value is an actual path (e.g., 'block/stone'), return the key
-			return key
 
-	# If the key is not in textures, return the key itself as the final key.
-	# This handles cases where a face references a key not explicitly defined.
+		# Is another reference
+		if isinstance(value, str) and value.startswith("#"):
+			return get_final_texture_key(value, textures, visited)
+	# Key not found — use the literal name
 	return key
+
 
 def locate_image(
 	context: Context, textures: Dict[str, str], img: str, model_filepath: Path) -> str:
