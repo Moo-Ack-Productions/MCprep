@@ -175,6 +175,102 @@ def add_get_material(
 
 	return mat
 
+def find_all_pack_roots(
+	start_path):
+	"""
+	Finds ALL possible pack roots, including:
+		- normal packs with 'assets/'
+		- loose/unpacked mod folders containing `models/` and `textures/`
+		- nested packs
+
+	A pack root is ANY folder that contains:
+		• assets/<namespace>/...
+		OR
+		• textures/	  (for packs missing the assets folder)
+		• models/	  (same case)
+	"""
+	roots = []
+	start = Path(start_path).resolve()
+
+	for parent in [start] + list(start.parents):
+
+		# Case A: vanilla-style root
+		if (parent / "assets").is_dir():
+			roots.append(parent)
+
+		# Case B: loose/unpacked mod folder (your case)
+		# e.g. christmasfestivity/textures/block/*.png
+		if (parent / "textures").is_dir() and (parent / "models").is_dir():
+			roots.append(parent)
+
+		# Case C: even looser: any folder with a textures/ directory
+		if (parent / "textures").is_dir():
+			roots.append(parent)
+
+	# Make unique and preserve order
+	seen = set()
+	final = []
+	for r in roots:
+		if r not in seen:
+			seen.add(r)
+			final.append(r)
+
+	return final
+
+def normalize_texture_path(
+	path: str) -> str:
+	"""
+	Minecraft-style permissive path normalizer.
+	Accepts ANY weird path and rewrites it to MC's form.
+
+	Examples:
+		"./block/./foo"		-> "block/foo"
+		"block\\foo"		-> "block/foo"
+		"block//foo"		-> "block/foo"
+		"../block/foo"		-> "block/foo"	(MC strips parent dirs)
+		"textures/block/foo" -> "block/foo" (MC removes leading folders)
+		"block/foo.png"		-> "block/foo"
+		"minecraft:block/foo" stays unchanged except path cleanup
+	"""
+
+	if not isinstance(path, str):
+		return path
+
+	# Strip leading '#' if passed a reference by mistake
+	if path.startswith("#"):
+		path = path[1:]
+
+	# 1. Convert Windows slashes → MC slashes
+	path = path.replace("\\", "/")
+
+	# 2. Remove redundant "./"
+	while "/./" in path:
+		path = path.replace("/./", "/")
+	if path.startswith("./"):
+		path = path[2:]
+
+	# 3. Collapse multiple slashes
+	while "//" in path:
+		path = path.replace("//", "/")
+
+	# 4. Remove ".png" extension if included
+	if path.lower().endswith(".png"):
+		path = path[:-4]
+
+	# 5. Minecraft strips leading ".." instead of traversing up
+	parts = [p for p in path.split("/") if p != ".."]
+	path = "/".join(parts)
+
+	# 6. Remove leading "textures/" folder if present
+	if path.startswith("textures/"):
+		path = path[9:]
+
+	# 7. Remove empty leading slash
+	if path.startswith("/"):
+		path = path[1:]
+
+	return path
+
 def get_final_texture_key(
 	texture_ref: str, textures: Dict[str, str], visited: Optional[set] = None) -> Optional[str]:
 	"""
