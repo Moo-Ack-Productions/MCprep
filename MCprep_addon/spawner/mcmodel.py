@@ -304,107 +304,115 @@ def get_final_texture_key(texture_ref, textures, visited=None):
 	return key
 
 
-def locate_image(
-	context: Context, textures: Dict[str, str], img: str, model_filepath: Path) -> str:
+def locate_image(context, textures, img, model_filepath):
 	"""
 	Finds and returns the final texture path from a texture key/reference in the model JSON.
-	
-	The search hierarchy is:
-	1. Recursively resolving texture references (e.g., '#side' -> '#all').
-	2. Cleaning the resulting path fragment (e.g., namespace, extension handling).
-	3. Searching the file in this order: Model's Origin Pack (A), Active Scene Resource Pack (B), and Addon Default Resource Pack (C).
 	"""
 
-	# 1. Resolve to final texture key. (e.g. #texture -> #all -> block/texture)
-	# Uses the `get_final_texture_key` function to get the final key
-	final_key = get_final_texture_key(f"#{img}", textures)
-	if final_key is None or final_key not in textures:
-		# Fallback if key is not found or is part of a circular reference
-		local_path = textures.get(img, img)
-	else:
-		local_path = textures[final_key]
-		
-	# Path Cleaning/Normalization
-	# Remove leading path separators AND the .png extension if present. For cleaner & safer searching
-	local_path_clean = local_path.replace("/", os.sep).replace("\\", os.sep)
-	local_path_clean = local_path_clean.lstrip(os.sep) # Prevent leading slash vulnerability
-	if local_path_clean.lower().endswith(".png"): # Prevent '.png.png' double extension
-		local_path_clean = local_path_clean[:-4]
+	# ---- 1. Resolve texture key (#foo -> foo -> actual path) ----
+	try:
+		final_key = get_final_texture_key(f"#{img}", textures)
+	except Exception as e:
+		line, file = env.current_line_and_file()
+		return MCprepError(
+			ValueError(f"Failed to resolve texture key '{img}'"),
+			line,
+			file,
+			f"Texture key resolution failed: {e}")
 	
-	# Append the extension once for a complete/clean path fragment
-	texture_path_fragment = local_path_clean + ".png"
+	if isinstance(final_key, MCprepError):
+		# Pass error upward instead of continuing
+		return final_key
 
-	# 2. Local relative paths (starting with `.`)
-	if local_path.startswith('.'):
-		# Path is relative to the model JSON file's directory.
-		directory = os.path.dirname(model_filepath)
-		return os.path.normpath(os.path.join(directory, texture_path_fragment))
+	# Get raw texture value or fallback
+	local_path = textures.get(final_key, textures.get(img, img))
 
-	# 3. Parse Namespace (e.g., 'minecraft:block/foo' -> 'block/foo')
-	if ":" in local_path:
-		namespace, local_path_remainder = local_path.split(":", 1)
+	# ---- 2. Normalize MC-style path ----
+	cleaned = normalize_texture_path(local_path)
+	cleaned_png = cleaned + ".png"
+
+	model_path = Path(model_filepath).resolve()
+
+	# ---------------------------------------------------------------
+	#  RELATIVE PATH HANDLING ("./texture")
+	# ---------------------------------------------------------------
+	if local_path.startswith("."):
+		relative_candidate = (model_path.parent / cleaned_png).resolve()
+		if relative_candidate.is_file():
+			return str(relative_candidate)
+		# Continue to search order A → B → C if not found
+
+	# ---------------------------------------------------------------
+	#  NAMESPACE SUPPORT
+	# ---------------------------------------------------------------
+	if ":" in cleaned:
+		namespace, texpath = cleaned.split(":", 1)
 	else:
 		namespace = "minecraft"
-		local_path_remainder = local_path
-	
-	# Re-apply path cleaning after namespace removal (safe, catches stray separators)
-	local_path_clean = local_path_remainder.replace("/", os.sep).replace("\\", os.sep)
-	local_path_clean = local_path_clean.lstrip(os.sep) # No leading separator
-	if local_path_clean.lower().endswith(".png"):
-		local_path_clean = local_path_clean[:-4]
-	texture_path_fragment = local_path_clean + ".png"
+		texpath = cleaned
 
-	# Retrieval of image file:
-	# --- A: Check Models Origin Resource Pack ---
-	# Search in the resource pack folder where the model JSON file is
+	texpath = texpath.lstrip("/")
+	tex_fragment = texpath + ".png"
+
 	try:
-		model_path_obj = Path(model_filepath).resolve()
-		pack_root = None
+	# ---------------------------------------------------------------
+	#  SEARCH ORDER A: ALL detected pack roots (multi-pack support)
+	# ---------------------------------------------------------------
+		pack_roots = find_all_pack_roots(model_filepath)
+		for root in pack_roots:
+			root = Path(root).resolve()
 
-		# Walk up the directory tree to find the 'assets' folder
-		for parent in [model_path_obj] + list(model_path_obj.parents):
-			if (parent / "assets").is_dir():
-				pack_root = parent
-				break
+			# NORMAL PACK (with assets/)
+			candidate = root / "assets" / namespace / "textures" / tex_fragment
+			if candidate.is_file():
+				env.log(f"Texture found in model origin: {candidate}", vv_only=True)
+				return str(candidate)
+				
+			# FLAT-PACK (not a normal structured pack)
+			flat1 = root / namespace / "textures" / tex_fragment
+			if flat1.is_file():
+				env.log(f"Texture found in model origin: {flat1}", vv_only=True)
+				return str(flat1)
 
-		if pack_root:
-			path_model = pack_root / "assets" / namespace / "textures" / texture_path_fragment
-			path_model_str = str(path_model)
+			flat2 = root / "textures" / tex_fragment
+			if flat2.is_file():
+				env.log(f"Texture found in model origin: {flat2}", vv_only=True)
+				return str(flat2)
 
-			if os.path.isfile(path_model_str):
-				env.log(f"Texture found in model origin: {path_model_str}", vv_only=True)
-				return path_model_str
+	# ---------------------------------------------------------------
+	#  SEARCH ORDER B: Active Resource Pack
+	# ---------------------------------------------------------------
+		root = Path(bpy.path.abspath(context.scene.mcprep_texturepack_path)).resolve()
+		candidate = root / "assets" / namespace / "textures" / tex_fragment
+		if candidate.is_file():
+			env.log(f"Texture found in Active Resource Pack: {candidate}", vv_only=True)
+			return str(candidate)
+	# ---------------------------------------------------------------
+	#  SEARCH ORDER C: MCprep default texture pack
+	# ---------------------------------------------------------------
+		prefs = util.get_user_preferences(context)
+		root = Path(bpy.path.abspath(prefs.custom_texturepack_path)).resolve()
+		candidate = root / "assets" / namespace / "textures" / tex_fragment
+		if candidate.is_file():
+			env.log(f"Texture found in MCprep default texture pack: {candidate}", vv_only=True)
+			return str(candidate)
+			
+
 	except Exception as e:
-		env.log(f"Error checking model origin path: {e}", vv_only=True)
+		line, file = env.current_line_and_file()
+		return MCprepError(
+			FileNotFoundError(f"Failed to resolve texture '{img}'"),
+			line,
+			file,
+			f"Error locating texture '{img}': {e}")
 
-	# --- B: Check Active Resource Pack ---
-	# If `A` failed, then try the active resource pack set in the scene properties
-	try:
-		resource_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
-		path_active = os.path.join(
-			resource_folder, "assets", namespace, "textures", texture_path_fragment)
-		path_active = os.path.normpath(path_active)
-
-		if os.path.isfile(path_active):
-			return path_active
-	except Exception as e:
-		env.log(f"Error checking assigned Resource Pack: {e}", vv_only=True)
-	
-	# --- C: Check mcprep_default Resource Pack ---
-	# Fallback to default minecraft resource pack (custom_texturepack_path), the resource pack defined in MCprep's addon preferences
-	try:
-		addon_prefs = util.get_user_preferences(context)
-		resource_folder = bpy.path.abspath(addon_prefs.custom_texturepack_path)
-		path_active = os.path.join(
-			resource_folder, "assets", namespace, "textures", texture_path_fragment)
-		path_active = os.path.normpath(path_active)
-
-		if os.path.isfile(path_active):
-			return path_active
-	except Exception as e:
-		env.log(f"Error checking default minecraft Resource Pack: {e}", vv_only=True)
-	# If neither found, return the path that would be expected in the Active Resource Pack (B) for error messages/debugging.
-	return path_active
+	# ---------------------------------------------------------------
+	#  FALLBACK
+	#  If nothing is found, return the last constructed candidate path.
+	# ---------------------------------------------------------------
+	candidate = str(candidate if 'candidate' in locals() else model_path.parent / cleaned_png)
+	env.log(f"All Failed trying to find pack path, fallbacking to {candidate}", vv_only=True)
+	return candidate
 
 def read_model(
 	context: Context, model_filepath: Path) -> Tuple[Element, Texture]:
