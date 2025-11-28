@@ -190,18 +190,18 @@ def find_all_pack_roots(
 	roots = []
 	start = Path(start_path).resolve()
 
-	for parent in [start] + list(start.parents):
+	for parent in list(start.parents):
 
 		# Case A: Simple root
 		if (parent / "assets").is_dir():
 			roots.append(parent)
 
 		# Case B: loose/unpacked mod folder
-		if (parent / "textures").is_dir() and (parent / "models").is_dir():
+		elif (parent / "textures").is_dir() and (parent / "models").is_dir():
 			roots.append(parent)
 
 		# Case C: even looser: any folder with a textures/directory
-		if (parent / "textures").is_dir():
+		elif (parent / "textures").is_dir():
 			roots.append(parent)
 
 	# Make unique and preserve order
@@ -230,9 +230,6 @@ def normalize_texture_path(
 		"minecraft:block/foo" stays unchanged except path cleanup
 	"""
 
-	if not isinstance(path, str):
-		return path
-
 	# Strip leading '#' if passed a reference by mistake
 	if path.startswith("#"):
 		path = path[1:]
@@ -241,8 +238,7 @@ def normalize_texture_path(
 	path = path.replace("\\", "/")
 
 	# 2. Remove redundant "./"
-	while "/./" in path:
-		path = path.replace("/./", "/")
+	path = path.replace("/./", "/")
 	if path.startswith("./"):
 		path = path[2:]
 
@@ -420,8 +416,8 @@ def read_model(
 	same texture from the parent.
 	"""
 	try:
-		with open(model_filepath, 'r') as f:
-			obj_data = json.load(open(model_filepath, encoding="utf-8-sig"))
+		with open(model_filepath, 'r', encoding="utf-8-sig") as f:
+			obj_data = json.load(f)
 	except PermissionError as e:
 		print(e)
 		raise ModelException("Permission error, try running as admin") from e
