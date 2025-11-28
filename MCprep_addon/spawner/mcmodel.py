@@ -24,8 +24,6 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple, Union, Sequence
 import re
 
-import traceback
-
 import bpy
 import bmesh
 from bpy.types import Context, Material
@@ -176,7 +174,7 @@ def add_get_material(
 	return mat
 
 def find_all_pack_roots(
-	start_path):
+	start_path: str) -> str:
 	"""
 	Finds ALL possible pack roots, including:
 		- normal packs with 'assets/'
@@ -184,26 +182,25 @@ def find_all_pack_roots(
 		- nested packs
 
 	A pack root is ANY folder that contains:
-		• assets/<namespace>/...
+		- assets/<namespace>/...
 		OR
-		• textures/	  (for packs missing the assets folder)
-		• models/	  (same case)
+		- textures/	  (for packs missing the assets folder)
+		- models/	  (same case)
 	"""
 	roots = []
 	start = Path(start_path).resolve()
 
 	for parent in [start] + list(start.parents):
 
-		# Case A: vanilla-style root
+		# Case A: Simple root
 		if (parent / "assets").is_dir():
 			roots.append(parent)
 
-		# Case B: loose/unpacked mod folder (your case)
-		# e.g. christmasfestivity/textures/block/*.png
+		# Case B: loose/unpacked mod folder
 		if (parent / "textures").is_dir() and (parent / "models").is_dir():
 			roots.append(parent)
 
-		# Case C: even looser: any folder with a textures/ directory
+		# Case C: even looser: any folder with a textures/directory
 		if (parent / "textures").is_dir():
 			roots.append(parent)
 
@@ -220,15 +217,15 @@ def find_all_pack_roots(
 def normalize_texture_path(
 	path: str) -> str:
 	"""
-	Minecraft-style permissive path normalizer.
-	Accepts ANY weird path and rewrites it to MC's form.
+	Path normalizer.
+	Takes different and any weird path and rewrites it into a formatted, useable form.
 
 	Examples:
 		"./block/./foo"		-> "block/foo"
 		"block\\foo"		-> "block/foo"
 		"block//foo"		-> "block/foo"
-		"../block/foo"		-> "block/foo"	(MC strips parent dirs)
-		"textures/block/foo" -> "block/foo" (MC removes leading folders)
+		"../block/foo"		-> "block/foo"
+		"textures/block/foo" -> "block/foo"
 		"block/foo.png"		-> "block/foo"
 		"minecraft:block/foo" stays unchanged except path cleanup
 	"""
@@ -240,7 +237,7 @@ def normalize_texture_path(
 	if path.startswith("#"):
 		path = path[1:]
 
-	# 1. Convert Windows slashes → MC slashes
+	# 1. Convert Windows slashes to MC slashes
 	path = path.replace("\\", "/")
 
 	# 2. Remove redundant "./"
@@ -257,7 +254,7 @@ def normalize_texture_path(
 	if path.lower().endswith(".png"):
 		path = path[:-4]
 
-	# 5. Minecraft strips leading ".." instead of traversing up
+	# 5. Strip leading ".." instead of traversing up
 	parts = [p for p in path.split("/") if p != ".."]
 	path = "/".join(parts)
 
@@ -271,7 +268,7 @@ def normalize_texture_path(
 
 	return path
 
-def get_final_texture_key(texture_ref, textures, visited=None):
+def get_final_texture_key(texture_ref: str, textures: Dict[str, str], visited: Optional[set] = None) -> str:
 	"""
 	Permissive texture resolver.
 	Follows recursive '#key' chains until a valid path is found.
@@ -284,7 +281,6 @@ def get_final_texture_key(texture_ref, textures, visited=None):
 
 	# Avoid infinite recursion
 	if key in visited:
-		# env.log(f"Circular texture reference detected for key: {key}")
 		line, file = env.current_line_and_file()
 		return MCprepError(
 			ValueError("Circular texture reference"),
@@ -300,16 +296,16 @@ def get_final_texture_key(texture_ref, textures, visited=None):
 		# Is another reference
 		if isinstance(value, str) and value.startswith("#"):
 			return get_final_texture_key(value, textures, visited)
-	# Key not found — use the literal name
+	# Key not found - use the literal name
 	return key
 
 
-def locate_image(context, textures, img, model_filepath):
+def locate_image(context: Context, textures: Dict[str, str], img: str, model_filepath: str) -> str:
 	"""
 	Finds and returns the final texture path from a texture key/reference in the model JSON.
 	"""
 
-	# ---- 1. Resolve texture key (#foo -> foo -> actual path) ----
+	# 1. Resolve texture key (#foo -> foo -> actual path)
 	try:
 		final_key = get_final_texture_key(f"#{img}", textures)
 	except Exception as e:
@@ -327,7 +323,7 @@ def locate_image(context, textures, img, model_filepath):
 	# Get raw texture value or fallback
 	local_path = textures.get(final_key, textures.get(img, img))
 
-	# ---- 2. Normalize MC-style path ----
+	# 2. Normalize path
 	cleaned = normalize_texture_path(local_path)
 	cleaned_png = cleaned + ".png"
 
@@ -340,7 +336,7 @@ def locate_image(context, textures, img, model_filepath):
 		relative_candidate = (model_path.parent / cleaned_png).resolve()
 		if relative_candidate.is_file():
 			return str(relative_candidate)
-		# Continue to search order A → B → C if not found
+		# Continue to search order A -> B -> C if not found
 
 	# ---------------------------------------------------------------
 	#  NAMESPACE SUPPORT
@@ -615,13 +611,13 @@ def add_model(
 
 					if textures is not None:
 						# Case A: Textures block exists in JSON (even if empty or partial)
-						# Enforce strict matching. If resolution fails, DO NOT assign material
+						# If resolution fails, DO NOT assign material
 						resolved_key = get_final_texture_key(face_mat, textures)
 						if resolved_key:
 							mat_key_to_find = f"#{resolved_key}"
 
 							if face_mat != mat_key_to_find:
-								env.log(f"[MCModel] Remap: {face_mat} -> {mat_key_to_find}")
+								env.log(f"Remap: {face_mat} -> {mat_key_to_find}")
 
 							if mat_key_to_find in materials:
 								mat_index = materials.index(mat_key_to_find)
@@ -641,7 +637,6 @@ def add_model(
 						# Check if material exists or create it (without image texture)
 						mat = bpy.data.materials.get(placeholder_name)
 						if mat is None:
-							# Use add_get_material passing empty path to avoid image texture assignment
 							mat = add_get_material(placeholder_name, path="", use_name=True)
 						
 						# Assign to object if not present
@@ -756,7 +751,6 @@ def add_model(
 						if mat_index is not None and mat_index >= 0:
 							face.material_index = mat_index 
 					except ValueError as e:
-						traceback.print_exc()
 						env.log(f"Failed to create BMesh face: {e}. Skipping.")
 						continue
 
@@ -819,14 +813,6 @@ def add_model(
 					if not uvs_final:
 						env.log("Warning: Empty uvs_final, skipping UV assignment for this face.")
 					else:
-						'''for loop, uv_coord in zip(face.loops, uvs_final):
-							try:
-								_ = loop[uv_layer]
-							except KeyError:
-								env.log("Warning: UV layer not found on loop; skipping UV assignment.")
-								continue
-
-							loop[uv_layer].uv = uv_coord'''
 						for j, loop in enumerate(face.loops):
 							# Bounds check before assignment
 							if j >= len(uvs_final):
@@ -880,7 +866,6 @@ def add_model(
 
 				except Exception as face_exc:
 					env.log(f"Error while building face {FACE_DIRECTIONS[i]}: {face_exc}. Skipping face.")
-					traceback.print_exc()
 					continue
 
 		except Exception as exc:
@@ -1050,9 +1035,11 @@ class ModelSpawnBase():
 	def create_and_place_json_model(self, context, filepath: Path) -> Optional[MCprepError]:
 		"""Function that does the entire model creation and placing"""
 		filename = filepath.stem
+		
 		if not filepath or not filepath.exists():
 			line, file = env.current_line_and_file()
 			return MCprepError(FileNotFoundError(), line, file, "File not found")
+
 		if filepath.suffix != ".json":
 			line, file = env.current_line_and_file()
 			return MCprepError(Exception(), line, file, f"File is not JSON: {filepath}")
