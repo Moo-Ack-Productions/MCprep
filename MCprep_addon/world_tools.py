@@ -592,7 +592,8 @@ class WorldImporterBase:
 					 context: Context,
 					 filepath: Path,
 					 header: Union[ObjHeaderOptions, CommonMCOBJ],
-					 offsets: Optional[Tuple[float, float, float]]) -> Union[None, List[MCprepError], MCprepError]:
+					 offsets: Optional[Tuple[float, float, float]],
+					 mineways_fix_smooth_shading_artifacts: bool = True) -> Union[None, List[MCprepError], MCprepError]:
 		# TODO: Create a more elegant way to handle warnings
 		propogated_warnings: List[MCprepError] = []
 		res = enable_obj_importer()
@@ -796,6 +797,10 @@ class WorldImporterBase:
 				obj.parent = empty
 				obj.matrix_parent_inverse = empty.matrix_world.inverted()  # don't transform object
 				self.track_exporter = header.exporter
+
+				# Mineways workaround for smooth shading artifacts
+				if mineways_fix_smooth_shading_artifacts and header.exporter == "mineways":
+					obj.data.polygons.foreach_set('use_smooth',  [False] * len(obj.data.polygons))
 			elif isinstance(header, ObjHeaderOptions):
 				obj["MCPREP_OBJ_HEADER"] = True
 				obj["MCPREP_OBJ_FILE_TYPE"] = header.texture_type()
@@ -809,6 +814,10 @@ class WorldImporterBase:
 				# getting the exporter
 				obj["MCPREP_OBJ_EXPORTER"] = "mineways-c" if header.exporter() == "Mineways" else "jmc2obj-c"
 				self.track_exporter = addon_prefs.MCprep_exporter_type  # Soft detect.
+				
+				# Mineways workaround for smooth shading artifacts
+				if mineways_fix_smooth_shading_artifacts and header.exporter() == "Mineways":
+					obj.data.polygons.foreach_set('use_smooth',  [False] * len(obj.data.polygons))
 
 		# One final assignment of the preferences, to avoid doing each loop
 		val = header.exporter if isinstance(header, CommonMCOBJ) else header.exporter()
@@ -870,6 +879,14 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, WorldImporterBase, Import
 		default=False,
 		options={'HIDDEN'})
 
+	minewaysShadingWorkaround: bpy.props.BoolProperty(
+		name="Mineways Shading Workaround",
+		description=("Mineways imports have custom vertex normals defined, which may "
+			"cause artifacts. If enabled, this option will enforce flat shading on "
+			"Mineways imports."),
+		default=True
+	)
+
 	track_function = "import_split"
 	track_exporter = None
 	@tracking.report_error
@@ -881,7 +898,11 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, WorldImporterBase, Import
 			return {'CANCELLED'}
 
 		path, header = path_res
-		res = self.import_obj_file(context, path, header, None)
+		res = self.import_obj_file(context,
+							 path,
+							 header,
+							 None,
+							 mineways_fix_smooth_shading_artifacts=self.minewaysShadingWorkaround)
 		if isinstance(res, MCprepError):
 			self.report({"ERROR"}, res.msg)
 			return {'CANCELLED'}
@@ -915,6 +936,13 @@ class MCPREP_OT_import_objs_as_chunks(bpy.types.Operator, WorldImporterBase, Imp
         ),
         default='XY',
     )
+	minewaysShadingWorkaround: bpy.props.BoolProperty(
+		name="Mineways Shading Workaround",
+		description=("Mineways imports have custom vertex normals defined, which may "
+			"cause artifacts. If enabled, this option will enforce flat shading on "
+			"Mineways imports."),
+		default=True
+	)
 
 	# necessary to support multi-file import
 	files: bpy.props.CollectionProperty(
@@ -979,7 +1007,11 @@ class MCPREP_OT_import_objs_as_chunks(bpy.types.Operator, WorldImporterBase, Imp
 			offset_y = (new_export_bounds_min[1] + new_export_bounds_max[1]) / 2
 		
 		for file, header in files_and_headers:
-			res = self.import_obj_file(context, file, header, (offset_x, offset_y, offset_z))
+			res = self.import_obj_file(context,
+							  file,
+							  header,
+							  (offset_x, offset_y, offset_z),
+							  mineways_fix_smooth_shading_artifacts=self.minewaysShadingWorkaround)
 			if isinstance(res, MCprepError):
 				self.report({"ERROR"}, res.msg)
 				return {'CANCELLED'}
