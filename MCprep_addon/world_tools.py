@@ -880,10 +880,10 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, WorldImporterBase, Import
 		options={'HIDDEN'})
 
 	minewaysShadingWorkaround: bpy.props.BoolProperty(
-		name="Mineways Shading Workaround",
-		description=("Mineways imports have custom vertex normals defined, which may "
+		name=env._("Mineways Shading Workaround"),
+		description=env.(("Mineways imports have custom vertex normals defined, which may "
 			"cause artifacts. If enabled, this option will enforce flat shading on "
-			"Mineways imports."),
+			"Mineways imports.")),
 		default=True
 	)
 
@@ -927,20 +927,20 @@ class MCPREP_OT_import_objs_as_chunks(bpy.types.Operator, WorldImporterBase, Imp
 		options={'HIDDEN'})
 	
 	center_assembly: bpy.props.EnumProperty(
-        name="Center Final Assembly",
-        description="Decide if the final assembly should be centered, and if so, how",
+        name=env._("Center Final Assembly"),
+        description=env._("Decide if the final assembly should be centered, and if so, how"),
         items=(
-            ('NONE', "Don't Center", "Doesn't center the final assembly"),
-            ('XY', "Center by XY Plane", "Centers the final assembly by X and Y only"),
-			('XYZ', "Center by all 3 axis", "Centers the final assembly by all 3 axis"),
+            ('NONE', env._("Don't Center"), env._("Doesn't center the final assembly")),
+            ('XY', env._("Center by XY Plane"), env._("Centers the final assembly by X and Y only")),
+			('XYZ', env._("Center by all 3 axis"), env._("Centers the final assembly by all 3 axis")),
         ),
         default='XY',
     )
 	minewaysShadingWorkaround: bpy.props.BoolProperty(
-		name="Mineways Shading Workaround",
-		description=("Mineways imports have custom vertex normals defined, which may "
+		name=env._("Mineways Shading Workaround"),
+		description=env._(("Mineways imports have custom vertex normals defined, which may "
 			"cause artifacts. If enabled, this option will enforce flat shading on "
-			"Mineways imports."),
+			"Mineways imports.")),
 		default=True
 	)
 
