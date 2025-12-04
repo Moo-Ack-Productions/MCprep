@@ -881,7 +881,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, WorldImporterBase, Import
 
 	minewaysShadingWorkaround: bpy.props.BoolProperty(
 		name=env._("Mineways Shading Workaround"),
-		description=env.(("Mineways imports have custom vertex normals defined, which may "
+		description=env._(("Mineways imports have custom vertex normals defined, which may "
 			"cause artifacts. If enabled, this option will enforce flat shading on "
 			"Mineways imports.")),
 		default=True
