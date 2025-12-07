@@ -264,7 +264,9 @@ def normalize_texture_path(
 
 	return path
 
-def get_final_texture_key(texture_ref: str, textures: Dict[str, str], error_collector: "ModelErrorCollector", visited: Optional[set] = None) -> str:
+#Pass Up ERROR:
+def get_final_texture_key(
+	texture_ref: str, textures: Dict[str, str], visited: Optional[set] = None) -> Tuple[str, Optional[MCprepError]]:
 	"""
 	Permissive texture resolver.
 	Follows recursive '#key' chains until a valid path is found.
@@ -275,12 +277,12 @@ def get_final_texture_key(texture_ref: str, textures: Dict[str, str], error_coll
 	# Strip '#' prefix
 	key = texture_ref[1:] if texture_ref.startswith('#') else texture_ref
 
+
 	# Avoid infinite recursion
 	if key in visited:
 		(line, file) = env.current_line_and_file()
-		error_collector.collect(MCprepError(Exception("Texture recursion"), line, file, f"Texture recursion on key '{key}' | Using '{key}'"))
-		return key
-	
+		return MCprepError(Exception(), line, file, f"Texture recursion on key '{key}'")
+
 	visited.add(key)
 
 	# If key exists
@@ -289,23 +291,24 @@ def get_final_texture_key(texture_ref: str, textures: Dict[str, str], error_coll
 
 		# Is another reference
 		if isinstance(value, str) and value.startswith("#"):
-			return get_final_texture_key(value, textures, error_collector, visited)
+			return get_final_texture_key(value, textures, visited)
+
 	# Key not found - use the literal name
 	return key
 
-
-def locate_image(context: Context, textures: Dict[str, str], img: str, model_filepath: str, error_collector: "ModelErrorCollector") -> str:
+#Pass Up ERROR:
+def locate_image(
+	context: Context, textures: Dict[str, str], img: str, model_filepath: str) -> Union[str, Optional[MCprepError]]:
 	"""
 	Finds and returns the final texture path from a texture key/reference in the model JSON.
 	"""
 
 	# 1. Resolve texture key (#foo -> foo -> actual path)
-	try:
-		final_key = get_final_texture_key(f"#{img}", textures, error_collector)
-	except Exception as e:
-		(line, file) = env.current_line_and_file()
-		error_collector.collect(MCprepError(Exception(), line, file, f"Error while resolving texture '{img}': {e}"), True)
-		return img
+	final_key = get_final_texture_key(f"#{img}", textures)
+
+	# Pass Up Error
+	if isinstance(final_key, MCprepError):
+		return final_key
 
 	# Get raw texture value or fallback
 	local_path = textures.get(final_key, textures.get(img, img))
@@ -341,6 +344,7 @@ def locate_image(context: Context, textures: Dict[str, str], img: str, model_fil
 	# ---------------------------------------------------------------
 	#  SEARCH ORDER A: ALL detected pack roots (multi-pack support)
 	# ---------------------------------------------------------------
+
 		pack_roots = find_all_pack_roots(model_filepath)
 		for root in pack_roots:
 			root = Path(root).resolve()
@@ -350,7 +354,7 @@ def locate_image(context: Context, textures: Dict[str, str], img: str, model_fil
 			if candidate.is_file():
 				env.log(f"Texture found in model origin: {candidate}", vv_only=True)
 				return str(candidate)
-				
+
 			# FLAT-PACK (not a normal structured pack)
 			flat1 = root / namespace / "textures" / tex_fragment
 			if flat1.is_file():
@@ -379,11 +383,12 @@ def locate_image(context: Context, textures: Dict[str, str], img: str, model_fil
 		if candidate.is_file():
 			env.log(f"Texture found in MCprep default texture pack: {candidate}", vv_only=True)
 			return str(candidate)
-			
+
 
 	except Exception as e:
 		(line, file) = env.current_line_and_file()
-		error_collector.collect(MCprepError(Exception(), line, file, f"Error searching texture packs for '{img}': {e}"))
+
+		return MCprepError(e, line, file, f"Error searching texture packs for '{img}': {e}")
 
 	# ---------------------------------------------------------------
 	#  FALLBACK
@@ -393,8 +398,9 @@ def locate_image(context: Context, textures: Dict[str, str], img: str, model_fil
 	env.log(f"All Failed trying to find pack path, fallbacking to {candidate}", vv_only=True)
 	return candidate
 
+
 def read_model(
-	context: Context, model_filepath: Path, error_collector: "ModelErrorCollector") -> Tuple[Element, Texture]:
+	context: Context, model_filepath: Path) -> Tuple[Element, Texture]:
 	"""Reads json file to get textures and elements needed for model.
 
 	This function is recursively called to also get the elements and textures
@@ -453,11 +459,11 @@ def read_model(
 			base_path = os.path.join(fallback_folder, models_dir)
 
 			if os.path.isfile(target_path):
-				elements, textures = read_model(context, target_path, error_collector)
+				elements, textures = read_model(context, target_path)
 			if os.path.isfile(active_path):
-				elements, textures = read_model(context, active_path, error_collector)
+				elements, textures = read_model(context, active_path)
 			elif os.path.isfile(base_path):
-				elements, textures = read_model(context, base_path, error_collector)
+				elements, textures = read_model(context, base_path)
 			else:
 				env.log(f"Failed to find mcmodel file {parent_filepath}")
 
@@ -480,15 +486,17 @@ def read_model(
 
 	return elements, textures
 
+#Pass Up ERROR:
 def add_model(
-	model_filepath: Path, obj_name: str = "MinecraftModel", error_collector: "ModelErrorCollector" = None) -> Tuple[int, bpy.types.Object]:
+	model_filepath: Path, obj_name: str = "MinecraftModel") -> Union[tuple[int, bpy.types.Object], Optional[MCprepError]]:
 	"""Primary function for generating a model from json file."""
+
 	collection = bpy.context.collection
 	view_layer = bpy.context.view_layer
 
 	# Called recursively!
 	# Can raise ModelException due to permission or corrupted file data.
-	elements, textures = read_model(bpy.context, model_filepath, error_collector)
+	elements, textures = read_model(bpy.context, model_filepath)
 
 	if elements is None:
 		return 1, None
@@ -518,7 +526,13 @@ def add_model(
 					continue
 
 				# 2. Determine the path and material name
-				tex_pth = locate_image(bpy.context, textures, img, model_filepath, error_collector)
+				tex_pth = locate_image(bpy.context, textures, img, model_filepath)
+
+				# Pass Up Error
+				if isinstance(tex_pth, MCprepError):
+					return tex_pth
+
+
 				if len(textures) > 1 and img != "particle":
 					# Use unique name for non-particle textures if multiple textures exist
 					name = f"{obj_name}_{img}"
@@ -547,7 +561,7 @@ def add_model(
 
 					# Add key to internal materials list for face assignment lookup
 					materials.append(mat_key)
-	
+
 	for e in elements:
 		try:
 			# Check if 'from' and 'to' bounds are present
@@ -595,12 +609,17 @@ def add_model(
 					if textures is not None:
 						# Case A: Textures block exists in JSON (even if empty or partial)
 						# If resolution fails, DO NOT assign material
-						resolved_key = get_final_texture_key(face_mat, textures, error_collector)
+						resolved_key = get_final_texture_key(face_mat, textures)
+
+						# Pass Up Error
+						if isinstance(resolved_key, MCprepError):
+							return resolved_key
+
 						if resolved_key:
 							mat_key_to_find = f"#{resolved_key}"
 
 							if face_mat != mat_key_to_find:
-								env.log(f"Remap: {face_mat} -> {mat_key_to_find}")
+								env.log(f"Remap: {face_mat} -> {mat_key_to_find}", vv_only=True)
 
 							if mat_key_to_find in materials:
 								mat_index = materials.index(mat_key_to_find)
@@ -608,25 +627,25 @@ def add_model(
 								env.log(f"Error while building face {face_name}: '{face_mat}' resolved to '{mat_key_to_find}' which is not in material list. Skipping assignment.")
 						else:
 							env.log(f"Error while building face {face_name}: '{face_mat}' could not be resolved. Skipping assignment.")
-					
+
 					else:
 						# Case B: Textures block is COMPLETELY MISSING in JSON (textures is None)
 						# Generate placeholder material without image
-						
+
 						# clean name (e.g., "#north" -> "north")
 						clean_tex_name = face_mat.lstrip('#')
 						placeholder_name = f"{obj_name}_{clean_tex_name}"
-						
+
 						# Check if material exists or create it (without image texture)
 						mat = bpy.data.materials.get(placeholder_name)
 						if mat is None:
 							mat = add_get_material(placeholder_name, path="", use_name=True)
-						
+
 						# Assign to object if not present
 						if mat:
 							if mat.name not in obj_mats:
 								obj_mats.append(mat)
-							
+
 							# Find the index in the object's material list
 							mat_index = obj_mats.find(mat.name)
 						else:
@@ -732,7 +751,7 @@ def add_model(
 						face = bm.faces.new(tuple(face_verts))
 						# Only assign the material if successfully resolved/created one
 						if mat_index is not None and mat_index >= 0:
-							face.material_index = mat_index 
+							face.material_index = mat_index
 					except ValueError as e:
 						env.log(f"Failed to create BMesh face: {e}. Skipping.")
 						continue
@@ -822,11 +841,11 @@ def add_model(
 							# Skip if the image texture node is blank/missing
 							if node and node.image:
 								scale = 1
-								
+
 								img_size = node.image.size
-								
+
 								if img_size[0] < img_size[1]:	# Only need to scale if image Height is smaller than Width.
-								
+
 									scale = (img_size[0] / img_size[1])
 									face_pivot = (0, 1)	 # OpenGL UV
 									scale_factor_uv = (1, scale)
@@ -849,12 +868,11 @@ def add_model(
 
 				except Exception as face_exc:
 					(line, file) = env.current_line_and_file()
-					error_collector.collect(MCprepError(Exception(), line, file, f"Error while building face {FACE_DIRECTIONS[i]}: '{face_exc}'"), True)
-					continue
+					return MCprepError(Exception(), line, file, f"Error while building face {FACE_DIRECTIONS[i]}: '{face_exc}'")
 
 		except Exception as exc:
-			env.log(f"Error during element build: {exc}. Skipping element.")
-			continue
+			(line, file) = env.current_line_and_file()
+			return MCprepError(Exception(), line, file, f"Error during element build: {exc}.")
 
 	# Quick way to clean the model, hopefully it doesn't cause any UV issues
 	# Ignore model has overlay geometry, causing issue
@@ -864,12 +882,12 @@ def add_model(
 	# make the bmesh the object's mesh
 	bm.to_mesh(mesh)
 	bm.free()
+
 	return 0, obj
 
 # -----------------------------------------------------------------------------
 # UI and resource pack management.
 # -----------------------------------------------------------------------------
-
 
 def update_model_list(context: Context):
 	"""Update the model list.
@@ -1019,7 +1037,7 @@ class ModelSpawnBase():
 	def create_and_place_json_model(self, context, filepath: Path) -> Optional[MCprepError]:
 		"""Function that does the entire model creation and placing"""
 		filename = filepath.stem
-		
+
 		if not filepath or not filepath.exists():
 			line, file = env.current_line_and_file()
 			return MCprepError(FileNotFoundError(), line, file, "File not found")
@@ -1029,21 +1047,22 @@ class ModelSpawnBase():
 			return MCprepError(Exception(), line, file, f"File is not JSON: {filepath}")
 
 		try:
-			error_collector = ModelErrorCollector(self.report) # set up error_collector
-			
-			r, obj = add_model(filepath, filename, error_collector)
+			result = add_model(filepath, filename)
+
+			if isinstance(result, MCprepError):
+				return result
+
+			r, obj = result
 			if r:
 				line, file = env.current_line_and_file()
 				return MCprepError(Exception(), line, file, "JSON model does not contain any actual geometry")
+
 		except ModelException as e:
 			line, file = env.current_line_and_file()
 			return MCprepError(ModelException(), line, file, f"Encountered error: {e}")
-		finally:
-			error_collector.display_and_clear() # If there was errors, display them now
 
 		self.place_model(obj)
 		self.post_spawn(context, obj)
-
 
 class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 	"""Import in an MC model from a json file."""
@@ -1086,9 +1105,10 @@ class MCPREP_OT_import_minecraft_model_file(
 	track_param = "file"
 	@tracking.report_error
 	def execute(self, context):
-		res = self.create_and_place_json_model(context, Path(self.filepath))
-		if res:
-			self.report({'ERROR'}, res.msg)
+		result = self.create_and_place_json_model(context, Path(self.filepath))
+		print(result)
+		if result:
+			self.report({'ERROR'}, result.msg)
 			return {'CANCELLED'}
 		return {'FINISHED'}
 
@@ -1176,44 +1196,6 @@ class MCPREP_OT_place_json_model_with_gizmo(bpy.types.Operator, ModelSpawnBase):
 			return
 
 		draw_callback(self.hit_vector)
-
-# -----------------------------------------------------------------------------
-#  ERROR COLLECTION / REPORTING
-# -----------------------------------------------------------------------------
-class ModelErrorCollector():
-	def __init__(self, report_call):
-		self._model_errors: list[MCprepError] = []
-		self._unhandled_errors: list[MCprepError] = []
-		self.report = report_call
-
-	def collect(self, err: "MCprepError", unhandled_error: bool = False):
-		"""Store error for later"""
-		if unhandled_error:
-			self._unhandled_errors.append(err)
-		else:
-			self._model_errors.append(err)
-
-	def display_and_clear(self):
-		"""
-		display each error, then clear the lists
-		"""
-		if not self._model_errors and not self._unhandled_errors:
-			return
-
-		model_error_msgs = [f"{e.msg or str(e.err_type)}" for e in self._model_errors]
-		unhandled_errors_msgs = [f"{e.msg or str(e.err_type)} ({e.file}:{e.line})" for e in self._unhandled_errors]
-
-		if model_error_msgs:
-			for msg in model_error_msgs:
-				self.report({'ERROR'}, msg)
-				
-		if unhandled_errors_msgs:
-			for msg in unhandled_errors_msgs:
-				self.report({'ERROR'}, msg)
-				
-		self._model_errors = [] # Clear errors after reporting
-		self._unhandled_errors = []
-
 
 classes = (
 	MCPREP_OT_spawn_minecraft_model,
