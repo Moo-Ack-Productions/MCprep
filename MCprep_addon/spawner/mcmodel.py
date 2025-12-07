@@ -264,7 +264,6 @@ def normalize_texture_path(
 
 	return path
 
-#Pass Up ERROR:
 def get_final_texture_key(
 	texture_ref: str, textures: Dict[str, str], visited: Optional[set] = None) -> Tuple[str, Optional[MCprepError]]:
 	"""
@@ -296,7 +295,6 @@ def get_final_texture_key(
 	# Key not found - use the literal name
 	return key
 
-#Pass Up ERROR:
 def locate_image(
 	context: Context, textures: Dict[str, str], img: str, model_filepath: str) -> Union[str, Optional[MCprepError]]:
 	"""
@@ -486,7 +484,6 @@ def read_model(
 
 	return elements, textures
 
-#Pass Up ERROR:
 def add_model(
 	model_filepath: Path, obj_name: str = "MinecraftModel") -> Union[tuple[int, bpy.types.Object], Optional[MCprepError]]:
 	"""Primary function for generating a model from json file."""
