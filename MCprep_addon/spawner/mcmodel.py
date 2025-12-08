@@ -1101,7 +1101,6 @@ class MCPREP_OT_import_minecraft_model_file(
 	@tracking.report_error
 	def execute(self, context):
 		result = self.create_and_place_json_model(context, Path(self.filepath))
-		print(result)
 		if result:
 			self.report({'ERROR'}, result.msg)
 			return {'CANCELLED'}
