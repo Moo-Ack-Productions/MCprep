@@ -190,8 +190,7 @@ def find_all_pack_roots(
 	roots: List[Path] = []
 	start = Path(start_path).resolve()
 
-	for parent in list(start.parents):
-
+	for parent in start.parents:
 		# Case A: Simple root
 		if (parent / "assets").is_dir():
 			roots.append(parent)
