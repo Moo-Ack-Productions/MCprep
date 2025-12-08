@@ -265,7 +265,7 @@ def normalize_texture_path(
 	return path
 
 def get_final_texture_key(
-	texture_ref: str, textures: Dict[str, str], visited: Optional[set] = None) -> Tuple[str, Optional[MCprepError]]:
+	texture_ref: str, textures: Dict[str, str], visited: Optional[set] = None) -> Union[str, MCprepError]:
 	"""
 	Permissive texture resolver.
 	Follows recursive '#key' chains until a valid path is found.
@@ -296,7 +296,7 @@ def get_final_texture_key(
 	return key
 
 def locate_image(
-	context: Context, textures: Dict[str, str], img: str, model_filepath: str) -> Union[str, Optional[MCprepError]]:
+	context: Context, textures: Dict[str, str], img: str, model_filepath: str) -> Union[str, MCprepError]:
 	"""
 	Finds and returns the final texture path from a texture key/reference in the model JSON.
 	"""
@@ -396,7 +396,6 @@ def locate_image(
 	env.log(f"All Failed trying to find pack path, fallbacking to {candidate}", vv_only=True)
 	return candidate
 
-
 def read_model(
 	context: Context, model_filepath: Path) -> Tuple[Element, Texture]:
 	"""Reads json file to get textures and elements needed for model.
@@ -485,7 +484,7 @@ def read_model(
 	return elements, textures
 
 def add_model(
-	model_filepath: Path, obj_name: str = "MinecraftModel") -> Union[tuple[int, bpy.types.Object], Optional[MCprepError]]:
+	model_filepath: Path, obj_name: str = "MinecraftModel") -> Union[Tuple[int, bpy.types.Object], MCprepError]:
 	"""Primary function for generating a model from json file."""
 
 	collection = bpy.context.collection
