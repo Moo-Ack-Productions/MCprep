@@ -21,7 +21,7 @@ import json
 from mathutils import Vector
 from math import sin, cos, radians
 from pathlib import Path
-from typing import Dict, Optional, Tuple, Union, Sequence
+from typing import Dict, List, Optional, Tuple, Union, Sequence, Set
 import re
 
 import bpy
@@ -99,7 +99,7 @@ def add_element(
 	elm_to: VectorType = [16, 16, 16],
 	rot_origin: VectorType = [8, 8, 8],
 	rot_axis: str = 'y',
-	rot_angle: float = 0) -> list:
+	rot_angle: float = 0) -> Tuple[List[VectorType], List[VectorType], List[Tuple[int, int, int, int]]]:
 	"""Calculates and defines the verts, edge, and faces that to create."""
 	verts = [
 		rotate_around(
@@ -120,14 +120,14 @@ def add_element(
 			rot_angle, [elm_from[0], elm_from[1], elm_to[2]], rot_origin, rot_axis),
 	]
 
-	edges = []
-	faces = [
-		[0, 1, 2, 3],  # north
-		[5, 4, 7, 6],  # south
-		[1, 0, 4, 5],  # up
-		[7, 6, 2, 3],  # down
-		[4, 0, 3, 7],  # west
-		[1, 5, 6, 2]]  # east
+	edges: List[VectorType] = []
+	faces: List[Tuple[int, int, int, int]] = [
+		(0, 1, 2, 3),  # north
+		(5, 4, 7, 6),  # south
+		(1, 0, 4, 5),  # up
+		(7, 6, 2, 3),  # down
+		(4, 0, 3, 7),  # west
+		(1, 5, 6, 2)]  # east
 
 	return verts, edges, faces
 
@@ -161,7 +161,7 @@ def add_get_material(
 			only_solid=False,
 			pack_format=generate.PackFormat.SIMPLE,
 			use_emission_nodes=False,
-			use_emission=False	# This is for an option set in matprep_cycles
+			use_emission=False # This is for an option set in matprep_cycles
 		)
 		_ = generate.matprep_cycles(
 			mat=mat,
@@ -174,7 +174,7 @@ def add_get_material(
 	return mat
 
 def find_all_pack_roots(
-	start_path: str) -> str:
+	start_path: str) -> List[Path]:
 	"""
 	Finds ALL possible pack roots, including:
 		- normal packs with 'assets/'
@@ -187,7 +187,7 @@ def find_all_pack_roots(
 		- textures/	  (for packs missing the assets folder)
 		- models/	  (same case)
 	"""
-	roots = []
+	roots: List[Path] = []
 	start = Path(start_path).resolve()
 
 	for parent in list(start.parents):
@@ -206,7 +206,7 @@ def find_all_pack_roots(
 
 	# Make unique and preserve order
 	seen = set()
-	final = []
+	final: List[Path] = []
 	for r in roots:
 		if r not in seen:
 			seen.add(r)
@@ -265,7 +265,7 @@ def normalize_texture_path(
 	return path
 
 def get_final_texture_key(
-	texture_ref: str, textures: Dict[str, str], visited: Optional[set] = None) -> Union[str, MCprepError]:
+	texture_ref: str, textures: Dict[str, str], visited: Optional[Set[str]] = None) -> Union[str, MCprepError]:
 	"""
 	Permissive texture resolver.
 	Follows recursive '#key' chains until a valid path is found.
@@ -417,7 +417,7 @@ def read_model(
 
 	addon_prefs = util.get_user_preferences(context)
 
-	# Go from:		pack/assets/minecraft/models/block/block.json
+	# Go from: pack/assets/minecraft/models/block/block.json
 	# to 5 dirs up: pack/
 	targets_folder = bpy.path.abspath(
 		os.path.dirname(
@@ -466,7 +466,7 @@ def read_model(
 
 	current_elements: Element = obj_data.get("elements")
 	if current_elements is not None:
-		elements = current_elements	 # overwrites any elements from parents
+		elements = current_elements # overwrites any elements from parents
 
 	current_textures: Texture = obj_data.get("textures")
 	if current_textures is not None:
@@ -522,7 +522,7 @@ def add_model(
 					continue
 
 				# 2. Determine the path and material name
-				tex_pth = locate_image(bpy.context, textures, img, model_filepath)
+				tex_pth = locate_image(bpy.context, textures, img, str(model_filepath))
 
 				# Pass Up Error
 				if isinstance(tex_pth, MCprepError):
