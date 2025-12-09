@@ -508,7 +508,6 @@ def add_model(
 	uv_layer = bm.loops.layers.uv.verify()
 
 	materials = []
-	materials_remap = {}
 
 	if textures:
 		for img in textures: # img is the texture key (e.g., 'base', 'side')
@@ -531,7 +530,6 @@ def add_model(
 				if len(textures) > 1 and img != "particle":
 					# Use unique name for non-particle textures if multiple textures exist
 					name = f"{obj_name}_{img}"
-					materials_remap[mat_key] = textures[img] # Store original reference for face assignment
 				else:
 					# Use generic name if only one main texture, or for the 'particle' texture
 					name = f"{obj_name}"
