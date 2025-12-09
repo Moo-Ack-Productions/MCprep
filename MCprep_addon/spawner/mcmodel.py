@@ -99,7 +99,7 @@ def add_element(
 	elm_to: VectorType = [16, 16, 16],
 	rot_origin: VectorType = [8, 8, 8],
 	rot_axis: str = 'y',
-	rot_angle: float = 0) -> Tuple[List[VectorType], List[VectorType], List[Tuple[int, int, int, int]]]:
+	rot_angle: float = 0) -> Tuple[List[VectorType], List[Tuple[int, int]], List[Tuple[int, int, int, int]]]:
 	"""Calculates and defines the verts, edge, and faces that to create."""
 	verts = [
 		rotate_around(
@@ -120,7 +120,7 @@ def add_element(
 			rot_angle, [elm_from[0], elm_from[1], elm_to[2]], rot_origin, rot_axis),
 	]
 
-	edges: List[VectorType] = []
+	edges: List[Tuple[int, int]] = []
 	faces: List[Tuple[int, int, int, int]] = [
 		(0, 1, 2, 3),  # north
 		(5, 4, 7, 6),  # south
