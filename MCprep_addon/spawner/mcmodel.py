@@ -21,7 +21,7 @@ import json
 from mathutils import Vector
 from math import sin, cos, radians
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union, Sequence, Set
+from typing import Dict, List, Optional, Tuple, Union, Sequence, Set, cast
 import re
 
 import bpy
@@ -35,7 +35,7 @@ from .. import tracking
 from ..materials import generate  # TODO: Use this module for mat gen in future
 from .spawner_gizmo import draw_callback
 
-TexFace = Dict[str, Dict[str, str]]
+TexFace = Dict[str, Dict[str, Union[str, List[int]]]]
 
 Element = Sequence[Union[Dict[str, VectorType], TexFace]]
 Texture = Dict[str, str]
@@ -508,7 +508,8 @@ def add_model(
 	uv_layer = bm.loops.layers.uv.verify()
 
 	materials = []
-
+	
+	# TODO: Go through and validate all of the types being used
 	if textures:
 		for img in textures: # img is the texture key (e.g., 'base', 'side')
 			# Only allow 'particle' texture if it is actually used by an element face.
@@ -571,29 +572,40 @@ def add_model(
 				raise ModelException(f"Invalid 'to' bounds format: {t_bounds}")
 
 			rotation = e.get("rotation")
-			if rotation is None:
+			if rotation is None or not isinstance(rotation, Dict):
 				# rotation default
 				rotation = {"angle": 0, "axis": "y", "origin": [8, 8, 8]}
-			element = add_element(
-				f_bounds, t_bounds, rotation['origin'], rotation['axis'], rotation['angle'])
+
+			origin, axis, angle = rotation['origin'], rotation['axis'], rotation['angle']
+			
+			if not isinstance(origin, List):
+				raise ModelException(f"Rotation origin invaid: {origin}")
+			elif not isinstance(axis, str):
+				raise ModelException(f"Rotation axis invalild: {axis}")
+			elif not isinstance(angle, int) and not isinstance(angle, float):
+				raise ModelException(f"Rotation angle invalid: {angle}")
+
+			element = add_element(f_bounds, t_bounds, origin, axis, angle)
 			verts = [bm.verts.new(v) for v in element[0]]  # add a new vert
 
 			faces = e.get("faces")
 			for i in range(len(element[2])):
 				try:
 					f = element[2][i]
-
-					if not faces:
+					
+					if not faces or not isinstance(faces, Dict):
 						continue
 
 					face_name = FACE_DIRECTIONS[i]
-					d_face = faces.get(face_name)
+					d_face = cast(Dict[str, Union[str, List[int]]], faces.get(face_name))
 					if not d_face:
 						continue
 
 					face_mat = d_face.get("texture")
 
 					if not face_mat:
+						continue
+					elif not isinstance(face_mat, str):
 						continue
 
 					# --- MATERIAL ASSIGNMENT LOGIC ---
@@ -645,15 +657,21 @@ def add_model(
 							env.log(f"Failed to generate placeholder material {placeholder_name}")
 
 					# uv can be rotated 0, 90, 180, or 270 degrees
-					uv_rot = d_face.get("rotation")
-					if uv_rot is None:
-						uv_rot = 0
+					uv_rot = d_face.get("rotation", 0)
+					
+					print("UV rotation type", type(uv_rot))
+					if not isinstance(uv_rot, str) and not isinstance(uv_rot, int):
+						continue
 
 					# the index of the first uv cord,
 					# the rotation is achieved by shifting the order of the uv coords
-					uv_idx = int(uv_rot / 90)
+					#
+					# Also only convert if needed, and use integer division
+					uv_idx = uv_rot // 90 if isinstance(uv_rot, int) else int(uv_rot) // 90
 
 					uv_coords = d_face.get("uv")  # in the format [x1, y1, x2, y2]
+					if isinstance(uv_coords, str):
+						continue
 
 					# --- UV Calculation Algorithm Overview ---
 					# Minecraft UVs use a 0-16 scale, where V=0 is the top edge (Y-max).
