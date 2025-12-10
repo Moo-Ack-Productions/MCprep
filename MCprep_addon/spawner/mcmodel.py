@@ -766,17 +766,10 @@ def add_model(
 
 					# Mirror axis per-face (to fix convention mismatches)
 					mirror_axis = None
-					if face_name == NORTH_DIR:
+					if face_name in (NORTH_DIR, WEST_DIR, DOWN_DIR):
 						mirror_axis = "Y"
-					elif face_name == EAST_DIR:
+					elif face_name in (EAST_DIR, SOUTH_DIR):
 						mirror_axis = "X"
-					elif face_name == SOUTH_DIR:
-						mirror_axis = "X"
-					elif face_name == WEST_DIR:
-						mirror_axis = "Y"
-					elif face_name == DOWN_DIR:
-						mirror_axis = "Y"
-					# up -> no mirroring
 
 					# If mirroring, get UV island median and mirror around point.
 					if mirror_axis is not None:
@@ -801,7 +794,7 @@ def add_model(
 						uvs_final = [(2 * mx - x, 2 * my - y) for x, y in uvs_final]
 
 					# Flip UV for 'down' face (V-axis flip)
-					if face_name == DOWN_DIR:
+					elif face_name == DOWN_DIR:
 						mx = sum(p[0] for p in uvs_final) / len(uvs_final)
 						my = sum(p[1] for p in uvs_final) / len(uvs_final)
 						uvs_final = [(x, 2 * my - y) for (x, y) in uvs_final]
