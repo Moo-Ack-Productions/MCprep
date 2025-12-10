@@ -514,7 +514,6 @@ def add_model(
 				if isinstance(tex_pth, MCprepError):
 					return tex_pth
 
-
 				if len(textures) > 1 and img != "particle":
 					# Use unique name for non-particle textures if multiple textures exist
 					name = f"{obj_name}_{img}"
@@ -522,9 +521,8 @@ def add_model(
 					# Use generic name if only one main texture, or for the 'particle' texture
 					name = f"{obj_name}"
 
-				mat = None
-
 				# 3. Create or retrieve the material only if its value is NOT a reference ('#')
+				mat = None
 				if not textures[img].startswith("#"):
 					mat = add_get_material(name, tex_pth, use_name=False)
 
@@ -535,7 +533,6 @@ def add_model(
 
 				# 5. If have a valid material object, link it up.
 				if mat is not None:
-
 					# Material is only linked to the object's mesh once
 					if mat.name not in obj_mats:
 						obj_mats.append(mat)
