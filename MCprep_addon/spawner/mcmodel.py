@@ -1086,7 +1086,7 @@ class MCPREP_OT_import_minecraft_model_file(
 	filter_glob: bpy.props.StringProperty(
 		default="*.json",
 		options={'HIDDEN'},
-		maxlen=255	# Max internal buffer length, longer would be clamped.
+		maxlen=255 # Max internal buffer length, longer would be clamped.
 	)
 
 	track_function = "model"
