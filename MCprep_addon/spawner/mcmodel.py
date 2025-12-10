@@ -316,18 +316,14 @@ def locate_image(
 
 	model_path = Path(model_filepath).resolve()
 
-	# ---------------------------------------------------------------
-	#  RELATIVE PATH HANDLING ("./texture")
-	# ---------------------------------------------------------------
+	# RELATIVE PATH HANDLING ("./texture")
 	if local_path.startswith("."):
 		relative_candidate = (model_path.parent / cleaned_png).resolve()
 		if relative_candidate.is_file():
 			return str(relative_candidate)
 		# Continue to search order A -> B -> C if not found
 
-	# ---------------------------------------------------------------
-	#  NAMESPACE SUPPORT
-	# ---------------------------------------------------------------
+	# NAMESPACE SUPPORT
 	if ":" in cleaned:
 		namespace, texpath = cleaned.split(":", 1)
 	else:
@@ -338,10 +334,7 @@ def locate_image(
 	tex_fragment = texpath + ".png"
 
 	try:
-	# ---------------------------------------------------------------
-	#  SEARCH ORDER A: ALL detected pack roots (multi-pack support)
-	# ---------------------------------------------------------------
-
+		# SEARCH ORDER A: ALL detected pack roots (multi-pack support)
 		pack_roots = find_all_pack_roots(model_filepath)
 		for root in pack_roots:
 			root = Path(root).resolve()
@@ -363,17 +356,14 @@ def locate_image(
 				env.log(f"Texture found in model origin: {flat2}", vv_only=True)
 				return str(flat2)
 
-	# ---------------------------------------------------------------
-	#  SEARCH ORDER B: Active Resource Pack
-	# ---------------------------------------------------------------
+		# SEARCH ORDER B: Active Resource Pack
 		root = Path(bpy.path.abspath(context.scene.mcprep_texturepack_path)).resolve()
 		candidate = root / "assets" / namespace / "textures" / tex_fragment
 		if candidate.is_file():
 			env.log(f"Texture found in Active Resource Pack: {candidate}", vv_only=True)
 			return str(candidate)
-	# ---------------------------------------------------------------
-	#  SEARCH ORDER C: MCprep default texture pack
-	# ---------------------------------------------------------------
+
+		# SEARCH ORDER C: MCprep default texture pack
 		prefs = util.get_user_preferences(context)
 		root = Path(bpy.path.abspath(prefs.custom_texturepack_path)).resolve()
 		candidate = root / "assets" / namespace / "textures" / tex_fragment
@@ -387,10 +377,7 @@ def locate_image(
 
 		return MCprepError(e, line, file, f"Error searching texture packs for '{img}': {e}")
 
-	# ---------------------------------------------------------------
-	#  FALLBACK
-	#  If nothing is found, return the last candidate path.
-	# ---------------------------------------------------------------
+	# If nothing is found, return the last candidate path.
 	candidate = str(candidate if 'candidate' in locals() else model_path.parent / cleaned_png)
 	env.log(f"All Failed trying to find pack path, fallbacking to {candidate}", vv_only=True)
 	return candidate
