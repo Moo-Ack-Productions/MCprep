@@ -7,7 +7,7 @@
 #
 #  This program is distributed in the hope that it will be useful,
 #  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 #  GNU General Public License for more details.
 #
 #  You should have received a copy of the GNU General Public License
@@ -21,7 +21,7 @@ import json
 from mathutils import Vector
 from math import sin, cos, radians
 from pathlib import Path
-from typing import Dict, Optional, Tuple, Union, Sequence
+from typing import Dict, List, Optional, Tuple, Union, Sequence, Set, cast
 import re
 
 import bpy
@@ -35,7 +35,7 @@ from .. import tracking
 from ..materials import generate  # TODO: Use this module for mat gen in future
 from .spawner_gizmo import draw_callback
 
-TexFace = Dict[str, Dict[str, str]]
+TexFace = Dict[str, Dict[str, Union[str, List[int]]]]
 
 Element = Sequence[Union[Dict[str, VectorType], TexFace]]
 Texture = Dict[str, str]
@@ -66,15 +66,13 @@ FACE_DIRECTIONS = (NORTH_DIR, SOUTH_DIR, UP_DIR, DOWN_DIR, WEST_DIR, EAST_DIR)
 class ModelException(Exception):
 	"""Custom exception type for model loading."""
 
-
 def rotate_around(
 	d: float,
 	pos: VectorType,
 	origin: VectorType,
 	axis: str = 'z',
 	offset: VectorType = [8, 0, 8],
-	scale: VectorType = [0.0625, 0.0625, 0.0625]
-) -> VectorType:
+	scale: VectorType = [0.0625, 0.0625, 0.0625]) -> VectorType:
 	r = -radians(d)
 	axis_i = ord(axis) - 120  # 'x'=0, 'y'=1, 'z'=2
 	a = pos[(1 + axis_i) % 3]
@@ -96,14 +94,12 @@ def rotate_around(
 		(new_pos[1] - offset[1]) * scale[1]
 	))
 
-
 def add_element(
 	elm_from: VectorType = [0, 0, 0],
 	elm_to: VectorType = [16, 16, 16],
 	rot_origin: VectorType = [8, 8, 8],
 	rot_axis: str = 'y',
-	rot_angle: float = 0
-) -> list:
+	rot_angle: float = 0) -> Tuple[List[VectorType], List[Tuple[int, int]], List[Tuple[int, int, int, int]]]:
 	"""Calculates and defines the verts, edge, and faces that to create."""
 	verts = [
 		rotate_around(
@@ -124,21 +120,19 @@ def add_element(
 			rot_angle, [elm_from[0], elm_from[1], elm_to[2]], rot_origin, rot_axis),
 	]
 
-	edges = []
-	faces = [
-		[0, 1, 2, 3],  # north
-		[5, 4, 7, 6],  # south
-		[1, 0, 4, 5],  # up
-		[7, 6, 2, 3],  # down
-		[4, 0, 3, 7],  # west
-		[1, 5, 6, 2]]  # east
+	edges: List[Tuple[int, int]] = []
+	faces: List[Tuple[int, int, int, int]] = [
+		(0, 1, 2, 3),  # north
+		(5, 4, 7, 6),  # south
+		(1, 0, 4, 5),  # up
+		(7, 6, 2, 3),  # down
+		(4, 0, 3, 7),  # west
+		(1, 5, 6, 2)]  # east
 
 	return verts, edges, faces
 
-
 def add_get_material(
-	name: str = "material", path: str = "", use_name: bool = False
-) -> Optional[Material]:
+	name: str = "material", path: str = "", use_name: bool = False) -> Optional[Material]:
 	"""Creates or get an existing created simple material with an image texture from path."""
 	engine = bpy.context.scene.render.engine
 	mat = bpy.data.materials.get(name)
@@ -167,7 +161,7 @@ def add_get_material(
 			only_solid=False,
 			pack_format=generate.PackFormat.SIMPLE,
 			use_emission_nodes=False,
-			use_emission=False  # This is for an option set in matprep_cycles
+			use_emission=False # This is for an option set in matprep_cycles
 		)
 		_ = generate.matprep_cycles(
 			mat=mat,
@@ -179,33 +173,214 @@ def add_get_material(
 
 	return mat
 
+def find_all_pack_roots(
+	start_path: str) -> List[Path]:
+	"""
+	Finds ALL possible pack roots, including:
+		- normal packs with 'assets/'
+		- loose/unpacked mod folders containing `models/` and `textures/`
+		- nested packs
+
+	A pack root is ANY folder that contains:
+		- assets/<namespace>/...
+		OR
+		- textures/	  (for packs missing the assets folder)
+		- models/	  (same case)
+	"""
+	roots: List[Path] = []
+	start = Path(start_path).resolve()
+
+	for parent in start.parents:
+		# Case A: Simple root
+		if (parent / "assets").is_dir():
+			roots.append(parent)
+
+		# Case B: loose/unpacked mod folder
+		elif (parent / "textures").is_dir() and (parent / "models").is_dir():
+			roots.append(parent)
+
+		# Case C: even looser: any folder with a textures/directory
+		elif (parent / "textures").is_dir():
+			roots.append(parent)
+
+	# Make unique and preserve order
+	seen = set()
+	final: List[Path] = []
+	for r in roots:
+		if r not in seen:
+			seen.add(r)
+			final.append(r)
+
+	return final
+
+def normalize_texture_path(
+	path: str) -> str:
+	"""
+	Path normalizer.
+	Takes different and any weird path and rewrites it into a formatted, useable form.
+
+	Examples:
+		"./block/./foo"		-> "block/foo"
+		"block\\foo"		-> "block/foo"
+		"block//foo"		-> "block/foo"
+		"../block/foo"		-> "block/foo"
+		"textures/block/foo" -> "block/foo"
+		"block/foo.png"		-> "block/foo"
+		"minecraft:block/foo" stays unchanged except path cleanup
+	"""
+
+	# Strip leading '#' if passed a reference by mistake
+	if path.startswith("#"):
+		path = path[1:]
+
+	# 1. Convert Windows slashes to MC slashes
+	path = path.replace("\\", "/")
+
+	# 2. Remove redundant "./"
+	path = path.replace("/./", "/")
+	if path.startswith("./"):
+		path = path[2:]
+
+	# 3. Collapse multiple slashes
+	while "//" in path:
+		path = path.replace("//", "/")
+
+	# 4. Remove ".png" extension if included
+	if path.lower().endswith(".png"):
+		path = path[:-4]
+
+	# 5. Strip leading ".." instead of traversing up
+	parts = [p for p in path.split("/") if p != ".."]
+	path = "/".join(parts)
+
+	# 6. Remove leading "textures/" folder if present
+	if path.startswith("textures/"):
+		path = path[9:]
+
+	# 7. Remove empty leading slash
+	if path.startswith("/"):
+		path = path[1:]
+
+	return path
+
+def get_final_texture_key(
+	texture_ref: str, textures: Dict[str, str], visited: Optional[Set[str]] = None) -> Union[str, MCprepError]:
+	"""
+	Permissive texture resolver.
+	Follows recursive '#key' chains until a valid path is found.
+	"""
+	if visited is None:
+		visited = set()
+
+	# Strip '#' prefix
+	key = texture_ref[1:] if texture_ref.startswith('#') else texture_ref
+
+
+	# Avoid infinite recursion
+	if key in visited:
+		(line, file) = env.current_line_and_file()
+		return MCprepError(Exception(), line, file, f"Texture recursion on key '{key}'")
+
+	visited.add(key)
+
+	# If key exists
+	if key in textures:
+		value = textures[key]
+
+		# Is another reference
+		if isinstance(value, str) and value.startswith("#"):
+			return get_final_texture_key(value, textures, visited)
+
+	# Key not found - use the literal name
+	return key
 
 def locate_image(
-	context: Context, textures: Dict[str, str], img: str, model_filepath: Path
-) -> Path:
-	"""Finds and returns the filepath of the image texture."""
-	resource_folder = bpy.path.abspath(context.scene.mcprep_texturepack_path)
+	context: Context, textures: Dict[str, str], img: str, model_filepath: str) -> Union[str, MCprepError]:
+	"""
+	Finds and returns the final texture path from a texture key/reference in the model JSON.
+	"""
 
-	local_path = textures[img]  # Can fail lookup.
-	if local_path[0] == '#':  # reference to another texture
-		return locate_image(context, textures, local_path[1:], model_filepath)
-		# note this will result in multiple materials that use the same texture
-		# considering reworking this function to also create the material so
-		# these can point towards the same material.
+	# 1. Resolve texture key (#foo -> foo -> actual path)
+	final_key = get_final_texture_key(f"#{img}", textures)
+
+	# Pass Up Error
+	if isinstance(final_key, MCprepError):
+		return final_key
+
+	# Get raw texture value or fallback
+	local_path = textures.get(final_key, textures.get(img, img))
+
+	# 2. Normalize path
+	cleaned = normalize_texture_path(local_path)
+	cleaned_png = cleaned + ".png"
+
+	model_path = Path(model_filepath).resolve()
+
+	# RELATIVE PATH HANDLING ("./texture")
+	if local_path.startswith("."):
+		relative_candidate = (model_path.parent / cleaned_png).resolve()
+		if relative_candidate.is_file():
+			return str(relative_candidate)
+		# Continue to search order A -> B -> C if not found
+
+	# NAMESPACE SUPPORT
+	if ":" in cleaned:
+		namespace, texpath = cleaned.split(":", 1)
 	else:
-		if local_path[0] == '.':  # path is local to the model file
-			directory = os.path.dirname(model_filepath)
-		else:
-			if len(local_path.split(":")) == 1:
-				namespace = "minecraft"
-			else:
-				namespace = local_path.split(":")[0]
-				local_path = local_path.split(":")[1]
+		namespace = "minecraft"
+		texpath = cleaned
 
-			directory = os.path.join(
-				resource_folder, "assets", namespace, "textures")
-		return os.path.realpath(os.path.join(directory, local_path) + ".png")
+	texpath = texpath.lstrip("/")
+	tex_fragment = texpath + ".png"
 
+	try:
+		# SEARCH ORDER A: ALL detected pack roots (multi-pack support)
+		pack_roots = find_all_pack_roots(model_filepath)
+		for root in pack_roots:
+			root = Path(root).resolve()
+
+			# NORMAL PACK (with assets/)
+			candidate = root / "assets" / namespace / "textures" / tex_fragment
+			if candidate.is_file():
+				env.log(f"Texture found in model origin: {candidate}", vv_only=True)
+				return str(candidate)
+
+			# FLAT-PACK (not a normal structured pack)
+			flat1 = root / namespace / "textures" / tex_fragment
+			if flat1.is_file():
+				env.log(f"Texture found in model origin: {flat1}", vv_only=True)
+				return str(flat1)
+
+			flat2 = root / "textures" / tex_fragment
+			if flat2.is_file():
+				env.log(f"Texture found in model origin: {flat2}", vv_only=True)
+				return str(flat2)
+
+		# SEARCH ORDER B: Active Resource Pack
+		root = Path(bpy.path.abspath(context.scene.mcprep_texturepack_path)).resolve()
+		candidate = root / "assets" / namespace / "textures" / tex_fragment
+		if candidate.is_file():
+			env.log(f"Texture found in Active Resource Pack: {candidate}", vv_only=True)
+			return str(candidate)
+
+		# SEARCH ORDER C: MCprep default texture pack
+		prefs = util.get_user_preferences(context)
+		root = Path(bpy.path.abspath(prefs.custom_texturepack_path)).resolve()
+		candidate = root / "assets" / namespace / "textures" / tex_fragment
+		if candidate.is_file():
+			env.log(f"Texture found in MCprep default texture pack: {candidate}", vv_only=True)
+			return str(candidate)
+
+
+	except Exception as e:
+		(line, file) = env.current_line_and_file()
+
+		return MCprepError(e, line, file, f"Error searching texture packs for '{img}': {e}")
+
+	# If nothing is found, return the last candidate path.
+	candidate = str(candidate if 'candidate' in locals() else model_path.parent / cleaned_png)
+	env.log(f"All Failed trying to find pack path, fallbacking to {candidate}", vv_only=True)
+	return candidate
 
 def read_model(
 	context: Context, model_filepath: Path) -> Tuple[Element, Texture]:
@@ -217,7 +392,7 @@ def read_model(
 	same texture from the parent.
 	"""
 	try:
-		with open(model_filepath, 'r') as f:
+		with open(model_filepath, 'r', encoding="utf-8-sig") as f:
 			obj_data = json.load(f)
 	except PermissionError as e:
 		print(e)
@@ -228,7 +403,7 @@ def read_model(
 
 	addon_prefs = util.get_user_preferences(context)
 
-	# Go from:      pack/assets/minecraft/models/block/block.json
+	# Go from: pack/assets/minecraft/models/block/block.json
 	# to 5 dirs up: pack/
 	targets_folder = bpy.path.abspath(
 		os.path.dirname(
@@ -277,7 +452,7 @@ def read_model(
 
 	current_elements: Element = obj_data.get("elements")
 	if current_elements is not None:
-		elements = current_elements  # overwrites any elements from parents
+		elements = current_elements # overwrites any elements from parents
 
 	current_textures: Texture = obj_data.get("textures")
 	if current_textures is not None:
@@ -294,11 +469,10 @@ def read_model(
 
 	return elements, textures
 
-
 def add_model(
-	model_filepath: Path, obj_name: str = "MinecraftModel"
-) -> Tuple[int, bpy.types.Object]:
+	model_filepath: Path, obj_name: str = "MinecraftModel") -> Union[Tuple[int, bpy.types.Object], MCprepError]:
 	"""Primary function for generating a model from json file."""
+
 	collection = bpy.context.collection
 	view_layer = bpy.context.view_layer
 
@@ -308,11 +482,10 @@ def add_model(
 
 	if elements is None:
 		return 1, None
-
 	mesh = bpy.data.meshes.new(obj_name)  # add a new mesh
-	obj = bpy.data.objects.new(obj_name, mesh)  # add a new object using the mesh
+	obj = bpy.data.objects.new(obj_name, mesh)	# add a new object using the mesh
 	collection.objects.link(obj)  # put the object into the scene (link)
-	view_layer.objects.active = obj  # set as the active object in the scene
+	view_layer.objects.active = obj	 # set as the active object in the scene
 	obj.select_set(True)  # select object
 	obj_mats = obj.data.materials
 
@@ -322,292 +495,387 @@ def add_model(
 	uv_layer = bm.loops.layers.uv.verify()
 
 	materials = []
-	materials_remap = {}
+	
+	# TODO: Go through and validate all of the types being used
 	if textures:
-		for img in textures:
-			if img != "particle":
-				tex_pth = locate_image(bpy.context, textures, img, model_filepath)
-				# Ensure the material name json file only use 1 material or having "all" texture
-				if (len(textures) < 3 or textures.get("all")):
-					name = f"{obj_name}"
-				else:
+		for img in textures: # img is the texture key (e.g., 'base', 'side')
+			# Only allow 'particle' texture if it is actually used by an element face.
+			if img != "particle" or (any("#particle" in str(e) for e in elements)):
+				mat_key = f"#{img}"
+
+				# 1. Skip if we already added this key to our materials list
+				if mat_key in materials:
+					continue
+
+				# 2. Determine the path and material name
+				tex_pth = locate_image(bpy.context, textures, img, str(model_filepath))
+
+				# Pass Up Error
+				if isinstance(tex_pth, MCprepError):
+					return tex_pth
+
+				if len(textures) > 1 and img != "particle":
+					# Use unique name for non-particle textures if multiple textures exist
 					name = f"{obj_name}_{img}"
-					materials_remap[f"#{img}"] = textures[img]
+				else:
+					# Use generic name if only one main texture, or for the 'particle' texture
+					name = f"{obj_name}"
+
+				# 3. Create or retrieve the material only if its value is NOT a reference ('#')
 				mat = None
-				if "#" not in textures[img]:
+				if not textures[img].startswith("#"):
 					mat = add_get_material(name, tex_pth, use_name=False)
-				# Map the "#" reference texture for later use in the assign material
-				# Make sure the same material doesn't get append and ignore reference texture like "#all"
-				if f"#{img}" not in materials and name not in obj_mats and mat is not None:
-					obj_mats.append(mat)
-					materials.append(f"#{img}")
+
+				# 4. If material creation failed (e.g., image not found) OR the texture value WAS a reference,
+				# try to retrieve a material with the expected name from Blender's database.
+				if mat is None:
+					mat = bpy.data.materials.get(name)
+
+				# 5. If have a valid material object, link it up.
+				if mat is not None:
+					# Material is only linked to the object's mesh once
+					if mat.name not in obj_mats:
+						obj_mats.append(mat)
+
+					# Add key to internal materials list for face assignment lookup
+					materials.append(mat_key)
 
 	for e in elements:
-		# Check if 'from' and 'to' bounds are present
-		if 'from' not in e or 'to' not in e:
-			raise ModelException(f"Element is missing required 'from' or 'to' bounds: {e}")
+		try:
+			# Check if 'from' and 'to' bounds are present
+			if 'from' not in e or 'to' not in e:
+				raise ModelException(f"Element is missing required 'from' or 'to' bounds: {e}")
 
-		f_bounds = e['from']  # [x1, y1, z1]
-		t_bounds = e['to']	  # [x2, y2, z2]
+			f_bounds = e['from']  # [x1, y1, z1]
+			t_bounds = e['to']	  # [x2, y2, z2]
 
-		# Check if bounds are lists of 3 points
-		if not isinstance(f_bounds, list) or len(f_bounds) != 3:
-			raise ModelException(f"Invalid 'from' bounds format: {f_bounds}")
-		if not isinstance(t_bounds, list) or len(t_bounds) != 3:
-			raise ModelException(f"Invalid 'to' bounds format: {t_bounds}")
+			# Check if bounds are lists of 3 points
+			if not isinstance(f_bounds, list) or len(f_bounds) != 3:
+				raise ModelException(f"Invalid 'from' bounds format: {f_bounds}")
+			if not isinstance(t_bounds, list) or len(t_bounds) != 3:
+				raise ModelException(f"Invalid 'to' bounds format: {t_bounds}")
 
-		rotation = e.get("rotation")
-		if rotation is None:
-			# rotation default
-			rotation = {"angle": 0, "axis": "y", "origin": [8, 8, 8]}
-		element = add_element(
-			f_bounds, t_bounds, rotation['origin'], rotation['axis'], rotation['angle'])
-		verts = [bm.verts.new(v) for v in element[0]]  # add a new vert
+			rotation = e.get("rotation")
+			if rotation is None or not isinstance(rotation, Dict):
+				# rotation default
+				rotation = {"angle": 0, "axis": "y", "origin": [8, 8, 8]}
 
-		faces = e.get("faces")
-		for i in range(len(element[2])):
-			f = element[2][i]
+			origin, axis, angle = rotation['origin'], rotation['axis'], rotation['angle']
+			
+			if not isinstance(origin, List):
+				raise ModelException(f"Rotation origin invaid: {origin}")
+			elif not isinstance(axis, str):
+				raise ModelException(f"Rotation axis invalild: {axis}")
+			elif not isinstance(angle, int) and not isinstance(angle, float):
+				raise ModelException(f"Rotation angle invalid: {angle}")
 
-			if not faces:
-				continue
+			element = add_element(f_bounds, t_bounds, origin, axis, angle)
+			verts = [bm.verts.new(v) for v in element[0]]  # add a new vert
 
-			face_name = FACE_DIRECTIONS[i]
-			d_face = faces.get(face_name)
-			if not d_face:
-				continue
+			faces = e.get("faces")
+			for i in range(len(element[2])):
+				try:
+					f = element[2][i]
+					
+					if not faces or not isinstance(faces, Dict):
+						continue
 
-			face_mat = d_face.get("texture")
-			# uv can be rotated 0, 90, 180, or 270 degrees
-			uv_rot = d_face.get("rotation")
-			if uv_rot is None:
-				uv_rot = 0
+					face_name = FACE_DIRECTIONS[i]
+					d_face = cast(Dict[str, Union[str, List[int]]], faces.get(face_name))
+					if not d_face:
+						continue
 
-			# the index of the first uv cord,
-			# the rotation is achieved by shifting the order of the uv coords
-			uv_idx = int(uv_rot / 90)
+					face_mat = d_face.get("texture")
 
-			uv_coords = d_face.get("uv")  # in the format [x1, y1, x2, y2]
+					if not face_mat:
+						continue
+					elif not isinstance(face_mat, str):
+						continue
 
-			# --- UV Calculation Algorithm Overview ---
-			# Minecraft UVs use a 0-16 scale, where V=0 is the top edge (Y-max).
-			# 1. Auto-UV: Calculates UV [u_min, v_min, u_max, v_max] based on the
-			#    element's bounding box ('from'/'to' vectors).
-			# 2. Conversion: Converts Minecraft's 0-16 UV scale to Blender's 0-1 UV
-			#    scale. Note that the V-axis is flipped (1 - MC_V ÷ 16) to match Blender's
-			#    convention (V=1 at the top).
-			# 3. Corner Definition: Defines the four corners (TL, TR, BR, BL) in 0-1 Blender
-			#    UV space.
-			# 4. Base Ordering: Defines the initial ordering of these corners (uvs_base) for
-			#    the specific face direction, accounting for MC's default face-to-UV mapping
-			#    conventions.
-			# 5. Rotation: Applies the `uv_rot` (0, 90, 180, 270) by cyclically shifting the
-			#    corner order (uvs_rot).
-			# 6. Mirroring/Flipping: Applies face-specific mirroring (X and/or Y axes) to correct
-			#    orientation between MC model format and Blender's mesh structure.
-			# ---------------------------------------
+					# --- MATERIAL ASSIGNMENT LOGIC ---
+					mat_index = None
 
-			if uv_coords is None:
-				# Auto-calculate proportional UVs (0-16 scale) based on element bounds
-				# MC UV convention: (u_min, v_min, u_max, v_max). V is measured from 0 at the top.
-				if face_name in (NORTH_DIR, SOUTH_DIR):
-					# U maps to X, V maps to Y (height). V is 16-Y (flipped V for MC texture coords).
-					uv_coords = [f_bounds[0], 16 - t_bounds[1], t_bounds[0], 16 - f_bounds[1]]
-				elif face_name in (WEST_DIR, EAST_DIR):
-					# U maps to Z, V maps to Y (height). V is 16-Y (flipped V for MC texture coords).
-					uv_coords = [f_bounds[2], 16 - t_bounds[1], t_bounds[2], 16 - f_bounds[1]]
-				elif face_name in (UP_DIR, DOWN_DIR):
-					# U maps to X, V maps to Z (depth).
-					uv_coords = [f_bounds[0], f_bounds[2], t_bounds[0], t_bounds[2]]
-				else:
-					env.log(f"Unknown face direction '{face_name}'. Defaulting UV mapping")
-					uv_coords = [0, 0, 16, 16]
+					if textures is not None:
+						# Case A: Textures block exists in JSON (even if empty or partial)
+						# If resolution fails, DO NOT assign material
+						resolved_key = get_final_texture_key(face_mat, textures)
 
-			# = UV Corner Definition =
-			# Convert MC UV (0-16) to Blender UV (0-1) and flip V accordingly.
-			u_min = uv_coords[0] / 16
-			u_max = uv_coords[2] / 16
-			v_max = 1 - (uv_coords[1] / 16)  # Blender Top V
-			v_min = 1 - (uv_coords[3] / 16)  # Blender Bottom V
+						# Pass Up Error
+						if isinstance(resolved_key, MCprepError):
+							return resolved_key
 
-			# Define the four corners
-			p_TL = (u_min, v_max)  # Top Left
-			p_TR = (u_max, v_max)  # Top Right
-			p_BR = (u_max, v_min)  # Bottom Right
-			p_BL = (u_min, v_min)  # Bottom Left
+						if resolved_key:
+							mat_key_to_find = f"#{resolved_key}"
 
-			# Face-specific base ordering (maps Tex-corners -> face loop positions)
-			if face_name == UP_DIR:  # Y+ (V-flip and U-flip)
-				uvs_base = [p_TR, p_TL, p_BL, p_BR]
-			elif face_name == DOWN_DIR:  # Y- (V-flip and U-flip)
-				uvs_base = [p_BL, p_BR, p_TR, p_TL]
-			elif face_name == NORTH_DIR:  # Z- (V-flip)
-				uvs_base = [p_TL, p_TR, p_BR, p_BL]
-			elif face_name == SOUTH_DIR:  # Z+ (V-flip and U-flip)
-				uvs_base = [p_BR, p_BL, p_TL, p_TR]
-			elif face_name == EAST_DIR:  # X+ (V-flip and U-flip)
-				uvs_base = [p_BR, p_BL, p_TL, p_TR]
-			elif face_name == WEST_DIR:  # X- (V-flip)
-				uvs_base = [p_TL, p_TR, p_BR, p_BL]
-			else:
-				# Default fallback (should not happen, just in case though)
-				env.log(f"Used default fallback for UV base on {obj_name}")
-				uvs_base = [p_TL, p_TR, p_BR, p_BL]
+							if face_mat != mat_key_to_find:
+								env.log(f"Remap: {face_mat} -> {mat_key_to_find}", vv_only=True)
 
-			# Reverse vertex order for downward faces before creation — keeps UVs intact
-			f_for_face = list(f)
-			if face_name == DOWN_DIR:
-				f_for_face = list(reversed(f_for_face))
+							if mat_key_to_find in materials:
+								mat_index = materials.index(mat_key_to_find)
+							else:
+								env.log(f"Error while building face {face_name}: '{face_mat}' resolved to '{mat_key_to_find}' which is not in material list. Skipping assignment.")
+						else:
+							env.log(f"Error while building face {face_name}: '{face_mat}' could not be resolved. Skipping assignment.")
 
-			if len(f_for_face) != 4:
-				env.log(f"Face vertex index list expected 4 elements, but got {len(f_for_face)}. Skipping face.")
-				continue
-
-			face_verts = []
-			out_of_bounds = False
-			for vert_idx in f_for_face:
-				if 0 <= vert_idx < len(verts):
-					face_verts.append(verts[vert_idx])
-				else:
-					env.log(f"Vertex index {vert_idx} is out of bounds (0 to {len(verts) - 1}). Skipping face.")
-					out_of_bounds = True
-					break  # No need to keep checking this face
-			if out_of_bounds:
-				continue
-			try:
-				face = bm.faces.new(tuple(face_verts))
-			except ValueError as e:
-				env.log(f"Failed to create BMesh face: {e}. Skipping.")
-				continue
-
-			face.normal_update()
-
-			# Give slight offset by normal for overlay geometry
-			if face_mat == "#overlay":
-				bmesh.ops.translate(bm, verts=face.verts, vec=0.0025 * face.normal)
-
-			# Apply rotation shift (uv_idx) with bounds check
-			uvs_rot = []
-			if uvs_base and len(uvs_base) > 0:
-				uvs_rot = [uvs_base[(k + uv_idx) % len(uvs_base)] for k in range(len(uvs_base))]
-			else:
-				env.log("Warning: Empty uvs_base, skipping UV rotation.")
-
-			# Mirror axis per-face (to fix convention mismatches)
-			mirror_axis = None
-			if face_name == NORTH_DIR:
-				mirror_axis = "Y"
-			elif face_name == EAST_DIR:
-				mirror_axis = "X"
-			elif face_name == SOUTH_DIR:
-				mirror_axis = "X"
-			elif face_name == WEST_DIR:
-				mirror_axis = "Y"
-			elif face_name == DOWN_DIR:
-				mirror_axis = "Y"
-			# up -> no mirroring
-
-			# If mirroring, get UV island median and mirror around point.
-			if mirror_axis is not None:
-				mx = sum(p[0] for p in uvs_rot) / len(uvs_rot)
-				my = sum(p[1] for p in uvs_rot) / len(uvs_rot)
-				uvs_final = []
-				for (x, y) in uvs_rot:
-					if mirror_axis == "X":
-						nx = 2 * mx - x		# mirror horizontally
-						ny = y
 					else:
-						nx = x
-						ny = 2 * my - y		  # mirror vertically
-					uvs_final.append((nx, ny))
-			else:
-				uvs_final = uvs_rot
+						# Case B: Textures block is COMPLETELY MISSING in JSON (textures is None)
+						# Generate placeholder material without image
 
-			# For cardinal faces (north/south/east/west) mirror over both axes
-			if face_name in (NORTH_DIR, SOUTH_DIR, EAST_DIR, WEST_DIR):
-				mx = sum(p[0] for p in uvs_final) / len(uvs_final)
-				my = sum(p[1] for p in uvs_final) / len(uvs_final)
-				uvs_final = [(2 * mx - x, 2 * my - y) for x, y in uvs_final]
+						# clean name (e.g., "#north" -> "north")
+						clean_tex_name = face_mat.lstrip('#')
+						placeholder_name = f"{obj_name}_{clean_tex_name}"
 
-			# Flip UV for 'down' face (V-axis flip)
-			if face_name == DOWN_DIR:
-				mx = sum(p[0] for p in uvs_final) / len(uvs_final)
-				my = sum(p[1] for p in uvs_final) / len(uvs_final)
-				uvs_final = [(x, 2 * my - y) for (x, y) in uvs_final]
+						# Check if material exists or create it (without image texture)
+						mat = bpy.data.materials.get(placeholder_name)
+						if mat is None:
+							mat = add_get_material(placeholder_name, path="", use_name=True)
 
-			# Assign the final computed UVs to the face loops
-			if not uvs_final:
-				env.log("Warning: Empty uvs_final, skipping UV assignment for this face.")
-			else:
-				for j, loop in enumerate(face.loops):
-					# Bounds check before assignment
-					if j >= len(uvs_final):
-						env.log(f"UV index {j} out of bounds for computed UVs (size: {len(uvs_final)}). Skipping assignment.")
-						break
+						# Assign to object if not present
+						if mat:
+							if mat.name not in obj_mats:
+								obj_mats.append(mat)
 
+							# Find the index in the object's material list
+							mat_index = obj_mats.find(mat.name)
+						else:
+							env.log(f"Failed to generate placeholder material {placeholder_name}")
+
+					# uv can be rotated 0, 90, 180, or 270 degrees
+					uv_rot = d_face.get("rotation", 0)
+					
+					print("UV rotation type", type(uv_rot))
+					if not isinstance(uv_rot, str) and not isinstance(uv_rot, int):
+						continue
+
+					# the index of the first uv cord,
+					# the rotation is achieved by shifting the order of the uv coords
+					#
+					# Also only convert if needed, and use integer division
+					uv_idx = uv_rot // 90 if isinstance(uv_rot, int) else int(uv_rot) // 90
+
+					uv_coords = d_face.get("uv")  # in the format [x1, y1, x2, y2]
+					if isinstance(uv_coords, str):
+						continue
+
+					# --- UV Calculation Algorithm Overview ---
+					# Minecraft UVs use a 0-16 scale, where V=0 is the top edge (Y-max).
+					# 1. Auto-UV: Calculates UV [u_min, v_min, u_max, v_max] based on the
+					#	 element's bounding box ('from'/'to' vectors).
+					# 2. Conversion: Converts Minecraft's 0-16 UV scale to Blender's 0-1 UV
+					#	 scale. Note that the V-axis is flipped (1 - MC_V ÷ 16) to match Blender's
+					#	 convention (V=1 at the top).
+					# 3. Corner Definition: Defines the four corners (TL, TR, BR, BL) in 0-1 Blender
+					#	 UV space.
+					# 4. Base Ordering: Defines the initial ordering of these corners (uvs_base) for
+					#	 the specific face direction, accounting for MC's default face-to-UV mapping
+					#	 conventions.
+					# 5. Rotation: Applies the `uv_rot` (0, 90, 180, 270) by cyclically shifting the
+					#	 corner order (uvs_rot).
+					# 6. Mirroring/Flipping: Applies face-specific mirroring (X and/or Y axes) to correct
+					#	 orientation between MC model format and Blender's mesh structure.
+					# ---------------------------------------
+
+					if uv_coords is None:
+						# Auto-calculate proportional UVs (0-16 scale) based on element bounds
+						# MC UV convention: (u_min, v_min, u_max, v_max). V is measured from 0 at the top.
+						if face_name in (NORTH_DIR, SOUTH_DIR):
+							# U maps to X, V maps to Y (height). V is 16-Y (flipped V for MC texture coords).
+							uv_coords = [f_bounds[0], 16 - t_bounds[1], t_bounds[0], 16 - f_bounds[1]]
+						elif face_name in (WEST_DIR, EAST_DIR):
+							# U maps to Z, V maps to Y (height). V is 16-Y (flipped V for MC texture coords).
+							uv_coords = [f_bounds[2], 16 - t_bounds[1], t_bounds[2], 16 - f_bounds[1]]
+						elif face_name in (UP_DIR, DOWN_DIR):
+							# U maps to X, V maps to Z (depth).
+							uv_coords = [f_bounds[0], f_bounds[2], t_bounds[0], t_bounds[2]]
+						else:
+							env.log(f"Unknown face direction '{face_name}'. Defaulting UV mapping")
+							uv_coords = [0, 0, 16, 16]
+
+					# = UV Corner Definition =
+					# Convert MC UV (0-16) to Blender UV (0-1) and flip V accordingly.
+					u_min = uv_coords[0] / 16
+					u_max = uv_coords[2] / 16
+					v_max = 1 - (uv_coords[1] / 16)	 # Blender Top V
+					v_min = 1 - (uv_coords[3] / 16)	 # Blender Bottom V
+
+					# Define the four corners
+					p_TL = (u_min, v_max)  # Top Left
+					p_TR = (u_max, v_max)  # Top Right
+					p_BR = (u_max, v_min)  # Bottom Right
+					p_BL = (u_min, v_min)  # Bottom Left
+
+					# Face-specific base ordering (maps Tex-corners -> face loop positions)
+					if face_name == UP_DIR:	 # Y+ (V-flip and U-flip)
+						uvs_base = [p_TR, p_TL, p_BL, p_BR]
+					elif face_name == DOWN_DIR:	 # Y- (V-flip and U-flip)
+						uvs_base = [p_BL, p_BR, p_TR, p_TL]
+					elif face_name == NORTH_DIR:  # Z- (V-flip)
+						uvs_base = [p_TL, p_TR, p_BR, p_BL]
+					elif face_name == SOUTH_DIR:  # Z+ (V-flip and U-flip)
+						uvs_base = [p_BR, p_BL, p_TL, p_TR]
+					elif face_name == EAST_DIR:	 # X+ (V-flip and U-flip)
+						uvs_base = [p_BR, p_BL, p_TL, p_TR]
+					elif face_name == WEST_DIR:	 # X- (V-flip)
+						uvs_base = [p_TL, p_TR, p_BR, p_BL]
+					else:
+						# Default fallback (should not happen, just in case though)
+						env.log(f"Used default fallback for UV base on {obj_name}")
+						uvs_base = [p_TL, p_TR, p_BR, p_BL]
+
+					# Reverse vertex order for downward faces before creation — keeps UVs intact
+					f_for_face = list(f)
+					if face_name == DOWN_DIR:
+						f_for_face = list(reversed(f_for_face))
+
+					if len(f_for_face) != 4:
+						env.log(f"Face vertex index list expected 4 elements, but got {len(f_for_face)}. Skipping face.")
+						continue
+
+					face_verts = []
+					out_of_bounds = False
+					for vert_idx in f_for_face:
+						if 0 <= vert_idx < len(verts):
+							face_verts.append(verts[vert_idx])
+						else:
+							env.log(f"Vertex index {vert_idx} is out of bounds (0 to {len(verts) - 1}). Skipping face.")
+							out_of_bounds = True
+							break  # No need to keep checking this face
+					if out_of_bounds:
+						continue
 					try:
-						_ = loop[uv_layer]
-					except KeyError:
-						env.log("Warning: UV layer not found on loop; skipping UV assignment.")
+						face = bm.faces.new(tuple(face_verts))
+						# Only assign the material if successfully resolved/created one
+						if mat_index is not None and mat_index >= 0:
+							face.material_index = mat_index
+					except ValueError as e:
+						env.log(f"Failed to create BMesh face: {e}. Skipping.")
 						continue
 
-					if (j % len(uvs_final)) < 0 or (j % len(uvs_final)) >= len(uvs_final):
-						env.log(f"Error assigning UV to loop {j}: Out of Bounds")
-						continue
-					loop[uv_layer].uv = uvs_final[j % len(uvs_final)]
+					face.normal_update()
 
-			# Using materials_remap to remap the index, used for the block with remapping "#side"
-			# Stored material index for getting the texture
-			material_index = 0
-			if face_mat and (face_mat in materials or face_mat in materials_remap):
-				face_mat_ref = materials_remap.get(face_mat)
-				if face_mat_ref and "#" in face_mat_ref:
-					face_mat = face_mat_ref
-				material_index = materials.index(face_mat)
+					# Give slight offset by normal for overlay geometry
+					if face_mat == "#overlay":
+						bmesh.ops.translate(bm, verts=face.verts, vec=0.0025 * face.normal)
 
-			# Assign the material on face
-			face.material_index = material_index
+					# Apply rotation shift (uv_idx) with bounds check
+					uvs_rot = []
+					if uvs_base and len(uvs_base) > 0:
+						uvs_rot = [uvs_base[(k + uv_idx) % len(uvs_base)] for k in range(len(uvs_base))]
+					else:
+						env.log("Warning: Empty uvs_base, skipping UV rotation.")
 
-			# Adjusting the uv scaling
-			if len(obj_mats) > 0:
-				node = obj_mats[material_index].node_tree.nodes.get('Diffuse Texture')
-				if node:
-					img_size = node.image.size
-					scale = 1
-					if img_size[1] != img_size[0]:
-						scale = (img_size[0] / img_size[1])
-					face_pivot = (0, 1)  # OpenGL UV
-					scale_factor_uv = (1, scale)
+					# Mirror axis per-face (to fix convention mismatches)
+					mirror_axis = None
+					if face_name in (NORTH_DIR, WEST_DIR, DOWN_DIR):
+						mirror_axis = "Y"
+					elif face_name in (EAST_DIR, SOUTH_DIR):
+						mirror_axis = "X"
 
-					# Starts doing uv scaling from a pivot location
-					for loop in face.loops:
-						uv = loop[uv_layer].uv
-						u, v = uv
+					# If mirroring, get UV island median and mirror around point.
+					if mirror_axis is not None:
+						mx = sum(p[0] for p in uvs_rot) / len(uvs_rot)
+						my = sum(p[1] for p in uvs_rot) / len(uvs_rot)
+						uvs_final = []
+						for (x, y) in uvs_rot:
+							if mirror_axis == "X":
+								nx = 2 * mx - x		# mirror horizontally
+								ny = y
+							else:
+								nx = x
+								ny = 2 * my - y		  # mirror vertically
+							uvs_final.append((nx, ny))
+					else:
+						uvs_final = uvs_rot
 
-						# Translate to pivot
-						translated_u = u - face_pivot[0]
-						translated_v = v - face_pivot[1]
+					# For cardinal faces (north/south/east/west) mirror over both axes
+					if face_name in (NORTH_DIR, SOUTH_DIR, EAST_DIR, WEST_DIR):
+						mx = sum(p[0] for p in uvs_final) / len(uvs_final)
+						my = sum(p[1] for p in uvs_final) / len(uvs_final)
+						uvs_final = [(2 * mx - x, 2 * my - y) for x, y in uvs_final]
 
-						# Scale
-						scaled_u = translated_u * scale_factor_uv[0]
-						scaled_v = translated_v * scale_factor_uv[1]
+					# Flip UV for 'down' face (V-axis flip)
+					elif face_name == DOWN_DIR:
+						mx = sum(p[0] for p in uvs_final) / len(uvs_final)
+						my = sum(p[1] for p in uvs_final) / len(uvs_final)
+						uvs_final = [(x, 2 * my - y) for (x, y) in uvs_final]
 
-						# Translate back
-						loop[uv_layer].uv = (scaled_u + face_pivot[0], scaled_v + face_pivot[1])
+					# Assign the final computed UVs to the face loops
+					if not uvs_final:
+						env.log("Warning: Empty uvs_final, skipping UV assignment for this face.")
+					else:
+						for j, loop in enumerate(face.loops):
+							# Bounds check before assignment
+							if j >= len(uvs_final):
+								env.log(f"UV index {j} out of bounds for computed UVs (size: {len(uvs_final)}). Skipping assignment.")
+								break
+
+							try:
+								_ = loop[uv_layer]
+							except KeyError:
+								env.log("Warning: UV layer not found on loop; skipping UV assignment.")
+								continue
+
+							if (j % len(uvs_final)) < 0 or (j % len(uvs_final)) >= len(uvs_final):
+								env.log(f"Error assigning UV to loop {j}: Out of Bounds")
+								continue
+							loop[uv_layer].uv = uvs_final[j % len(uvs_final)]
+
+					# Adjusting the uv scaling
+					# Check if valid material assigned to face before trying to access nodes
+					if mat_index is not None and len(obj_mats) > mat_index:
+						mat_obj = obj_mats[mat_index]
+						if mat_obj and mat_obj.node_tree:
+							node = mat_obj.node_tree.nodes.get('Diffuse Texture')
+							# Skip if the image texture node is blank/missing
+							if node and node.image:
+								scale = 1
+
+								img_size = node.image.size
+
+								if img_size[0] < img_size[1]:	# Only need to scale if image Height is smaller than Width.
+
+									scale = (img_size[0] / img_size[1])
+									face_pivot = (0, 1)	 # OpenGL UV
+									scale_factor_uv = (1, scale)
+
+									# Starts doing uv scaling from a pivot location
+									for loop in face.loops:
+										uv = loop[uv_layer].uv
+										u, v = uv
+
+										# Translate to pivot
+										translated_u = u - face_pivot[0]
+										translated_v = v - face_pivot[1]
+
+										# Scale
+										scaled_u = translated_u * scale_factor_uv[0]
+										scaled_v = translated_v * scale_factor_uv[1]
+
+										# Translate back
+										loop[uv_layer].uv = (scaled_u + face_pivot[0], scaled_v + face_pivot[1])
+
+				except Exception as face_exc:
+					(line, file) = env.current_line_and_file()
+					return MCprepError(Exception(), line, file, f"Error while building face {FACE_DIRECTIONS[i]}: '{face_exc}'")
+
+		except Exception as exc:
+			(line, file) = env.current_line_and_file()
+			return MCprepError(Exception(), line, file, f"Error during element build: {exc}.")
 
 	# Quick way to clean the model, hopefully it doesn't cause any UV issues
 	# Ignore model has overlay geometry, causing issue
-	if not textures.get("overlay"):
+	if textures and not textures.get("overlay"):
 		bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.005)
 
 	# make the bmesh the object's mesh
 	bm.to_mesh(mesh)
 	bm.free()
+
 	return 0, obj
 
 # -----------------------------------------------------------------------------
 # UI and resource pack management.
 # -----------------------------------------------------------------------------
-
 
 def update_model_list(context: Context):
 	"""Update the model list.
@@ -618,7 +886,7 @@ def update_model_list(context: Context):
 	available.
 	"""
 	scn_props = context.scene.mcprep_props
-	sorted_models = []  # Struc of model, name, description
+	sorted_models = []	# Struc of model, name, description
 	addon_prefs = util.get_user_preferences()
 
 	active_pack = bpy.path.abspath(context.scene.mcprep_texturepack_path)
@@ -706,12 +974,10 @@ def update_model_list(context: Context):
 	if scn_props.model_list_index >= len(scn_props.model_list):
 		scn_props.model_list_index = len(scn_props.model_list) - 1
 
-
 def draw_import_mcmodel(self, context: Context):
 	"""Import bar layout definition."""
 	layout = self.layout
 	layout.operator("mcprep.import_model_file", text="Minecraft Model (.json)")
-
 
 class ModelSpawnBase():
 	"""Class to inheret reused MCprep item spawning settings and functions."""
@@ -759,25 +1025,32 @@ class ModelSpawnBase():
 	def create_and_place_json_model(self, context, filepath: Path) -> Optional[MCprepError]:
 		"""Function that does the entire model creation and placing"""
 		filename = filepath.stem
+
 		if not filepath or not filepath.exists():
 			line, file = env.current_line_and_file()
 			return MCprepError(FileNotFoundError(), line, file, "File not found")
+
 		if filepath.suffix != ".json":
 			line, file = env.current_line_and_file()
 			return MCprepError(Exception(), line, file, f"File is not JSON: {filepath}")
 
 		try:
-			r, obj = add_model(filepath, filename)
+			result = add_model(filepath, filename)
+
+			if isinstance(result, MCprepError):
+				return result
+
+			r, obj = result
 			if r:
 				line, file = env.current_line_and_file()
 				return MCprepError(Exception(), line, file, "JSON model does not contain any actual geometry")
+
 		except ModelException as e:
 			line, file = env.current_line_and_file()
 			return MCprepError(ModelException(), line, file, f"Encountered error: {e}")
 
 		self.place_model(obj)
 		self.post_spawn(context, obj)
-
 
 class MCPREP_OT_spawn_minecraft_model(bpy.types.Operator, ModelSpawnBase):
 	"""Import in an MC model from a json file."""
@@ -813,16 +1086,16 @@ class MCPREP_OT_import_minecraft_model_file(
 	filter_glob: bpy.props.StringProperty(
 		default="*.json",
 		options={'HIDDEN'},
-		maxlen=255  # Max internal buffer length, longer would be clamped.
+		maxlen=255 # Max internal buffer length, longer would be clamped.
 	)
 
 	track_function = "model"
 	track_param = "file"
 	@tracking.report_error
 	def execute(self, context):
-		res = self.create_and_place_json_model(context, Path(self.filepath))
-		if res:
-			self.report({'ERROR'}, res.msg)
+		result = self.create_and_place_json_model(context, Path(self.filepath))
+		if result:
+			self.report({'ERROR'}, result.msg)
 			return {'CANCELLED'}
 		return {'FINISHED'}
 
@@ -910,7 +1183,6 @@ class MCPREP_OT_place_json_model_with_gizmo(bpy.types.Operator, ModelSpawnBase):
 			return
 
 		draw_callback(self.hit_vector)
-
 
 classes = (
 	MCPREP_OT_spawn_minecraft_model,
