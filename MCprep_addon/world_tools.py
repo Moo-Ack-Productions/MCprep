@@ -874,9 +874,9 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, WorldImporterBase, Import
         name="Center Import",
         description="Decide if the import should be centered, and if so, how",
         items=(
-            ('NONE', "Don't Center", "Doesn't center the final assembly"),
-            ('XY', "Center by XY Plane", "Centers the final assembly by X and Y only"),
-			('XYZ', "Center by all 3 axis", "Centers the final assembly by all 3 axis"),
+            ('NONE', "Don't Center", "Doesn't center the import"),
+            ('XY', "Center by XY Plane", "Centers the import by X and Y only"),
+			('XYZ', "Center by all 3 axis", "Centers the import by all 3 axis"),
         ),
         default='XY',
     )
