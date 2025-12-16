@@ -891,10 +891,6 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, WorldImporterBase, Import
 			self.report({"ERROR"}, path_res.msg)
 			return {'CANCELLED'}
 
-		# Declare and use the offsets regardless of whether
-		# or not CommonMCOBJ is used and/or centering is
-		# chosen. In those cases, the offsets will be 0, so
-		# nothing will happen
 		path, header = path_res
 		offset_x, offset_y, offset_z = 0, 0, 0
 
@@ -907,8 +903,15 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, WorldImporterBase, Import
 				offset_z = (header.export_bounds_min[2] + header.export_bounds_max[2]) / 2
 			if self.center_import == 'XYZ':
 				offset_y = (header.export_bounds_min[1] + header.export_bounds_max[1]) / 2
+		
+		# Set to None as import_obj_file raises an error
+		# if offsets are provided but the OBJ header is not
+		# a CommonMCOBJ header. The behavior is the same anyway
+		offsets = (offset_x, offset_y, offset_z)
+		if offsets == (0, 0, 0):
+			offsets = None
 
-		res = self.import_obj_file(context, path, header, (offset_x, offset_y, offset_z))
+		res = self.import_obj_file(context, path, header, offsets)
 		if isinstance(res, MCprepError):
 			self.report({"ERROR"}, res.msg)
 			return {'CANCELLED'}
