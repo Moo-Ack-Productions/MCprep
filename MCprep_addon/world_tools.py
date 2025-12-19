@@ -880,12 +880,12 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, WorldImporterBase, Import
 		options={'HIDDEN'})	
 
 	center_import: bpy.props.EnumProperty(
-        name="Center Import",
-        description="Decide if the import should be centered, and if so, how",
+        name=env._("Center Import"),
+        description=env._("Decide if the import should be centered, and if so, how"),
         items=(
-            ('NONE', "Don't Center", "Doesn't center the import"),
-            ('XY', "Center by XY Plane", "Centers the import by X and Y only"),
-			('XYZ', "Center by all 3 axis", "Centers the import by all 3 axis"),
+            ('NONE', env._("Don't Center"), env._("Doesn't center the import")),
+            ('XY', env._("Center by XY Plane"), env._("Centers the import by X and Y only")),
+			('XYZ', env._("Center by all 3 axis"), env._("Centers the import by all 3 axis")),
         ),
         default='XY',
     )
