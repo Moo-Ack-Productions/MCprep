@@ -884,7 +884,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, WorldImporterBase, Import
 		description=env._(("Mineways imports have custom vertex normals defined, which may "
 			"cause artifacts. If enabled, this option will enforce flat shading on "
 			"Mineways imports.")),
-		default=True
+		default=True if bpy.app.version >= (4, 5, 0) else False
 	)
 
 	center_import: bpy.props.EnumProperty(
