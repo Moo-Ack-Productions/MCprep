@@ -887,22 +887,53 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, WorldImporterBase, Import
 		default=True
 	)
 
+	center_import: bpy.props.EnumProperty(
+        name="Center Import",
+        description="Decide if the import should be centered, and if so, how",
+        items=(
+            ('NONE', "Don't Center", "Doesn't center the import"),
+            ('XY', "Center by XY Plane", "Centers the import by X and Y only"),
+			('XYZ', "Center by all 3 axis", "Centers the import by all 3 axis"),
+        ),
+        default='XY',
+    )
+
 	track_function = "import_split"
 	track_exporter = None
 	@tracking.report_error
 	def execute(self, context):
 		path_res = self.validate_and_return_header(Path(self.filepath))
-		
+
 		if isinstance(path_res, MCprepError):
 			self.report({"ERROR"}, path_res.msg)
 			return {'CANCELLED'}
 
 		path, header = path_res
-		res = self.import_obj_file(context,
-							 path,
-							 header,
-							 None,
+		offset_x, offset_y, offset_z = 0, 0, 0
+
+		if isinstance(header, ObjHeaderOptions):
+			self.report({"WARNING"}, "OBJ doesn't use the CommonMCOBJ spec, re-exporting with a modern OBJ exporter is recommended!")
+	
+		else:
+			if self.center_import == 'XY' or self.center_import == 'XYZ':
+				offset_x = (header.export_bounds_min[0] + header.export_bounds_max[0]) / 2
+				offset_z = (header.export_bounds_min[2] + header.export_bounds_max[2]) / 2
+			if self.center_import == 'XYZ':
+				offset_y = (header.export_bounds_min[1] + header.export_bounds_max[1]) / 2
+		
+		# Set to None as import_obj_file raises an error
+		# if offsets are provided but the OBJ header is not
+		# a CommonMCOBJ header. The behavior is the same anyway
+		offsets = (offset_x, offset_y, offset_z)
+		if offsets == (0, 0, 0):
+			offsets = None
+
+		res = self.import_obj_file(context, 
+							 path, 
+							 header, 
+							 offsets, 
 							 mineways_fix_smooth_shading_artifacts=self.minewaysShadingWorkaround)
+
 		if isinstance(res, MCprepError):
 			self.report({"ERROR"}, res.msg)
 			return {'CANCELLED'}
