@@ -877,15 +877,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, WorldImporterBase, Import
 	fileselectparams = "use_filter_blender"
 	skipUsage: bpy.props.BoolProperty(
 		default=False,
-		options={'HIDDEN'})
-
-	minewaysShadingWorkaround: bpy.props.BoolProperty(
-		name=env._("Mineways Shading Workaround"),
-		description=env._(("Mineways imports have custom vertex normals defined, which may "
-			"cause artifacts. If enabled, this option will enforce flat shading on "
-			"Mineways imports.")),
-		default=True if bpy.app.version >= (4, 5, 0) else False
-	)
+		options={'HIDDEN'})	
 
 	center_import: bpy.props.EnumProperty(
         name="Center Import",
@@ -897,6 +889,14 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, WorldImporterBase, Import
         ),
         default='XY',
     )
+
+	minewaysShadingWorkaround: bpy.props.BoolProperty(
+		name=env._("Mineways Shading Workaround"),
+		description=env._(("Mineways imports have custom vertex normals defined, which may "
+			"cause artifacts. If enabled, this option will enforce flat shading on "
+			"Mineways imports.")),
+		default=True if bpy.app.version >= (4, 5, 0) else False
+	)
 
 	track_function = "import_split"
 	track_exporter = None
