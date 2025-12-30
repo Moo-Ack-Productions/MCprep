@@ -271,7 +271,8 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 class MCPREP_OT_combine_images(bpy.types.Operator):
 	bl_idname = "mcprep.combine_images"
 	bl_label = "Combine images"
-	bl_description = "Consolidate the same images together e.g. img.001 and img.002"
+	bl_description = "Consolidate images with the same name (e.g. img.001 & img.002) and identical pixel data"
+	bl_options = {'REGISTER', 'UNDO'}
 
 	# arg to auto-force remove old? versus just keep as 0-users
 	selection_only: bpy.props.BoolProperty(
@@ -288,80 +289,104 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 	def execute(self, context):
 		removeold = True
 
-		if self.selection_only is True and len(context.selected_objects) == 0:
-			self.report(
-				{'ERROR'},
-				"Either turn selection only off or select objects with materials/images")
-			return {'CANCELLED'}
-
-		# 2-level structure to hold base name and all
-		# images blocks with the same base
 		if bpy.app.version < (2, 78):
 			self.report(
 				{'ERROR'}, "Must use blender 2.78 or higher to use this operator")
 			return {'CANCELLED'}
 
-		if self.selection_only is True:
+		if self.selection_only and len(context.selected_objects) == 0:
+			self.report(
+				{'ERROR'},
+				"Either turn selection only off or select objects with materials/images")
+			return {'CANCELLED'}
+
+		if self.selection_only:
 			self.report({'ERROR'}, (
 				"Combine images does not yet work for selection only, retry "
 				"with option disabled"))
 			return {'CANCELLED'}
 
-		name_cat = {}
 		data = bpy.data.images
-
 		precount = len(data)
 
-		# get and categorize all image names
-		for im in bpy.data.images:
-			base = util.nameGeneralize(im.name)
-			if base not in name_cat:
-				name_cat[base] = [im.name]
-			elif im.name not in name_cat[base]:
-				name_cat[base].append(im.name)
-			else:
-				env.log("Skipping, already added image", vv_only=True)
+		# Group images
+		groups = {}
+		for im in data:
+			if im.type == 'RENDER_RESULT': continue
 
-			postcount = len(["x" for x in bpy.data.materials if x.users > 0])
-			self.report(
-				{"INFO"},
-				f"Consolidated {precount - postcount} materials, down to {postcount} overall")
-			return {'FINISHED'}
+			base_name = util.nameGeneralize(im.name)
+			group_key = (base_name, im.size[0], im.size[1])
 
-		# perform the consolidation with one basename set at a time
-		for base in name_cat:
-			if len(base) < 2:
+			if group_key not in groups:
+				groups[group_key] = []
+			groups[group_key].append(im)
+
+		# Process groups
+		for key, im_list in groups.items():
+			if len(im_list) < 2:
 				continue
-			name_cat[base].sort()  # in-place sorting
-			baseImg = bpy.data.images[name_cat[base][0]]
 
-			for imgname in name_cat[base][1:]:
+			im_list.sort(key=lambda x: x.name)
+
+			target_img = im_list[0]
+			target_hash = self.get_image_hash(target_img)
+
+			if not target_hash:
+				continue
+
+			for i in range(1, len(im_list)):
+				current_img = im_list[i]
+
 				# skip if fake user set
-				if bpy.data.images[imgname].use_fake_user is True:
+				if current_img.use_fake_user:
 					continue
-				# otherwise, remap
-				data[imgname].user_remap(baseImg)
-				old = bpy.data.images[imgname]
-				if removeold is True and old.users == 0:
-					bpy.data.images.remove(bpy.data.images[imgname])
 
-			# Final step.. rename to not have .001 if it does
-			if baseImg.name != util.nameGeneralize(baseImg.name):
-				gen = util.nameGeneralize(baseImg.name)
-				in_data = gen in data
-				has_users = in_data and bpy.data.images[gen].users != 0
-				if has_users:
-					pass
+				current_hash = self.get_image_hash(current_img)
+
+				if current_hash == target_hash:
+					current_img.user_remap(target_img)
+					if removeold and current_img.users == 0:
+						data.remove(current_img)
 				else:
-					baseImg.name = util.nameGeneralize(baseImg.name)
-			else:
-				baseImg.name = util.nameGeneralize(baseImg.name)
+					continue
 
-		postcount = len(["x" for x in bpy.data.images if x.users > 0])
-		self.report(
-			{"INFO"}, f"Consolidated {precount} images down to {postcount}")
+			# Rename target to clean base name
+			clean_name = key[0]
+			if target_img.name != clean_name:
+				if clean_name not in data or data[clean_name].users == 0:
+					target_img.name = clean_name
+
+		postcount = len(data)
+		if precount - postcount > 0:
+			self.report({"INFO"}, f"Consolidated {precount} images down to {postcount}")
+		else:
+			self.report({"INFO"}, "No images found to condense")
 
 		return {'FINISHED'}
+
+	def get_image_hash(self, img):
+		"""Generates a MD5 hash from image pixel data"""
+		
+		if not img.has_data or sum(img.size) == 0:
+			return None
+
+		try:
+			width, height = img.size
+			pixels = np.empty(width * height * 4, dtype=np.float32)
+			img.pixels.foreach_get(pixels)
+			
+			# Calculate buffer (sample every Nth pixel), only start buffering when image is larger than 4096 pixels (bigger than 64 x 64)
+			buffer = max(1, (width * height) // 4096)
+
+			# Reshape so buffer skips WHOLE pixels, keeping RGBA grouped
+			sampled = pixels.view().reshape(-1, 4)[::buffer]
+			
+			return hashlib.md5(sampled.tobytes()).hexdigest()
+			
+		except Exception as e:
+			print(f"Failed to hash {img.name}: {e}")
+			return None
+
 
 
 class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
