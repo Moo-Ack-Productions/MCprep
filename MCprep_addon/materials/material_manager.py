@@ -149,7 +149,7 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 	# arg to auto-force remove old? versus just keep as 0-users
 	selection_only: bpy.props.BoolProperty(
 		name="Selection only",
-		description="Build materials to consoldiate based on selected objects only",
+		description="Build materials to consolidate based on selected objects only",
 		default=True)
 	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
@@ -277,7 +277,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 	selection_only: bpy.props.BoolProperty(
 		name="Selection only",
 		description=(
-			"Build images to consoldiate based on selected objects' materials only"),
+			"Build images to consolidate based on selected objects' materials only"),
 		default=False)
 	skipUsage: bpy.props.BoolProperty(
 		default=False,
