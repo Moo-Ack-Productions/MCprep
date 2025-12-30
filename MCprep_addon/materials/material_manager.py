@@ -21,6 +21,9 @@ import os
 
 import bpy
 
+import hashlib
+import numpy as np
+
 from . import generate
 from . import sequences
 from .. import tracking
@@ -318,15 +321,6 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 				name_cat[base].append(im.name)
 			else:
 				env.log("Skipping, already added image", vv_only=True)
-
-		# pre 2.78 solution, deep loop
-		if bpy.app.version < (2, 78):
-			for ob in bpy.data.objects:
-				for sl in ob.material_slots:
-					if sl is None or sl.material is None or sl.material not in data:
-						continue  # selection only
-					sl.material = data[name_cat[util.nameGeneralize(sl.material.name)][0]]
-			# doesn't remove old textures, but gets it to zero users
 
 			postcount = len(["x" for x in bpy.data.materials if x.users > 0])
 			self.report(
