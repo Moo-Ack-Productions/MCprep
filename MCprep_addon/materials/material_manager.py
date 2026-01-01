@@ -375,7 +375,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 		
 		#Calculate stride: if pixels > 4096, sample every Nth pixel
 		stride = max(1, total_pixels // 4096)
-		return pixels[::stride * 4].tobytes()
+		return pixels.reshape(-1, 4)[::stride * 4].tobytes()
 
 
 class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
