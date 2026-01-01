@@ -293,7 +293,6 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 				{'ERROR'},
 				"Either turn selection only off or select objects with materials/images")
 			return {'CANCELLED'}
-
 		if self.selection_only:
 			self.report({'ERROR'}, (
 				"Combine images does not yet work for selection only, retry "
@@ -312,10 +311,9 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 			base_name = util.nameGeneralize(img.name)
 			w, h = img.size
 			key = (base_name, w, h)
-
 			groups.setdefault(key, []).append(img)
-		images_to_remove = []
 
+		images_to_remove = []
 
 		# Hashing and Remapping
 		for (base_name, w, h), img_list in groups.items():
@@ -325,9 +323,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 			img_list.sort(key=lambda x: x.name)
 
 			# Internal cache for this group
-			# {hash: image}
 			fingerprints = {}
-
 			pixel_buffer = np.empty(w * h * 4, dtype=np.float32)	 #RGBA
 
 			for img in img_list:
@@ -344,7 +340,6 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 				else:
 					# Unique image: store as the master image for this hash
 					fingerprints[hash] = img
-
 					# Clean up the name of master image
 					if img.name != base_name and base_name not in images:
 						img.name = base_name
@@ -369,21 +364,18 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 		if not img.has_data:
 			return None
 
+		total_pixels = w * h
+		pixels = buffer if buffer is not None else np.empty(total_pixels * 4, dtype=np.float32)
+
 		try:
-			total_pixels = w * h
-			pixels = buffer if buffer is not None else np.empty(total_pixels * 4, dtype=np.float32)
-
 			img.pixels.foreach_get(pixels)
-
-			# Calculate stride: if pixels > 4096, sample every Nth pixel
-			stride = max(1, total_pixels // 4096)
-
-			return pixels[::stride * 4].tobytes()
-
-		except Exception as e:
+		except RuntimeError as e:
 			env.log(f"Failed to hash {img.name}: {e}", vv_only=True)
-			return None
-
+			return None		
+		
+		#Calculate stride: if pixels > 4096, sample every Nth pixel
+		stride = max(1, total_pixels // 4096)
+		return pixels[::stride * 4].tobytes()
 
 
 class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
