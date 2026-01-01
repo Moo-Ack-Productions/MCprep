@@ -21,7 +21,6 @@ import os
 
 import bpy
 
-import hashlib
 import numpy as np
 
 from . import generate
@@ -370,7 +369,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 
 	def get_image_hash(self, img: bpy.types.Image, w: int, h: int, buffer: np.ndarray = None) -> str:
 		"""
-		Generates a MD5 hash from image pixel data
+		Generates a byte-string hash from sampled image pixel data.
 		"""
 		if not img.has_data:
 			return None
@@ -381,12 +380,10 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 
 			img.pixels.foreach_get(pixels)
 
-			# Calculate stride (sample every Nth pixel), only start when image is larger than 4096 pixels (bigger than 64 x 64)
+			# Calculate stride: if pixels > 4096, sample every Nth pixel
 			stride = max(1, total_pixels // 4096)
 
-			sample = np.ascontiguousarray(pixels[::stride * 4])
-
-			return hashlib.md5(sample.data).hexdigest()
+			return pixels[::stride * 4].tobytes()
 
 		except Exception as e:
 			env.log(f"Failed to hash {img.name}: {e}", vv_only=True)
