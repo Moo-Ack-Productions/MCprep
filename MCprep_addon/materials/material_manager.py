@@ -288,11 +288,6 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 	def execute(self, context):
 		removeold = True
 
-		if bpy.app.version < (2, 78):
-			self.report(
-				{'ERROR'}, "Must use blender 2.78 or higher to use this operator")
-			return {'CANCELLED'}
-
 		if self.selection_only and len(context.selected_objects) == 0:
 			self.report(
 				{'ERROR'},
