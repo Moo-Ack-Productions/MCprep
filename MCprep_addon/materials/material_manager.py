@@ -270,46 +270,73 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 class MCPREP_OT_combine_images(bpy.types.Operator):
 	bl_idname = "mcprep.combine_images"
 	bl_label = "Combine images"
-	bl_description = "Consolidate images with the same name (e.g. img.001 & img.002) and identical pixel data"
+	bl_description = "Merge duplicate images"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	# arg to auto-force remove old? versus just keep as 0-users
+	group_by_name: bpy.props.BoolProperty(
+		name="Group Method: Image Name",
+		description="Finds images with the same name (ignoring extensions like .001)",
+		default=True)
+
 	selection_only: bpy.props.BoolProperty(
 		name="Selection only",
-		description=(
-			"Build images to consolidate based on selected objects' materials only"),
+		description="Build images to consolidate based on selected objects' materials only",
 		default=False)
-	skipUsage: bpy.props.BoolProperty(
-		default=False,
-		options={'HIDDEN'})
+
+	strict_comparison: bpy.props.BoolProperty(
+		name="Strict Comparison",
+		description="Check every single pixel. Slower, but 100% accurate",
+		default=False)
+
+	def invoke(self, context, event):
+		return context.window_manager.invoke_props_dialog(self)
 
 	track_function = "combine_images"
 	@tracking.report_error
 	def execute(self, context):
-		removeold = True
-
-		if self.selection_only and len(context.selected_objects) == 0:
-			self.report(
-				{'ERROR'},
-				"Either turn selection only off or select objects with materials/images")
-			return {'CANCELLED'}
+		# Setup image list
 		if self.selection_only:
-			self.report({'ERROR'}, (
-				"Combine images does not yet work for selection only, retry "
-				"with option disabled"))
-			return {'CANCELLED'}
+			if not context.selected_objects:
+				self.report({'ERROR'}, "Select objects with materials/images first")
+				return {'CANCELLED'}
 
-		images = bpy.data.images
-		precount = len(images)
+			target_images = set()
+			processed_materials = set()
+
+			for obj in context.selected_objects:
+				if not hasattr(obj.data, "materials"):
+					continue
+
+				for mat in obj.data.materials:
+					if not mat or mat in processed_materials:
+						continue
+
+					processed_materials.add(mat)
+					if mat.use_nodes and mat.node_tree:
+						for node in mat.node_tree.nodes:
+							if node.type == 'TEX_IMAGE' and node.image:
+								target_images.add(node.image)
+
+			if not target_images:
+				self.report({'INFO'}, "No images found in selection")
+				return {'FINISHED'}
+
+			images_to_check = list(target_images)
+		else:
+			images_to_check = list(bpy.data.images)
+
+		precount = len(bpy.data.images)
 
 		# Group images
 		groups = {}
-		for img in images:
+		for img in images_to_check:
 			if img.type in {'RENDER_RESULT', 'COMPOSITING'} or img.use_fake_user:
 				continue
 
-			base_name = util.nameGeneralize(img.name)
 			w, h = img.size
+
+			base_name = util.nameGeneralize(img.name) if self.group_by_name else "GLOBAL"
+
 			key = (base_name, w, h)
 			groups.setdefault(key, []).append(img)
 
@@ -324,42 +351,50 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 
 			# Internal cache for this group
 			fingerprints = {}
-			pixel_buffer = np.empty(w * h * 4, dtype=np.float32)	 #RGBA
+			is_empty = (w == 0 or h == 0)
+			pixel_buffer = None if is_empty else np.empty(w * h * 4, dtype=np.float32)	#RGBA
 
 			for img in img_list:
-				hash = self.get_image_hash(img, w, h, buffer=pixel_buffer)
+				hash = b"EMPTY" if is_empty else self.get_image_hash(img, w, h, buffer=pixel_buffer)
 
 				if not hash:
 					continue
 
 				if hash in fingerprints:
 					# Duplicate: remap to first image instance of hash
-					master_image = fingerprints[hash]
-					img.user_remap(master_image)
+					img.user_remap(fingerprints[hash])
 					images_to_remove.append(img)
 				else:
 					# Unique image: store as the master image for this hash
 					fingerprints[hash] = img
-					# Clean up the name of master image
-					if img.name != base_name and base_name not in images:
+					# Clean up name of master image ONLY if grouping by name
+					if self.group_by_name and img.name != base_name and base_name not in bpy.data.images:
 						img.name = base_name
 
 		# Cleanup
-		for img in images_to_remove:
-			if img.users == 0:
-				images.remove(img)
+		to_delete = [
+			img for img in images_to_remove
+			if img.users == 0 and not img.use_fake_user and not img.is_library_indirect]
 
-		postcount = len(images)
-		if precount - postcount > 0:
-			self.report({"INFO"}, f"Consolidated {precount} images down to {postcount}")
+		if to_delete:
+			for img in to_delete:
+				img.gl_free()
+				img.buffers_free()
+			bpy.data.batch_remove(ids=to_delete)
+
+		# Report
+		postcount = len(bpy.data.images)
+		consolidated_count = precount - postcount
+
+		if consolidated_count > 0:
+			self.report({"INFO"}, f"Consolidated {consolidated_count} image{'s' if consolidated_count > 1 else ''} (Total: {precount} -> {postcount})")
 		else:
-			self.report({"INFO"}, "No images found to condense")
-
+			self.report({"INFO"}, "No duplicates found")
 		return {'FINISHED'}
 
-	def get_image_hash(self, img: bpy.types.Image, w: int, h: int, buffer: np.ndarray = None) -> str:
+	def get_image_hash(self, img: bpy.types.Image, w: int, h: int, buffer: np.ndarray = None) -> bytes:
 		"""
-		Generates a byte-string hash from sampled image pixel data.
+		Generates a byte hash from sampled image pixel data.
 		"""
 		if not img.has_data:
 			return None
@@ -371,11 +406,14 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 			img.pixels.foreach_get(pixels)
 		except RuntimeError as e:
 			env.log(f"Failed to hash {img.name}: {e}", vv_only=True)
-			return None		
-		
-		#Calculate stride: if pixels > 4096, sample every Nth pixel
-		stride = max(1, total_pixels // 4096)
-		return pixels.reshape(-1, 4)[::stride * 4].tobytes()
+			return None
+
+		if self.strict_comparison:
+			return pixels.tobytes()
+		else:
+			#Calculate stride: if pixels > 4096, sample every Nth pixel
+			stride = max(1, total_pixels // 4096)
+			return pixels[::stride * 4].tobytes()
 
 
 class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
