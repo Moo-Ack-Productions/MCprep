@@ -314,8 +314,9 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 					processed_materials.add(mat)
 					if mat.use_nodes and mat.node_tree:
 						for node in mat.node_tree.nodes:
-							if node.type == 'TEX_IMAGE' and node.image:
-								target_images.add(node.image)
+							if node.type != 'TEX_IMAGE' or not node.image:
+								continue
+							target_images.add(node.image)
 
 			if not target_images:
 				self.report({'INFO'}, "No images found in selection")
@@ -330,7 +331,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 		# Group images
 		groups = {}
 		for img in images_to_check:
-			if img.type in {'RENDER_RESULT', 'COMPOSITING'} or img.use_fake_user:
+			if img.type in ('RENDER_RESULT', 'COMPOSITING') or img.use_fake_user:
 				continue
 
 			w, h = img.size
