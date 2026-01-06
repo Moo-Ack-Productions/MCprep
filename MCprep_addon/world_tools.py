@@ -887,7 +887,7 @@ class MCPREP_OT_import_world_split(bpy.types.Operator, WorldImporterBase, Import
             ('XY', env._("Center by XY Plane"), env._("Centers the import by X and Y only")),
 			('XYZ', env._("Center by all 3 axis"), env._("Centers the import by all 3 axis")),
         ),
-        default='XY',
+        default='NONE',
     )
 
 	minewaysShadingWorkaround: bpy.props.BoolProperty(
