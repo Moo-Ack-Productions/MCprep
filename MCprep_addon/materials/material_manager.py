@@ -18,10 +18,12 @@
 
 
 import os
+from typing import Dict, List, Optional, Tuple
 
 import bpy
 
 import numpy as np
+from numpy.typing import NDArray
 
 from . import generate
 from . import sequences
@@ -329,60 +331,64 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 		precount = len(bpy.data.images)
 
 		# Group images
-		groups = {}
+		#
+		# Here we use a list, since we're just trying to get the
+		# raw images at this point for comparison
+		groups: List[Tuple[str, int, int, bpy.types.Image]] = []
 		for img in images_to_check:
 			if img.type in ('RENDER_RESULT', 'COMPOSITING') or img.use_fake_user:
 				continue
 
 			w, h = img.size
-
+			
 			base_name = util.nameGeneralize(img.name) if self.group_by_name else "GLOBAL"
-
-			key = (base_name, w, h)
-			groups.setdefault(key, []).append(img)
-
-		images_to_remove = []
+			groups.append((base_name, w, h, img))
 
 		# Comparison and Remapping
-		for (base_name, w, h), img_list in groups.items():
-			if len(img_list) < 2:
+		#
+		# We store both the image (for remapping later on)
+		# and the array, mainly to avoid constant conversion
+		unique_images: Dict[Tuple[str, int, int], List[Tuple[bpy.types.Image, NDArray[np.float64]]]] = {}
+		images_to_remove = []
+		for base_name, w, h, img in groups:
+			# If the tuple is not accounted for yet, then add to 
+			# unique images and continue
+			#
+			# Images with the same base name but different widths
+			# and heights are considered unique images since their
+			# resolutions are different
+			if (base_name, w, h) not in unique_images:
+				unique_images[(base_name, w, h)] = [(img, np.asarray(img.pixels))]
+				continue
+			# No data, then don't bother, there's nothing to compare
+			elif not img.has_data:
+				continue
+			# Empty images can't be compared, don't do anything
+			# with them
+			elif w == 0 or h == 0:
 				continue
 
-			img_list.sort(key=lambda x: x.name)
-
-			# Internal cache for this group
-			unique_contents = {}
-			is_empty = (w == 0 or h == 0)
-			pixel_buffer = None if is_empty else np.empty(w * h * 4, dtype=np.float32)	#RGBA
-			
-			total_pixels = w * h
-
-			stride = max(1, total_pixels // 4096) if not self.strict_comparison and total_pixels > 4096 else 1
-
-			for img in img_list:
-				if pixel_buffer is None:
-					content_key = "EMPTY"
-				elif not img.has_data:
+			image_present = False
+			present_image: Optional[bpy.types.Image] = None
+			img_array = np.asarray(img.pixels)
+			for uni_image, uni_image_array in unique_images[(base_name, w, h)]:
+				if not np.array_equal(uni_image_array, img_array):
 					continue
-				else:
-					try:
-						img.pixels.foreach_get(pixel_buffer)
-						content_key = pixel_buffer.reshape(-1, 4)[::stride].tobytes()
-					except RuntimeError as e:
-						env.log(f"Failed to hash {img.name}: {e}", vv_only=True)
-						continue
+				image_present = True
+				present_image = uni_image
+				break
 
-				if content_key in unique_contents:
-					# Duplicate: remap to first image instance of hash
-					img.user_remap(unique_contents[content_key])
-					images_to_remove.append(img)
-				else:
-					# Unique image: store as the master image for this hash
-					unique_contents[content_key] = img
-					# Clean up name of master image ONLY if grouping by name
-					if self.group_by_name and img.name != base_name and base_name not in bpy.data.images:
-						img.name = base_name
+			# If the image is present already, mark it
+			# for removal, remap, and continue to the next
+			# image
+			if image_present:
+				images_to_remove.append(img)
+				img.user_remap(present_image)	
+				continue
 
+			# If the image is not present, add it to the list
+			unique_images[(base_name, w, h)].append((img, img_array))
+			
 		# Cleanup
 		to_delete = [
 			img for img in images_to_remove
