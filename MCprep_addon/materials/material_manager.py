@@ -294,7 +294,6 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 	track_function = "combine_images"
 	@tracking.report_error
 	def execute(self, context):
-		start_time = time.time()
 		# Setup image list
 		if self.selection_only:
 			if not context.selected_objects:
@@ -396,8 +395,6 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 			self.report({"INFO"}, f"Consolidated {consolidated_count} duplicate image{'s' if consolidated_count != 1 else ''} (Total: {precount} -> {postcount})")
 		else:
 			self.report({"INFO"}, "No duplicates found")
-		
-		print(f"{time.time() - start_time}s")
 		return {'FINISHED'}
 
 	def get_image_hash(self, img: bpy.types.Image, w: int, h: int, buffer: np.ndarray = None, stride: int = 1) -> bytes:
