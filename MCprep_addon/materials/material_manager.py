@@ -294,6 +294,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 	track_function = "combine_images"
 	@tracking.report_error
 	def execute(self, context):
+		start_time = time.time()
 		# Setup image list
 		if self.selection_only:
 			if not context.selected_objects:
@@ -354,9 +355,13 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 			fingerprints = {}
 			is_empty = (w == 0 or h == 0)
 			pixel_buffer = None if is_empty else np.empty(w * h * 4, dtype=np.float32)	#RGBA
+			
+			total_pixels = w * h
+
+			stride = max(1, total_pixels // 4096) if not self.strict_comparison and total_pixels > 4096 else 1
 
 			for img in img_list:
-				hash = b"EMPTY" if is_empty else self.get_image_hash(img, w, h, buffer=pixel_buffer)
+				hash = b"EMPTY" if is_empty else self.get_image_hash(img, w, h, buffer=pixel_buffer, stride = stride)
 
 				if not hash:
 					continue
@@ -391,9 +396,11 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 			self.report({"INFO"}, f"Consolidated {consolidated_count} duplicate image{'s' if consolidated_count != 1 else ''} (Total: {precount} -> {postcount})")
 		else:
 			self.report({"INFO"}, "No duplicates found")
+		
+		print(f"{time.time() - start_time}s")
 		return {'FINISHED'}
 
-	def get_image_hash(self, img: bpy.types.Image, w: int, h: int, buffer: np.ndarray = None) -> bytes:
+	def get_image_hash(self, img: bpy.types.Image, w: int, h: int, buffer: np.ndarray = None, stride: int = 1) -> bytes:
 		"""
 		Generates a byte hash from sampled image pixel data.
 		"""
@@ -409,12 +416,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 			env.log(f"Failed to hash {img.name}: {e}", vv_only=True)
 			return None
 
-		if self.strict_comparison:
-			return pixels.tobytes()
-		else:
-			#Calculate stride: if pixels > 4096, sample every Nth pixel
-			stride = max(1, total_pixels // 4096)
-			return pixels[::stride * 4].tobytes()
+		return pixels.reshape(-1, 4)[::stride].tobytes()
 
 
 class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
