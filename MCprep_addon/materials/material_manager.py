@@ -343,7 +343,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 
 		images_to_remove = []
 
-		# Hashing and Remapping
+		# Comparison and Remapping
 		for (base_name, w, h), img_list in groups.items():
 			if len(img_list) < 2:
 				continue
@@ -351,7 +351,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 			img_list.sort(key=lambda x: x.name)
 
 			# Internal cache for this group
-			fingerprints = {}
+			unique_contents = {}
 			is_empty = (w == 0 or h == 0)
 			pixel_buffer = None if is_empty else np.empty(w * h * 4, dtype=np.float32)	#RGBA
 			
@@ -360,18 +360,25 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 			stride = max(1, total_pixels // 4096) if not self.strict_comparison and total_pixels > 4096 else 1
 
 			for img in img_list:
-				hash = b"EMPTY" if is_empty else self.get_image_hash(img, w, h, buffer=pixel_buffer, stride = stride)
-
-				if not hash:
+				if pixel_buffer is None:
+					content_key = "EMPTY"
+				elif not img.has_data:
 					continue
+				else:
+					try:
+						img.pixels.foreach_get(pixel_buffer)
+						content_key = pixel_buffer.reshape(-1, 4)[::stride].tobytes()
+					except RuntimeError as e:
+						env.log(f"Failed to hash {img.name}: {e}", vv_only=True)
+						continue
 
-				if hash in fingerprints:
+				if content_key in unique_contents:
 					# Duplicate: remap to first image instance of hash
-					img.user_remap(fingerprints[hash])
+					img.user_remap(unique_contents[content_key])
 					images_to_remove.append(img)
 				else:
 					# Unique image: store as the master image for this hash
-					fingerprints[hash] = img
+					unique_contents[content_key] = img
 					# Clean up name of master image ONLY if grouping by name
 					if self.group_by_name and img.name != base_name and base_name not in bpy.data.images:
 						img.name = base_name
@@ -396,24 +403,6 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 		else:
 			self.report({"INFO"}, "No duplicates found")
 		return {'FINISHED'}
-
-	def get_image_hash(self, img: bpy.types.Image, w: int, h: int, buffer: np.ndarray = None, stride: int = 1) -> bytes:
-		"""
-		Generates a byte hash from sampled image pixel data.
-		"""
-		if not img.has_data:
-			return None
-
-		total_pixels = w * h
-		pixels = buffer if buffer is not None else np.empty(total_pixels * 4, dtype=np.float32)
-
-		try:
-			img.pixels.foreach_get(pixels)
-		except RuntimeError as e:
-			env.log(f"Failed to hash {img.name}: {e}", vv_only=True)
-			return None
-
-		return pixels.reshape(-1, 4)[::stride].tobytes()
 
 
 class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
