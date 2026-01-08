@@ -270,22 +270,22 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 class MCPREP_OT_combine_images(bpy.types.Operator):
 	bl_idname = "mcprep.combine_images"
 	bl_label = "Combine images"
-	bl_description = "Merge duplicate images"
+	bl_description = "Find and merge duplicate images, remapping users to a single image"
 	bl_options = {'REGISTER', 'UNDO'}
 
 	group_by_name: bpy.props.BoolProperty(
-		name="Group Method: Image Name",
-		description="Finds images with the same name (ignoring extensions like .001)",
+		name="Group by Name",
+		description="Compare duplicates using base names (e.g., 'Texture.001' matches 'Texture')",
 		default=True)
 
 	selection_only: bpy.props.BoolProperty(
 		name="Selection only",
-		description="Build images to consolidate based on selected objects' materials only",
+		description="Only check images used by materials on selected objects",
 		default=False)
 
 	strict_comparison: bpy.props.BoolProperty(
 		name="Strict Comparison",
-		description="Check every single pixel. Slower, but 100% accurate",
+		description="Compare full image content instead of samples. More accurate, but slower for large images",
 		default=False)
 
 	def invoke(self, context, event):
@@ -297,7 +297,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 		# Setup image list
 		if self.selection_only:
 			if not context.selected_objects:
-				self.report({'ERROR'}, "Select objects with materials/images first")
+				self.report({'ERROR'}, "No objects selected")
 				return {'CANCELLED'}
 
 			target_images = set()
@@ -388,7 +388,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 		consolidated_count = precount - postcount
 
 		if consolidated_count > 0:
-			self.report({"INFO"}, f"Consolidated {consolidated_count} image{'s' if consolidated_count > 1 else ''} (Total: {precount} -> {postcount})")
+			self.report({"INFO"}, f"Consolidated {consolidated_count} duplicate image{'s' if consolidated_count != 1 else ''} (Total: {precount} -> {postcount})")
 		else:
 			self.report({"INFO"}, "No duplicates found")
 		return {'FINISHED'}
