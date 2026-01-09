@@ -32,6 +32,14 @@ from .. import util
 
 from ..conf import MCprepError, env
 
+# 4096 * 4, used to cap the amount of
+# pixels summed when not using the fast
+# prefilter with the Combine Images operator
+#
+# 4096 is the amount of pixels capped to,
+# and 4 is the RGBA channels
+RGBA_PIXELS_4096_MAX = 16384
+
 
 # -----------------------------------------------------------------------------
 # UI and utility functions
@@ -331,6 +339,9 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 		precount = len(bpy.data.images)
 
 		# Group images
+		#
+		# Here we use a list, since we're just trying to get the
+		# raw images at this point for comparison
 		groups: List[Tuple[str, int, int, bpy.types.Image]] = []
 		for img in images_to_check:
 			if img.type in ('RENDER_RESULT', 'COMPOSITING') or img.use_fake_user:
@@ -348,25 +359,29 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 		# Value: List of (image_obj, comparison_array, sum)
 		# store both the image (for remapping later on), the pixel array,
 		# and pixel array sum for super fast prefilter
-		unique_images: Dict[Tuple[str, int, int], List[Tuple[bpy.types.Image, NDArray[np.float32], float]]] = {}
+		unique_images: Dict[Tuple[str, int, int], List[Tuple[bpy.types.Image, NDArray[np.float32], Optional[np.float64]]]] = {}
 		images_to_remove = []
 
 		for base_name, w, h, img in groups:
 			cur_img_key = (base_name, w, h)
 
-			num_pixels = w * h * 4
-			img_array = np.empty(num_pixels, dtype=np.float32)
-			img.pixels.foreach_get(img_array)	# faster than `np.asarray(img.pixels)`
+			img_array = np.asarray(img.pixels)
+			pix_sum: Optional[np.float64] = None
 
-			# Use sampling unless strict is enabled
-			# 16384 = 4096 * 4
-			stride = max(1, num_pixels // 16384) if not self.strict_comparison else 1
-			cur_img_data = img_array[::stride] if stride > 1 else img_array
+			# Approximation of a image content check used
+			# if strict comparison is disabled. Unlike strict
+			# comparison, which checks the actual pixels, this
+			# sums up the pixels and uses that to represent the
+			# image contents
+			if not self.strict_comparison:
+				num_pixels = w * h * 4
+				stride = max(1, num_pixels // RGBA_PIXELS_4096_MAX)
+				cur_img_data = img_array[::stride] if stride > 1 else img_array
 
-			pix_sum = np.sum(cur_img_data)
-
+				pix_sum = np.sum(cur_img_data)
+	
 			if cur_img_key not in unique_images:
-				unique_images[cur_img_key] = [(img, cur_img_data, pix_sum)]
+				unique_images[cur_img_key] = [(img, img_array, pix_sum)]
 				continue
 
 			image_present = False
@@ -374,10 +389,11 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 
 			# Look through existing items in this Name/Size group
 			for uni_image, uni_data, uni_sum in unique_images[cur_img_key]:
-				# FAST PREFILTER
-				if not pix_sum == uni_sum:
+				# Fast prefilter, used as an alternative
+				# to strict comparison
+				if not self.strict_comparison and not pix_sum == uni_sum:
 					continue
-				elif not np.array_equal(uni_data, cur_img_data):
+				elif not np.array_equal(uni_data, img_array):
 					continue
 				image_present = True
 				present_image = uni_image
@@ -392,7 +408,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 				continue
 
 			# If the image is not present, add it to the list
-			unique_images[cur_img_key].append((img, cur_img_data, pix_sum))
+			unique_images[cur_img_key].append((img, img_array, pix_sum))
 
 		# Cleanup
 		to_delete = [
