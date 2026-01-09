@@ -331,64 +331,69 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 		precount = len(bpy.data.images)
 
 		# Group images
-		#
-		# Here we use a list, since we're just trying to get the
-		# raw images at this point for comparison
 		groups: List[Tuple[str, int, int, bpy.types.Image]] = []
 		for img in images_to_check:
 			if img.type in ('RENDER_RESULT', 'COMPOSITING') or img.use_fake_user:
 				continue
-
 			w, h = img.size
-			
+			# No data or empty image, nothing to compare, skip
+			if w == 0 or h == 0 or not img.has_data:
+				continue
+
 			base_name = util.nameGeneralize(img.name) if self.group_by_name else "GLOBAL"
 			groups.append((base_name, w, h, img))
 
 		# Comparison and Remapping
-		#
-		# We store both the image (for remapping later on)
-		# and the array, mainly to avoid constant conversion
-		unique_images: Dict[Tuple[str, int, int], List[Tuple[bpy.types.Image, NDArray[np.float64]]]] = {}
+		# Key: (base_name, w, h)
+		# Value: List of (image_obj, comparison_array, sum)
+		# store both the image (for remapping later on), the pixel array,
+		# and pixel array sum for super fast prefilter
+		unique_images: Dict[Tuple[str, int, int], List[Tuple[bpy.types.Image, NDArray[np.float32], float]]] = {}
 		images_to_remove = []
+
 		for base_name, w, h, img in groups:
-			# If the tuple is not accounted for yet, then add to 
-			# unique images and continue
-			#
-			# Images with the same base name but different widths
-			# and heights are considered unique images since their
-			# resolutions are different
-			if (base_name, w, h) not in unique_images:
-				unique_images[(base_name, w, h)] = [(img, np.asarray(img.pixels))]
-				continue
-			# No data, then don't bother, there's nothing to compare
-			elif not img.has_data:
-				continue
-			# Empty images can't be compared, don't do anything
-			# with them
-			elif w == 0 or h == 0:
+			cur_img_key = (base_name, w, h)
+
+			num_pixels = w * h * 4
+			img_array = np.empty(num_pixels, dtype=np.float32)
+			img.pixels.foreach_get(img_array)	# faster than `np.asarray(img.pixels)`
+
+			# Use sampling unless strict is enabled
+			# 16384 = 4096 * 4
+			stride = max(1, num_pixels // 16384) if not self.strict_comparison else 1
+			cur_img_data = img_array[::stride] if stride > 1 else img_array
+
+			pix_sum = np.sum(cur_img_data)
+
+			if cur_img_key not in unique_images:
+				unique_images[cur_img_key] = [(img, cur_img_data, pix_sum)]
 				continue
 
 			image_present = False
 			present_image: Optional[bpy.types.Image] = None
-			img_array = np.asarray(img.pixels)
-			for uni_image, uni_image_array in unique_images[(base_name, w, h)]:
-				if not np.array_equal(uni_image_array, img_array):
+
+			# Look through existing items in this Name/Size group
+			for uni_image, uni_data, uni_sum in unique_images[cur_img_key]:
+				# FAST PREFILTER
+				if not pix_sum == uni_sum:
+					continue
+				elif not np.array_equal(uni_data, cur_img_data):
 					continue
 				image_present = True
 				present_image = uni_image
 				break
 
+
 			# If the image is present already, mark it
-			# for removal, remap, and continue to the next
-			# image
+			# for removal, remap, and continue to the next image
 			if image_present:
 				images_to_remove.append(img)
-				img.user_remap(present_image)	
+				img.user_remap(present_image)
 				continue
 
 			# If the image is not present, add it to the list
-			unique_images[(base_name, w, h)].append((img, img_array))
-			
+			unique_images[cur_img_key].append((img, cur_img_data, pix_sum))
+
 		# Cleanup
 		to_delete = [
 			img for img in images_to_remove
