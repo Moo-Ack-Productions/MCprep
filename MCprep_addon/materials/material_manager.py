@@ -18,8 +18,12 @@
 
 
 import os
+from typing import Dict, List, Optional, Tuple
 
 import bpy
+
+import numpy as np
+from numpy.typing import NDArray
 
 from . import generate
 from . import sequences
@@ -27,6 +31,14 @@ from .. import tracking
 from .. import util
 
 from ..conf import MCprepError, env
+
+# 4096 * 4, used to cap the amount of
+# pixels summed when not using the fast
+# prefilter with the Combine Images operator
+#
+# 4096 is the amount of pixels capped to,
+# and 4 is the RGBA channels
+RGBA_PIXELS_4096_MAX = 16384
 
 
 # -----------------------------------------------------------------------------
@@ -146,7 +158,7 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 	# arg to auto-force remove old? versus just keep as 0-users
 	selection_only: bpy.props.BoolProperty(
 		name="Selection only",
-		description="Build materials to consoldiate based on selected objects only",
+		description="Build materials to consolidate based on selected objects only",
 		default=True)
 	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
@@ -268,105 +280,155 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 class MCPREP_OT_combine_images(bpy.types.Operator):
 	bl_idname = "mcprep.combine_images"
 	bl_label = "Combine images"
-	bl_description = "Consolidate the same images together e.g. img.001 and img.002"
+	bl_description = "Find and merge duplicate images, remapping users to a single image"
+	bl_options = {'REGISTER', 'UNDO'}
 
-	# arg to auto-force remove old? versus just keep as 0-users
+	group_by_name: bpy.props.BoolProperty(
+		name="Group by Name",
+		description="Compare duplicates using base names (e.g., 'Texture.001' matches 'Texture')",
+		default=True)
+
 	selection_only: bpy.props.BoolProperty(
 		name="Selection only",
-		description=(
-			"Build images to consoldiate based on selected objects' materials only"),
+		description="Only check images used by materials on selected objects",
 		default=False)
-	skipUsage: bpy.props.BoolProperty(
-		default=False,
-		options={'HIDDEN'})
+
+	strict_comparison: bpy.props.BoolProperty(
+		name="Strict Comparison",
+		description="Compare full image content instead of samples. More accurate, but slower for large images",
+		default=False)
+
+	def invoke(self, context, event):
+		return context.window_manager.invoke_props_dialog(self)
 
 	track_function = "combine_images"
 	@tracking.report_error
 	def execute(self, context):
-		removeold = True
+		# Setup image list
+		if self.selection_only:
+			if not context.selected_objects:
+				self.report({'ERROR'}, "No objects selected")
+				return {'CANCELLED'}
 
-		if self.selection_only is True and len(context.selected_objects) == 0:
-			self.report(
-				{'ERROR'},
-				"Either turn selection only off or select objects with materials/images")
-			return {'CANCELLED'}
+			target_images = set()
+			processed_materials = set()
 
-		# 2-level structure to hold base name and all
-		# images blocks with the same base
-		if bpy.app.version < (2, 78):
-			self.report(
-				{'ERROR'}, "Must use blender 2.78 or higher to use this operator")
-			return {'CANCELLED'}
-
-		if self.selection_only is True:
-			self.report({'ERROR'}, (
-				"Combine images does not yet work for selection only, retry "
-				"with option disabled"))
-			return {'CANCELLED'}
-
-		name_cat = {}
-		data = bpy.data.images
-
-		precount = len(data)
-
-		# get and categorize all image names
-		for im in bpy.data.images:
-			base = util.nameGeneralize(im.name)
-			if base not in name_cat:
-				name_cat[base] = [im.name]
-			elif im.name not in name_cat[base]:
-				name_cat[base].append(im.name)
-			else:
-				env.log("Skipping, already added image", vv_only=True)
-
-		# pre 2.78 solution, deep loop
-		if bpy.app.version < (2, 78):
-			for ob in bpy.data.objects:
-				for sl in ob.material_slots:
-					if sl is None or sl.material is None or sl.material not in data:
-						continue  # selection only
-					sl.material = data[name_cat[util.nameGeneralize(sl.material.name)][0]]
-			# doesn't remove old textures, but gets it to zero users
-
-			postcount = len(["x" for x in bpy.data.materials if x.users > 0])
-			self.report(
-				{"INFO"},
-				f"Consolidated {precount - postcount} materials, down to {postcount} overall")
-			return {'FINISHED'}
-
-		# perform the consolidation with one basename set at a time
-		for base in name_cat:
-			if len(base) < 2:
-				continue
-			name_cat[base].sort()  # in-place sorting
-			baseImg = bpy.data.images[name_cat[base][0]]
-
-			for imgname in name_cat[base][1:]:
-				# skip if fake user set
-				if bpy.data.images[imgname].use_fake_user is True:
+			for obj in context.selected_objects:
+				if not hasattr(obj.data, "materials"):
 					continue
-				# otherwise, remap
-				data[imgname].user_remap(baseImg)
-				old = bpy.data.images[imgname]
-				if removeold is True and old.users == 0:
-					bpy.data.images.remove(bpy.data.images[imgname])
 
-			# Final step.. rename to not have .001 if it does
-			if baseImg.name != util.nameGeneralize(baseImg.name):
-				gen = util.nameGeneralize(baseImg.name)
-				in_data = gen in data
-				has_users = in_data and bpy.data.images[gen].users != 0
-				if has_users:
-					pass
-				else:
-					baseImg.name = util.nameGeneralize(baseImg.name)
-			else:
-				baseImg.name = util.nameGeneralize(baseImg.name)
+				for mat in obj.data.materials:
+					if not mat or mat in processed_materials:
+						continue
 
-		postcount = len(["x" for x in bpy.data.images if x.users > 0])
-		self.report(
-			{"INFO"}, f"Consolidated {precount} images down to {postcount}")
+					processed_materials.add(mat)
+					if mat.use_nodes and mat.node_tree:
+						for node in mat.node_tree.nodes:
+							if node.type != 'TEX_IMAGE' or not node.image:
+								continue
+							target_images.add(node.image)
 
+			if not target_images:
+				self.report({'INFO'}, "No images found in selection")
+				return {'FINISHED'}
+
+			images_to_check = list(target_images)
+		else:
+			images_to_check = list(bpy.data.images)
+
+		precount = len(bpy.data.images)
+
+		# Group images
+		#
+		# Here we use a list, since we're just trying to get the
+		# raw images at this point for comparison
+		groups: List[Tuple[str, int, int, bpy.types.Image]] = []
+		for img in images_to_check:
+			if img.type in ('RENDER_RESULT', 'COMPOSITING') or img.use_fake_user:
+				continue
+			w, h = img.size
+			# No data or empty image, nothing to compare, skip
+			if w == 0 or h == 0 or not img.has_data:
+				continue
+
+			base_name = util.nameGeneralize(img.name) if self.group_by_name else "GLOBAL"
+			groups.append((base_name, w, h, img))
+
+		# Comparison and Remapping
+		# Key: (base_name, w, h)
+		# Value: List of (image_obj, comparison_array, sum)
+		# store both the image (for remapping later on), the pixel array,
+		# and pixel array sum for super fast prefilter
+		unique_images: Dict[Tuple[str, int, int], List[Tuple[bpy.types.Image, NDArray[np.float32], Optional[np.float64]]]] = {}
+		images_to_remove = []
+
+		for base_name, w, h, img in groups:
+			cur_img_key = (base_name, w, h)
+
+			img_array = np.asarray(img.pixels)
+			pix_sum: Optional[np.float64] = None
+
+			# Approximation of a image content check used
+			# if strict comparison is disabled. Unlike strict
+			# comparison, which checks the actual pixels, this
+			# sums up the pixels and uses that to represent the
+			# image contents
+			if not self.strict_comparison:
+				num_pixels = w * h * 4
+				stride = max(1, num_pixels // RGBA_PIXELS_4096_MAX)
+				cur_img_data = img_array[::stride] if stride > 1 else img_array
+
+				pix_sum = np.sum(cur_img_data)
+	
+			if cur_img_key not in unique_images:
+				unique_images[cur_img_key] = [(img, img_array, pix_sum)]
+				continue
+
+			image_present = False
+			present_image: Optional[bpy.types.Image] = None
+
+			# Look through existing items in this Name/Size group
+			for uni_image, uni_data, uni_sum in unique_images[cur_img_key]:
+				# Fast prefilter, used as an alternative
+				# to strict comparison
+				if not self.strict_comparison and not pix_sum == uni_sum:
+					continue
+				elif not np.array_equal(uni_data, img_array):
+					continue
+				image_present = True
+				present_image = uni_image
+				break
+
+
+			# If the image is present already, mark it
+			# for removal, remap, and continue to the next image
+			if image_present:
+				images_to_remove.append(img)
+				img.user_remap(present_image)
+				continue
+
+			# If the image is not present, add it to the list
+			unique_images[cur_img_key].append((img, img_array, pix_sum))
+
+		# Cleanup
+		to_delete = [
+			img for img in images_to_remove
+			if img.users == 0 and not img.use_fake_user and not img.is_library_indirect]
+
+		if to_delete:
+			for img in to_delete:
+				img.gl_free()
+				img.buffers_free()
+			bpy.data.batch_remove(ids=to_delete)
+
+		# Report
+		postcount = len(bpy.data.images)
+		consolidated_count = precount - postcount
+
+		if consolidated_count > 0:
+			self.report({"INFO"}, f"Consolidated {consolidated_count} duplicate image{'s' if consolidated_count != 1 else ''} (Total: {precount} -> {postcount})")
+		else:
+			self.report({"INFO"}, "No duplicates found")
 		return {'FINISHED'}
 
 

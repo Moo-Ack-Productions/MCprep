@@ -982,6 +982,14 @@ class MaterialsTest(unittest.TestCase):
         bpy.ops.mcprep.combine_images()
         self.assertEqual(init_count, len(bpy.data.images))
 
+    def test_combine_images_strict_comparision(self):
+        img1 = bpy.data.images.new("CombineImages", width=1, height=1)
+        init_count = len(bpy.data.images)
+        img2 = bpy.data.images.new("CombineImages", width=1, height=1)
+        self.assertNotEqual(img1.id_data, img2.id_data)
+        bpy.ops.mcprep.combine_images(strict_comparison=True)
+        self.assertEqual(init_count, len(bpy.data.images))
+
     def test_uv_scale(self):
         bpy.ops.mesh.primitive_plane_add()
         bpy.ops.object.editmode_toggle()
