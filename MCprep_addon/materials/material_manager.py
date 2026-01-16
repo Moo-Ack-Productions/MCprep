@@ -52,12 +52,12 @@ IGNORE_PROPS = (
 	'color', 'parent', 'internal_links', 'texture_mapping', 'color_mapping', 'node_tree'
 )
 
-IGNORE_MAT_SETTINGS = {
+IGNORE_MAT_SETTINGS = (
 	'name', 'use_fake_user', 'is_runtime_data', 'tag', 'asset_data',
 	'preview_render_type', 'use_preview_world', 'use_nodes', 'node_tree',
 	'diffuse_color', 'specular_color', 'roughness', 'specular_intensity',
 	'metallic', 'line_color', 'animation_data'
-}
+)
 
 # -----------------------------------------------------------------------------
 # UI and utility functions
@@ -408,7 +408,7 @@ def get_node_group_fingerprint(node_tree: bpy.types.NodeTree) -> Optional[Dict[s
 					node_data["inputs"].append(input_data)
 
 
-		if node.bl_idname in {'ShaderNodeGroup', 'GeometryNodeGroup'} and node.node_tree: # 'GeometryNodeGroup' included for future merge geoNode operator
+		if node.bl_idname in ('ShaderNodeGroup', 'GeometryNodeGroup') and node.node_tree: # 'GeometryNodeGroup' included for future merge geoNode operator
 			node_data["group_content"] = get_node_group_fingerprint(node.node_tree)
 		nodes_data.append(node_data)
 
@@ -437,7 +437,7 @@ def count_total_nodes(material: bpy.types.Material) -> int:
 				continue
 			count += 1
 			# If it's a group, count its internal nodes too
-			if node.bl_idname in {'ShaderNodeGroup', 'GeometryNodeGroup'} and node.node_tree:
+			if node.bl_idname in ('ShaderNodeGroup', 'GeometryNodeGroup') and node.node_tree:
 				count += _recursive_count(node.node_tree)
 		return count
 
@@ -479,7 +479,7 @@ def get_connected_nodes(node_tree: bpy.types.NodeTree) -> Set[bpy.types.Node]:
 	"""
 	if not node_tree:
 		return set()
-	outputNodes = [n for n in node_tree.nodes if n.bl_idname in {'ShaderNodeOutputMaterial', 'NodeGroupOutput'}]
+	outputNodes = [n for n in node_tree.nodes if n.bl_idname in ('ShaderNodeOutputMaterial', 'NodeGroupOutput')]
 	connected = set()
 	queue = deque(outputNodes)
 	while queue:
