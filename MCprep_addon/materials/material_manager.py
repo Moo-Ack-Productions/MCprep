@@ -175,18 +175,6 @@ def serialize_keyframe(kp: bpy.types.Keyframe) -> Dict[str, Any]:
 		"period": round(kp.period, 6),
 	}
 
-def serialize_action(action: Optional[bpy.types.Action]) -> Optional[Dict[str, Any]]:
-	"""Serializes an entire Action (collection of F-Curves)."""
-	if not action:
-		return None
-
-	fcurves = sorted(action.fcurves, key=lambda f: (f.data_path, f.array_index))
-
-	return {
-		# "name": action.name, # make togglable optional by user
-		"fcurves": [serialize_fcurve(f) for f in fcurves]
-	}
-
 # --- ANIMATION & DRIVER LOGIC ---
 def get_animation_fingerprint(id_data: bpy.types.ID, data_path: Optional[str] = None, array_index: Optional[int] = None) -> Optional[Dict[str, Any]]:
 	"""
@@ -277,7 +265,7 @@ def get_driver_fingerprint(id_data: bpy.types.ID, data_path: str, array_index: O
 
 # --- NODE TREE ANALYSIS ---
 
-def get_material_fingerprint(material: bpy.types.Material, exclude_settings: bool) -> Dict[str, Any]:
+def get_material_fingerprint(material: bpy.types.Material, exclude_settings: bool, use_action_names: bool) -> Dict[str, Any]:
 	"""
 	Generates a unique signature of a material's node tree and render settings to identify duplicates.
 	"""
@@ -295,6 +283,16 @@ def get_material_fingerprint(material: bpy.types.Material, exclude_settings: boo
 		}
 
 	# Gather Animation
+	if use_action_names:
+		# Material level action
+		fp["mat_action_name"] = material.animation_data.action.name if (material.animation_data and material.animation_data.action) else 'None'
+
+		# Node Tree level action
+		if material.node_tree and material.node_tree.animation_data and material.node_tree.animation_data.action:
+			fp["node_tree_action_name"] = material.node_tree.animation_data.action.name
+		else:
+			fp["node_tree_action_name"] = 'None'
+
 	anim = get_animation_fingerprint(material)
 	if anim:
 		fp["animation"] = anim
@@ -339,6 +337,7 @@ def get_material_fingerprint(material: bpy.types.Material, exclude_settings: boo
 					val_data["driver"] = driver
 
 				line_art_settings[prop.identifier] = val_data
+		fp["line_art_settings"] = line_art_settings
 
 	return fp
 
@@ -544,6 +543,11 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 		description="Do not compare materials settings, only nodes",
 		default=False)
 
+	use_action_names: bpy.props.BoolProperty(
+		name="Differentiate by Action Name",
+		description="If true, materials with identical animation but different Action names will be kept separate",
+		default=False)
+
 	def invoke(self, context, event):
 		return context.window_manager.invoke_props_dialog(self)
 
@@ -578,7 +582,7 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 
 		for mat in materials_to_check:
 			group_key = util.nameGeneralize(mat.name) if self.group_by_name else "GLOBAL"
-			fp = get_material_fingerprint(mat, self.exclude_mat_settings)
+			fp = get_material_fingerprint(mat, self.exclude_mat_settings, self.use_action_names)
 
 			if group_key not in fingerprint_groups:
 				fingerprint_groups[group_key] = []
