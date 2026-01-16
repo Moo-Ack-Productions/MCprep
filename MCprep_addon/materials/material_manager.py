@@ -560,11 +560,11 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 			for obj in context.selected_objects:
 				if hasattr(obj.data, "materials"):
 					for mat in obj.data.materials:
-						if mat and not mat.library:
+						if mat and not mat.library and not mat.is_library_indirect:
 							materials_to_check.add(mat)
 			materials_to_check = list(materials_to_check)
 		else:
-			materials_to_check = [m for m in bpy.data.materials if not m.library]
+			materials_to_check = [m for m in bpy.data.materials if not m.library and not m.is_library_indirect]
 
 		if not materials_to_check:
 			self.report({'INFO'}, "No materials found to process")
@@ -577,7 +577,7 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 		fingerprint_groups = {}
 
 		for mat in materials_to_check:
-			group_key = mat.name.split('.')[0] if self.group_by_name else "GLOBAL"
+			group_key = util.nameGeneralize(mat.name) if self.group_by_name else "GLOBAL"
 			fp = get_material_fingerprint(mat, self.exclude_mat_settings)
 
 			if group_key not in fingerprint_groups:
@@ -614,7 +614,13 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 			self.report({'INFO'}, "No duplicates found")
 			return {'FINISHED'}
 
+		renamed_masters = set()
 		for old_mat, master_mat in merge_map.items():
+			if master_mat not in renamed_masters:
+				new_name = util.nameGeneralize(master_mat.name)
+				if new_name != master_mat.name and new_name not in bpy.data.materials:
+					master_mat.name = new_name
+				renamed_masters.add(master_mat)
 			env.log(f"Replaced '{old_mat.name}' with '{master_mat.name}'")
 			old_mat.user_remap(master_mat)
 
