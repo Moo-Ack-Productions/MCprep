@@ -527,7 +527,7 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 	bl_idname = "mcprep.combine_materials"
 	bl_label = "Combine materials"
 	bl_description = "Consolidate duplicate materials based on nodes or name"
-	bl_options = {'REGISTER', 'UNDO'} #add group_undo?
+	bl_options = {'REGISTER', 'UNDO'}
 
 	group_by_name: bpy.props.BoolProperty(
 		name="Group Method: Material Name",
