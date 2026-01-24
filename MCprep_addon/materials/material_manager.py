@@ -261,7 +261,7 @@ def serialize_keyframe(precision: int, kp: bpy.types.Keyframe) -> KeyframeData:
 	)
 
 # --- ANIMATION & DRIVER LOGIC ---
-def get_animation_fingerprint(precision: int, id_data: bpy.types.ID, data_path: Optional[str] = None, array_index: Optional[int] = None) -> Optional[List[FCurveData]]:
+def get_animation_fingerprint(precision: int, id_data: bpy.types.ID, data_path: Optional[str] = None, array_index: Optional[int] = -1) -> Optional[List[FCurveData]]:
 	"""
 	Retrieves the animation data for a specific property or data-block as a serializable fingerprint.
 	"""
@@ -269,33 +269,31 @@ def get_animation_fingerprint(precision: int, id_data: bpy.types.ID, data_path: 
 		return None
 
 	action = id_data.animation_data.action
-
+	fcurve = None
+	
 	if data_path:
-		fcurve = next((f for f in action.fcurves if f.data_path == data_path and
-					  (array_index is None or f.array_index == array_index)), None)
-		return [serialize_fcurve(precision, fcurve)] if fcurve else None
-
-	fcurves = sorted(action.fcurves, key=lambda f: (f.data_path, f.array_index))
-	return [serialize_fcurve(precision, f) for f in fcurves]
-
-def get_driver_fingerprint(precision: int, id_data: bpy.types.ID, data_path: str, array_index: Optional[int] = None) -> Optional[DriverFingerprint]:
-	"""
-	Captures driver expressions, variables, and modifier stacks into a serializable structure.
-	"""
-	if not id_data.animation_data:
-		return None
-
-	fcurve: Optional[bpy.types.FCurve] = None
-	for d in id_data.animation_data.drivers:
-		if d.data_path == data_path and (array_index is None or d.array_index == array_index):
-			fcurve = d
-			break
+		found = action.fcurves.find(data_path, index=array_index)
+		fcurve = [found] if found else None 
+	else:
+		fcurve = sorted(action.fcurves, key=lambda f: (f.data_path, f.array_index))
 
 	if not fcurve:
 		return None
+	return [serialize_fcurve(precision, f) for f in fcurve]
+
+def get_driver_fingerprint(precision: int, id_data: bpy.types.ID, data_path: str, array_index: Optional[int] = -1) -> Optional[DriverFingerprint]:
+	"""
+	Captures driver expressions, variables, and modifier stacks into a serializable structure.
+	"""
+	if not id_data.animation_data or not id_data.animation_data.drivers:
+		return None
+		
+	fcurve = id_data.animation_data.drivers.find(data_path, index=array_index)
+	
+	if fcurve is None:
+		return None
 
 	drv = fcurve.driver
-
 
 	variables: List[DriverVariableData] = []
 	for var in drv.variables:
