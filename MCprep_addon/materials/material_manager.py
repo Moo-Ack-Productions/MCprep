@@ -23,7 +23,7 @@ import bpy
 from collections import deque
 import time
 
-from typing import Dict, List, Optional, Set, Tuple, Union, Any, Deque
+from typing import Dict, List, Optional, Set, Tuple, Union
 from numpy.typing import NDArray
 
 import numpy as np
@@ -135,48 +135,133 @@ class ListMaterials(bpy.types.PropertyGroup):
 	path: bpy.props.StringProperty(subtype='FILE_PATH')
 	index: bpy.props.IntProperty(min=0, default=0)  # for icon drawing
 
+
+# -----------------------------------------------------------------------------
+# Dataclasses for material comparison 
+# -----------------------------------------------------------------------------
+
+Primitive = Union[int, float, str, bool, list, None]
+
+@dataclass
+class KeyframeData:
+	co: Tuple[float, float]
+	handles: Tuple[float, float, float, float] # left_x, left_y, right_x, right_y
+	types: Tuple[str, str, str, str]		   # handle_l, handle_r, interp, easing
+	dynamics: Tuple[float, float, float]	   # back, amplitude, period
+
+@dataclass
+class FCurveData:
+	array_index: int
+	extrapolation: str
+	auto_smoothing: bool
+	mute: bool
+	keyframes: List[KeyframeData]
+
+@dataclass
+class DriverVariableTarget:
+	id_name: str
+	data_path: str = ""
+	bone_target: str = ""
+	id_type: str = ""
+	transform_type: str = ""
+	transform_space: str = ""
+	rotation_mode: str = ""
+	context_property: str = ""
+
+@dataclass
+class DriverVariableData:
+	name: str
+	var_type: str
+	targets: List[DriverVariableTarget]
+
+@dataclass
+class DriverModifierData:
+	mod_type: str
+	settings: Dict[str, Primitive]
+
+@dataclass
+class DriverFingerprint:
+	drv_type: str
+	expression: Optional[str]
+	variables: List[DriverVariableData]
+	fcurve: FCurveData
+	modifiers: List[DriverModifierData]
+
+@dataclass
+class PropertyEntry:
+	val: Primitive
+	driver: Optional[DriverFingerprint] = None
+	animation: Optional[List[FCurveData]] = None
+
+class NodeLinkData:
+	from_socket: str
+	from_node: str
+	to_socket: str
+	to_node: str
+
+@dataclass
+class NodeFingerprint:
+	node_type: str
+	muted: bool
+	properties: Dict[str, PropertyEntry]
+	inputs: List[PropertyEntry]
+	group_content: Optional['NodeTreeFingerprint'] = None
+
+@dataclass
+class NodeTreeFingerprint:
+	nodes: List[NodeFingerprint]
+	links: List[NodeLinkData]
+
+@dataclass
+class MaterialFingerprint:
+	mat_type: str = ""
+	diffuse: Optional[List[float]] = None
+	roughness: Optional[float] = None
+	metallic: Optional[float] = None
+	node_tree_data: Optional[NodeTreeFingerprint] = None
+	mat_action_name: str = 'None'
+	node_tree_action_name: str = 'None'
+	animation: Optional[Dict[str, List[FCurveData]]] = None
+	render_settings: Optional[Dict[str, PropertyEntry]] = None
+	line_art_settings: Optional[Dict[str, PropertyEntry]] = None
+
+
 # -----------------------------------------------------------------------------
 # Material structural comparison helpers
 # -----------------------------------------------------------------------------
 
 # --- SERIALIZATION HELPERS ---
 
-def serialize_fcurve(fcurve: bpy.types.FCurve) -> Dict[str, Any]:
+def serialize_fcurve(fcurve: bpy.types.FCurve) -> FCurveData:
 	"""
 	Converts an F-Curve data-block into a dictionary of primitive values for structural comparison.
 	"""
 	fcurve.keyframe_points.sort()
 
-	return {
-		"array_index": fcurve.array_index,
-		"extrapolation": fcurve.extrapolation,
-		"auto_smoothing": fcurve.auto_smoothing,
-		"mute": fcurve.mute,
-		"keyframes": [
-			serialize_keyframe(kp)
-			for kp in fcurve.keyframe_points
-		],
-	}
+	return FCurveData(
+        array_index=fcurve.array_index,
+        extrapolation=fcurve.extrapolation,
+        auto_smoothing=fcurve.auto_smoothing,
+        mute=fcurve.mute,
+        keyframes=[serialize_keyframe(kp) for kp in fcurve.keyframe_points]
+    )
 
-def serialize_keyframe(kp: bpy.types.Keyframe) -> Dict[str, Any]:
+def serialize_keyframe(kp: bpy.types.Keyframe) -> KeyframeData:
 	"""
 	Serializes individual keyframe points, rounding float values to ensure consistent hashing.
 	"""
-	return {
-		"co": tuple(round(v, 6) for v in kp.co),
-		"handle_left": tuple(round(v, 6) for v in kp.handle_left),
-		"handle_right": tuple(round(v, 6) for v in kp.handle_right),
-		"handle_left_type": kp.handle_left_type,
-		"handle_right_type": kp.handle_right_type,
-		"interpolation": kp.interpolation,
-		"easing": kp.easing,
-		"back": round(kp.back, 6),
-		"amplitude": round(kp.amplitude, 6),
-		"period": round(kp.period, 6),
-	}
+	return KeyframeData(
+        co=(round(kp.co[0]), round(kp.co[1])),
+        handles=(
+            round(kp.handle_left[0]), round(kp.handle_left[1]),
+            round(kp.handle_right[0]), round(kp.handle_right[1])
+        ),
+        types=(kp.handle_left_type, kp.handle_right_type, kp.interpolation, kp.easing),
+        dynamics=(round(kp.back), round(kp.amplitude), round(kp.period))
+    )
 
 # --- ANIMATION & DRIVER LOGIC ---
-def get_animation_fingerprint(id_data: bpy.types.ID, data_path: Optional[str] = None, array_index: Optional[int] = None) -> Optional[Dict[str, Any]]:
+def get_animation_fingerprint(id_data: bpy.types.ID, data_path: Optional[str] = None, array_index: Optional[int] = None) -> Optional[List[FCurveData]]:
 	"""
 	Retrieves the animation data for a specific property or data-block as a serializable fingerprint.
 	"""
@@ -188,12 +273,12 @@ def get_animation_fingerprint(id_data: bpy.types.ID, data_path: Optional[str] = 
 	if data_path:
 		fcurve = next((f for f in action.fcurves if f.data_path == data_path and
 					  (array_index is None or f.array_index == array_index)), None)
-		return serialize_fcurve(fcurve) if fcurve else None
+		return [serialize_fcurve(fcurve)] if fcurve else None
 
 	fcurves = sorted(action.fcurves, key=lambda f: (f.data_path, f.array_index))
-	return {"fcurves": [serialize_fcurve(f) for f in fcurves]}
+	return [serialize_fcurve(f) for f in fcurves]
 
-def get_driver_fingerprint(id_data: bpy.types.ID, data_path: str, array_index: Optional[int] = None) -> Optional[Dict[str, Any]]:
+def get_driver_fingerprint(id_data: bpy.types.ID, data_path: str, array_index: Optional[int] = None) -> Optional[DriverFingerprint]:
 	"""
 	Captures driver expressions, variables, and modifier stacks into a serializable structure.
 	"""
@@ -206,96 +291,101 @@ def get_driver_fingerprint(id_data: bpy.types.ID, data_path: str, array_index: O
 
 	drv = fcurve.driver
 
-	# 1. Basic Driver Settings
-	driver_data = {"type": drv.type,}
-	if drv.type == 'SCRIPTED':
-		driver_data["expression"] = drv.expression
 
-	# 2. Variable Logic (Only properties that affect driver result)
-
-	driver_data["variables"] = []
+	variables: List[DriverVariableData] = []
 	for var in drv.variables:
-		var_data = {"name": var.name, "type": var.type, "targets": []}
-
+		targets: List[DriverVariableTarget] = []
+		
 		for tar in var.targets:
-			tar_info = {}
-			if var.type == 'CONTEXT_PROP':
-				tar_info["context_property"] = tar.context_property
-				tar_info["data_path"] = tar.data_path
-				var_data["targets"].append(tar_info)
-				continue
+			# 1. Basic Driver Settings
+			tar_info: Dict[str, str] = {"id_name": getattr(tar.id, "name_full", tar.id.name) if tar.id else ""}
 
-			tar_info = {"id": getattr(tar.id, "name_full", tar.id.name)}
-
+			# 2. Variable Logic (Only properties that affect driver result)
 			if tar.bone_target:
 				tar_info["bone_target"] = tar.bone_target
 
-			if var.type == 'SINGLE_PROP':
+			if var.type == 'CONTEXT_PROP':
+				tar_info["context_property"] = tar.context_property
+				tar_info["data_path"] = tar.data_path
+
+			elif var.type == 'SINGLE_PROP':
 				tar_info["id_type"] = tar.id_type
 				tar_info["data_path"] = tar.data_path
 
 			elif var.type == 'TRANSFORMS':
 				tar_info["transform_type"] = tar.transform_type
+				tar_info["transform_space"] = tar.transform_space
 				if tar.transform_type.startswith("ROT"):
 					tar_info["rotation_mode"] = tar.rotation_mode
-				tar_info["transform_space"] = tar.transform_space
 
 			elif var.type == 'LOC_DIFF':
 				tar_info["transform_space"] = tar.transform_space
 
-			var_data["targets"].append(tar_info)
-		driver_data["variables"].append(var_data)
+			targets.append(DriverVariableTarget(**tar_info))
+		variables.append(DriverVariableData(name=var.name, var_type=var.type, targets=targets))
 
 	# 3. F-Curve
-	driver_data["fcurve"] = serialize_fcurve(fcurve)
-
+	driver_fcurve = serialize_fcurve(precision, fcurve)
+	
 	# 4. F-Curve Modifiers (Skip if muted or influence is 0)
-	driver_data["modifiers"] = []
+	modifiers: List[DriverModifierData] = []
 	for mod in fcurve.modifiers:
 		if mod.mute or getattr(mod, "influence", 1.0) <= 0.0:
 			continue
 
-		m_data = {"type": mod.type}
+		m_data: Dict[str, Primitive] = {}
 		for prop in mod.bl_rna.properties:
 			if not prop.is_readonly and prop.identifier not in {'name', 'type', 'is_active'}:
 				m_data[prop.identifier] = to_primitive(getattr(mod, prop.identifier))
-		driver_data["modifiers"].append(m_data)
+		
+		modifiers.append(DriverModifierData(mod_type=mod.type, settings=m_data))
 
-	return driver_data
+	return DriverFingerprint(
+		drv_type=drv.type,
+		expression=drv.expression if drv.type == 'SCRIPTED' else None,
+		variables=variables,
+		fcurve=driver_fcurve,
+		modifiers=modifiers
+	)
 
 # --- NODE TREE ANALYSIS ---
 
-def get_material_fingerprint(material: bpy.types.Material, exclude_settings: bool, use_action_names: bool) -> Dict[str, Any]:
+def get_material_fingerprint(material: bpy.types.Material, exclude_settings: bool, use_action_names: bool) -> MaterialFingerprint:
 	"""
 	Generates a unique signature of a material's node tree and render settings to identify duplicates.
 	"""
+	mat_type = "FIXED_MAT"
+	diffuse = None
+	roughness = None
+	metallic = None
+	node_tree_data = None
+	mat_action_name = 'None'
+	node_tree_action_name = 'None'
+	anim = None
+	render_settings = None
+	line_art_settings = None
+
 	if not material.node_tree:
-		fp = {
-			"type": "FIXED_MAT",
-			"diffuse": to_primitive(material.diffuse_color),
-			"roughness": material.roughness,
-			"metallic": material.metallic
-		}
+		mat_type = "FIXED_MAT"
+		diffuse = to_primitive(material.diffuse_color)
+		roughness = to_primitive(material.roughness)
+		metallic = to_primitive(material.metallic)
 	else:
-		fp = {
-			"type": "NODE_TREE",
-			"data": get_node_group_fingerprint(material.node_tree)
-		}
+		mat_type = "NODE_TREE"
+		node_tree_data = get_node_group_fingerprint(material.node_tree)
 
 	# Gather Animation
 	if use_action_names:
 		# Material level action
-		fp["mat_action_name"] = material.animation_data.action.name if (material.animation_data and material.animation_data.action) else 'None'
+		mat_action_name = material.animation_data.action.name if (material.animation_data and material.animation_data.action) else 'None'
 
 		# Node Tree level action
 		if material.node_tree and material.node_tree.animation_data and material.node_tree.animation_data.action:
-			fp["node_tree_action_name"] = material.node_tree.animation_data.action.name
+			node_tree_action_name = material.node_tree.animation_data.action.name
 		else:
-			fp["node_tree_action_name"] = 'None'
+			node_tree_action_name = 'None'
 
-	anim = get_animation_fingerprint(material)
-	if anim:
-		fp["animation"] = anim
+	anim = get_animation_fingerprint(precision, material)
 
 	# Gather Material / Render Settings
 	if not exclude_settings:
@@ -304,16 +394,14 @@ def get_material_fingerprint(material: bpy.types.Material, exclude_settings: boo
 			if prop.is_readonly or prop.identifier in IGNORE_MAT_SETTINGS:
 				continue
 
-			val_data = {"val": to_primitive(getattr(material, prop.identifier))}
+			val_data = PropertyEntry(val=to_primitive(getattr(material, prop.identifier)))
 
 			# Check for driver
-			driver = get_driver_fingerprint(material, prop.identifier)
+			driver = get_driver_fingerprint(precision, material, prop.identifier)
 			if driver is not None:
-				val_data["driver"] = driver
+				val_data.driver = driver
 
 			render_settings[prop.identifier] = val_data
-
-		fp["render_settings"] = render_settings
 
 		# Gather Line Art Settings
 		line_art_settings = {}
@@ -329,19 +417,29 @@ def get_material_fingerprint(material: bpy.types.Material, exclude_settings: boo
 				else:
 					value = to_primitive(value)
 
-				val_data = {"val": value}
+				val_data = PropertyEntry(val=value)
 
 				# Check for driver
-				driver = get_driver_fingerprint(material, f"line_art.{prop.identifier}")
+				driver = get_driver_fingerprint(precision, material, f"line_art.{prop.identifier}")
 				if driver is not None:
-					val_data["driver"] = driver
+					val_data.driver = driver
 
 				line_art_settings[prop.identifier] = val_data
-		fp["line_art_settings"] = line_art_settings
 
-	return fp
+	return MaterialFingerprint(
+		mat_type=mat_type,
+		diffuse=diffuse,
+		roughness=roughness,
+		metallic=metallic,
+		node_tree_data=node_tree_data,
+		mat_action_name=mat_action_name,
+		node_tree_action_name=node_tree_action_name,
+		animation=anim,
+		render_settings=render_settings,
+		line_art_settings=line_art_settings
+	)
 
-def get_node_group_fingerprint(node_tree: bpy.types.NodeTree) -> Optional[Dict[str, Any]]:
+def get_node_group_fingerprint(node_tree: bpy.types.NodeTree) -> Optional[NodeTreeFingerprint]
 	"""
 	Recursively maps the connected node network, properties, and internal group contents.
 	"""
@@ -420,7 +518,9 @@ def get_node_group_fingerprint(node_tree: bpy.types.NodeTree) -> Optional[Dict[s
 				if src.node in active_nodes:
 					links_data.append({"from_socket": src.name, "from_node": src.node.bl_idname, "to_socket": socket.name, "to_node": node.bl_idname})
 
-	return {"nodes": nodes_data, "links": sorted(links_data, key=lambda x: str(x))}
+	return NodeTreeFingerprint(
+		nodes=nodes_data,
+		links=sorted(links_data, key=lambda x: str(x)))
 
 def count_total_nodes(material: bpy.types.Material) -> int:
 	"""
@@ -442,7 +542,7 @@ def count_total_nodes(material: bpy.types.Material) -> int:
 
 	return _recursive_count(material.node_tree)
 
-def to_primitive(val: Any) -> Union[int, float, str, bool, list, None]:
+def to_primitive(val: Any) -> Primitive:
 	"""
 	Converts Blender-specific data types into standard Python primitives for serialization.
 	"""
