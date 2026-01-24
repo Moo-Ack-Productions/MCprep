@@ -232,36 +232,36 @@ class MaterialFingerprint:
 
 # --- SERIALIZATION HELPERS ---
 
-def serialize_fcurve(fcurve: bpy.types.FCurve) -> FCurveData:
+def serialize_fcurve(precision: int, fcurve: bpy.types.FCurve) -> FCurveData:
 	"""
 	Converts an F-Curve data-block into a dictionary of primitive values for structural comparison.
 	"""
 	fcurve.keyframe_points.sort()
 
 	return FCurveData(
-        array_index=fcurve.array_index,
-        extrapolation=fcurve.extrapolation,
-        auto_smoothing=fcurve.auto_smoothing,
-        mute=fcurve.mute,
-        keyframes=[serialize_keyframe(kp) for kp in fcurve.keyframe_points]
-    )
+		array_index=fcurve.array_index,
+		extrapolation=fcurve.extrapolation,
+		auto_smoothing=fcurve.auto_smoothing,
+		mute=fcurve.mute,
+		keyframes=[serialize_keyframe(precision, kp) for kp in fcurve.keyframe_points]
+	)
 
-def serialize_keyframe(kp: bpy.types.Keyframe) -> KeyframeData:
+def serialize_keyframe(precision: int, kp: bpy.types.Keyframe) -> KeyframeData:
 	"""
 	Serializes individual keyframe points, rounding float values to ensure consistent hashing.
 	"""
 	return KeyframeData(
-        co=(round(kp.co[0]), round(kp.co[1])),
-        handles=(
-            round(kp.handle_left[0]), round(kp.handle_left[1]),
-            round(kp.handle_right[0]), round(kp.handle_right[1])
-        ),
-        types=(kp.handle_left_type, kp.handle_right_type, kp.interpolation, kp.easing),
-        dynamics=(round(kp.back), round(kp.amplitude), round(kp.period))
-    )
+		co=(round(kp.co[0], precision), round(kp.co[1], precision)),
+		handles=(
+			round(kp.handle_left[0], precision), round(kp.handle_left[1], precision),
+			round(kp.handle_right[0], precision), round(kp.handle_right[1], precision)
+		),
+		types=(kp.handle_left_type, kp.handle_right_type, kp.interpolation, kp.easing),
+		dynamics=(round(kp.back, precision), round(kp.amplitude, precision), round(kp.period, precision))
+	)
 
 # --- ANIMATION & DRIVER LOGIC ---
-def get_animation_fingerprint(id_data: bpy.types.ID, data_path: Optional[str] = None, array_index: Optional[int] = None) -> Optional[List[FCurveData]]:
+def get_animation_fingerprint(precision: int, id_data: bpy.types.ID, data_path: Optional[str] = None, array_index: Optional[int] = None) -> Optional[List[FCurveData]]:
 	"""
 	Retrieves the animation data for a specific property or data-block as a serializable fingerprint.
 	"""
@@ -273,12 +273,12 @@ def get_animation_fingerprint(id_data: bpy.types.ID, data_path: Optional[str] = 
 	if data_path:
 		fcurve = next((f for f in action.fcurves if f.data_path == data_path and
 					  (array_index is None or f.array_index == array_index)), None)
-		return [serialize_fcurve(fcurve)] if fcurve else None
+		return [serialize_fcurve(precision, fcurve)] if fcurve else None
 
 	fcurves = sorted(action.fcurves, key=lambda f: (f.data_path, f.array_index))
-	return [serialize_fcurve(f) for f in fcurves]
+	return [serialize_fcurve(precision, f) for f in fcurves]
 
-def get_driver_fingerprint(id_data: bpy.types.ID, data_path: str, array_index: Optional[int] = None) -> Optional[DriverFingerprint]:
+def get_driver_fingerprint(precision: int, id_data: bpy.types.ID, data_path: str, array_index: Optional[int] = None) -> Optional[DriverFingerprint]:
 	"""
 	Captures driver expressions, variables, and modifier stacks into a serializable structure.
 	"""
@@ -336,7 +336,7 @@ def get_driver_fingerprint(id_data: bpy.types.ID, data_path: str, array_index: O
 		m_data: Dict[str, Primitive] = {}
 		for prop in mod.bl_rna.properties:
 			if not prop.is_readonly and prop.identifier not in {'name', 'type', 'is_active'}:
-				m_data[prop.identifier] = to_primitive(getattr(mod, prop.identifier))
+				m_data[prop.identifier] = to_primitive(getattr(mod, prop.identifier), precision)
 		
 		modifiers.append(DriverModifierData(mod_type=mod.type, settings=m_data))
 
@@ -350,7 +350,7 @@ def get_driver_fingerprint(id_data: bpy.types.ID, data_path: str, array_index: O
 
 # --- NODE TREE ANALYSIS ---
 
-def get_material_fingerprint(material: bpy.types.Material, exclude_settings: bool, use_action_names: bool) -> MaterialFingerprint:
+def get_material_fingerprint(material: bpy.types.Material, exclude_settings: bool, use_action_names: bool,	precision: int) -> MaterialFingerprint:
 	"""
 	Generates a unique signature of a material's node tree and render settings to identify duplicates.
 	"""
@@ -367,12 +367,12 @@ def get_material_fingerprint(material: bpy.types.Material, exclude_settings: boo
 
 	if not material.node_tree:
 		mat_type = "FIXED_MAT"
-		diffuse = to_primitive(material.diffuse_color)
-		roughness = to_primitive(material.roughness)
-		metallic = to_primitive(material.metallic)
+		diffuse = to_primitive(material.diffuse_color, precision)
+		roughness = to_primitive(material.roughness, precision)
+		metallic = to_primitive(material.metallic, precision)
 	else:
 		mat_type = "NODE_TREE"
-		node_tree_data = get_node_group_fingerprint(material.node_tree)
+		node_tree_data = get_node_group_fingerprint(material.node_tree, precision)
 
 	# Gather Animation
 	if use_action_names:
@@ -394,7 +394,7 @@ def get_material_fingerprint(material: bpy.types.Material, exclude_settings: boo
 			if prop.is_readonly or prop.identifier in IGNORE_MAT_SETTINGS:
 				continue
 
-			val_data = PropertyEntry(val=to_primitive(getattr(material, prop.identifier)))
+			val_data = PropertyEntry(val=to_primitive(getattr(material, prop.identifier), precision))
 
 			# Check for driver
 			driver = get_driver_fingerprint(precision, material, prop.identifier)
@@ -413,9 +413,9 @@ def get_material_fingerprint(material: bpy.types.Material, exclude_settings: boo
 
 				value = getattr(la, prop.identifier)
 				if hasattr(value, "__iter__") and not isinstance(value, (str, bytes)):
-					value = [to_primitive(v) for v in value]
+					value = [to_primitive(v, precision) for v in value]
 				else:
-					value = to_primitive(value)
+					value = to_primitive(value, precision)
 
 				val_data = PropertyEntry(val=value)
 
@@ -439,7 +439,7 @@ def get_material_fingerprint(material: bpy.types.Material, exclude_settings: boo
 		line_art_settings=line_art_settings
 	)
 
-def get_node_group_fingerprint(node_tree: bpy.types.NodeTree) -> Optional[NodeTreeFingerprint]
+def get_node_group_fingerprint(node_tree: bpy.types.NodeTree, precision: int) -> Optional[NodeTreeFingerprint]:
 	"""
 	Recursively maps the connected node network, properties, and internal group contents.
 	"""
@@ -457,11 +457,11 @@ def get_node_group_fingerprint(node_tree: bpy.types.NodeTree) -> Optional[NodeTr
 			if prop.identifier in IGNORE_PROPS or prop.is_readonly: continue
 			data_path = f'nodes["{node.name}"].{prop.identifier}'
 
-			prop_entry = {"val": to_primitive(getattr(node, prop.identifier))}
+			prop_entry = {"val": to_primitive(getattr(node, prop.identifier), precision)}
 
 			# Check Driver & Anim
-			driver = get_driver_fingerprint(node_tree, data_path)
-			anim = get_animation_fingerprint(node_tree, data_path)
+			driver = get_driver_fingerprint(precision, node_tree, data_path)
+			anim = get_animation_fingerprint(precision, node_tree, data_path)
 			if driver: prop_entry["driver"] = driver
 			if anim: prop_entry["animation"] = anim
 
@@ -477,11 +477,11 @@ def get_node_group_fingerprint(node_tree: bpy.types.NodeTree) -> Optional[NodeTr
 
 			# Scalar
 			if isinstance(default_val, (int, float)):
-				input_data = {"idx": socket_idx, "val": to_primitive(default_val)}
+				input_data = {"idx": socket_idx, "val": to_primitive(default_val, precision)}
 
 				# Check Driver & Anim
-				driver = get_driver_fingerprint(node_tree, data_path)
-				anim = get_animation_fingerprint(node_tree, data_path)
+				driver = get_driver_fingerprint(precision, node_tree, data_path)
+				anim = get_animation_fingerprint(precision, node_tree, data_path)
 				if driver: input_data["driver"] = driver
 				if anim: input_data["animation"] = anim
 
@@ -497,8 +497,8 @@ def get_node_group_fingerprint(node_tree: bpy.types.NodeTree) -> Optional[NodeTr
 						"val": value if isinstance(value, str) else round(value, 6)}
 
 					# Check Driver & Anim
-					driver = get_driver_fingerprint(node_tree, data_path, array_idx)
-					anim = get_animation_fingerprint(node_tree, data_path, array_idx)
+					driver = get_driver_fingerprint(precision, node_tree, data_path, array_idx)
+					anim = get_animation_fingerprint(precision, node_tree, data_path, array_idx)
 					if driver: input_data["driver"] = driver
 					if anim: input_data["animation"] = anim
 
@@ -506,7 +506,7 @@ def get_node_group_fingerprint(node_tree: bpy.types.NodeTree) -> Optional[NodeTr
 
 
 		if node.bl_idname in ('ShaderNodeGroup', 'GeometryNodeGroup') and node.node_tree: # 'GeometryNodeGroup' included for future merge geoNode operator
-			node_data["group_content"] = get_node_group_fingerprint(node.node_tree)
+			node_data["group_content"] = get_node_group_fingerprint(node.node_tree, precision)
 		nodes_data.append(node_data)
 
 	links_data = []
@@ -542,18 +542,18 @@ def count_total_nodes(material: bpy.types.Material) -> int:
 
 	return _recursive_count(material.node_tree)
 
-def to_primitive(val: Any) -> Primitive:
+def to_primitive(val, decimals: int = 4) -> Primitive:
 	"""
 	Converts Blender-specific data types into standard Python primitives for serialization.
 	"""
 	if isinstance(val, (int, float)):
-		return round(val, 6)
+		return round(val, decimals)
 	elif isinstance(val, (str, bool, type(None))):
 		return val
 	elif hasattr(val, "to_list"):
-		return [round(x, 6) for x in val.to_list()]
+		return [round(x, decimals) for x in val.to_list()]
 	elif hasattr(val, "__iter__"):
-		return [to_primitive(x) for x in val]
+		return [to_primitive(x, decimals) for x in val]
 	return str(val)
 
 def trace_socket(socket: bpy.types.NodeSocket) -> bpy.types.NodeSocket:
@@ -648,6 +648,12 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 		description="If true, materials with identical animation but different Action names will be kept separate",
 		default=False)
 
+	precision: bpy.props.IntProperty(
+		name="Matching Precision",
+		description="Number of decimal places to round values to when comparing. Higher = stricter",
+		min=0, max=6,
+		default=4)
+
 	def invoke(self, context, event):
 		return context.window_manager.invoke_props_dialog(self)
 
@@ -682,7 +688,7 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 
 		for mat in materials_to_check:
 			group_key = util.nameGeneralize(mat.name) if self.group_by_name else "GLOBAL"
-			fp = get_material_fingerprint(mat, self.exclude_mat_settings, self.use_action_names)
+			fp = get_material_fingerprint(mat, self.exclude_mat_settings, self.use_action_names, self.precision)
 
 			if group_key not in fingerprint_groups:
 				fingerprint_groups[group_key] = []
