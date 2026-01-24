@@ -285,7 +285,12 @@ def get_driver_fingerprint(precision: int, id_data: bpy.types.ID, data_path: str
 	if not id_data.animation_data:
 		return None
 
-	fcurve = next((d for d in id_data.animation_data.drivers if d.data_path == data_path and (array_index is None or d.array_index == array_index)), None)
+	fcurve: Optional[bpy.types.FCurve] = None
+	for d in id_data.animation_data.drivers:
+		if d.data_path == data_path and (array_index is None or d.array_index == array_index):
+			fcurve = d
+			break
+
 	if not fcurve:
 		return None
 
