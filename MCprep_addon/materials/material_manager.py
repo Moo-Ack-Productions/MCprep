@@ -135,7 +135,7 @@ class ListMaterials(bpy.types.PropertyGroup):
 	# inherited: name
 	description: bpy.props.StringProperty()
 	path: bpy.props.StringProperty(subtype='FILE_PATH')
-	index: bpy.props.IntProperty(min=0, default=0)  # for icon drawing
+	index: bpy.props.IntProperty(min=0, default=0)	# for icon drawing
 
 
 # -----------------------------------------------------------------------------
@@ -323,7 +323,7 @@ def get_animation_fingerprint(precision: int, id_data: bpy.types.ID, data_path: 
 	# Return None if no valid (multi-keyframe) curves were found
 	return results if results else None
 
-def get_driver_fingerprint(precision: int, id_data: bpy.types.ID, data_path: str, array_index: int = 0) -> Optional[DriverFingerprint]:
+def get_driver_fingerprint(precision: int, id_data: bpy.types.ID, data_path: str, array_index: int = -1) -> Optional[DriverFingerprint]:
 	"""Captures drivers math (expression), inputs (variables), and modifiers."""
 
 	if not id_data.animation_data or not id_data.animation_data.drivers:
@@ -348,7 +348,7 @@ def get_driver_fingerprint(precision: int, id_data: bpy.types.ID, data_path: str
 				id_name=getattr(tar.id, "name_full", tar.id.name) if tar.id else ""
 			)
 
-			# 4. Contextual Logic: Only capture attributes relevant to the variable type.
+			# - Contextual Logic: Only capture attributes relevant to the variable type.
 			# This prevents "noise" / irrelevant unused attributes in the driver results
 			
 			# - Property based variables (getting a value from a UI field)
@@ -537,10 +537,29 @@ def get_node_group_fingerprint(node_tree: bpy.types.NodeTree, precision: int) ->
 	# doesn't change if the user re-wired nodes in a different sequence.
 	return NodeTreeFingerprint(nodes=nodes_data, links=sorted(links_data, key=lambda x: str(x)))
 
-def count_total_nodes(material: bpy.types.Material) -> int:
+def node_tree_counter(node_tree: bpy.types.NodeTree) -> int:
 	"""
 	Counts all functional nodes. If a NodeGroup is found, 
 	it enters that sub-tree and adds those nodes to the total count.
+	"""
+	count = 0
+	for node in node_tree.nodes:
+		# Frames and Reroutes are organizational, not functional
+		if node.bl_idname in ('NodeFrame', 'NodeReroute'):
+			continue
+		count += 1
+
+		# If it's a group, count its internal nodes too
+		if node.bl_idname == 'ShaderNodeGroup' and node.node_tree:
+			count += node_tree_counter(node.node_tree)
+	return count
+
+def count_nodes_in_material(material: bpy.types.Material) -> int:
+	"""Wrapper that performs a recursive count of all functional nodes within a material and its nested node groups."""
+	if not material.node_tree:
+		return 0
+	return node_tree_counter(material.node_tree)
+
 def serialize_value(val, decimals: int = 4) -> Primitive:
 	"""
 	Standardizes Blender's internal math types into Python-native primitives.
@@ -568,20 +587,25 @@ def serialize_value(val, decimals: int = 4) -> Primitive:
 		
 	return val
 
-def trace_socket(socket: bpy.types.NodeSocket) -> bpy.types.NodeSocket:
+def trace_socket(dest_socket: bpy.types.NodeSocket) -> bpy.types.NodeSocket:
 	"""Follows a node socket link back to its source, traversing reroute nodes."""
-	Follows a node socket link back to its source, traversing reroute nodes.
-	"""
-	if not socket or not socket.is_linked:
-		return socket
-	current_link = socket.links[0]
+	if not dest_socket or not dest_socket.is_linked:
+		return dest_socket
+	
+	# Start at the first link connected to the destination socket
+	current_link = dest_socket.links[0]
 	source_node = current_link.from_node
+
+	# If the source is a reroute, we need to walk "behind" it recursively
 	while source_node and source_node.bl_idname == 'NodeReroute':
-		if source_node.inputs[0].is_linked:
-			current_link = source_node.inputs[0].links[0]
-			source_node = current_link.from_node
-		else:
-			return source_node.inputs[0]
+		reroute_input = source_node.inputs[0]
+		if not reroute_input.is_linked:
+			return reroute_input
+		
+		current_link = reroute_input.links[0]
+		source_node = current_link.from_node
+
+	# Once we hit a non-reroute node, return the actual source output socket
 	return current_link.from_socket
 
 def get_connected_nodes(node_tree: bpy.types.NodeTree) -> Set[bpy.types.Node]:
@@ -592,18 +616,22 @@ def get_connected_nodes(node_tree: bpy.types.NodeTree) -> Set[bpy.types.Node]:
 	"""
 	if not node_tree:
 		return set()
-	outputNodes = [n for n in node_tree.nodes if n.bl_idname in ('ShaderNodeOutputMaterial', 'NodeGroupOutput')]
+	
+	# Identify the starting output node of the data flow - typically the Material Output node, but also Group Outputs for nested groups
+	outputs = [n for n in node_tree.nodes if n.bl_idname in ('ShaderNodeOutputMaterial', 'NodeGroupOutput')]
 	connected = set()
-	queue = deque(outputNodes)
+	queue = deque(outputs)
+
+	# Breadth-first search through the node tree, following links backwards from outputs to inputs
 	while queue:
 		node = queue.popleft()
-		if node in connected: continue
+		if node in connected:
+			continue
 		connected.add(node)
-		for input_socket in node.inputs:
-			for link in input_socket.links:
-				from_node = link.from_node
-				if from_node not in connected:
-					queue.append(from_node)
+		for socket in node.inputs:
+			for link in socket.links:
+				if link.from_node not in connected:
+					queue.append(link.from_node)
 	return connected
 
 # -----------------------------------------------------------------------------
@@ -668,6 +696,8 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 		min=0, max=6,
 		default=4)
 
+	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
+
 	def invoke(self, context, event):
 		return context.window_manager.invoke_props_dialog(self)
 
@@ -682,10 +712,13 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 		if self.selection_only:
 			materials_to_check = set()
 			for obj in context.selected_objects:
-				if hasattr(obj.data, "materials"):
-					for mat in obj.data.materials:
-						if mat and not mat.library and not mat.is_library_indirect:
-							materials_to_check.add(mat)
+				if not hasattr(obj.data, "materials"):
+					continue
+				
+				for mat in obj.data.materials:
+					if not mat or mat.library or mat.is_library_indirect:
+						continue
+					materials_to_check.add(mat)
 			materials_to_check = list(materials_to_check)
 		else:
 			materials_to_check = [m for m in bpy.data.materials if not m.library and not m.is_library_indirect]
@@ -728,6 +761,7 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 
 				# Sort materials by total node count (add option for user to decide, least or greatest node count. What about number of users?), then by name length as a tie-breaker
 				mats.sort(key=lambda m: (count_total_nodes(m), len(m.name)))
+				mats.sort(key=lambda m: (count_nodes_in_material(m), len(m.name)))
 
 				master_mat = mats[0] # The one with the least nodes
 				for i in range(1, len(mats)):
@@ -760,7 +794,6 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 		else:
 			self.report({"INFO"}, "No duplicates found")
 		return {'FINISHED'}
-
 
 
 class MCPREP_OT_combine_images(bpy.types.Operator):
@@ -865,7 +898,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 				cur_img_data = img_array[::stride] if stride > 1 else img_array
 
 				pix_sum = np.sum(cur_img_data)
-	
+
 			if cur_img_key not in unique_images:
 				unique_images[cur_img_key] = [(img, img_array, pix_sum)]
 				continue
