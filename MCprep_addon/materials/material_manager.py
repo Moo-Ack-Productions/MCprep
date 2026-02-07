@@ -254,7 +254,9 @@ class MaterialFingerprint:
 
 def serialize_fcurve(precision: int, fcurve: bpy.types.FCurve) -> FCurveData:
 	"""
-	Converts an F-Curve data-block into a dictionary of primitive values for structural comparison.
+	Converts a Blender F-Curve into a dataclass.
+	Returns None if the curve has 1 or fewer keyframes, as this doesn't 
+	constitute a functional animation for comparison purposes.
 	"""
 	fcurve.keyframe_points.sort()
 
@@ -268,7 +270,8 @@ def serialize_fcurve(precision: int, fcurve: bpy.types.FCurve) -> FCurveData:
 
 def serialize_keyframe(precision: int, kp: bpy.types.Keyframe) -> KeyframeData:
 	"""
-	Serializes individual keyframe points, rounding float values to ensure consistent hashing.
+	Extracts essential keyframe data: coordinates, handle positions, 
+	interpolation types, and dynamic easing properties (Back/Bounce/Elastic).
 	"""
 	return KeyframeData(
 		co=(round(kp.co[0], precision), round(kp.co[1], precision)),
@@ -284,7 +287,7 @@ def serialize_keyframe(precision: int, kp: bpy.types.Keyframe) -> KeyframeData:
 def get_animation_fingerprint(precision: int, id_data: bpy.types.ID, data_path: Optional[str] = None, array_index: Optional[int] = -1) -> Optional[List[FCurveData]]:
 	"""
 	Retrieves the animation data for a specific property or data-block as a serializable fingerprint.
-	"""
+	"""	
 	if not id_data.animation_data or not id_data.animation_data.action:
 		return None
 
@@ -301,10 +304,9 @@ def get_animation_fingerprint(precision: int, id_data: bpy.types.ID, data_path: 
 		return None
 	return [serialize_fcurve(precision, f) for f in fcurve]
 
-def get_driver_fingerprint(precision: int, id_data: bpy.types.ID, data_path: str, array_index: Optional[int] = -1) -> Optional[DriverFingerprint]:
-	"""
-	Captures driver expressions, variables, and modifier stacks into a serializable structure.
-	"""
+def get_driver_fingerprint(precision: int, id_data: bpy.types.ID, data_path: str, array_index: int = 0) -> Optional[DriverFingerprint]:
+	"""Captures drivers math (expression), inputs (variables), and modifiers."""
+
 	if not id_data.animation_data or not id_data.animation_data.drivers:
 		return None
 		
@@ -373,21 +375,14 @@ def get_driver_fingerprint(precision: int, id_data: bpy.types.ID, data_path: str
 
 # --- NODE TREE ANALYSIS ---
 
-def get_material_fingerprint(material: bpy.types.Material, exclude_settings: bool, use_action_names: bool,	precision: int) -> MaterialFingerprint:
 	"""
-	Generates a unique signature of a material's node tree and render settings to identify duplicates.
-	"""
-	mat_type = "FIXED_MAT"
-	diffuse = None
-	roughness = None
-	metallic = None
-	node_tree_data = None
-	mat_action_name = 'None'
-	node_tree_action_name = 'None'
-	anim = None
-	render_settings = None
-	line_art_settings = None
+	Bundles a property's current value with its associated animation 
+	and driver data.
 
+	target_val: The actual value (already retrieved).
+	id_block: The owner of the animation (Material/NodeTree).
+	data_path: The RNA path for driver/animation lookup.
+	"""
 	if not material.node_tree:
 		mat_type = "FIXED_MAT"
 		diffuse = to_primitive(material.diffuse_color, precision)
@@ -463,10 +458,7 @@ def get_material_fingerprint(material: bpy.types.Material, exclude_settings: boo
 	)
 
 def get_node_group_fingerprint(node_tree: bpy.types.NodeTree, precision: int) -> Optional[NodeTreeFingerprint]:
-	"""
-	Recursively maps the connected node network, properties, and internal group contents.
-	"""
-	if not node_tree: return None
+	"""Recursively maps the connected node network, properties, and internal group contents."""   
 	active_nodes = get_connected_nodes(node_tree)
 	nodes_data = []
 
@@ -547,21 +539,8 @@ def get_node_group_fingerprint(node_tree: bpy.types.NodeTree, precision: int) ->
 
 def count_total_nodes(material: bpy.types.Material) -> int:
 	"""
-	Performs a recursive count of all functional nodes within a material and its nested node groups.
-	"""
-	if not material.node_tree:
-		return 0
-
-	def _recursive_count(node_tree):
-		count = 0
-		for node in node_tree.nodes:
-			if node.bl_idname in {'NodeFrame', 'NodeReroute'}:
-				continue
-			count += 1
-			# If it's a group, count its internal nodes too
-			if node.bl_idname in ('ShaderNodeGroup', 'GeometryNodeGroup') and node.node_tree:
-				count += _recursive_count(node.node_tree)
-		return count
+	Counts all functional nodes. If a NodeGroup is found, 
+	it enters that sub-tree and adds those nodes to the total count.
 
 	return _recursive_count(material.node_tree)
 
@@ -580,7 +559,7 @@ def to_primitive(val, decimals: int = 4) -> Primitive:
 	return str(val)
 
 def trace_socket(socket: bpy.types.NodeSocket) -> bpy.types.NodeSocket:
-	"""
+	"""Follows a node socket link back to its source, traversing reroute nodes."""
 	Follows a node socket link back to its source, traversing reroute nodes.
 	"""
 	if not socket or not socket.is_linked:
@@ -597,7 +576,9 @@ def trace_socket(socket: bpy.types.NodeSocket) -> bpy.types.NodeSocket:
 
 def get_connected_nodes(node_tree: bpy.types.NodeTree) -> Set[bpy.types.Node]:
 	"""
-	Identifies all nodes that are functionally connected to a material or group output.
+	Traces the node tree backwards from the Material or Group outputs.
+	This ensures we only fingerprint nodes that actually contribute 
+	to the final render, ignoring "floating" or disconnected nodes.
 	"""
 	if not node_tree:
 		return set()
