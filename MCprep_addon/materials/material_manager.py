@@ -29,6 +29,7 @@ from numpy.typing import NDArray
 from dataclasses import dataclass
 
 import numpy as np
+from enum import Enum
 
 from . import generate
 from . import sequences
@@ -142,7 +143,11 @@ class ListMaterials(bpy.types.PropertyGroup):
 # Dataclasses for material comparison 
 # -----------------------------------------------------------------------------
 
-Primitive = Union[int, float, str, bool, list, None]
+
+class AnimState(Enum):
+	"""Represents the presence or absence of animation data."""
+	NONE = 'None'
+	ACTIVE = 'Active'
 
 @dataclass
 class KeyframeData:
@@ -221,8 +226,8 @@ class MaterialFingerprint:
 	roughness: Optional[float] = None
 	metallic: Optional[float] = None
 	node_tree_data: Optional[NodeTreeFingerprint] = None
-	mat_action_name: str = 'None'
-	node_tree_action_name: str = 'None'
+	mat_action_name: Optional[Union[str, AnimState]] = AnimState.NONE
+	node_tree_action_name: Optional[Union[str, AnimState]] = AnimState.NONE
 	animation: Optional[Dict[str, List[FCurveData]]] = None
 	render_settings: Optional[Dict[str, PropertyEntry]] = None
 	line_art_settings: Optional[Dict[str, PropertyEntry]] = None
