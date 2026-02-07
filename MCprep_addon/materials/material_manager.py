@@ -151,6 +151,7 @@ class AnimState(Enum):
 
 @dataclass
 class KeyframeData:
+	"""Stores keyframe coordinate, handle, and dynamic data."""
 	co: Tuple[float, float]
 	handles: Tuple[float, float, float, float] # left_x, left_y, right_x, right_y
 	types: Tuple[str, str, str, str]		   # handle_l, handle_r, interp, easing
@@ -158,49 +159,58 @@ class KeyframeData:
 
 @dataclass
 class FCurveData:
+	"""Stores F-Curve settings and list of keyframes."""
+	data_path: str
 	array_index: int
 	extrapolation: str
-	auto_smoothing: bool
+	auto_smoothing: str
 	mute: bool
 	keyframes: List[KeyframeData]
 
 @dataclass
 class DriverVariableTarget:
+	"""Stores driver variable target data."""
 	id_name: str
-	data_path: str = ""
-	bone_target: str = ""
-	id_type: str = ""
-	transform_type: str = ""
-	transform_space: str = ""
-	rotation_mode: str = ""
-	context_property: str = ""
+	data_path: Optional[str] = None
+	bone_target: Optional[str] = None
+	id_type: Optional[str] = None
+	transform_type: Optional[str] = None
+	transform_space: Optional[str] = None
+	rotation_mode: Optional[str] = None
+	context_property: Optional[str] = None
 
 @dataclass
 class DriverVariableData:
+	"""Stores driver variable name, type, and targets."""
 	name: str
 	var_type: str
 	targets: List[DriverVariableTarget]
 
 @dataclass
 class DriverModifierData:
+	"""Stores driver modifier type and settings."""
 	mod_type: str
 	settings: Dict[str, Primitive]
 
 @dataclass
 class DriverFingerprint:
+	"""Stores full driver data including variables, F-curves, and modifiers."""
 	drv_type: str
 	expression: Optional[str]
 	variables: List[DriverVariableData]
-	fcurve: FCurveData
+	fcurve: Optional[FCurveData]
 	modifiers: List[DriverModifierData]
 
 @dataclass
 class PropertyEntry:
+	"""Stores a property value along with potential driver or animation data."""
 	val: Primitive
 	driver: Optional[DriverFingerprint] = None
 	animation: Optional[List[FCurveData]] = None
 
+@dataclass
 class NodeLinkData:
+	"""Stores connection details between two node sockets."""
 	from_socket: str
 	from_node: str
 	to_socket: str
@@ -208,6 +218,7 @@ class NodeLinkData:
 
 @dataclass
 class NodeFingerprint:
+	"""Stores node type, mute status, and input/property data."""
 	node_type: str
 	muted: bool
 	properties: Dict[str, PropertyEntry]
@@ -216,15 +227,17 @@ class NodeFingerprint:
 
 @dataclass
 class NodeTreeFingerprint:
+	"""Stores the list of nodes and links within a node tree."""
 	nodes: List[NodeFingerprint]
 	links: List[NodeLinkData]
 
 @dataclass
 class MaterialFingerprint:
-	mat_type: str = ""
-	diffuse: Optional[List[float]] = None
-	roughness: Optional[float] = None
-	metallic: Optional[float] = None
+	"""Stores a unique signature of a material for structural comparison."""
+	mat_type: str = "FIXED_MAT"
+	diffuse: Optional[Primitive] = None
+	roughness: Optional[Primitive] = None
+	metallic: Optional[Primitive] = None
 	node_tree_data: Optional[NodeTreeFingerprint] = None
 	mat_action_name: Optional[Union[str, AnimState]] = AnimState.NONE
 	node_tree_action_name: Optional[Union[str, AnimState]] = AnimState.NONE
