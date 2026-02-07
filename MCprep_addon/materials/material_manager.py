@@ -252,15 +252,21 @@ class MaterialFingerprint:
 
 # --- SERIALIZATION HELPERS ---
 
-def serialize_fcurve(precision: int, fcurve: bpy.types.FCurve) -> FCurveData:
+def serialize_fcurve(precision: int, fcurve: bpy.types.FCurve) -> Optional[FCurveData]:
 	"""
 	Converts a Blender F-Curve into a dataclass.
 	Returns None if the curve has 1 or fewer keyframes, as this doesn't 
 	constitute a functional animation for comparison purposes.
 	"""
+	# If there's only one keyframe, it's a static value, not an animation.
+	# We ignore it to keep the fingerprint focused on actual movement.
+	if len(fcurve.keyframe_points) <= 1:
+		return
+
 	fcurve.keyframe_points.sort()
 
 	return FCurveData(
+		data_path=fcurve.data_path,
 		array_index=fcurve.array_index,
 		extrapolation=fcurve.extrapolation,
 		auto_smoothing=fcurve.auto_smoothing,
@@ -293,81 +299,104 @@ def get_animation_fingerprint(precision: int, id_data: bpy.types.ID, data_path: 
 		return None
 
 	action = id_data.animation_data.action
-	fcurve = None
+	fcurves_to_serialize = []
 	
+	# Gather relevant curves:
 	if data_path:
 		found = action.fcurves.find(data_path, index=array_index)
-		fcurve = [found] if found else None 
+		if found:
+			fcurves_to_serialize = [found]
 	else:
-		fcurve = sorted(action.fcurves, key=lambda f: (f.data_path, f.array_index))
+		fcurves_to_serialize = sorted(
+			[f for f in action.fcurves if f.is_valid], 
+			key=lambda f: (f.data_path, f.array_index)
+		)
 
-	if not fcurve:
-		return None
-	return [serialize_fcurve(precision, f) for f in fcurve]
+	# Serialize and Filter
+	results: List[FCurveData] = []
+	
+	for fcurve in fcurves_to_serialize:
+		serialized = serialize_fcurve(precision, fcurve)
+		if serialized is not None:
+			results.append(serialized)
+
+	# Return None if no valid (multi-keyframe) curves were found
+	return results if results else None
 
 def get_driver_fingerprint(precision: int, id_data: bpy.types.ID, data_path: str, array_index: int = 0) -> Optional[DriverFingerprint]:
 	"""Captures drivers math (expression), inputs (variables), and modifiers."""
 
 	if not id_data.animation_data or not id_data.animation_data.drivers:
 		return None
-		
+
+	# Locate the specific driver F-Curve for the given property path
 	fcurve = id_data.animation_data.drivers.find(data_path, index=array_index)
-	
-	if fcurve is None:
+	if not fcurve:
 		return None
 
 	drv = fcurve.driver
-
 	variables: List[DriverVariableData] = []
+
+	# Process Variables
 	for var in drv.variables:
 		targets: List[DriverVariableTarget] = []
-		
+		var_type = var.type
+
 		for tar in var.targets:
-			# 1. Basic Driver Settings
-			tar_info: Dict[str, str] = {"id_name": getattr(tar.id, "name_full", tar.id.name) if tar.id else ""}
+			# Every target needs an ID
+			tar_obj = DriverVariableTarget(
+				id_name=getattr(tar.id, "name_full", tar.id.name) if tar.id else ""
+			)
 
-			# 2. Variable Logic (Only properties that affect driver result)
-			if tar.bone_target:
-				tar_info["bone_target"] = tar.bone_target
-
-			if var.type == 'CONTEXT_PROP':
-				tar_info["context_property"] = tar.context_property
-				tar_info["data_path"] = tar.data_path
-
-			elif var.type == 'SINGLE_PROP':
-				tar_info["id_type"] = tar.id_type
-				tar_info["data_path"] = tar.data_path
-
-			elif var.type == 'TRANSFORMS':
-				tar_info["transform_type"] = tar.transform_type
-				tar_info["transform_space"] = tar.transform_space
+			# 4. Contextual Logic: Only capture attributes relevant to the variable type.
+			# This prevents "noise" / irrelevant unused attributes in the driver results
+			
+			# - Property based variables (getting a value from a UI field)
+			if var_type in ('SINGLE_PROP', 'CONTEXT_PROP'):
+				tar_obj.data_path = tar.data_path
+				if var_type == 'SINGLE_PROP':
+					tar_obj.id_type = tar.id_type
+				else:
+					tar_obj.context_property = tar.context_property
+			
+			# - Transform based variables (getting Loc/Rot/Scale from 3D space)
+			elif var_type == 'TRANSFORMS':
+				tar_obj.transform_type = tar.transform_type
+				tar_obj.transform_space = tar.transform_space
 				if tar.transform_type.startswith("ROT"):
-					tar_info["rotation_mode"] = tar.rotation_mode
+					tar_obj.rotation_mode = tar.rotation_mode
+			
+			# - Distance-based variables
+			elif var_type == 'LOC_DIFF':
+				tar_obj.transform_space = tar.transform_space
+			
+			# Bones require a specific sub-target name within an Armature
+			if tar.id and tar.id.type == 'ARMATURE' and tar.bone_target:
+				tar_obj.bone_target = tar.bone_target
 
-			elif var.type == 'LOC_DIFF':
-				tar_info["transform_space"] = tar.transform_space
-
-			targets.append(DriverVariableTarget(**tar_info))
-		variables.append(DriverVariableData(name=var.name, var_type=var.type, targets=targets))
-
-	# 3. F-Curve
-	driver_fcurve = serialize_fcurve(precision, fcurve)
-	
-	# 4. F-Curve Modifiers (Skip if muted or influence is 0)
-	modifiers: List[DriverModifierData] = []
-	for mod in fcurve.modifiers:
-		if mod.mute or getattr(mod, "influence", 1.0) <= 0.0:
-			continue
-
-		m_data: Dict[str, Primitive] = {}
-		for prop in mod.bl_rna.properties:
-			if not prop.is_readonly and prop.identifier not in {'name', 'type', 'is_active'}:
-				m_data[prop.identifier] = to_primitive(getattr(mod, prop.identifier), precision)
+			targets.append(tar_obj)
 		
-		modifiers.append(DriverModifierData(mod_type=mod.type, settings=m_data))
+		variables.append(DriverVariableData(name=var.name, var_type=var_type, targets=targets))
+
+	# Capture Driver F-Curve Influence and Modifiers
+	driver_fcurve = serialize_fcurve(precision, fcurve)
+	modifiers: List[DriverModifierData] = [
+		DriverModifierData(
+			mod_type=mod.type,
+			settings={
+				# Automatically scrape all settings for this modifier type
+				p.identifier: serialize_value(getattr(mod, p.identifier), precision)
+				for p in mod.bl_rna.properties
+				if not p.is_readonly and p.identifier not in ('name', 'type', 'is_active')
+			})
+		# Ignore modifiers that are turned off or have no strength
+		for mod in fcurve.modifiers
+		if not mod.mute and getattr(mod, "influence", 1.0) > 0.0
+	]
 
 	return DriverFingerprint(
 		drv_type=drv.type,
+		# Only 'SCRIPTED' drivers use the expression string (e.g., "var * 2")
 		expression=drv.expression if drv.type == 'SCRIPTED' else None,
 		variables=variables,
 		fcurve=driver_fcurve,
@@ -542,22 +571,32 @@ def count_total_nodes(material: bpy.types.Material) -> int:
 	"""
 	Counts all functional nodes. If a NodeGroup is found, 
 	it enters that sub-tree and adds those nodes to the total count.
-
-	return _recursive_count(material.node_tree)
-
-def to_primitive(val, decimals: int = 4) -> Primitive:
+def serialize_value(val, decimals: int = 4) -> Primitive:
 	"""
-	Converts Blender-specific data types into standard Python primitives for serialization.
+	Standardizes Blender's internal math types into Python-native primitives.
+	Args:
+		val: The value to convert (Vector, Color, Euler, float, etc.)
+		decimals: Precision for rounding. Needed for "Matching Precision" option ('fuzzy matching')
+				  where two materials are identical except for a tiny 
+				  floating-point difference (e.g., 0.5001 vs 0.5).
 	"""
-	if isinstance(val, (int, float)):
-		return round(val, decimals)
-	elif isinstance(val, (str, bool, type(None))):
+	if val is None:
+		return None
+		
+	# Standard types are returned as-is
+	if isinstance(val, (str, bool, int)):
 		return val
-	elif hasattr(val, "to_list"):
-		return [round(x, decimals) for x in val.to_list()]
-	elif hasattr(val, "__iter__"):
-		return [to_primitive(x, decimals) for x in val]
-	return str(val)
+	
+	# Floats are rounded for the 'Matching Precision' feature
+	if isinstance(val, float):
+		return round(val, decimals)
+
+	# If the value is iterable (like a Vector, Color, or Euler), 
+	# we convert it to a tuple of primitives recursively.
+	if isinstance(val, Iterable):
+		return tuple(serialize_value(x, decimals) for x in val)
+		
+	return val
 
 def trace_socket(socket: bpy.types.NodeSocket) -> bpy.types.NodeSocket:
 	"""Follows a node socket link back to its source, traversing reroute nodes."""
