@@ -760,7 +760,6 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 					continue
 
 				# Sort materials by total node count (add option for user to decide, least or greatest node count. What about number of users?), then by name length as a tie-breaker
-				mats.sort(key=lambda m: (count_total_nodes(m), len(m.name)))
 				mats.sort(key=lambda m: (count_nodes_in_material(m), len(m.name)))
 
 				master_mat = mats[0] # The one with the least nodes
