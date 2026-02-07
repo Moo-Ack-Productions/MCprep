@@ -405,6 +405,7 @@ def get_driver_fingerprint(precision: int, id_data: bpy.types.ID, data_path: str
 
 # --- NODE TREE ANALYSIS ---
 
+def extract_property(target_val: object, id_block: bpy.types.ID, data_path: str, precision: int) -> PropertyEntry:
 	"""
 	Bundles a property's current value with its associated animation 
 	and driver data.
@@ -413,159 +414,128 @@ def get_driver_fingerprint(precision: int, id_data: bpy.types.ID, data_path: str
 	id_block: The owner of the animation (Material/NodeTree).
 	data_path: The RNA path for driver/animation lookup.
 	"""
+	return PropertyEntry(
+		val=serialize_value(target_val, precision),
+		driver=get_driver_fingerprint(precision, id_block, data_path),
+		animation=get_animation_fingerprint(precision, id_block, data_path)
+	)
+
+def get_material_fingerprint(material: bpy.types.Material, exclude_settings: bool, use_action_names: bool, precision: int) -> MaterialFingerprint:
+	"""Generates a unique signature of a material's node tree and render settings to identify duplicates."""
+	fp = MaterialFingerprint()
+
+	# 1. Handle Surface Type
 	if not material.node_tree:
-		mat_type = "FIXED_MAT"
-		diffuse = to_primitive(material.diffuse_color, precision)
-		roughness = to_primitive(material.roughness, precision)
-		metallic = to_primitive(material.metallic, precision)
+		fp.mat_type = "FIXED_MAT"
+		fp.diffuse = serialize_value(material.diffuse_color, precision)
+		fp.roughness = serialize_value(material.roughness, precision)
+		fp.metallic = serialize_value(material.metallic, precision)
 	else:
-		mat_type = "NODE_TREE"
-		node_tree_data = get_node_group_fingerprint(material.node_tree, precision)
+		fp.mat_type = "NODE_TREE"
+		fp.node_tree_data = get_node_group_fingerprint(material.node_tree, precision)
 
-	# Gather Animation
+	# 2. Gather Action Names (Optional metadata)
 	if use_action_names:
-		# Material level action
-		mat_action_name = material.animation_data.action.name if (material.animation_data and material.animation_data.action) else 'None'
+		if material.animation_data and material.animation_data.action:
+			fp.mat_action_name = material.animation_data.action.name
+		
+		nt = material.node_tree
+		if nt and nt.animation_data and nt.animation_data.action:
+			fp.node_tree_action_name = nt.animation_data.action.name
 
-		# Node Tree level action
-		if material.node_tree and material.node_tree.animation_data and material.node_tree.animation_data.action:
-			node_tree_action_name = material.node_tree.animation_data.action.name
-		else:
-			node_tree_action_name = 'None'
+	# 3. Full Animation Data (F-Curves)
+	anim_list = get_animation_fingerprint(precision, material)
+	if anim_list:
+		fp.animation = {}
+		for f in anim_list:
+			# Group by data_path to match Dict[str, List[FCurveData]]
+			if f.data_path not in fp.animation:
+				fp.animation[f.data_path] = []
+			fp.animation[f.data_path].append(f)
+	else:
+		fp.animation = None
 
-	anim = get_animation_fingerprint(precision, material)
-
-	# Gather Material / Render Settings
+	# 4. Gather Settings and Line Art
 	if not exclude_settings:
-		render_settings = {}
-		for prop in material.bl_rna.properties:
-			if prop.is_readonly or prop.identifier in IGNORE_MAT_SETTINGS:
-				continue
+		# Material Render Settings
+		fp.render_settings = {
+			prop.identifier: extract_property(getattr(material, prop.identifier), material, prop.identifier, precision)
+			for prop in material.bl_rna.properties
+			if not prop.is_readonly and prop.identifier not in IGNORE_MAT_SETTINGS
+		}
 
-			val_data = PropertyEntry(val=to_primitive(getattr(material, prop.identifier), precision))
-
-			# Check for driver
-			driver = get_driver_fingerprint(precision, material, prop.identifier)
-			if driver is not None:
-				val_data.driver = driver
-
-			render_settings[prop.identifier] = val_data
-
-		# Gather Line Art Settings
-		line_art_settings = {}
+		# Line Art Settings (Nested object property)
 		if hasattr(material, "lineart"):
 			la = material.lineart
-			for prop in la.bl_rna.properties:
-				if prop.is_readonly or prop.identifier in IGNORE_MAT_SETTINGS:
-					continue
+			fp.line_art_settings = {
+				prop.identifier: extract_property(getattr(la, prop.identifier), material, f"lineart.{prop.identifier}", precision)
+				for prop in la.bl_rna.properties
+				if not prop.is_readonly and prop.identifier not in IGNORE_MAT_SETTINGS
+			}
 
-				value = getattr(la, prop.identifier)
-				if hasattr(value, "__iter__") and not isinstance(value, (str, bytes)):
-					value = [to_primitive(v, precision) for v in value]
-				else:
-					value = to_primitive(value, precision)
-
-				val_data = PropertyEntry(val=value)
-
-				# Check for driver
-				driver = get_driver_fingerprint(precision, material, f"line_art.{prop.identifier}")
-				if driver is not None:
-					val_data.driver = driver
-
-				line_art_settings[prop.identifier] = val_data
-
-	return MaterialFingerprint(
-		mat_type=mat_type,
-		diffuse=diffuse,
-		roughness=roughness,
-		metallic=metallic,
-		node_tree_data=node_tree_data,
-		mat_action_name=mat_action_name,
-		node_tree_action_name=node_tree_action_name,
-		animation=anim,
-		render_settings=render_settings,
-		line_art_settings=line_art_settings
-	)
+	return fp
 
 def get_node_group_fingerprint(node_tree: bpy.types.NodeTree, precision: int) -> Optional[NodeTreeFingerprint]:
 	"""Recursively maps the connected node network, properties, and internal group contents."""   
+	if not node_tree:
+		return
+
+	# Filter: Only process nodes that actually lead to an output.
+	# This prevents 'stray' nodes from making two materials look different.
 	active_nodes = get_connected_nodes(node_tree)
-	nodes_data = []
+	nodes_data: List[NodeFingerprint] = []
 
-	for node in sorted(list(active_nodes), key=lambda n: (n.bl_idname, n.name)):
-		if node.bl_idname in {'NodeFrame', 'NodeReroute'}: continue
+	# Sort: We sort by type and name so that the order of nodes in 
+	# the list is always identical (deterministic) for the same setup.
+	for node in sorted(active_nodes, key=lambda n: (n.bl_idname, n.name)):
+		if node.bl_idname in ('NodeFrame', 'NodeReroute'):
+			continue
 
-		node_data = {"type": node.bl_idname, "muted": node.mute, "properties": {}, "inputs": []}
+		# Capture Attributes: Every input property, slider, checkbox, enum, etc. on the node.
+		properties = {
+			p.identifier: extract_property(getattr(node, p.identifier), node_tree, f'nodes["{node.name}"].{p.identifier}', precision)
+			for p in node.bl_rna.properties
+			if p.identifier not in IGNORE_PROPS and not p.is_readonly
+		}
 
-		# Properties + Drivers + Anim
-		for prop in node.bl_rna.properties:
-			if prop.identifier in IGNORE_PROPS or prop.is_readonly: continue
-			data_path = f'nodes["{node.name}"].{prop.identifier}'
+		# Capture Inputs: Only record inputs that are NOT linked (static values).
+		# Linked inputs are handled later in the 'links_data' section.
+		inputs = [
+			extract_property(socket.default_value, node_tree, f'nodes["{node.name}"].inputs[{i}].default_value', precision)
+			for i, socket in enumerate(node.inputs)
+			if not socket.is_linked and hasattr(socket, "default_value")
+		]
 
-			prop_entry = {"val": to_primitive(getattr(node, prop.identifier), precision)}
+		# RECURSION: If this node is a group, we call this function again
+		# to fingerprint the 'inside' of the group. This can go many levels deep.
+		nested_group = None
+		if node.bl_idname == 'ShaderNodeGroup' and node.node_tree:
+			nested_group = get_node_group_fingerprint(node.node_tree, precision)
 
-			# Check Driver & Anim
-			driver = get_driver_fingerprint(precision, node_tree, data_path)
-			anim = get_animation_fingerprint(precision, node_tree, data_path)
-			if driver: prop_entry["driver"] = driver
-			if anim: prop_entry["animation"] = anim
+		nodes_data.append(NodeFingerprint(
+			node_type=node.bl_idname,
+			muted=node.mute,
+			properties=properties,
+			inputs=inputs,
+			group_content=nested_group
+		))
 
-			node_data["properties"][prop.identifier] = prop_entry
+	# Links: Define the "wiring" of the network. 
+	# We trace from the Destination (input) back to the Source (output).
+	links_data = [
+		NodeLinkData(
+			from_socket=(source_socket := trace_socket(dest_socket)).name,
+			from_node=source_socket.node.bl_idname,
+			to_socket=dest_socket.name,
+			to_node=node.bl_idname)
 
-		# Inputs
-		for socket_idx, socket in enumerate(node.inputs):
-			if socket.is_linked or not hasattr(socket, "default_value"):
-				continue
+		for node in active_nodes if node.bl_idname not in ('NodeFrame', 'NodeReroute')
+		for dest_socket in node.inputs if dest_socket.is_linked and (source_socket := trace_socket(dest_socket)).node in active_nodes
+	]
 
-			default_val = socket.default_value
-			data_path = f'nodes["{node.name}"].inputs[{socket_idx}].default_value'
-
-			# Scalar
-			if isinstance(default_val, (int, float)):
-				input_data = {"idx": socket_idx, "val": to_primitive(default_val, precision)}
-
-				# Check Driver & Anim
-				driver = get_driver_fingerprint(precision, node_tree, data_path)
-				anim = get_animation_fingerprint(precision, node_tree, data_path)
-				if driver: input_data["driver"] = driver
-				if anim: input_data["animation"] = anim
-
-				node_data["inputs"].append(input_data)
-
-			# Array (RGBA / Vector)
-			else:
-				for array_idx, value in enumerate(default_val):
-
-					input_data = {
-						"idx": socket_idx,
-						"array_index": array_idx,
-						"val": value if isinstance(value, str) else round(value, 6)}
-
-					# Check Driver & Anim
-					driver = get_driver_fingerprint(precision, node_tree, data_path, array_idx)
-					anim = get_animation_fingerprint(precision, node_tree, data_path, array_idx)
-					if driver: input_data["driver"] = driver
-					if anim: input_data["animation"] = anim
-
-					node_data["inputs"].append(input_data)
-
-
-		if node.bl_idname in ('ShaderNodeGroup', 'GeometryNodeGroup') and node.node_tree: # 'GeometryNodeGroup' included for future merge geoNode operator
-			node_data["group_content"] = get_node_group_fingerprint(node.node_tree, precision)
-		nodes_data.append(node_data)
-
-	links_data = []
-	for node in active_nodes:
-		if node.bl_idname in {'NodeFrame', 'NodeReroute'}: continue
-		for socket in node.inputs:
-			if socket.is_linked:
-				src = trace_socket(socket)
-				if src.node in active_nodes:
-					links_data.append({"from_socket": src.name, "from_node": src.node.bl_idname, "to_socket": socket.name, "to_node": node.bl_idname})
-
-	return NodeTreeFingerprint(
-		nodes=nodes_data,
-		links=sorted(links_data, key=lambda x: str(x)))
+	# Sorting links by a string representation ensures the link order 
+	# doesn't change if the user re-wired nodes in a different sequence.
+	return NodeTreeFingerprint(nodes=nodes_data, links=sorted(links_data, key=lambda x: str(x)))
 
 def count_total_nodes(material: bpy.types.Material) -> int:
 	"""
