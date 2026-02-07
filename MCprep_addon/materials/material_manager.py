@@ -23,7 +23,7 @@ import bpy
 from collections import deque
 import time
 
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Dict, List, Optional, Set, Tuple, Union, Iterable
 from numpy.typing import NDArray
 
 from dataclasses import dataclass
@@ -65,7 +65,6 @@ IGNORE_MAT_SETTINGS = (
 # -----------------------------------------------------------------------------
 # UI and utility functions
 # -----------------------------------------------------------------------------
-
 
 def reload_materials(context):
 	"""Reload the material UI list"""
@@ -143,6 +142,7 @@ class ListMaterials(bpy.types.PropertyGroup):
 # Dataclasses for material comparison 
 # -----------------------------------------------------------------------------
 
+Primitive = Union[int, float, str, bool, Tuple['Primitive', ...], None]
 
 class AnimState(Enum):
 	"""Represents the presence or absence of animation data."""
@@ -284,7 +284,8 @@ def serialize_keyframe(precision: int, kp: bpy.types.Keyframe) -> KeyframeData:
 	)
 
 # --- ANIMATION & DRIVER LOGIC ---
-def get_animation_fingerprint(precision: int, id_data: bpy.types.ID, data_path: Optional[str] = None, array_index: Optional[int] = -1) -> Optional[List[FCurveData]]:
+
+def get_animation_fingerprint(precision: int, id_data: bpy.types.ID, data_path: Optional[str] = None, array_index: int = -1) -> Optional[List[FCurveData]]:
 	"""
 	Retrieves the animation data for a specific property or data-block as a serializable fingerprint.
 	"""	
