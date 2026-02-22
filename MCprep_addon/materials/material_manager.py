@@ -150,6 +150,11 @@ class AnimState(Enum):
 	NONE = 'None'
 	ACTIVE = 'Active'
 
+class MaterialType(Enum):
+	"""Basically represents if a material use nodes or not."""
+	FIXED = "FIXED_MAT"
+	NODES = "NODE_TREE"
+
 @dataclass
 class KeyframeData:
 	"""Stores keyframe coordinate, handle, and dynamic data."""
@@ -235,7 +240,7 @@ class NodeTreeFingerprint:
 @dataclass
 class MaterialFingerprint:
 	"""Stores a unique signature of a material for structural comparison."""
-	mat_type: str = "FIXED_MAT"
+	mat_type: MaterialType = MaterialType.FIXED
 	diffuse: Optional[Primitive] = None
 	roughness: Optional[Primitive] = None
 	metallic: Optional[Primitive] = None
@@ -424,19 +429,19 @@ def get_material_fingerprint(material: bpy.types.Material, compare_settings: boo
 
 	# 1. Handle Surface Type
 	if not material.node_tree:
-		fp.mat_type = "FIXED_MAT"
+		fp.mat_type = MaterialType.FIXED
 		fp.diffuse = round_value(material.diffuse_color, precision)
 		fp.roughness = round_value(material.roughness, precision)
 		fp.metallic = round_value(material.metallic, precision)
 	else:
-		fp.mat_type = "NODE_TREE"
+		fp.mat_type = MaterialType.NODES
 		fp.node_tree_data = get_node_group_fingerprint(material.node_tree, precision)
 
 	# 2. Gather Action Names (Optional metadata)
 	if use_action_names:
 		if material.animation_data and material.animation_data.action:
 			fp.mat_action_name = material.animation_data.action.name
-		
+
 		nt = material.node_tree
 		if nt and nt.animation_data and nt.animation_data.action:
 			fp.node_tree_action_name = nt.animation_data.action.name
