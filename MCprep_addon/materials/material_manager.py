@@ -23,8 +23,8 @@ import bpy
 from collections import deque
 import time
 
-from typing import Dict, List, Optional, Set, Tuple, Union, Iterable
-from numpy.typing import NDArray
+from typing import Dict, List, Optional, Set, Tuple, Union, Iterable, Mapping, Any
+from mathutils import Vector, Color, Euler, Quaternion, Matrix
 
 from dataclasses import dataclass
 
@@ -142,7 +142,8 @@ class ListMaterials(bpy.types.PropertyGroup):
 # Dataclasses for material comparison 
 # -----------------------------------------------------------------------------
 
-Primitive = Union[int, float, str, bool, Tuple['Primitive', ...], None]
+PrimitiveBasic = Union[int, float, str, bool, None, Vector, Color, Euler, Quaternion, Matrix]
+Primitive = Union[PrimitiveBasic, Tuple['Primitive', ...]]
 
 class AnimState(Enum):
 	"""Represents the presence or absence of animation data."""
@@ -152,10 +153,10 @@ class AnimState(Enum):
 @dataclass
 class KeyframeData:
 	"""Stores keyframe coordinate, handle, and dynamic data."""
-	co: Tuple[float, float]
-	handles: Tuple[float, float, float, float] # left_x, left_y, right_x, right_y
-	types: Tuple[str, str, str, str]		   # handle_l, handle_r, interp, easing
-	dynamics: Tuple[float, float, float]	   # back, amplitude, period
+	co: Iterable[float]
+	handles: Iterable[float] 			# left_x, left_y, right_x, right_y
+	types: Tuple[str, str, str, str]	# handle_l, handle_r, interp, easing
+	dynamics: Iterable[float]	   		# back, amplitude, period
 
 @dataclass
 class FCurveData:
@@ -517,22 +518,28 @@ def get_node_group_fingerprint(node_tree: bpy.types.NodeTree, precision: int) ->
 			group_content=nested_group
 		))
 
-	# Links: Define the "wiring" of the network. 
+	# Links: Define the "wiring" of the network.
 	# We trace from the Destination (input) back to the Source (output).
-	links_data = [
-		NodeLinkData(
-			from_socket=(source_socket := trace_socket(dest_socket)).name,
-			from_node=source_socket.node.bl_idname,
-			to_socket=dest_socket.name,
-			to_node=node.bl_idname)
+	links_data = []
+	for node in active_nodes:
+		if node.bl_idname in ('NodeFrame', 'NodeReroute'):
+			continue
 
-		for node in active_nodes if node.bl_idname not in ('NodeFrame', 'NodeReroute')
-		for dest_socket in node.inputs if dest_socket.is_linked and (source_socket := trace_socket(dest_socket)).node in active_nodes
-	]
+		for dest_socket in node.inputs:
+			if not dest_socket.is_linked:
+				continue
 
-	# Sorting links by a string representation ensures the link order 
-	# doesn't change if the user re-wired nodes in a different sequence.
-	return NodeTreeFingerprint(nodes=nodes_data, links=sorted(links_data, key=lambda x: str(x)))
+			source_socket = trace_socket(dest_socket)
+			if source_socket.node in active_nodes:
+				links_data.append(NodeLinkData(
+					from_socket=source_socket.name,
+					from_node=source_socket.node.bl_idname,
+					to_socket=dest_socket.name,
+					to_node=node.bl_idname
+				))
+
+	# Sorting links via dataclass native sorting (order=True) ensures determinism.
+	return NodeTreeFingerprint(nodes=nodes_data, links=sorted(links_data))
 
 def node_tree_counter(node_tree: bpy.types.NodeTree) -> int:
 	"""
@@ -928,7 +935,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 		# Value: List of (image_obj, comparison_array, sum)
 		# store both the image (for remapping later on), the pixel array,
 		# and pixel array sum for super fast prefilter
-		unique_images: Dict[Tuple[str, int, int], List[Tuple[bpy.types.Image, NDArray[np.float32], Optional[np.float64]]]] = {}
+		unique_images: Dict[Tuple[str, int, int], List[Tuple[bpy.types.Image, np.ndarray, Optional[np.float64]]]] = {}
 		images_to_remove = []
 
 		for base_name, w, h, img in groups:
