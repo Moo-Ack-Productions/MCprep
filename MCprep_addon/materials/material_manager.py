@@ -771,6 +771,10 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 			self.report({'ERROR'}, "Select objects with materials first")
 			return {'CANCELLED'}
 
+		# Map Enum to numeric precision. 'inf' means Exact Matching (no rounding).
+		precision_map = {'OFF': float('inf'), 'STRICT': 4, 'LOOSE': 2, 'ROUGH': 1}
+		precision_val = precision_map.get(self.matching_precision, 4)
+
 		# 1. Gather materials
 		if self.selection_only:
 			materials_to_check = set()
@@ -816,16 +820,28 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 
 		# 3. Determine Masters and Build Merge Map
 		merge_map = {}
+
+		# Define sort keys for Master Selection.
+		# We sort so that index 0 becomes the Master.
+		# Secondary sort key (len(m.name)) for tie-breaker.
+		sort_logic = {
+			'LOW_NODES': lambda m: (count_nodes_in_material(m), len(m.name)),
+			'HIGH_NODES': lambda m: (-count_nodes_in_material(m), len(m.name)), # Negative for Descending
+			'HIGH_USERS': lambda m: (-m.users, len(m.name)),                    # Negative for Descending
+			'LOW_USERS': lambda m: (m.users, len(m.name))
+		}
+		active_sort = sort_logic.get(self.master_selection, sort_logic['LOW_NODES'])
+
 		for group_key, entries in fingerprint_groups.items():
 			for entry in entries:
 				mats = entry['materials']
 				if len(mats) <= 1:
 					continue
 
-				# Sort materials by total node count (add option for user to decide, least or greatest node count. What about number of users?), then by name length as a tie-breaker
-				mats.sort(key=lambda m: (count_nodes_in_material(m), len(m.name)))
+				# Sort based on user selection.
+				mats.sort(key=active_sort)
 
-				master_mat = mats[0] # The one with the least nodes
+				master_mat = mats[0] # The "Winner" of the sort logic
 				for i in range(1, len(mats)):
 					merge_map[mats[i]] = master_mat
 
