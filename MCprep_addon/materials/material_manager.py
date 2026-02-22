@@ -420,7 +420,7 @@ def extract_property(target_val: object, id_block: bpy.types.ID, data_path: str,
 		animation=get_animation_fingerprint(precision, id_block, data_path)
 	)
 
-def get_material_fingerprint(material: bpy.types.Material, exclude_settings: bool, use_action_names: bool, precision: int) -> MaterialFingerprint:
+def get_material_fingerprint(material: bpy.types.Material, compare_settings: bool, use_action_names: bool, precision: int) -> MaterialFingerprint:
 	"""Generates a unique signature of a material's node tree and render settings to identify duplicates."""
 	fp = MaterialFingerprint()
 
@@ -456,7 +456,7 @@ def get_material_fingerprint(material: bpy.types.Material, exclude_settings: boo
 		fp.animation = None
 
 	# 4. Gather Settings and Line Art
-	if not exclude_settings:
+	if compare_settings:
 		# Material Render Settings
 		fp.render_settings = {
 			prop.identifier: extract_property(getattr(material, prop.identifier), material, prop.identifier, precision)
@@ -670,31 +670,56 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 	bl_description = "Consolidate duplicate materials based on nodes or name"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	group_by_name: bpy.props.BoolProperty(
-		name="Group Method: Material Name",
-		description="Finds materials with the same name (ignoring extensions like .001)",
-		default=False)
-
 	selection_only: bpy.props.BoolProperty(
 		name="Selection only",
-		description="Build materials to consolidate based on selected objects only",
+		description="Only check materials used by selected objects",
+		default=True)
+
+	compare_name: bpy.props.BoolProperty(
+		name="Compare Material Name",
+		description="Only compare materials with matching base names (ignores .001, .002, etc.)",
 		default=False)
 
-	exclude_mat_settings: bpy.props.BoolProperty(
-		name="Exclude Material Settings",
-		description="Do not compare materials settings, only nodes",
+	compare_settings: bpy.props.BoolProperty(
+		name="Compare Material Settings",
+		description="Compare materials settings alongside nodes",
+		default=True)
+
+	compare_action_name: bpy.props.BoolProperty(
+		name="Compare Action Name",
+		description="Treat materials with different Action names as unique, even if their animation data matches",
 		default=False)
 
-	use_action_names: bpy.props.BoolProperty(
-		name="Differentiate by Action Name",
-		description="If true, materials with identical animation but different Action names will be kept separate",
-		default=False)
+	matching_precision: bpy.props.EnumProperty(
+		items=[
+			('OFF', "Off (Exact)", "No rounding. Values must match exactly"),
+			('STRICT', "Strict (4 decimals)", "High precision matching. Values must be nearly identical (e.g. 0.1234)"),
+			('LOOSE', "Loose (2 decimals)", "Forgiving matching. Values like 0.12 and 0.124 will match"),
+			('ROUGH', "Rough (1 decimal)", "Very loose matching. Values like 0.1 and 0.14 will match"),
+		],
+		name="Value Matching",
+		description="Controls how precisely float values are compared (node inputs, colors, vectors, animation keyframes)",
+		default='STRICT'
+	)
 
-	precision: bpy.props.IntProperty(
-		name="Matching Precision",
-		description="Number of decimal places to round values to when comparing. Higher = stricter",
-		min=0, max=6,
-		default=4)
+	master_selection: bpy.props.EnumProperty(
+		items=[
+		('LOW_NODES', "Fewest Nodes",
+		"Keep the simplest material (fewest nodes)."),
+
+		('HIGH_NODES', "Most Nodes",
+		"Keep the most complex material (most nodes)."),
+
+		('HIGH_USERS', "Most Users",
+		"Keep the material used by the most objects."),
+
+		('LOW_USERS', "Fewest Users",
+		"Keep the material used by the fewest objects."),
+		],
+		name="Material to Keep",
+		description="Choose which material remains when duplicates are merged. All others are remapped to the selected material",
+		default='LOW_NODES'
+	)
 
 	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
@@ -734,8 +759,8 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 		fingerprint_groups = {}
 
 		for mat in materials_to_check:
-			group_key = util.nameGeneralize(mat.name) if self.group_by_name else "GLOBAL"
-			fp = get_material_fingerprint(mat, self.exclude_mat_settings, self.use_action_names, self.precision)
+			group_key = util.nameGeneralize(mat.name) if self.compare_name else "GLOBAL"
+			fp = get_material_fingerprint(mat, self.compare_settings, self.compare_action_name, precision_val)
 
 			if group_key not in fingerprint_groups:
 				fingerprint_groups[group_key] = []
@@ -801,18 +826,18 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 	bl_description = "Find and merge duplicate images, remapping users to a single image"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	group_by_name: bpy.props.BoolProperty(
-		name="Group by Name",
-		description="Compare duplicates using base names (e.g., 'Texture.001' matches 'Texture')",
-		default=True)
-
 	selection_only: bpy.props.BoolProperty(
 		name="Selection only",
 		description="Only check images used by materials on selected objects",
-		default=False)
+		default=True)
 
-	strict_comparison: bpy.props.BoolProperty(
-		name="Strict Comparison",
+	compare_name: bpy.props.BoolProperty(
+		name="Compare Image Name",
+		description="Compare duplicates using base names (e.g., 'Texture.001' matches 'Texture')",
+		default=True)
+
+	compare_pixels: bpy.props.BoolProperty(
+		name="Compare Pixels (slower)",
 		description="Compare full image content instead of samples. More accurate, but slower for large images",
 		default=False)
 
@@ -869,7 +894,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 			if w == 0 or h == 0 or not img.has_data:
 				continue
 
-			base_name = util.nameGeneralize(img.name) if self.group_by_name else "GLOBAL"
+			base_name = util.nameGeneralize(img.name) if self.compare_name else "GLOBAL"
 			groups.append((base_name, w, h, img))
 
 		# Comparison and Remapping
@@ -891,7 +916,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 			# comparison, which checks the actual pixels, this
 			# sums up the pixels and uses that to represent the
 			# image contents
-			if not self.strict_comparison:
+			if not self.compare_pixels:
 				num_pixels = w * h * 4
 				stride = max(1, num_pixels // RGBA_PIXELS_4096_MAX)
 				cur_img_data = img_array[::stride] if stride > 1 else img_array
@@ -909,7 +934,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 			for uni_image, uni_data, uni_sum in unique_images[cur_img_key]:
 				# Fast prefilter, used as an alternative
 				# to strict comparison
-				if not self.strict_comparison and not pix_sum == uni_sum:
+				if not self.compare_pixels and not pix_sum == uni_sum:
 					continue
 				elif not np.array_equal(uni_data, img_array):
 					continue
