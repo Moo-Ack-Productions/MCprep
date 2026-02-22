@@ -276,17 +276,14 @@ def serialize_fcurve(precision: int, fcurve: bpy.types.FCurve) -> Optional[FCurv
 
 def serialize_keyframe(precision: int, kp: bpy.types.Keyframe) -> KeyframeData:
 	"""
-	Extracts essential keyframe data: coordinates, handle positions, 
+	Extracts essential keyframe data: coordinates, handle positions,
 	interpolation types, and dynamic easing properties (Back/Bounce/Elastic).
 	"""
 	return KeyframeData(
-		co=(round(kp.co[0], precision), round(kp.co[1], precision)),
-		handles=(
-			round(kp.handle_left[0], precision), round(kp.handle_left[1], precision),
-			round(kp.handle_right[0], precision), round(kp.handle_right[1], precision)
-		),
+		co=round_value(kp.co, precision),
+		handles=(*round_value(kp.handle_left, precision), *round_value(kp.handle_right, precision)),
 		types=(kp.handle_left_type, kp.handle_right_type, kp.interpolation, kp.easing),
-		dynamics=(round(kp.back, precision), round(kp.amplitude, precision), round(kp.period, precision))
+		dynamics=round_value((kp.back, kp.amplitude, kp.period), precision)
 	)
 
 # --- ANIMATION & DRIVER LOGIC ---
@@ -385,7 +382,7 @@ def get_driver_fingerprint(precision: int, id_data: bpy.types.ID, data_path: str
 			mod_type=mod.type,
 			settings={
 				# Automatically scrape all settings for this modifier type
-				p.identifier: serialize_value(getattr(mod, p.identifier), precision)
+				p.identifier: round_value(getattr(mod, p.identifier), precision)
 				for p in mod.bl_rna.properties
 				if not p.is_readonly and p.identifier not in ('name', 'type', 'is_active')
 			})
@@ -415,7 +412,7 @@ def extract_property(target_val: object, id_block: bpy.types.ID, data_path: str,
 	data_path: The RNA path for driver/animation lookup.
 	"""
 	return PropertyEntry(
-		val=serialize_value(target_val, precision),
+		val=round_value(target_val, precision),
 		driver=get_driver_fingerprint(precision, id_block, data_path),
 		animation=get_animation_fingerprint(precision, id_block, data_path)
 	)
@@ -427,9 +424,9 @@ def get_material_fingerprint(material: bpy.types.Material, compare_settings: boo
 	# 1. Handle Surface Type
 	if not material.node_tree:
 		fp.mat_type = "FIXED_MAT"
-		fp.diffuse = serialize_value(material.diffuse_color, precision)
-		fp.roughness = serialize_value(material.roughness, precision)
-		fp.metallic = serialize_value(material.metallic, precision)
+		fp.diffuse = round_value(material.diffuse_color, precision)
+		fp.roughness = round_value(material.roughness, precision)
+		fp.metallic = round_value(material.metallic, precision)
 	else:
 		fp.mat_type = "NODE_TREE"
 		fp.node_tree_data = get_node_group_fingerprint(material.node_tree, precision)
@@ -560,31 +557,60 @@ def count_nodes_in_material(material: bpy.types.Material) -> int:
 		return 0
 	return node_tree_counter(material.node_tree)
 
-def serialize_value(val, decimals: int = 4) -> Primitive:
+def round_value(val: object, decimals: int = 4) -> Primitive:
 	"""
-	Standardizes Blender's internal math types into Python-native primitives.
+	Recursively rounds floating-point values within nested data structures and Blender types.
+
+	Preserves the original data types where possible. If a container is immutable
+	or cannot be re-instantiated (e.g., `bpy_prop_array`), it returns
+	a standard tuple of the rounded values.
+
 	Args:
-		val: The value to convert (Vector, Color, Euler, float, etc.)
-		decimals: Precision for rounding. Needed for "Matching Precision" option ('fuzzy matching')
-				  where two materials are identical except for a tiny 
-				  floating-point difference (e.g., 0.5001 vs 0.5).
+		val (object): The input value or container to process.
+		decimals (int, optional): The number of decimal places to round to.
+			If float('inf'), exact values are returned (no rounding). | Default 4.
+
+	Returns:
+		Primitive: The processed structure with rounded floats. Falls back to a tuple if the
+			original type cannot be re-instantiated.
 	"""
+
 	if val is None:
-		return None
-		
-	# Standard types are returned as-is
+		return val
+
+	# Standard non-roundable primitive types
 	if isinstance(val, (str, bool, int)):
 		return val
-	
-	# Floats are rounded for the 'Matching Precision' feature
+
+	# Direct float rounding
 	if isinstance(val, float):
+		if decimals == float('inf'):
+			return val  # No rounding, return original value as-is
 		return round(val, decimals)
 
-	# If the value is iterable (like a Vector, Color, or Euler), 
-	# we convert it to a tuple of primitives recursively.
-	if isinstance(val, Iterable):
-		return tuple(serialize_value(x, decimals) for x in val)
-		
+	# Handle Mappings (Dictionaries)
+	if isinstance(val, Mapping):
+		return {k: round_value(v, decimals) for k, v in val.items()}
+
+	# Handle Mathutils and Iterables
+	if isinstance(val, (Iterable, Vector, Color, Euler, Quaternion, Matrix)):
+		# Recursively process elements
+		rounded_data = [round_value(x, decimals) for x in val]
+
+		# Try to reconstruct the original container type (Vector, Color, etc.)
+		val_type = type(val)
+		try:
+			# Special case: Euler rotation order preserved
+			if isinstance(val, Euler):
+				return val_type(rounded_data, val.order)
+
+			return val_type(rounded_data)
+
+		except (TypeError, ValueError):
+			# Fallback for read-only/uninstantiable types (e.g., bpy_prop_array)
+			return tuple(rounded_data)
+
+	# Return as-is if type is unknown/currently not supported/not roundable
 	return val
 
 def trace_socket(dest_socket: bpy.types.NodeSocket) -> bpy.types.NodeSocket:
