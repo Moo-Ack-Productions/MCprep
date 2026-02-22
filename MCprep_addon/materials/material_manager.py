@@ -885,12 +885,12 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 		description="Only check images used by materials on selected objects",
 		default=True)
 
-	compare_name: bpy.props.BoolProperty(
+	group_by_name: bpy.props.BoolProperty(
 		name="Compare Image Name",
 		description="Compare duplicates using base names (e.g., 'Texture.001' matches 'Texture')",
 		default=True)
 
-	compare_pixels: bpy.props.BoolProperty(
+	strict_comparison: bpy.props.BoolProperty(
 		name="Compare Pixels (slower)",
 		description="Compare full image content instead of samples. More accurate, but slower for large images",
 		default=False)
@@ -948,7 +948,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 			if w == 0 or h == 0 or not img.has_data:
 				continue
 
-			base_name = util.nameGeneralize(img.name) if self.compare_name else "GLOBAL"
+			base_name = util.nameGeneralize(img.name) if self.group_by_name else "GLOBAL"
 			groups.append((base_name, w, h, img))
 
 		# Comparison and Remapping
@@ -970,7 +970,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 			# comparison, which checks the actual pixels, this
 			# sums up the pixels and uses that to represent the
 			# image contents
-			if not self.compare_pixels:
+			if not self.strict_comparison:
 				num_pixels = w * h * 4
 				stride = max(1, num_pixels // RGBA_PIXELS_4096_MAX)
 				cur_img_data = img_array[::stride] if stride > 1 else img_array
@@ -988,7 +988,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 			for uni_image, uni_data, uni_sum in unique_images[cur_img_key]:
 				# Fast prefilter, used as an alternative
 				# to strict comparison
-				if not self.compare_pixels and not pix_sum == uni_sum:
+				if not self.strict_comparison and not pix_sum == uni_sum:
 					continue
 				elif not np.array_equal(uni_data, img_array):
 					continue
@@ -1027,6 +1027,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 		else:
 			self.report({"INFO"}, "No duplicates found")
 		return {'FINISHED'}
+
 
 
 class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
