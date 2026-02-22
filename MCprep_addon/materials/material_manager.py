@@ -139,7 +139,7 @@ class ListMaterials(bpy.types.PropertyGroup):
 
 
 # -----------------------------------------------------------------------------
-# Dataclasses for material comparison 
+# Dataclasses for material comparison
 # -----------------------------------------------------------------------------
 
 PrimitiveBasic = Union[int, float, str, bool, None, Vector, Color, Euler, Quaternion, Matrix]
@@ -214,7 +214,7 @@ class PropertyEntry:
 	driver: Optional[DriverFingerprint] = None
 	animation: Optional[List[FCurveData]] = None
 
-@dataclass
+@dataclass(order=True)
 class NodeLinkData:
 	"""Stores connection details between two node sockets."""
 	from_socket: str
@@ -261,7 +261,7 @@ class MaterialFingerprint:
 def serialize_fcurve(precision: int, fcurve: bpy.types.FCurve) -> Optional[FCurveData]:
 	"""
 	Converts a Blender F-Curve into a dataclass.
-	Returns None if the curve has 1 or fewer keyframes, as this doesn't 
+	Returns None if the curve has 1 or fewer keyframes, as this doesn't
 	constitute a functional animation for comparison purposes.
 	"""
 	# If there's only one keyframe, it's a static value, not an animation.
@@ -297,13 +297,13 @@ def serialize_keyframe(precision: int, kp: bpy.types.Keyframe) -> KeyframeData:
 def get_animation_fingerprint(precision: int, id_data: bpy.types.ID, data_path: Optional[str] = None, array_index: int = -1) -> Optional[List[FCurveData]]:
 	"""
 	Retrieves the animation data for a specific property or data-block as a serializable fingerprint.
-	"""	
+	"""
 	if not id_data.animation_data or not id_data.animation_data.action:
 		return None
 
 	action = id_data.animation_data.action
 	fcurves_to_serialize = []
-	
+
 	# Gather relevant curves:
 	if data_path:
 		found = action.fcurves.find(data_path, index=array_index)
@@ -311,13 +311,13 @@ def get_animation_fingerprint(precision: int, id_data: bpy.types.ID, data_path: 
 			fcurves_to_serialize = [found]
 	else:
 		fcurves_to_serialize = sorted(
-			[f for f in action.fcurves if f.is_valid], 
+			[f for f in action.fcurves if f.is_valid],
 			key=lambda f: (f.data_path, f.array_index)
 		)
 
 	# Serialize and Filter
 	results: List[FCurveData] = []
-	
+
 	for fcurve in fcurves_to_serialize:
 		serialized = serialize_fcurve(precision, fcurve)
 		if serialized is not None:
@@ -326,7 +326,7 @@ def get_animation_fingerprint(precision: int, id_data: bpy.types.ID, data_path: 
 	# Return None if no valid (multi-keyframe) curves were found
 	return results if results else None
 
-def get_driver_fingerprint(precision: int, id_data: bpy.types.ID, data_path: str, array_index: int = -1) -> Optional[DriverFingerprint]:
+def get_driver_fingerprint(precision: int, id_data: bpy.types.ID, data_path: str, array_index: int = 0) -> Optional[DriverFingerprint]:
 	"""Captures drivers math (expression), inputs (variables), and modifiers."""
 
 	if not id_data.animation_data or not id_data.animation_data.drivers:
@@ -353,7 +353,7 @@ def get_driver_fingerprint(precision: int, id_data: bpy.types.ID, data_path: str
 
 			# - Contextual Logic: Only capture attributes relevant to the variable type.
 			# This prevents "noise" / irrelevant unused attributes in the driver results
-			
+
 			# - Property based variables (getting a value from a UI field)
 			if var_type in ('SINGLE_PROP', 'CONTEXT_PROP'):
 				tar_obj.data_path = tar.data_path
@@ -361,24 +361,24 @@ def get_driver_fingerprint(precision: int, id_data: bpy.types.ID, data_path: str
 					tar_obj.id_type = tar.id_type
 				else:
 					tar_obj.context_property = tar.context_property
-			
+
 			# - Transform based variables (getting Loc/Rot/Scale from 3D space)
 			elif var_type == 'TRANSFORMS':
 				tar_obj.transform_type = tar.transform_type
 				tar_obj.transform_space = tar.transform_space
 				if tar.transform_type.startswith("ROT"):
 					tar_obj.rotation_mode = tar.rotation_mode
-			
+
 			# - Distance-based variables
 			elif var_type == 'LOC_DIFF':
 				tar_obj.transform_space = tar.transform_space
-			
+
 			# Bones require a specific sub-target name within an Armature
 			if tar.id and tar.id.type == 'ARMATURE' and tar.bone_target:
 				tar_obj.bone_target = tar.bone_target
 
 			targets.append(tar_obj)
-		
+
 		variables.append(DriverVariableData(name=var.name, var_type=var_type, targets=targets))
 
 	# Capture Driver F-Curve Influence and Modifiers
@@ -410,7 +410,7 @@ def get_driver_fingerprint(precision: int, id_data: bpy.types.ID, data_path: str
 
 def extract_property(target_val: object, id_block: bpy.types.ID, data_path: str, precision: int) -> PropertyEntry:
 	"""
-	Bundles a property's current value with its associated animation 
+	Bundles a property's current value with its associated animation
 	and driver data.
 
 	target_val: The actual value (already retrieved).
@@ -479,7 +479,7 @@ def get_material_fingerprint(material: bpy.types.Material, compare_settings: boo
 	return fp
 
 def get_node_group_fingerprint(node_tree: bpy.types.NodeTree, precision: int) -> Optional[NodeTreeFingerprint]:
-	"""Recursively maps the connected node network, properties, and internal group contents."""   
+	"""Recursively maps the connected node network, properties, and internal group contents."""
 	if not node_tree:
 		return
 
@@ -488,7 +488,7 @@ def get_node_group_fingerprint(node_tree: bpy.types.NodeTree, precision: int) ->
 	active_nodes = get_connected_nodes(node_tree)
 	nodes_data: List[NodeFingerprint] = []
 
-	# Sort: We sort by type and name so that the order of nodes in 
+	# Sort: We sort by type and name so that the order of nodes in
 	# the list is always identical (deterministic) for the same setup.
 	for node in sorted(active_nodes, key=lambda n: (n.bl_idname, n.name)):
 		if node.bl_idname in ('NodeFrame', 'NodeReroute'):
@@ -548,7 +548,7 @@ def get_node_group_fingerprint(node_tree: bpy.types.NodeTree, precision: int) ->
 
 def node_tree_counter(node_tree: bpy.types.NodeTree) -> int:
 	"""
-	Counts all functional nodes. If a NodeGroup is found, 
+	Counts all functional nodes. If a NodeGroup is found,
 	it enters that sub-tree and adds those nodes to the total count.
 	"""
 	count = 0
@@ -629,7 +629,7 @@ def trace_socket(dest_socket: bpy.types.NodeSocket) -> bpy.types.NodeSocket:
 	"""Follows a node socket link back to its source, traversing reroute nodes."""
 	if not dest_socket or not dest_socket.is_linked:
 		return dest_socket
-	
+
 	# Start at the first link connected to the destination socket
 	current_link = dest_socket.links[0]
 	source_node = current_link.from_node
@@ -639,7 +639,7 @@ def trace_socket(dest_socket: bpy.types.NodeSocket) -> bpy.types.NodeSocket:
 		reroute_input = source_node.inputs[0]
 		if not reroute_input.is_linked:
 			return reroute_input
-		
+
 		current_link = reroute_input.links[0]
 		source_node = current_link.from_node
 
@@ -649,12 +649,12 @@ def trace_socket(dest_socket: bpy.types.NodeSocket) -> bpy.types.NodeSocket:
 def get_connected_nodes(node_tree: bpy.types.NodeTree) -> Set[bpy.types.Node]:
 	"""
 	Traces the node tree backwards from the Material or Group outputs.
-	This ensures we only fingerprint nodes that actually contribute 
+	This ensures we only fingerprint nodes that actually contribute
 	to the final render, ignoring "floating" or disconnected nodes.
 	"""
 	if not node_tree:
 		return set()
-	
+
 	# Identify the starting output node of the data flow - typically the Material Output node, but also Group Outputs for nested groups
 	outputs = [n for n in node_tree.nodes if n.bl_idname in ('ShaderNodeOutputMaterial', 'NodeGroupOutput')]
 	connected = set()
@@ -781,7 +781,7 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 			for obj in context.selected_objects:
 				if not hasattr(obj.data, "materials"):
 					continue
-				
+
 				for mat in obj.data.materials:
 					if not mat or mat.library or mat.is_library_indirect:
 						continue
