@@ -143,7 +143,7 @@ class ListMaterials(bpy.types.PropertyGroup):
 # -----------------------------------------------------------------------------
 
 PrimitiveBasic = Union[int, float, str, bool, None, Vector, Color, Euler, Quaternion, Matrix]
-Primitive = Union[PrimitiveBasic, Tuple['Primitive', ...]]
+Primitive = Union[PrimitiveBasic, Tuple['Primitive', ...], Dict[str, 'Primitive'], Iterable['Primitive']]
 
 class AnimState(Enum):
 	"""Represents the presence or absence of animation data."""
@@ -569,7 +569,7 @@ def count_nodes_in_material(material: bpy.types.Material) -> int:
 		return 0
 	return node_tree_counter(material.node_tree)
 
-def round_value(val: object, decimals: int = 4) -> Primitive:
+def round_value(val: object, decimals: Union[int, float, None]  = None) -> Primitive:
 	"""
 	Recursively rounds floating-point values within nested data structures and Blender types.
 
@@ -579,11 +579,14 @@ def round_value(val: object, decimals: int = 4) -> Primitive:
 
 	Args:
 		val (object): The input value or container to process.
-		decimals (int, optional): The number of decimal places to round to.
-			If float('inf'), exact values are returned (no rounding). | Default 4.
+		decimals (int | float | None): The number of decimal places to round to.
+			If None, rounds to the nearest integer (returns int).
+			If float('inf'), returns values as-is (no rounding).
+			If floats are passed, they are rounded to the nearest whole integer.
+			| Default: None
 
 	Returns:
-		Primitive: The processed structure with rounded floats. Falls back to a tuple if the
+		Primitive: The processed structure with rounded floats or integers. Falls back to a tuple if the
 			original type cannot be re-instantiated.
 	"""
 
@@ -598,7 +601,10 @@ def round_value(val: object, decimals: int = 4) -> Primitive:
 	if isinstance(val, float):
 		if decimals == float('inf'):
 			return val  # No rounding, return original value as-is
-		return round(val, decimals)
+		
+		# Makes sure decimals is an int
+		decimal = round(decimals) if isinstance(decimals, (int, float)) else None
+		return round(val, decimal)
 
 	# Handle Mappings (Dictionaries)
 	if isinstance(val, Mapping):
