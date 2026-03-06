@@ -27,6 +27,7 @@ from bpy.types import Context, Material, Image, Texture, Nodes, NodeLinks, Node
 
 from .. import util
 from ..conf import MCprepError, env, Form
+from .resource_pack import find_from_texturepack
 
 AnimatedTex = Dict[str, int]
 
@@ -139,93 +140,6 @@ def get_mc_canonical_name(name: str) -> Tuple[str, Optional[Form]]:
 		canon = general_name
 
 	return canon, form
-
-
-def find_from_texturepack(blockname: str, resource_folder: Optional[Path]=None) -> Union[Path, MCprepError]:
-	"""Given a blockname (and resource folder), find image filepath.
-
-	Finds textures following any pack which should have this structure, and
-	the input folder or default resource folder could target at any of the
-	following sublevels above the <subfolder> level.
-	//pack_name/assets/minecraft/textures/<subfolder>/<blockname.png>
-
-	Returns:
-		- Path if successful
-		- MCprepError if error occurs (may return with a message)
-	"""
-	if resource_folder is None:
-		# default to internal pack
-		resource_folder = Path(cast(
-			str,
-			bpy.path.abspath(bpy.context.scene.mcprep_texturepack_path)
-		))
-
-	if not resource_folder.exists() or not resource_folder.is_dir():
-		env.log("Error, resource folder does not exist")
-		line, file = env.current_line_and_file()
-		return MCprepError(FileNotFoundError(), line, file, f"Resource pack folder at {resource_folder} does not exist!")
-
-	# Check multiple paths, picking the first match (order is important),
-	# goal of picking out the /textures folder.
-	check_dirs = [
-		Path(resource_folder, "textures"),
-		Path(resource_folder, "minecraft", "textures"),
-		Path(resource_folder, "assets", "minecraft", "textures")]
-	for path in check_dirs:
-		if path.exists():
-			resource_folder = path
-			break
-
-	search_paths = [
-		resource_folder,
-		# Both singular and plural shown below as it has varied historically.
-		Path(resource_folder, "blocks"),
-		Path(resource_folder, "block"),
-		Path(resource_folder, "items"),
-		Path(resource_folder, "item"),
-		Path(resource_folder, "entity"),
-		Path(resource_folder, "models"),
-		Path(resource_folder, "model"),
-	]
-	res = None
-
-	# first see if subpath included is found, prioritize use of that
-	extensions = [".png", ".jpg", ".jpeg"]
-	if "/" in blockname:
-		newpath = blockname.replace("/", os.path.sep)
-		for ext in extensions:
-			if Path(resource_folder, newpath + ext).exists():
-				res = Path(resource_folder, newpath + ext)
-				return res
-		newpath = os.path.basename(blockname)  # case where goes into other subpaths
-		for ext in extensions:
-			if Path(resource_folder, newpath + ext).exists():
-				res = Path(resource_folder, newpath + ext)
-				return res
-
-	# fallback (more common case), wide-search for
-	for path in search_paths:
-		if not path.is_dir():
-			continue
-		for ext in extensions:
-			check_path = Path(path, blockname + ext)
-			if check_path.exists() and check_path.is_file():
-				res = Path(path, blockname + ext)
-				return res
-
-	# Mineways fallback
-	for suffix in ["-Alpha", "-RGB", "-RGBA"]:
-		if blockname.endswith(suffix):
-			res = Path(
-				resource_folder, "mineways_assets", f"mineways{suffix}.png")
-			if res.exists() and res.is_file():
-				return res
-
-	if res is None:
-		line, file = env.current_line_and_file()
-		return MCprepError(FileNotFoundError(), line, file)
-	return res
-
 
 def detect_form(materials: List[Material]) -> Optional[Form]:
 	"""Function which, given the input materials, guesses the exporter form.
