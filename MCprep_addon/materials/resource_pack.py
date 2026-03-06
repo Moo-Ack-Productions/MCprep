@@ -21,7 +21,7 @@ from enum import auto, Enum
 import json
 import os
 from pathlib import Path
-from typing import cast, Optional, Tuple, Union
+from typing import List, cast, Optional, Tuple, Union, final
 
 import bpy
 
@@ -35,7 +35,7 @@ class MCMetaErrorType(Enum):
     FIELD_INVALID = auto()
     PARSED_FIELD_INVALID_TYPE = auto()
 
-
+@final
 class MCMetaIncorrectFormatException(Exception):
     def __init__(
         self,
@@ -50,6 +50,10 @@ class MCMetaIncorrectFormatException(Exception):
         self.err_type = err_type
         self.additional_context = additional_context
 
+@final
+class MCResourcePackTextureNotFound(Exception):
+    def __init__(self, msg: str = "") -> None:
+        super().__init__(msg)
 
 @dataclass
 class PackVersionData:
@@ -61,11 +65,29 @@ class PackVersionData:
 class MCResourcePack:
     name: str
     path: Path
-    pack_format: PackVersionData
+    pack_format: Optional[PackVersionData]
 
 
-def get_resource_pack_info(path: Path) -> Union[MCResourcePack, MCprepError]:
+def get_resource_pack_info(path: Path, dont_parse_pack_mcmeta: bool = False) -> Union[MCResourcePack, MCprepError]:
+    if not path.exists():
+        line, file = env.current_line_and_file()
+        return MCprepError(FileNotFoundError(), line, file, f"Resource pack cannot be found at {str(path)}")
+    elif not path.is_dir():
+        line, file = env.current_line_and_file()
+        return MCprepError(NotADirectoryError(), line, file, f"Resource pack not a directory: {str(path)}")
+
     name = path.name
+
+    # Intended for the default resource
+    # pack because it doesn't come with
+    # a pack.mcmeta file for some reason.
+    #
+    # TODO: Figure out a way to extract the
+    # pack format of the default resource pack
+    # without pack.mcmeta.
+    if dont_parse_pack_mcmeta:
+        return MCResourcePack(name, path, None)
+
     pack_meta_json = Path(path, PACK_MCMETA)
 
     if not pack_meta_json.exists():
@@ -244,9 +266,15 @@ def get_resource_pack_info(path: Path) -> Union[MCResourcePack, MCprepError]:
 
     return MCResourcePack(name, path, PackVersionData(min_format, max_format))
 
+def get_default_pack() -> Union[MCResourcePack, MCprepError]:
+    """Return the default texture pack bundled with MCprep."""
+    internal_pack = Path(
+        cast(str, bpy.path.abspath(bpy.context.scene.mcprep_texturepack_path))
+    )
+    return get_resource_pack_info(internal_pack)
 
 def find_from_texturepack(
-    blockname: str, resource_folder: Optional[Path] = None
+    blockname: str, resource_folder: Path
 ) -> Union[Path, MCprepError]:
     """Given a blockname (and resource folder), find image filepath.
 
@@ -259,11 +287,6 @@ def find_from_texturepack(
             - Path if successful
             - MCprepError if error occurs (may return with a message)
     """
-    if resource_folder is None:
-        # default to internal pack
-        resource_folder = Path(
-            cast(str, bpy.path.abspath(bpy.context.scene.mcprep_texturepack_path))
-        )
 
     if not resource_folder.exists() or not resource_folder.is_dir():
         env.log("Error, resource folder does not exist")
@@ -333,5 +356,26 @@ def find_from_texturepack(
 
     if res is None:
         line, file = env.current_line_and_file()
-        return MCprepError(FileNotFoundError(), line, file)
+        return MCprepError(MCResourcePackTextureNotFound(), line, file)
     return res
+
+
+def find_texture_from_layers(block_name: str, resource_pack_layers: List[MCResourcePack]) -> Union[Path, MCprepError]:
+    """Given a list of resource packs, in order from top to bottom, search for a texture.
+    
+    Returns:
+        - Path to the texture if it exists in any of the resource packs
+        - MCprepError with err_type set to MCResourcePackTextureNotFound
+        - If an alternate error occurs, then MCprepError with err_type set
+          any other exception class
+    """
+    for pack in resource_pack_layers:
+        res = find_from_texturepack(block_name, pack.path)
+        if isinstance(res, MCprepError):
+            if isinstance(res.err_type, MCResourcePackTextureNotFound):
+                continue
+            return res
+        return res
+
+    line, file = env.current_line_and_file()
+    return MCprepError(MCResourcePackTextureNotFound(), line, file)

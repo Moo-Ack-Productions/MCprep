@@ -27,7 +27,7 @@ from bpy.types import Context, Material, Image, Texture, Nodes, NodeLinks, Node
 
 from .. import util
 from ..conf import MCprepError, env, Form
-from .resource_pack import find_from_texturepack
+from .resource_pack import MCResourcePack, find_texture_from_layers, get_default_pack
 
 AnimatedTex = Dict[str, int]
 
@@ -284,24 +284,26 @@ def matprep_cycles(mat: Material, options: PrepOptions) -> Optional[bool]:
 	return res
 
 
-def set_texture_pack(
-	material: Material, folder: Path, use_extra_passes: bool) -> bool:
-	"""Replace existing material's image with texture pack's.
+def set_texture_pack_stack(
+		material: Material, resource_packs: List[MCResourcePack], use_extra_passes: bool) -> bool:
+	"""Replace existing material's image with one from the texture pack(s).
+
+	This goes through a stack of texture packs, from top to bottom.
 
 	Run through and check for each if counterpart material exists, then
 	run the swap (and auto load e.g. normals and specs if avail.)
 	"""
 	mc_name, _ = get_mc_canonical_name(material.name)
-	image = find_from_texturepack(mc_name, folder)
+	image = find_texture_from_layers(mc_name, resource_packs)
 	if isinstance(image, MCprepError):
 		if image.msg:
 			env.log(image.msg)
-		return 0
+		return False
 
 	image_data = util.loadTexture(str(image))
 	_ = set_cycles_texture(
 		image_data, material, extra_passes=use_extra_passes)
-	return 1
+	return True
 
 
 def assert_textures_on_materials(
@@ -585,7 +587,14 @@ def replace_missing_texture(image: Image) -> bool:
 	name = os.path.splitext(name)[0]  # cut off png / jpg / etc
 	canon, _ = get_mc_canonical_name(name)
 	# TODO: detect for pass structure like normal and still look for right pass
-	image_path = find_from_texturepack(canon)
+
+	internal_pack = get_default_pack()
+	if isinstance(internal_pack, MCprepError):
+		if internal_pack.msg is not None:
+			env.log(internal_pack.msg)
+		return False
+
+	image_path = find_texture_from_layers(canon, [internal_pack])
 	if isinstance(image_path, MCprepError):
 		if image_path.msg:
 			env.log(image_path.msg)
