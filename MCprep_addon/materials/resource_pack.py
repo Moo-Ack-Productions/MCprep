@@ -35,6 +35,7 @@ class MCMetaErrorType(Enum):
     FIELD_INVALID = auto()
     PARSED_FIELD_INVALID_TYPE = auto()
 
+
 @final
 class MCMetaIncorrectFormatException(Exception):
     def __init__(
@@ -50,10 +51,12 @@ class MCMetaIncorrectFormatException(Exception):
         self.err_type = err_type
         self.additional_context = additional_context
 
+
 @final
 class MCResourcePackTextureNotFound(Exception):
     def __init__(self, msg: str = "") -> None:
         super().__init__(msg)
+
 
 @dataclass
 class PackVersionData:
@@ -68,13 +71,25 @@ class MCResourcePack:
     pack_format: Optional[PackVersionData]
 
 
-def get_resource_pack_info(path: Path, dont_parse_pack_mcmeta: bool = False) -> Union[MCResourcePack, MCprepError]:
+def get_resource_pack_info(
+    path: Path, dont_parse_pack_mcmeta: bool = False
+) -> Union[MCResourcePack, MCprepError]:
     if not path.exists():
         line, file = env.current_line_and_file()
-        return MCprepError(FileNotFoundError(), line, file, f"Resource pack cannot be found at {str(path)}")
+        return MCprepError(
+            FileNotFoundError(),
+            line,
+            file,
+            f"Resource pack cannot be found at {str(path)}",
+        )
     elif not path.is_dir():
         line, file = env.current_line_and_file()
-        return MCprepError(NotADirectoryError(), line, file, f"Resource pack not a directory: {str(path)}")
+        return MCprepError(
+            NotADirectoryError(),
+            line,
+            file,
+            f"Resource pack not a directory: {str(path)}",
+        )
 
     name = path.name
 
@@ -266,12 +281,14 @@ def get_resource_pack_info(path: Path, dont_parse_pack_mcmeta: bool = False) -> 
 
     return MCResourcePack(name, path, PackVersionData(min_format, max_format))
 
+
 def get_default_pack() -> Union[MCResourcePack, MCprepError]:
     """Return the default texture pack bundled with MCprep."""
     internal_pack = Path(
         cast(str, bpy.path.abspath(bpy.context.scene.mcprep_texturepack_path))
     )
     return get_resource_pack_info(internal_pack)
+
 
 def find_from_texturepack(
     blockname: str, resource_folder: Path
@@ -360,9 +377,11 @@ def find_from_texturepack(
     return res
 
 
-def find_texture_from_layers(block_name: str, resource_pack_layers: List[MCResourcePack]) -> Union[Path, MCprepError]:
+def find_texture_from_layers(
+    block_name: str, resource_pack_layers: List[MCResourcePack]
+) -> Union[Path, MCprepError]:
     """Given a list of resource packs, in order from top to bottom, search for a texture.
-    
+
     Returns:
         - Path to the texture if it exists in any of the resource packs
         - MCprepError with err_type set to MCResourcePackTextureNotFound
