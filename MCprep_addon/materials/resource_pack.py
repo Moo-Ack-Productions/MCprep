@@ -25,7 +25,7 @@ from typing import List, cast, Optional, Tuple, Union, final
 
 import bpy
 
-from MCprep_addon.conf import MCprepError, env
+from ..conf import MCprepError, env
 
 PACK_MCMETA = "pack.mcmeta"
 
