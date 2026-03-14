@@ -674,8 +674,9 @@ def get_connected_nodes(node_tree: bpy.types.NodeTree) -> Set[bpy.types.Node]:
 		connected.add(node)
 		for socket in node.inputs:
 			for link in socket.links:
-				if link.from_node not in connected:
-					queue.append(link.from_node)
+				if link.from_node in connected:
+					continue
+				queue.append(link.from_node)
 	return connected
 
 # -----------------------------------------------------------------------------
@@ -734,16 +735,12 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 		description="Treat materials with different Action names as unique, even if their animation data matches",
 		default=False)
 
-	matching_precision: bpy.props.EnumProperty(
-		items=[
-			('OFF', "Off (Exact)", "No rounding. Values must match exactly"),
-			('STRICT', "Strict (4 decimals)", "High precision matching. Values must be nearly identical (e.g. 0.1234)"),
-			('LOOSE', "Loose (2 decimals)", "Forgiving matching. Values like 0.12 and 0.124 will match"),
-			('ROUGH', "Rough (1 decimal)", "Very loose matching. Values like 0.1 and 0.14 will match"),
-		],
-		name="Value Matching",
-		description="Controls how precisely float values are compared (node inputs, colors, vectors, animation keyframes)",
-		default='STRICT'
+	value_rounding: bpy.props.IntProperty(
+		name="Decimal Rounding",
+		description="Number of decimal places to round float values (node inputs, colors, vectors, animation keyframes) for comparison. -1 for exact matching",
+		default=4,
+		min=-1,
+		max=10
 	)
 
 	master_selection: bpy.props.EnumProperty(
@@ -777,9 +774,8 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 			self.report({'ERROR'}, "Select objects with materials first")
 			return {'CANCELLED'}
 
-		# Map Enum to numeric precision. 'inf' means Exact Matching (no rounding).
-		precision_map = {'OFF': float('inf'), 'STRICT': 4, 'LOOSE': 2, 'ROUGH': 1}
-		precision_val = precision_map.get(self.matching_precision, 4)
+		# < 0 means Exact Matching (no rounding).
+		precision_val = float('inf') if self.value_rounding < 0 else self.value_rounding
 
 		# 1. Gather materials
 		if self.selection_only:
