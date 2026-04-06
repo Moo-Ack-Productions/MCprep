@@ -295,8 +295,9 @@ def serialize_keyframe(precision: float, kp: bpy.types.Keyframe) -> KeyframeData
 # --- ANIMATION & DRIVER LOGIC ---
 
 def get_animation_fingerprint(precision: float, id_data: bpy.types.ID, data_path: Optional[str] = None, array_index: int = -1) -> Optional[List[FCurveData]]:
+	"""Retrieves the animation data for a specific property or data-block as a serializable fingerprint."""
 	if not id_data.animation_data or not id_data.animation_data.action:
-		return None
+		return
 
 	action = id_data.animation_data.action
 	fcurves_to_serialize = []
@@ -327,12 +328,12 @@ def get_driver_fingerprint(precision: float, id_data: bpy.types.ID, data_path: s
 	"""Captures drivers math (expression), inputs (variables), and modifiers."""
 
 	if not id_data.animation_data or not id_data.animation_data.drivers:
-		return None
+		return
 
 	# Locate the specific driver F-Curve for the given property path
 	fcurve = id_data.animation_data.drivers.find(data_path, index=array_index)
 	if not fcurve:
-		return None
+		return
 
 	drv = fcurve.driver
 	variables: List[DriverVariableData] = []
@@ -459,16 +460,26 @@ def get_material_fingerprint(material: bpy.types.Material, compare_settings: boo
 	if compare_settings:
 		# Material Render Settings
 		fp.render_settings = {
-			prop.identifier: extract_property(getattr(material, prop.identifier), material, prop.identifier, precision)
-			for prop in material.bl_rna.properties
-			if not prop.is_readonly and prop.identifier not in IGNORE_MAT_SETTINGS
-		}
+        prop.identifier: extract_property(
+            getattr(material, prop.identifier),
+            material,
+            prop.identifier,
+            precision
+        )
+        for prop in material.bl_rna.properties
+        if not prop.is_readonly and prop.identifier not in IGNORE_MAT_SETTINGS
+    }
 
 		# Line Art Settings (Nested object property)
 		if hasattr(material, "lineart"):
 			la = material.lineart
 			fp.line_art_settings = {
-				prop.identifier: extract_property(getattr(la, prop.identifier), material, f"lineart.{prop.identifier}", precision)
+				prop.identifier: extract_property(
+					getattr(la, prop.identifier),
+					material,
+					f"lineart.{prop.identifier}",
+					precision
+				)
 				for prop in la.bl_rna.properties
 				if not prop.is_readonly and prop.identifier not in IGNORE_MAT_SETTINGS
 			}
@@ -493,7 +504,12 @@ def get_node_group_fingerprint(node_tree: bpy.types.NodeTree, precision: float) 
 
 		# Capture Attributes: Every input property, slider, checkbox, enum, etc. on the node.
 		properties = {
-			p.identifier: extract_property(getattr(node, p.identifier), node_tree, f'nodes["{node.name}"].{p.identifier}', precision)
+			p.identifier: extract_property(
+				getattr(node, p.identifier),
+				node_tree,
+				f'nodes["{node.name}"].{p.identifier}',
+				precision
+			)
 			for p in node.bl_rna.properties
 			if p.identifier not in IGNORE_PROPS and not p.is_readonly
 		}
@@ -501,7 +517,12 @@ def get_node_group_fingerprint(node_tree: bpy.types.NodeTree, precision: float) 
 		# Capture Inputs: Only record inputs that are NOT linked (static values).
 		# Linked inputs are handled later in the 'links_data' section.
 		inputs = [
-			extract_property(socket.default_value, node_tree, f'nodes["{node.name}"].inputs[{i}].default_value', precision)
+			extract_property(
+				socket.default_value,
+				node_tree,
+				f'nodes["{node.name}"].inputs[{i}].default_value',
+				precision
+			)
 			for i, socket in enumerate(node.inputs)
 			if not socket.is_linked and hasattr(socket, "default_value")
 		]
@@ -859,7 +880,7 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 			env.log(f"Replaced '{old_mat.name}' with '{master_mat.name}'")
 			old_mat.user_remap(master_mat)
 
-		to_delete = [m for m in merge_map.keys() if m.users == 0 and not m.use_fake_user]
+		to_delete = [m for m in merge_map.keys() if not (m.users or m.use_fake_user)]
 		if to_delete:
 			bpy.data.batch_remove(ids=to_delete)
 
@@ -867,9 +888,14 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 		consolidated_count = precount - postcount
 
 		if consolidated_count > 0:
-			self.report({"INFO"}, f"Consolidated {consolidated_count} material{'s' if consolidated_count > 1 else ''} (Total: {precount} -> {postcount})")
+			# Slices 's' if count is 1 (1^1=0) to handle pluralization via bitwise XOR
+			self.report({"INFO"}, 
+				f"Consolidated {consolidated_count} material{'s'[:consolidated_count^1]} "
+				f"(Total: {precount} -> {postcount})"
+			)
 		else:
 			self.report({"INFO"}, "No duplicates found")
+			
 		return {'FINISHED'}
 
 
