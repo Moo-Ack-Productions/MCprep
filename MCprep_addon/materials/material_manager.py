@@ -258,7 +258,7 @@ class MaterialFingerprint:
 
 # --- SERIALIZATION HELPERS ---
 
-def serialize_fcurve(precision: int, fcurve: bpy.types.FCurve) -> Optional[FCurveData]:
+def serialize_fcurve(precision: float, fcurve: bpy.types.FCurve) -> Optional[FCurveData]:
 	"""
 	Converts a Blender F-Curve into a dataclass.
 	Returns None if the curve has 1 or fewer keyframes, as this doesn't
@@ -280,7 +280,7 @@ def serialize_fcurve(precision: int, fcurve: bpy.types.FCurve) -> Optional[FCurv
 		keyframes=[serialize_keyframe(precision, kp) for kp in fcurve.keyframe_points]
 	)
 
-def serialize_keyframe(precision: int, kp: bpy.types.Keyframe) -> KeyframeData:
+def serialize_keyframe(precision: float, kp: bpy.types.Keyframe) -> KeyframeData:
 	"""
 	Extracts essential keyframe data: coordinates, handle positions,
 	interpolation types, and dynamic easing properties (Back/Bounce/Elastic).
@@ -294,10 +294,7 @@ def serialize_keyframe(precision: int, kp: bpy.types.Keyframe) -> KeyframeData:
 
 # --- ANIMATION & DRIVER LOGIC ---
 
-def get_animation_fingerprint(precision: int, id_data: bpy.types.ID, data_path: Optional[str] = None, array_index: int = -1) -> Optional[List[FCurveData]]:
-	"""
-	Retrieves the animation data for a specific property or data-block as a serializable fingerprint.
-	"""
+def get_animation_fingerprint(precision: float, id_data: bpy.types.ID, data_path: Optional[str] = None, array_index: int = -1) -> Optional[List[FCurveData]]:
 	if not id_data.animation_data or not id_data.animation_data.action:
 		return None
 
@@ -326,7 +323,7 @@ def get_animation_fingerprint(precision: int, id_data: bpy.types.ID, data_path: 
 	# Return None if no valid (multi-keyframe) curves were found
 	return results if results else None
 
-def get_driver_fingerprint(precision: int, id_data: bpy.types.ID, data_path: str, array_index: int = 0) -> Optional[DriverFingerprint]:
+def get_driver_fingerprint(precision: float, id_data: bpy.types.ID, data_path: str, array_index: int = 0) -> Optional[DriverFingerprint]:
 	"""Captures drivers math (expression), inputs (variables), and modifiers."""
 
 	if not id_data.animation_data or not id_data.animation_data.drivers:
@@ -408,7 +405,7 @@ def get_driver_fingerprint(precision: int, id_data: bpy.types.ID, data_path: str
 
 # --- NODE TREE ANALYSIS ---
 
-def extract_property(target_val: object, id_block: bpy.types.ID, data_path: str, precision: int) -> PropertyEntry:
+def extract_property(target_val: object, id_block: bpy.types.ID, data_path: str, precision: float) -> PropertyEntry:
 	"""
 	Bundles a property's current value with its associated animation
 	and driver data.
@@ -423,7 +420,7 @@ def extract_property(target_val: object, id_block: bpy.types.ID, data_path: str,
 		animation=get_animation_fingerprint(precision, id_block, data_path)
 	)
 
-def get_material_fingerprint(material: bpy.types.Material, compare_settings: bool, use_action_names: bool, precision: int) -> MaterialFingerprint:
+def get_material_fingerprint(material: bpy.types.Material, compare_settings: bool, use_action_names: bool, precision: float) -> MaterialFingerprint:
 	"""Generates a unique signature of a material's node tree and render settings to identify duplicates."""
 	fp = MaterialFingerprint()
 
@@ -478,7 +475,7 @@ def get_material_fingerprint(material: bpy.types.Material, compare_settings: boo
 
 	return fp
 
-def get_node_group_fingerprint(node_tree: bpy.types.NodeTree, precision: int) -> Optional[NodeTreeFingerprint]:
+def get_node_group_fingerprint(node_tree: bpy.types.NodeTree, precision: float) -> Optional[NodeTreeFingerprint]:
 	"""Recursively maps the connected node network, properties, and internal group contents."""
 	if not node_tree:
 		return
@@ -601,7 +598,7 @@ def round_value(val: object, decimals: Union[int, float, None]  = None) -> Primi
 	if isinstance(val, float):
 		if decimals == float('inf'):
 			return val  # No rounding, return original value as-is
-		
+
 		# Makes sure decimals is an int
 		decimal = round(decimals) if isinstance(decimals, (int, float)) else None
 		return round(val, decimal)
@@ -1029,7 +1026,6 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 		else:
 			self.report({"INFO"}, "No duplicates found")
 		return {'FINISHED'}
-
 
 
 class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
