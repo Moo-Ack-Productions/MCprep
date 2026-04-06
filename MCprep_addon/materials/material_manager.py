@@ -741,7 +741,7 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 	compare_name: bpy.props.BoolProperty(
 		name="Compare Material Name",
 		description="Only compare materials with matching base names (ignores .001, .002, etc.)",
-		default=False)
+		default=True)
 
 	compare_settings: bpy.props.BoolProperty(
 		name="Compare Material Settings",
@@ -780,6 +780,11 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 		default='LOW_NODES'
 	)
 
+	combine_images: bpy.props.BoolProperty(
+		name="Compare image blocks",
+		description="Combine Images first",
+		default=True)
+
 	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	def invoke(self, context, event):
@@ -791,6 +796,14 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 		if self.selection_only and not context.selected_objects:
 			self.report({'ERROR'}, "Select objects with materials first")
 			return {'CANCELLED'}
+
+		if self.combine_images:
+			bpy.ops.mcprep.combine_images(
+				'EXEC_DEFAULT',
+				selection_only=self.selection_only,
+				group_by_name=self.compare_name,
+				strict_comparison=True
+			)
 
 		# < 0 means Exact Matching (no rounding).
 		precision_val = float('inf') if self.value_rounding < 0 else self.value_rounding
