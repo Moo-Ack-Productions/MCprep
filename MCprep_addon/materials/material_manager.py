@@ -18,12 +18,18 @@
 
 
 import os
-from typing import Dict, List, Optional, Tuple
 
 import bpy
+from collections import deque
+import time
+
+from typing import Dict, List, Optional, Set, Tuple, Union, Iterable, Mapping, Any
+from mathutils import Vector, Color, Euler, Quaternion, Matrix
+
+from dataclasses import dataclass
 
 import numpy as np
-from numpy.typing import NDArray
+from enum import Enum
 
 from . import generate
 from . import sequences
@@ -40,11 +46,25 @@ from ..conf import MCprepError, env
 # and 4 is the RGBA channels
 RGBA_PIXELS_4096_MAX = 16384
 
+# --- CONFIG: PROPERTIES TO IGNORE ---
+IGNORE_PROPS = (
+	'bl_description', 'bl_width_default', 'bl_width_min', 'bl_width_max', 'bl_height_default', 'bl_height_min',
+	'bl_height_max', 'bl_icon', 'bl_static_type', 'bl_label', 'name', 'label',
+	'location', 'width', 'height', 'dimensions', 'hide', 'select',
+	'show_options', 'show_texture', 'show_preview', 'use_custom_color',
+	'color', 'parent', 'internal_links', 'texture_mapping', 'color_mapping', 'node_tree'
+)
+
+IGNORE_MAT_SETTINGS = (
+	'name', 'use_fake_user', 'is_runtime_data', 'tag', 'asset_data',
+	'preview_render_type', 'use_preview_world', 'use_nodes', 'node_tree',
+	'diffuse_color', 'specular_color', 'roughness', 'specular_intensity',
+	'metallic', 'line_color', 'animation_data'
+)
 
 # -----------------------------------------------------------------------------
 # UI and utility functions
 # -----------------------------------------------------------------------------
-
 
 def reload_materials(context):
 	"""Reload the material UI list"""
@@ -115,8 +135,567 @@ class ListMaterials(bpy.types.PropertyGroup):
 	# inherited: name
 	description: bpy.props.StringProperty()
 	path: bpy.props.StringProperty(subtype='FILE_PATH')
-	index: bpy.props.IntProperty(min=0, default=0)  # for icon drawing
+	index: bpy.props.IntProperty(min=0, default=0)	# for icon drawing
 
+
+# -----------------------------------------------------------------------------
+# Dataclasses for material comparison
+# -----------------------------------------------------------------------------
+
+PrimitiveBasic = Union[int, float, str, bool, None, Vector, Color, Euler, Quaternion, Matrix]
+Primitive = Union[PrimitiveBasic, Tuple['Primitive', ...], Dict[str, 'Primitive'], Iterable['Primitive']]
+
+class AnimState(Enum):
+	"""Represents the presence or absence of animation data."""
+	NONE = 'None'
+	ACTIVE = 'Active'
+
+class MaterialType(Enum):
+	"""Basically represents if a material use nodes or not."""
+	FIXED = "FIXED_MAT"
+	NODES = "NODE_TREE"
+
+@dataclass
+class KeyframeData:
+	"""Stores keyframe coordinate, handle, and dynamic data."""
+	co: Iterable[float]
+	handles: Iterable[float] 			# left_x, left_y, right_x, right_y
+	types: Tuple[str, str, str, str]	# handle_l, handle_r, interp, easing
+	dynamics: Iterable[float]	   		# back, amplitude, period
+
+@dataclass
+class FCurveData:
+	"""Stores F-Curve settings and list of keyframes."""
+	data_path: str
+	array_index: int
+	extrapolation: str
+	auto_smoothing: str
+	mute: bool
+	keyframes: List[KeyframeData]
+
+@dataclass
+class DriverVariableTarget:
+	"""Stores driver variable target data."""
+	id_name: str
+	data_path: Optional[str] = None
+	bone_target: Optional[str] = None
+	id_type: Optional[str] = None
+	transform_type: Optional[str] = None
+	transform_space: Optional[str] = None
+	rotation_mode: Optional[str] = None
+	context_property: Optional[str] = None
+
+@dataclass
+class DriverVariableData:
+	"""Stores driver variable name, type, and targets."""
+	name: str
+	var_type: str
+	targets: List[DriverVariableTarget]
+
+@dataclass
+class DriverModifierData:
+	"""Stores driver modifier type and settings."""
+	mod_type: str
+	settings: Dict[str, Primitive]
+
+@dataclass
+class DriverFingerprint:
+	"""Stores full driver data including variables, F-curves, and modifiers."""
+	drv_type: str
+	expression: Optional[str]
+	variables: List[DriverVariableData]
+	fcurve: Optional[FCurveData]
+	modifiers: List[DriverModifierData]
+
+@dataclass
+class PropertyEntry:
+	"""Stores a property value along with potential driver or animation data."""
+	val: Primitive
+	driver: Optional[DriverFingerprint] = None
+	animation: Optional[List[FCurveData]] = None
+
+@dataclass(order=True)
+class NodeLinkData:
+	"""Stores connection details between two node sockets."""
+	from_socket: str
+	from_node: str
+	to_socket: str
+	to_node: str
+
+@dataclass
+class NodeFingerprint:
+	"""Stores node type, mute status, and input/property data."""
+	node_type: str
+	muted: bool
+	properties: Dict[str, PropertyEntry]
+	inputs: List[PropertyEntry]
+	group_content: Optional['NodeTreeFingerprint'] = None
+
+@dataclass
+class NodeTreeFingerprint:
+	"""Stores the list of nodes and links within a node tree."""
+	nodes: List[NodeFingerprint]
+	links: List[NodeLinkData]
+
+@dataclass
+class MaterialFingerprint:
+	"""Stores a unique signature of a material for structural comparison."""
+	mat_type: MaterialType = MaterialType.FIXED
+	diffuse: Optional[Primitive] = None
+	roughness: Optional[Primitive] = None
+	metallic: Optional[Primitive] = None
+	node_tree_data: Optional[NodeTreeFingerprint] = None
+	mat_action_name: Optional[Union[str, AnimState]] = AnimState.NONE
+	node_tree_action_name: Optional[Union[str, AnimState]] = AnimState.NONE
+	animation: Optional[Dict[str, List[FCurveData]]] = None
+	render_settings: Optional[Dict[str, PropertyEntry]] = None
+	line_art_settings: Optional[Dict[str, PropertyEntry]] = None
+
+
+# -----------------------------------------------------------------------------
+# Material structural comparison helpers
+# -----------------------------------------------------------------------------
+
+# --- SERIALIZATION HELPERS ---
+
+def serialize_fcurve(precision: float, fcurve: bpy.types.FCurve) -> Optional[FCurveData]:
+	"""
+	Converts a Blender F-Curve into a dataclass.
+	Returns None if the curve has 1 or fewer keyframes, as this doesn't
+	constitute a functional animation for comparison purposes.
+	"""
+	# If there's only one keyframe, it's a static value, not an animation.
+	# We ignore it to keep the fingerprint focused on actual movement.
+	if len(fcurve.keyframe_points) <= 1:
+		return
+
+	fcurve.keyframe_points.sort()
+
+	return FCurveData(
+		data_path=fcurve.data_path,
+		array_index=fcurve.array_index,
+		extrapolation=fcurve.extrapolation,
+		auto_smoothing=fcurve.auto_smoothing,
+		mute=fcurve.mute,
+		keyframes=[serialize_keyframe(precision, kp) for kp in fcurve.keyframe_points]
+	)
+
+def serialize_keyframe(precision: float, kp: bpy.types.Keyframe) -> KeyframeData:
+	"""
+	Extracts essential keyframe data: coordinates, handle positions,
+	interpolation types, and dynamic easing properties (Back/Bounce/Elastic).
+	"""
+	return KeyframeData(
+		co=round_value(kp.co, precision),
+		handles=(*round_value(kp.handle_left, precision), *round_value(kp.handle_right, precision)),
+		types=(kp.handle_left_type, kp.handle_right_type, kp.interpolation, kp.easing),
+		dynamics=round_value((kp.back, kp.amplitude, kp.period), precision)
+	)
+
+# --- ANIMATION & DRIVER LOGIC ---
+
+def get_animation_fingerprint(precision: float, id_data: bpy.types.ID, data_path: Optional[str] = None, array_index: int = -1) -> Optional[List[FCurveData]]:
+	"""Retrieves the animation data for a specific property or data-block as a serializable fingerprint."""
+	if not id_data.animation_data or not id_data.animation_data.action:
+		return
+
+	action = id_data.animation_data.action
+	fcurves_to_serialize = []
+
+	# Gather relevant curves:
+	if data_path:
+		found = action.fcurves.find(data_path, index=array_index)
+		if found:
+			fcurves_to_serialize = [found]
+	else:
+		fcurves_to_serialize = sorted(
+			[f for f in action.fcurves if f.is_valid],
+			key=lambda f: (f.data_path, f.array_index)
+		)
+
+	# Serialize and Filter
+	results: List[FCurveData] = []
+
+	for fcurve in fcurves_to_serialize:
+		serialized = serialize_fcurve(precision, fcurve)
+		if serialized is not None:
+			results.append(serialized)
+
+	# Return None if no valid (multi-keyframe) curves were found
+	return results if results else None
+
+def get_driver_fingerprint(precision: float, id_data: bpy.types.ID, data_path: str, array_index: int = 0) -> Optional[DriverFingerprint]:
+	"""Captures drivers math (expression), inputs (variables), and modifiers."""
+
+	if not id_data.animation_data or not id_data.animation_data.drivers:
+		return
+
+	# Locate the specific driver F-Curve for the given property path
+	fcurve = id_data.animation_data.drivers.find(data_path, index=array_index)
+	if not fcurve:
+		return
+
+	drv = fcurve.driver
+	variables: List[DriverVariableData] = []
+
+	# Process Variables
+	for var in drv.variables:
+		targets: List[DriverVariableTarget] = []
+		var_type = var.type
+
+		for tar in var.targets:
+			# Every target needs an ID
+			tar_obj = DriverVariableTarget(
+				id_name=getattr(tar.id, "name_full", tar.id.name) if tar.id else ""
+			)
+
+			# - Contextual Logic: Only capture attributes relevant to the variable type.
+			# This prevents "noise" / irrelevant unused attributes in the driver results
+
+			# - Property based variables (getting a value from a UI field)
+			if var_type in ('SINGLE_PROP', 'CONTEXT_PROP'):
+				tar_obj.data_path = tar.data_path
+				if var_type == 'SINGLE_PROP':
+					tar_obj.id_type = tar.id_type
+				else:
+					tar_obj.context_property = tar.context_property
+
+			# - Transform based variables (getting Loc/Rot/Scale from 3D space)
+			elif var_type == 'TRANSFORMS':
+				tar_obj.transform_type = tar.transform_type
+				tar_obj.transform_space = tar.transform_space
+				if tar.transform_type.startswith("ROT"):
+					tar_obj.rotation_mode = tar.rotation_mode
+
+			# - Distance-based variables
+			elif var_type == 'LOC_DIFF':
+				tar_obj.transform_space = tar.transform_space
+
+			# Bones require a specific sub-target name within an Armature
+			if tar.id and tar.id.type == 'ARMATURE' and tar.bone_target:
+				tar_obj.bone_target = tar.bone_target
+
+			targets.append(tar_obj)
+
+		variables.append(DriverVariableData(name=var.name, var_type=var_type, targets=targets))
+
+	# Capture Driver F-Curve Influence and Modifiers
+	driver_fcurve = serialize_fcurve(precision, fcurve)
+	modifiers: List[DriverModifierData] = [
+		DriverModifierData(
+			mod_type=mod.type,
+			settings={
+				# Automatically scrape all settings for this modifier type
+				p.identifier: round_value(getattr(mod, p.identifier), precision)
+				for p in mod.bl_rna.properties
+				if not p.is_readonly and p.identifier not in ('name', 'type', 'is_active')
+			})
+		# Ignore modifiers that are turned off or have no strength
+		for mod in fcurve.modifiers
+		if not mod.mute and getattr(mod, "influence", 1.0) > 0.0
+	]
+
+	return DriverFingerprint(
+		drv_type=drv.type,
+		# Only 'SCRIPTED' drivers use the expression string (e.g., "var * 2")
+		expression=drv.expression if drv.type == 'SCRIPTED' else None,
+		variables=variables,
+		fcurve=driver_fcurve,
+		modifiers=modifiers
+	)
+
+# --- NODE TREE ANALYSIS ---
+
+def extract_property(target_val: object, id_block: bpy.types.ID, data_path: str, precision: float) -> PropertyEntry:
+	"""
+	Bundles a property's current value with its associated animation
+	and driver data.
+
+	target_val: The actual value (already retrieved).
+	id_block: The owner of the animation (Material/NodeTree).
+	data_path: The RNA path for driver/animation lookup.
+	"""
+	return PropertyEntry(
+		val=round_value(target_val, precision),
+		driver=get_driver_fingerprint(precision, id_block, data_path),
+		animation=get_animation_fingerprint(precision, id_block, data_path)
+	)
+
+def get_material_fingerprint(material: bpy.types.Material, compare_settings: bool, use_action_names: bool, precision: float) -> MaterialFingerprint:
+	"""Generates a unique signature of a material's node tree and render settings to identify duplicates."""
+	fp = MaterialFingerprint()
+
+	# 1. Handle Surface Type
+	if not material.node_tree:
+		fp.mat_type = MaterialType.FIXED
+		fp.diffuse = round_value(material.diffuse_color, precision)
+		fp.roughness = round_value(material.roughness, precision)
+		fp.metallic = round_value(material.metallic, precision)
+	else:
+		fp.mat_type = MaterialType.NODES
+		fp.node_tree_data = get_node_group_fingerprint(material.node_tree, precision)
+
+	# 2. Gather Action Names (Optional metadata)
+	if use_action_names:
+		if material.animation_data and material.animation_data.action:
+			fp.mat_action_name = material.animation_data.action.name
+
+		nt = material.node_tree
+		if nt and nt.animation_data and nt.animation_data.action:
+			fp.node_tree_action_name = nt.animation_data.action.name
+
+	# 3. Full Animation Data (F-Curves)
+	anim_list = get_animation_fingerprint(precision, material)
+	if anim_list:
+		fp.animation = {}
+		for f in anim_list:
+			# Group by data_path to match Dict[str, List[FCurveData]]
+			if f.data_path not in fp.animation:
+				fp.animation[f.data_path] = []
+			fp.animation[f.data_path].append(f)
+	else:
+		fp.animation = None
+
+	# 4. Gather Settings and Line Art
+	if compare_settings:
+		# Material Render Settings
+		fp.render_settings = {
+        prop.identifier: extract_property(
+            getattr(material, prop.identifier),
+            material,
+            prop.identifier,
+            precision
+        )
+        for prop in material.bl_rna.properties
+        if not prop.is_readonly and prop.identifier not in IGNORE_MAT_SETTINGS
+    }
+
+		# Line Art Settings (Nested object property)
+		if hasattr(material, "lineart"):
+			la = material.lineart
+			fp.line_art_settings = {
+				prop.identifier: extract_property(
+					getattr(la, prop.identifier),
+					material,
+					f"lineart.{prop.identifier}",
+					precision
+				)
+				for prop in la.bl_rna.properties
+				if not prop.is_readonly and prop.identifier not in IGNORE_MAT_SETTINGS
+			}
+
+	return fp
+
+def get_node_group_fingerprint(node_tree: bpy.types.NodeTree, precision: float) -> Optional[NodeTreeFingerprint]:
+	"""Recursively maps the connected node network, properties, and internal group contents."""
+	if not node_tree:
+		return
+
+	# Filter: Only process nodes that actually lead to an output.
+	# This prevents 'stray' nodes from making two materials look different.
+	active_nodes = get_connected_nodes(node_tree)
+	nodes_data: List[NodeFingerprint] = []
+
+	# Sort: We sort by type and name so that the order of nodes in
+	# the list is always identical (deterministic) for the same setup.
+	for node in sorted(active_nodes, key=lambda n: (n.bl_idname, n.name)):
+		if node.bl_idname in ('NodeFrame', 'NodeReroute'):
+			continue
+
+		# Capture Attributes: Every input property, slider, checkbox, enum, etc. on the node.
+		properties = {
+			p.identifier: extract_property(
+				getattr(node, p.identifier),
+				node_tree,
+				f'nodes["{node.name}"].{p.identifier}',
+				precision
+			)
+			for p in node.bl_rna.properties
+			if p.identifier not in IGNORE_PROPS and not p.is_readonly
+		}
+
+		# Capture Inputs: Only record inputs that are NOT linked (static values).
+		# Linked inputs are handled later in the 'links_data' section.
+		inputs = [
+			extract_property(
+				socket.default_value,
+				node_tree,
+				f'nodes["{node.name}"].inputs[{i}].default_value',
+				precision
+			)
+			for i, socket in enumerate(node.inputs)
+			if not socket.is_linked and hasattr(socket, "default_value")
+		]
+
+		# RECURSION: If this node is a group, we call this function again
+		# to fingerprint the 'inside' of the group. This can go many levels deep.
+		nested_group = None
+		if node.bl_idname == 'ShaderNodeGroup' and node.node_tree:
+			nested_group = get_node_group_fingerprint(node.node_tree, precision)
+
+		nodes_data.append(NodeFingerprint(
+			node_type=node.bl_idname,
+			muted=node.mute,
+			properties=properties,
+			inputs=inputs,
+			group_content=nested_group
+		))
+
+	# Links: Define the "wiring" of the network.
+	# We trace from the Destination (input) back to the Source (output).
+	links_data = []
+	for node in active_nodes:
+		if node.bl_idname in ('NodeFrame', 'NodeReroute'):
+			continue
+
+		for dest_socket in node.inputs:
+			if not dest_socket.is_linked:
+				continue
+
+			source_socket = trace_socket(dest_socket)
+			if source_socket.node in active_nodes:
+				links_data.append(NodeLinkData(
+					from_socket=source_socket.name,
+					from_node=source_socket.node.bl_idname,
+					to_socket=dest_socket.name,
+					to_node=node.bl_idname
+				))
+
+	# Sorting links via dataclass native sorting (order=True) ensures determinism.
+	return NodeTreeFingerprint(nodes=nodes_data, links=sorted(links_data))
+
+def node_tree_counter(node_tree: bpy.types.NodeTree) -> int:
+	"""
+	Counts all functional nodes. If a NodeGroup is found,
+	it enters that sub-tree and adds those nodes to the total count.
+	"""
+	count = 0
+	for node in node_tree.nodes:
+		# Frames and Reroutes are organizational, not functional
+		if node.bl_idname in ('NodeFrame', 'NodeReroute'):
+			continue
+		count += 1
+
+		# If it's a group, count its internal nodes too
+		if node.bl_idname == 'ShaderNodeGroup' and node.node_tree:
+			count += node_tree_counter(node.node_tree)
+	return count
+
+def count_nodes_in_material(material: bpy.types.Material) -> int:
+	"""Wrapper that performs a recursive count of all functional nodes within a material and its nested node groups."""
+	if not material.node_tree:
+		return 0
+	return node_tree_counter(material.node_tree)
+
+def round_value(val: object, decimals: Union[int, float, None]  = None) -> Primitive:
+	"""
+	Recursively rounds floating-point values within nested data structures and Blender types.
+
+	Preserves the original data types where possible. If a container is immutable
+	or cannot be re-instantiated (e.g., `bpy_prop_array`), it returns
+	a standard tuple of the rounded values.
+
+	Args:
+		val (object): The input value or container to process.
+		decimals (int | float | None): The number of decimal places to round to.
+			If None, rounds to the nearest integer (returns int).
+			If float('inf'), returns values as-is (no rounding).
+			If floats are passed, they are rounded to the nearest whole integer.
+			| Default: None
+
+	Returns:
+		Primitive: The processed structure with rounded floats or integers. Falls back to a tuple if the
+			original type cannot be re-instantiated.
+	"""
+
+	if val is None:
+		return val
+
+	# Standard non-roundable primitive types
+	if isinstance(val, (str, bool, int)):
+		return val
+
+	# Direct float rounding
+	if isinstance(val, float):
+		if decimals == float('inf'):
+			return val  # No rounding, return original value as-is
+
+		# Makes sure decimals is an int
+		decimal = round(decimals) if isinstance(decimals, (int, float)) else None
+		return round(val, decimal)
+
+	# Handle Mappings (Dictionaries)
+	if isinstance(val, Mapping):
+		return {k: round_value(v, decimals) for k, v in val.items()}
+
+	# Handle Mathutils and Iterables
+	if isinstance(val, (Iterable, Vector, Color, Euler, Quaternion, Matrix)):
+		# Recursively process elements
+		rounded_data = [round_value(x, decimals) for x in val]
+
+		# Try to reconstruct the original container type (Vector, Color, etc.)
+		val_type = type(val)
+		try:
+			# Special case: Euler rotation order preserved
+			if isinstance(val, Euler):
+				return val_type(rounded_data, val.order)
+
+			return val_type(rounded_data)
+
+		except (TypeError, ValueError):
+			# Fallback for read-only/uninstantiable types (e.g., bpy_prop_array)
+			return tuple(rounded_data)
+
+	# Return as-is if type is unknown/currently not supported/not roundable
+	return val
+
+def trace_socket(dest_socket: bpy.types.NodeSocket) -> bpy.types.NodeSocket:
+	"""Follows a node socket link back to its source, traversing reroute nodes."""
+	if not dest_socket or not dest_socket.is_linked:
+		return dest_socket
+
+	# Start at the first link connected to the destination socket
+	current_link = dest_socket.links[0]
+	source_node = current_link.from_node
+
+	# If the source is a reroute, we need to walk "behind" it recursively
+	while source_node and source_node.bl_idname == 'NodeReroute':
+		reroute_input = source_node.inputs[0]
+		if not reroute_input.is_linked:
+			return reroute_input
+
+		current_link = reroute_input.links[0]
+		source_node = current_link.from_node
+
+	# Once we hit a non-reroute node, return the actual source output socket
+	return current_link.from_socket
+
+def get_connected_nodes(node_tree: bpy.types.NodeTree) -> Set[bpy.types.Node]:
+	"""
+	Traces the node tree backwards from the Material or Group outputs.
+	This ensures we only fingerprint nodes that actually contribute
+	to the final render, ignoring "floating" or disconnected nodes.
+	"""
+	if not node_tree:
+		return set()
+
+	# Identify the starting output node of the data flow - typically the Material Output node, but also Group Outputs for nested groups
+	outputs = [n for n in node_tree.nodes if n.bl_idname in ('ShaderNodeOutputMaterial', 'NodeGroupOutput')]
+	connected = set()
+	queue = deque(outputs)
+
+	# Breadth-first search through the node tree, following links backwards from outputs to inputs
+	while queue:
+		node = queue.popleft()
+		if node in connected:
+			continue
+		connected.add(node)
+		for socket in node.inputs:
+			for link in socket.links:
+				if link.from_node in connected:
+					continue
+				queue.append(link.from_node)
+	return connected
 
 # -----------------------------------------------------------------------------
 # Material data management operators
@@ -151,129 +730,185 @@ class MCPREP_OT_reload_materials(bpy.types.Operator):
 class MCPREP_OT_combine_materials(bpy.types.Operator):
 	bl_idname = "mcprep.combine_materials"
 	bl_label = "Combine materials"
-	bl_description = (
-		"Consolidate the same materials together e.g. mat.001 and mat.002")
+	bl_description = "Consolidate duplicate materials based on nodes or name"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	# arg to auto-force remove old? versus just keep as 0-users
 	selection_only: bpy.props.BoolProperty(
 		name="Selection only",
-		description="Build materials to consolidate based on selected objects only",
+		description="Only check materials used by selected objects",
 		default=True)
+
+	compare_name: bpy.props.BoolProperty(
+		name="Compare Material Name",
+		description="Only compare materials with matching base names (ignores .001, .002, etc.)",
+		default=True)
+
+	compare_settings: bpy.props.BoolProperty(
+		name="Compare Material Settings",
+		description="Compare materials settings alongside nodes",
+		default=True)
+
+	compare_action_name: bpy.props.BoolProperty(
+		name="Compare Action Name",
+		description="Treat materials with different Action names as unique, even if their animation data matches",
+		default=False)
+
+	value_rounding: bpy.props.IntProperty(
+		name="Decimal Rounding",
+		description="Number of decimal places to round float values (node inputs, colors, vectors, animation keyframes) for comparison. -1 for exact matching",
+		default=4,
+		min=-1,
+		max=10
+	)
+
+	master_selection: bpy.props.EnumProperty(
+		items=[
+		('LOW_NODES', "Fewest Nodes",
+		"Keep the simplest material (fewest nodes)."),
+
+		('HIGH_NODES', "Most Nodes",
+		"Keep the most complex material (most nodes)."),
+
+		('HIGH_USERS', "Most Users",
+		"Keep the material used by the most objects."),
+
+		('LOW_USERS', "Fewest Users",
+		"Keep the material used by the fewest objects."),
+		],
+		name="Material to Keep",
+		description="Choose which material remains when duplicates are merged. All others are remapped to the selected material",
+		default='LOW_NODES'
+	)
+
+	combine_images: bpy.props.BoolProperty(
+		name="Compare image blocks",
+		description="Combine Images first",
+		default=True)
+
 	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
+
+	def invoke(self, context, event):
+		return context.window_manager.invoke_props_dialog(self)
 
 	track_function = "combine_materials"
 	@tracking.report_error
 	def execute(self, context):
-		removeold = True
-
-		if self.selection_only is True and len(context.selected_objects) == 0:
-			self.report(
-				{'ERROR'},
-				"Either turn selection only off or select objects with materials")
+		if self.selection_only and not context.selected_objects:
+			self.report({'ERROR'}, "Select objects with materials first")
 			return {'CANCELLED'}
 
-		# 2-level structure to hold base name and all
-		# materials blocks with the same base
-		name_cat = {}
+		if self.combine_images:
+			bpy.ops.mcprep.combine_images(
+				'EXEC_DEFAULT',
+				selection_only=self.selection_only,
+				group_by_name=self.compare_name,
+				strict_comparison=True
+			)
 
-		def getMaterials(self, context):
-			if self.selection_only is False:
-				return bpy.data.materials
-			else:
-				mats = []
-				for ob in bpy.data.objects:
-					for sl in ob.material_slots:
-						if sl is None or sl.material is None:
-							continue
-						if sl.material in mats:
-							continue
-						mats.append(sl.material)
-				return mats
+		# < 0 means Exact Matching (no rounding).
+		precision_val = float('inf') if self.value_rounding < 0 else self.value_rounding
 
-		data = getMaterials(self, context)
-		precount = len(["x" for x in data if x.users > 0])
+		# 1. Gather materials
+		if self.selection_only:
+			materials_to_check = set()
+			for obj in context.selected_objects:
+				if not hasattr(obj.data, "materials"):
+					continue
 
-		if not data:
-			if self.selection_only:
-				self.report({"ERROR"}, "No materials found on selected objects")
-			else:
-				self.report({"ERROR"}, "No materials in open file")
-			return {'CANCELLED'}
-
-		# get and categorize all materials names
-		for mat in data:
-			base = util.nameGeneralize(mat.name)
-			if base not in name_cat:
-				name_cat[base] = [mat.name]
-			elif mat.name not in name_cat[base]:
-				name_cat[base].append(mat.name)
-			else:
-				env.log("Skipping, already added material", True)
-
-		# Pre 2.78 solution, deep loop.
-		if bpy.app.version < (2, 78):
-			for ob in bpy.data.objects:
-				for sl in ob.material_slots:
-					if sl is None or sl.material is None:
+				for mat in obj.data.materials:
+					if not mat or mat.library or mat.is_library_indirect:
 						continue
-					if sl.material not in data:
-						continue  # Selection only.
-					name_ref = name_cat[util.nameGeneralize(sl.material.name)][0]
-					sl.material = bpy.data.materials[name_ref]
-			# doesn't remove old textures, but gets it to zero users
+					materials_to_check.add(mat)
+			materials_to_check = list(materials_to_check)
+		else:
+			materials_to_check = [m for m in bpy.data.materials if not m.library and not m.is_library_indirect]
 
-			postcount = len([True for x in bpy.data.materials if x.users > 0])
-			self.report(
-				{"INFO"},
-				f"Consolidated {precount - postcount} materials, down to {postcount} overall")
+		if not materials_to_check:
+			self.report({'INFO'}, "No materials found to process")
 			return {'FINISHED'}
 
-		# perform the consolidation with one basename set at a time
-		for base in name_cat:  # The keys of the dictionary.
-			if len(base) < 2:
-				continue
+		precount = len(bpy.data.materials)
 
-			name_cat[base].sort()  # in-place sorting
-			baseMat = bpy.data.materials[name_cat[base][0]]
+		# 2. Grouping by Fingerprint
+		# Structure: { group_key: [ {fingerprint: dict, materials: [mat1, mat2]} ] }
+		fingerprint_groups = {}
 
-			env.log(f"{name_cat[base]} ##  {baseMat}", vv_only=True)
+		for mat in materials_to_check:
+			group_key = util.nameGeneralize(mat.name) if self.compare_name else "GLOBAL"
+			fp = get_material_fingerprint(mat, self.compare_settings, self.compare_action_name, precision_val)
 
-			for matname in name_cat[base][1:]:
-				# skip if fake user set
-				if bpy.data.materials[matname].use_fake_user is True:
+			if group_key not in fingerprint_groups:
+				fingerprint_groups[group_key] = []
+
+			# Check if fingerprint exists in the current group
+			match_found = False
+			for entry in fingerprint_groups[group_key]:
+				if entry['fingerprint'] == fp:
+					entry['materials'].append(mat)
+					match_found = True
+					break
+
+			if not match_found:
+				fingerprint_groups[group_key].append({'fingerprint': fp, 'materials': [mat]})
+
+		# 3. Determine Masters and Build Merge Map
+		merge_map = {}
+
+		# Define sort keys for Master Selection.
+		# We sort so that index 0 becomes the Master.
+		# Secondary sort key (len(m.name)) for tie-breaker.
+		sort_logic = {
+			'LOW_NODES': lambda m: (count_nodes_in_material(m), len(m.name)),
+			'HIGH_NODES': lambda m: (-count_nodes_in_material(m), len(m.name)), # Negative for Descending
+			'HIGH_USERS': lambda m: (-m.users, len(m.name)),                    # Negative for Descending
+			'LOW_USERS': lambda m: (m.users, len(m.name))
+		}
+		active_sort = sort_logic.get(self.master_selection, sort_logic['LOW_NODES'])
+
+		for group_key, entries in fingerprint_groups.items():
+			for entry in entries:
+				mats = entry['materials']
+				if len(mats) <= 1:
 					continue
-				# otherwise, remap
-				bpy.data.materials[matname].user_remap(baseMat)
-				old = bpy.data.materials[matname]
-				env.log(f"removing old? {matname}", vv_only=True)
-				if removeold is True and old.users == 0:
-					env.log(f"removing old:{matname}", vv_only=True)
-					try:
-						data.remove(old)
-					except ReferenceError as err:
-						print(f'Error trying to remove material {matname}')
-						print(str(err))
-					except ValueError as err:
-						print(f'Error trying to remove material {matname}')
-						print(str(err))
 
-			# Final step.. rename to not have .001 if it does,
-			# unless the target base-named material still exists and has users.
-			gen_base = util.nameGeneralize(baseMat.name)
-			gen_material = bpy.data.materials.get(gen_base)
-			if baseMat.name != gen_base:
-				if gen_material and gen_material.users != 0:
-					pass
-				else:
-					baseMat.name = gen_base
-			else:
-				baseMat.name = gen_base
-			env.log(f"Final: {baseMat}", vv_only=True)
+				# Sort based on user selection.
+				mats.sort(key=active_sort)
 
-		postcount = len(["x" for x in getMaterials(self, context) if x.users > 0])
-		self.report({"INFO"}, f"Consolidated {precount} materials down to {postcount}")
+				master_mat = mats[0] # The "Winner" of the sort logic
+				for i in range(1, len(mats)):
+					merge_map[mats[i]] = master_mat
 
+		# 4. Remap & Cleanup
+		if not merge_map:
+			self.report({'INFO'}, "No duplicates found")
+			return {'FINISHED'}
+
+		renamed_masters = set()
+		for old_mat, master_mat in merge_map.items():
+			if master_mat not in renamed_masters:
+				new_name = util.nameGeneralize(master_mat.name)
+				if new_name != master_mat.name and new_name not in bpy.data.materials:
+					master_mat.name = new_name
+				renamed_masters.add(master_mat)
+			env.log(f"Replaced '{old_mat.name}' with '{master_mat.name}'")
+			old_mat.user_remap(master_mat)
+
+		to_delete = [m for m in merge_map.keys() if not (m.users or m.use_fake_user)]
+		if to_delete:
+			bpy.data.batch_remove(ids=to_delete)
+
+		postcount = len(bpy.data.materials)
+		consolidated_count = precount - postcount
+
+		if consolidated_count > 0:
+			# Slices 's' if count is 1 (1^1=0) to handle pluralization via bitwise XOR
+			self.report({"INFO"}, 
+				f"Consolidated {consolidated_count} material{'s'[:consolidated_count^1]} "
+				f"(Total: {precount} -> {postcount})"
+			)
+		else:
+			self.report({"INFO"}, "No duplicates found")
+			
 		return {'FINISHED'}
 
 
@@ -283,18 +918,18 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 	bl_description = "Find and merge duplicate images, remapping users to a single image"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	group_by_name: bpy.props.BoolProperty(
-		name="Group by Name",
-		description="Compare duplicates using base names (e.g., 'Texture.001' matches 'Texture')",
-		default=True)
-
 	selection_only: bpy.props.BoolProperty(
 		name="Selection only",
 		description="Only check images used by materials on selected objects",
-		default=False)
+		default=True)
+
+	group_by_name: bpy.props.BoolProperty(
+		name="Compare Image Name",
+		description="Compare duplicates using base names (e.g., 'Texture.001' matches 'Texture')",
+		default=True)
 
 	strict_comparison: bpy.props.BoolProperty(
-		name="Strict Comparison",
+		name="Compare Pixels (slower)",
 		description="Compare full image content instead of samples. More accurate, but slower for large images",
 		default=False)
 
@@ -359,7 +994,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 		# Value: List of (image_obj, comparison_array, sum)
 		# store both the image (for remapping later on), the pixel array,
 		# and pixel array sum for super fast prefilter
-		unique_images: Dict[Tuple[str, int, int], List[Tuple[bpy.types.Image, NDArray[np.float32], Optional[np.float64]]]] = {}
+		unique_images: Dict[Tuple[str, int, int], List[Tuple[bpy.types.Image, np.ndarray, Optional[np.float64]]]] = {}
 		images_to_remove = []
 
 		for base_name, w, h, img in groups:
@@ -379,7 +1014,7 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 				cur_img_data = img_array[::stride] if stride > 1 else img_array
 
 				pix_sum = np.sum(cur_img_data)
-	
+
 			if cur_img_key not in unique_images:
 				unique_images[cur_img_key] = [(img, img_array, pix_sum)]
 				continue

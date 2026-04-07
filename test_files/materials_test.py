@@ -975,20 +975,50 @@ class MaterialsTest(unittest.TestCase):
         # TODO: add test for ensuring selection_only=True also works
 
     def test_combine_images(self):
-        img1 = bpy.data.images.new("CombineImages", width=1, height=1)
+        bpy.ops.mesh.primitive_plane_add()
+        obj = bpy.context.active_object
+
+        img1 = bpy.data.images.new("CombineImages", width=8, height=8)
+        img2 = bpy.data.images.new("CombineImages", width=8, height=8)
+
+        pixels = [1.0] * (8 * 8 * 4)
+        img1.pixels = pixels
+        img2.pixels = pixels
+
         init_count = len(bpy.data.images)
-        img2 = bpy.data.images.new("CombineImages", width=1, height=1)
-        self.assertNotEqual(img1.id_data, img2.id_data)
-        bpy.ops.mcprep.combine_images()
-        self.assertEqual(init_count, len(bpy.data.images))
+
+        for i, img in enumerate([img1, img2]):
+            mat = bpy.data.materials.new(name=f"TestMat_{i}")
+            mat.use_nodes = True
+            node = mat.node_tree.nodes.new(type="ShaderNodeTexImage")
+            node.image = img
+            obj.data.materials.append(mat)
+
+        bpy.ops.mcprep.combine_images(selection_only=True)
+        self.assertEqual(len(bpy.data.images), init_count - 1)
 
     def test_combine_images_strict_comparision(self):
-        img1 = bpy.data.images.new("CombineImages", width=1, height=1)
+        bpy.ops.mesh.primitive_plane_add()
+        obj = bpy.context.active_object
+
+        img1 = bpy.data.images.new("CombineImages", width=8, height=8)
+        img2 = bpy.data.images.new("CombineImages", width=8, height=8)
+
+        pixels = [0.5] * (8 * 8 * 4)
+        img1.pixels = pixels
+        img2.pixels = pixels
+
         init_count = len(bpy.data.images)
-        img2 = bpy.data.images.new("CombineImages", width=1, height=1)
-        self.assertNotEqual(img1.id_data, img2.id_data)
-        bpy.ops.mcprep.combine_images(strict_comparison=True)
-        self.assertEqual(init_count, len(bpy.data.images))
+
+        for i, img in enumerate([img1, img2]):
+            mat = bpy.data.materials.new(name=f"StrictMat_{i}")
+            mat.use_nodes = True
+            node = mat.node_tree.nodes.new(type="ShaderNodeTexImage")
+            node.image = img
+            obj.data.materials.append(mat)
+
+        bpy.ops.mcprep.combine_images(selection_only=True, strict_comparison=True)
+        self.assertEqual(len(bpy.data.images), init_count - 1)
 
     def test_uv_scale(self):
         bpy.ops.mesh.primitive_plane_add()
