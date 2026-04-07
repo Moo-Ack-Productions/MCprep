@@ -738,6 +738,11 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 		description="Only check materials used by selected objects",
 		default=True)
 
+	combine_images: bpy.props.BoolProperty(
+		name="Combine images",
+		description="Combine Images first and then compare image blocks",
+		default=True)
+
 	compare_name: bpy.props.BoolProperty(
 		name="Compare Material Name",
 		description="Only compare materials with matching base names (ignores .001, .002, etc.)",
@@ -780,11 +785,6 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 		default='LOW_NODES'
 	)
 
-	combine_images: bpy.props.BoolProperty(
-		name="Compare image blocks",
-		description="Combine Images first",
-		default=True)
-
 	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	def invoke(self, context, event):
@@ -802,7 +802,8 @@ class MCPREP_OT_combine_materials(bpy.types.Operator):
 				'EXEC_DEFAULT',
 				selection_only=self.selection_only,
 				group_by_name=self.compare_name,
-				strict_comparison=True
+				strict_comparison=True,
+				skipUsage=True
 			)
 
 		# < 0 means Exact Matching (no rounding).
@@ -932,6 +933,8 @@ class MCPREP_OT_combine_images(bpy.types.Operator):
 		name="Compare Pixels (slower)",
 		description="Compare full image content instead of samples. More accurate, but slower for large images",
 		default=False)
+
+	skipUsage: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
 
 	def invoke(self, context, event):
 		return context.window_manager.invoke_props_dialog(self)
