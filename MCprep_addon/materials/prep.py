@@ -27,10 +27,11 @@ from bpy.types import Context
 from . import generate
 from . import sequences
 from . import uv_tools
+from . import resource_pack
 from .. import tracking
 from .. import util
 from .. import world_tools
-from ..conf import env
+from ..conf import MCprepError, env
 
 # -----------------------------------------------------------------------------
 # Material class functions
@@ -469,12 +470,12 @@ class MCPREP_OT_swap_texture_pack(
 
 		# check folder exist, but keep relative if relevant
 		folder = self.filepath
-		if os.path.isfile(bpy.path.abspath(folder)):
-			folder = os.path.dirname(folder)
-		env.log(f"Folder: {folder}")
+		file_path = Path(bpy.path.abspath(folder))
+		parsed_resource_pack = resource_pack.get_resource_pack_info(file_path)
 
-		if not os.path.isdir(bpy.path.abspath(folder)):
-			self.report({'ERROR'}, "Selected folder does not exist")
+		if isinstance(parsed_resource_pack, MCprepError):
+			self.report({'ERROR'}, parsed_resource_pack.msg)
+			env.log(f"{parsed_resource_pack.file}:{parsed_resource_pack.line}", vv_only=True)
 			return {'CANCELLED'}
 
 		# get list of selected objects
@@ -507,7 +508,7 @@ class MCPREP_OT_swap_texture_pack(
 		res = 0
 		for mat in mat_list:
 			self.preprocess_material(mat)
-			res += generate.set_texture_pack(mat, Path(folder), self.useExtraMaps)
+			res += generate.set_texture_pack_stack(mat, [parsed_resource_pack], self.useExtraMaps)
 			if self.animateTextures:
 				sequences.animate_single_material(
 					mat,

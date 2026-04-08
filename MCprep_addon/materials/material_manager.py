@@ -32,6 +32,7 @@ import numpy as np
 from enum import Enum
 
 from . import generate
+from . import resource_pack
 from . import sequences
 from .. import tracking
 from .. import util
@@ -1141,7 +1142,14 @@ class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 		"""If image datablock not found in passes, try to directly load and assign"""
 		env.log(f"Loading from texpack for {mat.name}", vv_only=True)
 		canon, _ = generate.get_mc_canonical_name(mat.name)
-		image_path = generate.find_from_texturepack(canon)
+
+		internal_pack = resource_pack.get_default_pack()
+		if isinstance(internal_pack, MCprepError):
+			if internal_pack.msg:
+				env.log(internal_pack.msg)
+			return False
+
+		image_path = resource_pack.find_texture_from_layers(canon, [internal_pack])
 		if isinstance(image_path, MCprepError):
 			if image_path.msg:
 				env.log(image_path.msg)

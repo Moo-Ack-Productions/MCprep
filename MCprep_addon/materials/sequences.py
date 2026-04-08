@@ -29,6 +29,7 @@ import bpy
 from bpy.types import Context, Material, Image, Texture
 
 from . import generate
+from . import resource_pack
 from . import uv_tools
 from .. import tracking
 from .. import util
@@ -71,7 +72,14 @@ def animate_single_material(
 		affectable = True  # retroactively assign to true, as tiled image found
 
 	# get the base image from the texturepack (cycles/BI general)
-	image_path_canon = generate.find_from_texturepack(canon)
+	internal_pack = resource_pack.get_default_pack()
+
+	if isinstance(internal_pack, MCprepError):
+		if internal_pack.msg:
+			env.log(internal_pack.msg)
+		return affectable, False, None
+
+	image_path_canon = resource_pack.find_texture_from_layers(canon, [internal_pack])
 
 	if isinstance(image_path_canon, MCprepError):
 		if image_path_canon.msg:

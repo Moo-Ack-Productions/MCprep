@@ -30,6 +30,7 @@ from .. import tracking
 from .. import util
 from ..conf import MCprepError, env
 from . import generate
+from . import resource_pack
 from . import sync
 from . import vivy_utils as vu
 from .generate import checklist, get_mc_canonical_name
@@ -481,7 +482,14 @@ class MCPREP_OT_vivy_swap_texture_pack(
 		run the swap (and auto load e.g. normals and specs if avail.)
 		"""
 		mc_name, _ = get_mc_canonical_name(material.name)
-		image = generate.find_from_texturepack(mc_name, Path(folder) if not isinstance(folder, Path) else folder)
+		parsed_pack = resource_pack.get_resource_pack_info(Path(folder) if not isinstance(folder, Path) else folder)
+
+		if isinstance(parsed_pack, MCprepError):
+			if parsed_pack.msg:
+				env.log(parsed_pack.msg)
+			return False
+
+		image = resource_pack.find_texture_from_layers(mc_name, [parsed_pack])
 
 		if isinstance(image, MCprepError):
 			if image.msg:
