@@ -39,7 +39,6 @@ from .spawner import meshswap
 from .spawner import mobs
 from .spawner import spawn_util
 from .conf import env
-# from .import_bridge import bridge
 
 # blender 2.8 icon selections
 LOAD_FACTORY = 'LOOP_BACK'
