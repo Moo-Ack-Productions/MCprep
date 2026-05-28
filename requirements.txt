@@ -1,4 +1,25 @@
-bpy-addon-build>=0.5.0, < 0.6.0
-fake-bpy-module-2.80==20230117
+attrs==23.2.0
+bpy==5.0.1
+bpy-addon-build==0.5.1
+certifi==2026.5.20
+charset-normalizer==3.4.7
+Cython==3.2.5
 flake8==5.0.4
+idna==3.17
+markdown-it-py==4.2.0
+mccabe==0.7.0
+mdurl==0.1.2
+numpy==1.26.4
+packaging==24.2
 polib==1.2.0
+pycodestyle==2.9.1
+pyflakes==2.5.0
+Pygments==2.20.0
+PyYAML==6.0.3
+requests==2.34.2
+rich==13.9.4
+tomli==2.4.1
+typeguard==4.5.2
+typing_extensions==4.15.0
+urllib3==2.7.0
+zstandard==0.25.0
