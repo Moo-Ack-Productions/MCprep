@@ -38,11 +38,11 @@ Disclaimer: This is not an official Google product
 # Increment this number for each time you get a "inconsistent use of spaces and tab error"
 # 								error = 52
 
-bl_info = {
+old_bl_info = {
 	"name": "MCprep",
 	"category": "Object",
-	"version": (3, 6, 2),
-	"blender": (4, 3, 0),
+	"version": (4, 0, 0),
+	"blender": (4, 2, 0),
 	"location": "3D window toolshelf > MCprep tab",
 	"description": "Minecraft workflow addon for rendering and animation",
 	"warning": "",
@@ -62,11 +62,11 @@ import bpy
 
 
 def register():
-	load_modules.register(bl_info)
+	load_modules.register(old_bl_info)
 
 
 def unregister():
-	load_modules.unregister(bl_info)
+	load_modules.unregister(old_bl_info)
 
 
 if __name__ == "__main__":

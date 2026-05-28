@@ -174,7 +174,6 @@ module_list = (
 	item,
 	effects,
 	world_tools,
-	# bridge,
 	mcprep_ui,
 	vivy_materials,
 	vivy_ui,
