@@ -23,11 +23,11 @@ import enum
 import json
 import operator
 import os
-import platform
 import random
 import re
 import subprocess
-from .commonmcobj_parser import CommonMCOBJTextureType
+import sys
+from .commonmcobj_parser import CommonMCOBJ, CommonMCOBJTextureType
 
 import bpy
 from bpy.types import (
@@ -338,6 +338,25 @@ def is_atlas_export(context: Context) -> bool:
 
 	return file_types["ATLAS"] == 0
 
+def return_commonmcobj_header(world_import: bpy.types.Object) -> CommonMCOBJ:
+	"""Given an imported world, find its parent empty and return the CommonMCOBJ header"""
+	empty = world_import["PARENTED_EMPTY"]
+	return CommonMCOBJ(
+			empty["version"],
+			empty["exporter"],
+			empty["world_name"],
+			empty["world_path"],
+			empty["export_bounds_min"],
+			empty["export_bounds_max"],
+			empty["export_offset"],
+			empty["block_scale"],
+			empty["block_origin_offset"],
+			empty["z_up"],
+			CommonMCOBJTextureType[empty["texture_type"]],
+			empty["has_split_block"],
+			empty["original_header"]
+		)
+
 
 def face_on_edge(faceLoc: Union[tuple, Vector]) -> bool:
 	"""Check if a face is on the boundary between two blocks (local coordinates)."""
@@ -480,6 +499,46 @@ def open_program(executable: str) -> Optional[MCprepError]:
 		if err != b"":
 			return MCprepError(RuntimeError(), line, file, f"Error occured while trying to open executable: {err!r}")
 	return MCprepError(RuntimeError(), line, file, "Failed to open executable")
+
+# Mostly-direct copy of Blender's bpy.wm.path_open
+# operator, adapted for MCprep, and with arguments
+def run_executable(exec: Path, args: list[str]) -> None | MCprepError:
+	# TODO: Figure out a better way for Windows
+	if sys.platform == "win32":
+		os.startfile(filepath=exec, arguments=''.join(args))
+	elif sys.platform == "darwin":
+		subprocess.check_call(["open", exec] + args)
+
+	# FreeBSD should have xdg-open, as well as pretty
+	# much any modern desktop version of Linux.
+	#
+	# Also not sure who would be running Blender in
+	# a Cygwin/MSYS2 environment (though they are common
+	# on Windows for C/C++ dev environments, so maybe
+	# addons that have C/C++ components might be tested
+	# in a MSYS2 environment?), but the Python docs mention
+	# it, and we can handle it the same as UNIX (in theory)
+	elif sys.platform in ("linux", "freebsd", "cygwin"):
+		try:
+			subprocess.check_call(["xdg-open", exec] + args)
+		except Exception:
+			if sys.platform != "cygwin":
+				line, file = env.current_line_and_file()
+				return MCprepError(RuntimeError(), line, file, "Had errors with xdg-open")
+
+			# For Cygwin, try cygstart
+			try:
+				subprocess.check_call(["cygstart", exec] + args)
+			except Exception:
+				line, file = env.current_line_and_file()
+				return MCprepError(RuntimeError(), line, file, "Had errors with both xdg-open and cygstart")
+
+	# Important fallback, since there is an
+	# Android and iPad port of Blender in the
+	# works
+	else:
+		line, file = env.current_line_and_file()
+		return MCprepError(RuntimeError(), line, file, f"MCprep does not support running executables on {sys.platform}")
 
 
 def open_folder_crossplatform(folder: str) -> bool:

@@ -794,6 +794,7 @@ class WorldImporterBase:
 			if isinstance(header, CommonMCOBJ):
 				obj["COMMONMCOBJ_HEADER"] = True
 				obj["PARENTED_EMPTY"] = empty
+				obj["MCPREP_OBJ_FILE_PATH"] = str(filepath)
 				obj.parent = empty
 				obj.matrix_parent_inverse = empty.matrix_world.inverted()  # don't transform object
 				self.track_exporter = header.exporter

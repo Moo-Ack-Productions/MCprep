@@ -28,6 +28,7 @@ from ..commonmcobj_parser import CommonMCOBJTextureType
 class ExportBuilder(ABC):
     executable_path: Path
     output_obj_path: Path
+    args: list[str] = []
 
     @abstractmethod
     def set_world_path(self, world: Path) -> None | MCprepError:
@@ -63,7 +64,7 @@ class ExportBuilder(ABC):
         pass
 
     @abstractmethod
-    def create_export(self) -> None | MCprepError:
+    def prep_for_export(self) -> None | MCprepError:
         if not self.executable_path.exists():
             line, file = env.current_line_and_file()
             return MCprepError(FileNotFoundError(), line, file, f"Executable not found: {str(self.executable_path)}")

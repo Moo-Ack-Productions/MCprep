@@ -1,6 +1,23 @@
+# ##### BEGIN GPL LICENSE BLOCK #####
+#
+#  This program is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU General Public License
+#  as published by the Free Software Foundation; either version 2
+#  of the License, or (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software Foundation,
+#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# ##### END GPL LICENSE BLOCK #####
+
 from dataclasses import dataclass
 from pathlib import Path
-import subprocess
 from typing import override
 
 from . import ExportBuilder
@@ -9,10 +26,8 @@ from ..commonmcobj_parser import CommonMCOBJTextureType
 
 @dataclass
 class Jmc2OBJExportBuilder(ExportBuilder):
-    java_executable_path: Path
-    args: list[str]
-    world_path: str | None # Necessary because jmc2OBJ expects the world path last
-    xz_min_max: tuple[int, int, int, int] | None # Used for offsets
+    world_path: str | None = None # Necessary because jmc2OBJ expects the world path last
+    xz_min_max: tuple[int, int, int, int] | None = None # Used for offsets
 
     @override
     def set_world_path(self, world: Path) -> None | MCprepError:
@@ -79,25 +94,12 @@ class Jmc2OBJExportBuilder(ExportBuilder):
         self.args.append("--object-per-mat")
 
     @override
-    def create_export(self) -> None | MCprepError:
-        base_check = super().create_export()
+    def prep_for_export(self) -> None | MCprepError:
+        base_check = super().prep_for_export()
         if base_check is not None:
             return base_check
-
-        # Java is a required executable to run jmc2OBJ
-        if not self.java_executable_path.exists():
+        if not self.world_path:
             line, file = env.current_line_and_file()
-            return MCprepError(FileNotFoundError(), line, file, f"Java not found: {str(self.executable_path)}")
-        elif self.java_executable_path.is_dir():
-            line, file = env.current_line_and_file()
-            return MCprepError(IsADirectoryError(), line, file, f"Java path is a directory: {str(self.executable_path)}")
-
-        if self.world_path is None:
-            line, file = env.current_line_and_file()
-            return MCprepError(FileNotFoundError(), line, file, f"No world path defined!") 
-
-        subprocess_args = [str(self.java_executable_path), "-jar", str(self.executable_path)]
-        subprocess_args += self.args
-        subprocess_args.append(self.world_path)
-
-        _ = subprocess.run(subprocess_args)
+            return MCprepError(Exception(), line, file, "No world path set!")
+        self.args.append(f"--output=\"{str(self.output_obj_path)}\"")
+        self.args.append(self.world_path)
