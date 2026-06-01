@@ -353,7 +353,7 @@ def return_commonmcobj_header(world_import: bpy.types.Object) -> CommonMCOBJ:
 			empty["block_origin_offset"],
 			empty["z_up"],
 			CommonMCOBJTextureType[empty["texture_type"]],
-			empty["has_split_block"],
+			empty["has_split_blocks"],
 			empty["original_header"]
 		)
 
