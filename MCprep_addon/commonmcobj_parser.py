@@ -112,7 +112,7 @@ def parse_common_header(header_lines: List[str]) -> CommonMCOBJ:
         z_up=False,
         texture_type=CommonMCOBJTextureType.ATLAS,
         has_split_blocks=False,
-        original_header=None
+        original_header="\n".join(header_lines)
     )
     
     # Keys whose values do not need extra processing
