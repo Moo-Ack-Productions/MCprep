@@ -17,7 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from ..conf import env, MCprepError
@@ -28,7 +28,7 @@ from ..commonmcobj_parser import CommonMCOBJTextureType
 class ExportBuilder(ABC):
     executable_path: Path
     output_obj_path: Path
-    args: list[str] = []
+    args: list[str] = field(default_factory=lambda: [])
 
     @abstractmethod
     def set_world_path(self, world: Path) -> None | MCprepError:
