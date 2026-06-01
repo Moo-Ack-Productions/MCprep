@@ -107,11 +107,6 @@ if "effects" in locals():
 else:
 	from .spawner import effects
 
-# if "bridge" in locals():
-# 	importlib.reload(bridge)
-# else:
-# 	from .mineways_bridge import bridge
-
 if "mcprep_ui" in locals():
 	importlib.reload(mcprep_ui)
 else:
@@ -156,6 +151,11 @@ if "vivy_editor" in locals():
 else:
 	from . import vivy_editor
 
+if "exporter_bridge" in locals():
+    importlib.reload(exporter_bridge)
+else:
+    from . import exporter_brige
+
 # Only include those with a register function, which is not all
 module_list = (
 	conf,
@@ -177,7 +177,8 @@ module_list = (
 	mcprep_ui,
 	vivy_materials,
 	vivy_ui,
-	vivy_editor
+	vivy_editor,
+    exporter_brige
 )
 
 
