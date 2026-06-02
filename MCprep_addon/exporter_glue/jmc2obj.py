@@ -106,5 +106,7 @@ class Jmc2OBJExportBuilder(ExportBuilder):
         if not self.world_path:
             line, file = env.current_line_and_file()
             return MCprepError(Exception(), line, file, "No world path set!")
-        self.args.append(f"--output=\"{str(self.output_obj_path)}\"")
+        self.args += [f"--output={str(self.output_obj_path.parent)}",
+                      f"--objfile={str(self.output_obj_path.name)}",
+                      f"--objfile={str(self.output_obj_path.with_suffix('.mtl').name)}"]
         self.args.append(self.world_path)
