@@ -19,9 +19,19 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import final
 
 from ..conf import env, MCprepError
 from ..commonmcobj_parser import CommonMCOBJTextureType
+
+# Class for interpreter and interpreter
+# arguments; frozen to enforce some level
+# of immutability
+@final
+@dataclass(frozen=True)
+class InterpreterWrapper:
+    interpreter_exec: Path | str
+    interpreter_args: list[str]
 
 # Base exporter class, not meant to be used directly
 @dataclass
@@ -29,6 +39,14 @@ class ExportBuilder(ABC):
     executable_path: Path
     output_obj_path: Path
     args: list[str] = field(default_factory=lambda: [])
+    interpreter: InterpreterWrapper | None = field(init=False)
+
+    # Make the interpreter a post-init
+    # field to keep the reload operators
+    # simple
+    @abstractmethod
+    def __post_init__(self) -> None:
+        self.interpreter = None
 
     @abstractmethod
     def set_world_path(self, world: Path) -> None | MCprepError:

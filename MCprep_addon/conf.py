@@ -268,8 +268,10 @@ class MCprepEnv:
 				print(e)
 		self.preview_collections.clear()
 
-	def log(self, statement: str, vv_only: bool = False):
-		if self.verbose and vv_only and self.very_verbose:
+	def log(self, statement: str, vv_only: bool = False, always_print: bool = False):
+		if always_print:
+			print(statement)
+		elif self.verbose and vv_only and self.very_verbose:
 			print(statement)
 		elif self.verbose:
 			print(statement)

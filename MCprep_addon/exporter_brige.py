@@ -83,7 +83,12 @@ class MCPREP_OT_reload_world_single(bpy.types.Operator, WorldImporterBase):
                 self.report({'ERROR'}, res.msg)
                 return {'CANCELLED'}
 
-        res = util.run_executable(builder.executable_path, builder.args)
+        if builder.interpreter is None:
+            res = util.run_executable(builder.executable_path, builder.args)
+        else:
+            command = str(builder.interpreter.interpreter_exec)
+            args = builder.interpreter.interpreter_args + [str(builder.executable_path)] + builder.args
+            res = util.run_executable(command, args)
 
         if res:
             self.report({'ERROR'}, res.msg)

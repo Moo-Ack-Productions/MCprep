@@ -500,46 +500,38 @@ def open_program(executable: str) -> Optional[MCprepError]:
 			return MCprepError(RuntimeError(), line, file, f"Error occured while trying to open executable: {err!r}")
 	return MCprepError(RuntimeError(), line, file, "Failed to open executable")
 
-# Mostly-direct copy of Blender's bpy.wm.path_open
-# operator, adapted for MCprep, and with arguments
-def run_executable(exec: Path, args: list[str]) -> None | MCprepError:
-	# TODO: Figure out a better way for Windows
-	if sys.platform == "win32":
-		os.startfile(filepath=exec, arguments=''.join(args))
-	elif sys.platform == "darwin":
-		subprocess.check_call(["open", exec] + args)
-
-	# FreeBSD should have xdg-open, as well as pretty
-	# much any modern desktop version of Linux.
-	#
-	# Also not sure who would be running Blender in
-	# a Cygwin/MSYS2 environment (though they are common
-	# on Windows for C/C++ dev environments, so maybe
-	# addons that have C/C++ components might be tested
-	# in a MSYS2 environment?), but the Python docs mention
-	# it, and we can handle it the same as UNIX (in theory)
-	elif sys.platform in ("linux", "freebsd", "cygwin"):
-		try:
-			subprocess.check_call(["xdg-open", exec] + args)
-		except Exception:
-			if sys.platform != "cygwin":
-				line, file = env.current_line_and_file()
-				return MCprepError(RuntimeError(), line, file, "Had errors with xdg-open")
-
-			# For Cygwin, try cygstart
-			try:
-				subprocess.check_call(["cygstart", exec] + args)
-			except Exception:
-				line, file = env.current_line_and_file()
-				return MCprepError(RuntimeError(), line, file, "Had errors with both xdg-open and cygstart")
-
+# Abstracted function that simply runs
+# an executable with arguments, and returns
+# either nothing or a proper error object
+def run_executable(exec: Path | str, args: list[str]) -> None | MCprepError:
 	# Important fallback, since there is an
 	# Android and iPad port of Blender in the
 	# works
-	else:
+	if sys.platform not in ("win32", "darwin", "linux", "freebsd", "cygwin"):
 		line, file = env.current_line_and_file()
 		return MCprepError(RuntimeError(), line, file, f"MCprep does not support running executables on {sys.platform}")
-
+	if isinstance(exec, Path):
+		line, file = env.current_line_and_file()
+		if not exec.exists():
+			return MCprepError(FileNotFoundError(), line, file, f"Could not find {str(exec)}")
+		elif exec.is_dir():
+			return MCprepError(IsADirectoryError(), line, file, f"Path is a directory: {str(exec)}")
+	try:
+		cmd_res = subprocess.run([exec] + args, check=True, capture_output=True)
+		env.log(cmd_res.stdout.decode(), vv_only=True)
+	except subprocess.CalledProcessError as err:
+		if err.stderr:
+			env.log(err.stderr.decode(), always_print=True)
+		elif err.stdout:
+			env.log(err.stdout.decode(), always_print=True)
+		else:
+			env.log(err.output.decode(), always_print=True)
+		line, file = env.current_line_and_file()
+		return MCprepError(err, line, file, f"{err.cmd} returned exit code {err.returncode}")
+	except Exception as err:
+		env.log(str(err), always_print=True)
+		line, file = env.current_line_and_file()
+		return MCprepError(err, line, file, f"An exception was thrown: {err}")
 
 def open_folder_crossplatform(folder: str) -> bool:
 	"""Cross platform way to open folder in host operating system."""

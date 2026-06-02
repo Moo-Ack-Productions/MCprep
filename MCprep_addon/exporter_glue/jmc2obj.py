@@ -18,16 +18,21 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import override
+from typing import final, override
 
-from . import ExportBuilder
+from . import ExportBuilder, InterpreterWrapper
 from ..conf import env, MCprepError
 from ..commonmcobj_parser import CommonMCOBJTextureType
 
+@final
 @dataclass
 class Jmc2OBJExportBuilder(ExportBuilder):
     world_path: str | None = None # Necessary because jmc2OBJ expects the world path last
     xz_min_max: tuple[int, int, int, int] | None = None # Used for offsets
+
+    @override
+    def __post_init__(self) -> None:
+        self.interpreter = InterpreterWrapper("java", ["-jar"])
 
     @override
     def set_world_path(self, world: Path) -> None | MCprepError:
