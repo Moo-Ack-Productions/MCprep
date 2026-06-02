@@ -49,7 +49,7 @@ class Jmc2OBJExportBuilder(ExportBuilder):
 
         self.xz_min_max = (min_bounds[0],min_bounds[2],max_bounds[0],max_bounds[2])
         self.args += [f"--area={','.join(str(x) for x in self.xz_min_max)}",
-                      f"--height={min_bounds[1],max_bounds[1]}"]
+                      f"--height={min_bounds[1]},{max_bounds[1]}"]
 
     @override
     def set_export_offset(self, offset: tuple[float, float, float]) -> None | MCprepError:
