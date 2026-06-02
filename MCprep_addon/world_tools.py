@@ -824,7 +824,7 @@ class WorldImporterBase:
 		val = header.exporter if isinstance(header, CommonMCOBJ) else header.exporter()
 		addon_prefs.MCprep_exporter_type = "Mineways" if val.lower().startswith("mineways") else "jmc2obj"
 
-		new_col = self.split_world_by_material(context)
+		new_col = self.split_world_by_material(context, filepath)
 		new_col.objects.link(empty)  # parent empty
 
 		if len(propogated_warnings):
@@ -843,10 +843,10 @@ class WorldImporterBase:
 			return
 		obj.name = util.nameGeneralize(mat.name)
 
-	def split_world_by_material(self, context: Context) -> bpy.types.Collection:
+	def split_world_by_material(self, context: Context, path: Path) -> bpy.types.Collection:
 		"""2.8-only function, split combined object into parts by material"""
-		world_name = os.path.basename(self.filepath)
-		world_name = os.path.splitext(world_name)[0]
+		world_name = path.name
+		world_name = path.stem
 
 		# Create the new world collection
 		prefs = util.get_user_preferences(context)
