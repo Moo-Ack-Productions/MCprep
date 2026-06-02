@@ -66,7 +66,8 @@ class MCPREP_OT_reload_world_single(bpy.types.Operator, WorldImporterBase):
                 self.report({'ERROR'}, "Cannot get executable!")
                 return {'CANCELLED'}
 
-        builder = EXPORTER_INTERFACES[header.exporter](executable, Path(obj["MCPREP_OBJ_FILE_PATH"]))
+        path_obj = Path(obj["MCPREP_OBJ_FILE_PATH"])
+        builder = EXPORTER_INTERFACES[header.exporter](executable, path_obj)
         steps: tuple[tuple[Callable[..., None | MCprepError], tuple[StepArgs, ...]], ...] = (
             (builder.set_world_path, (Path(header.world_path),)),
             (builder.set_export_bounds, (header.export_bounds_min, header.export_bounds_max)),
@@ -102,7 +103,7 @@ class MCPREP_OT_reload_world_single(bpy.types.Operator, WorldImporterBase):
         # has been abstracted to a simple base
         # class, we can make this operator another
         # world importer
-        path_res = self.validate_and_return_header(Path(self.filepath))
+        path_res = self.validate_and_return_header(path_obj)
         if isinstance(path_res, MCprepError):
             self.report({"ERROR"}, path_res.msg)
             return {'CANCELLED'}
