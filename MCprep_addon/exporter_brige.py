@@ -20,7 +20,7 @@ from typing import Callable
 import bpy
 from pathlib import Path
 
-from .conf import MCprepError
+from .conf import env, MCprepError
 from .exporter_glue.interfaces import EXPORTER_INTERFACES
 from .commonmcobj_parser import CommonMCOBJ, CommonMCOBJTextureType
 from . import tracking
@@ -67,7 +67,7 @@ class MCPREP_OT_reload_world_single(bpy.types.Operator, WorldImporterBase):
                 return {'CANCELLED'}
 
         path_obj = Path(obj["MCPREP_OBJ_FILE_PATH"])
-        builder = EXPORTER_INTERFACES[header.exporter](executable, path_obj)
+        builder = EXPORTER_INTERFACES[header.exporter](executable, path_obj, env.resource_packs)
         steps: tuple[tuple[Callable[..., None | MCprepError], tuple[StepArgs, ...]], ...] = (
             (builder.set_world_path, (Path(header.world_path),)),
             (builder.set_export_bounds, (header.export_bounds_min, header.export_bounds_max)),
