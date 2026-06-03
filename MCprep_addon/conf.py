@@ -154,7 +154,12 @@ class MCprepEnv:
 		# State for name changes in the Vivy config
 		#
 		# This is reverse, so the new name refers to the previous name
-		self.vivy_name_changes: Dict[str, str] = {}		
+		self.vivy_name_changes: Dict[str, str] = {}
+
+		# NOTE: This is temporary
+		# TODO: Remove once we have this properly handled in the UI
+		self.resource_packs: list[Path] = []
+		self.reload_exporter_bridge_settings()
 
 	def reload_vivy_json(self, path: Path) -> None:
 		json_path = Path(path, "vivy_materials.json")
@@ -171,6 +176,19 @@ class MCprepEnv:
 		else: 
 			with open(json_path, 'r') as f:
 				self.vivy_material_json = json.load(f) if json_path.stat().st_size != 0 else {}
+
+	def reload_exporter_bridge_settings(self) -> None:
+		settings_path = Path(MCPREP_RESOURCES, "exporter_settings_bridge.json")
+		if not settings_path.exists():
+			return
+
+		data = {}
+		with open(settings_path, 'r') as f:
+			data = json.load(f)
+
+		# Expand ~ if it exists at this point
+		if "resource_packs" in data:
+			self.resource_packs = [Path(pack).expanduser() for pack in data["resource_packs"]]
 
 	def _load_translations(self) -> None:
 		"""Loads in mo file translation maps"""

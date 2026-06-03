@@ -22,6 +22,7 @@ MCprep_addon/import_bridge/conf
 MCprep_addon/import_bridge/nbt
 MCprep_addon/MCprep_resources/*.blend
 MCprep_addon/MCprep_resources/mcprep_data.json
+MCprep_addon/MCprep_resources/exporter_settings_bridge.json
 MCprep_addon/MCprep_resources/effects
 MCprep_addon/MCprep_resources/resourcepacks
 MCprep_addon/MCprep_resources/rigs
