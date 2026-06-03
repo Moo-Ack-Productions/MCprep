@@ -38,6 +38,7 @@ class InterpreterWrapper:
 class ExportBuilder(ABC):
     executable_path: Path
     output_obj_path: Path
+    resource_packs: list[Path]
     args: list[str] = field(default_factory=lambda: [])
     interpreter: InterpreterWrapper | None = field(init=False)
 
@@ -89,4 +90,10 @@ class ExportBuilder(ABC):
         elif self.executable_path.is_dir():
             line, file = env.current_line_and_file()
             return MCprepError(IsADirectoryError(), line, file, f"Executable path is a directory: {str(self.executable_path)}")
+
+        for pack in self.resource_packs:
+            if pack.exists():
+                continue
+            line, file = env.current_line_and_file()
+            return MCprepError(IsADirectoryError(), line, file, f"Resource pack not found: {str(pack)}")
 

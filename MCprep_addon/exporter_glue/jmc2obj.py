@@ -109,4 +109,5 @@ class Jmc2OBJExportBuilder(ExportBuilder):
         self.args += [f"--output={str(self.output_obj_path.parent)}",
                       f"--objfile={str(self.output_obj_path.name)}",
                       f"--mtlfile={str(self.output_obj_path.with_suffix('.mtl').name)}"]
+        self.args += [f"--resource-pack={pack}" for pack in self.resource_packs]
         self.args.append(self.world_path)
