@@ -47,9 +47,16 @@ class Jmc2OBJExportBuilder(ExportBuilder):
         if base_check is not None:
             return base_check
 
+        print(tuple(min_bounds), tuple(max_bounds))
+
         self.xz_min_max = (min_bounds[0],min_bounds[2],max_bounds[0],max_bounds[2])
-        self.args += [f"--area={','.join(str(x) for x in self.xz_min_max)}",
-                      f"--height={min_bounds[1]},{max_bounds[1]}"]
+
+        # Adjustment is required for the max bounds to avoid shifts
+        min_max_adjusted = (min_bounds[0],min_bounds[2],max_bounds[0] + 1,max_bounds[2] + 1)
+        self.args += [f"--area={','.join(str(x) for x in min_max_adjusted)}",
+                      f"--height={min_bounds[1]},{max_bounds[1] + 1}"]
+
+        print(self.args)
 
     @override
     def set_export_offset(self, offset: tuple[float, float, float]) -> None | MCprepError:
@@ -74,7 +81,9 @@ class Jmc2OBJExportBuilder(ExportBuilder):
 
         x_average = average_offset(self.xz_min_max[0], self.xz_min_max[2])
         z_average = average_offset(self.xz_min_max[1], self.xz_min_max[3])
-        if offset[0] == x_average and offset[1] == z_average:
+        print(offset[0], offset[2])
+        print(x_average, z_average)
+        if offset[0] == x_average and offset[2] == z_average:
             self.args.append("--offset=center")
         else:
             self.args.append(f"--offset={offset[0]},{offset[2]}")
