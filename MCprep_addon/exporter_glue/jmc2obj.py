@@ -47,7 +47,6 @@ class Jmc2OBJExportBuilder(ExportBuilder):
         if base_check is not None:
             return base_check
 
-        print(tuple(min_bounds), tuple(max_bounds))
 
         self.xz_min_max = (min_bounds[0],min_bounds[2],max_bounds[0],max_bounds[2])
 
@@ -56,8 +55,6 @@ class Jmc2OBJExportBuilder(ExportBuilder):
         self.args += [f"--area={','.join(str(x) for x in min_max_adjusted)}",
                       f"--height={min_bounds[1]},{max_bounds[1] + 1}"]
 
-        print(self.args)
-
     @override
     def set_export_offset(self, offset: tuple[float, float, float]) -> None | MCprepError:
         # If a Y-offset other than 0 is used,
@@ -65,7 +62,10 @@ class Jmc2OBJExportBuilder(ExportBuilder):
         # if the X and Z are centered (to handle the
         # edge case of an export with minY set to 0)
         # Source: https://github.com/jmc2obj/j-mc-2-obj/blob/master/src/org/jmc/ObjExporter.java#L98-L103
-        if offset[1] != 0:
+        if offset == (0, 0, 0):
+            self.args.append("--offset=none")
+            return
+        elif offset[1] != 0:
             self.args.append("--offset=center")
             return
 
