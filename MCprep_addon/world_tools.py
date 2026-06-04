@@ -636,9 +636,9 @@ class WorldImporterBase:
 			res = None
 			if util.min_bv((3, 5)):
 				res = bpy.ops.wm.obj_import(
-					filepath=file_as_str, use_split_groups=True)
+					filepath=file_as_str, use_split_groups=True, mtl_name_collision_mode="REFERENCE_EXISTING")
 			else:
-				res = bpy.ops.import_scene.obj(
+				res = bpy.ops.wm.obj_import(
 					filepath=file_as_str, use_split_groups=True)
 
 		except MemoryError as err:
