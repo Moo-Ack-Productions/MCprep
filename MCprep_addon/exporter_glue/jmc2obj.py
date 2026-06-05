@@ -117,6 +117,8 @@ class Jmc2OBJExportBuilder(ExportBuilder):
             return MCprepError(Exception(), line, file, "No world path set!")
         self.args += [f"--output={str(self.output_obj_path.parent)}",
                       f"--objfile={str(self.output_obj_path.name)}",
-                      f"--mtlfile={str(self.output_obj_path.with_suffix('.mtl').name)}"]
+                      f"--mtlfile={str(self.output_obj_path.with_suffix('.mtl').name)}",
+                      "--remove-dup",
+                      "--optimize-geometry"]
         self.args += [f"--resource-pack={pack}" for pack in self.resource_packs]
         self.args.append(self.world_path)
