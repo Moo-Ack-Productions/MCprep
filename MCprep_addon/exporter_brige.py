@@ -39,8 +39,74 @@ class MCPREP_OT_reload_world_single(bpy.types.Operator, WorldImporterBase):
         options={'HIDDEN'})
 
     track_function = "reload_world_single"
+
+    _timer = None
+    proc = None
+    original_import = None
+    path_obj = None
+
+    def modal(self, context, event):
+        if event.type == 'TIMER':
+            if self.proc.poll() is None:
+                return {'PASS_THROUGH'}
+
+            # Process finished
+            context.window_manager.event_timer_remove(self._timer)
+            env.global_lock = False # Release global lock
+
+            if self.proc.returncode != 0:
+                self.report({'ERROR'}, f"Export failed with return code {self.proc.returncode}")
+                return {'CANCELLED'}
+
+            if not self.original_import:
+                self.report({'ERROR'}, "Original object not found!")
+                return {'CANCELLED'}
+
+            if not self.path_obj:
+                self.report({'ERROR'}, "Path to OBJ not found!")
+                return {'CANCELLED'}
+
+            # TODO: Figure out an operatorless way of doing this
+            with context.temp_override(selected_objects=[self.original_import], active_object=self.original_import):
+                bpy.ops.object.delete()
+
+            # Since all of the world importer code
+            # has been abstracted to a simple base
+            # class, we can make this operator another
+            # world importer
+            path_res = self.validate_and_return_header(self.path_obj)
+            if isinstance(path_res, MCprepError):
+                self.report({"ERROR"}, path_res.msg)
+                return {'CANCELLED'}
+
+            path, header = path_res
+            if not isinstance(header, CommonMCOBJ):
+                self.report({"ERROR"}, "OBJ doesn't use the CommonMCOBJ spec, CommonMCOBJ is required!")
+                return {'CANCELLED'}
+
+            res = self.import_obj_file(context,
+                                 path,
+                                 header,
+                                 None,
+                                 mineways_fix_smooth_shading_artifacts=False)
+
+            if isinstance(res, MCprepError):
+                self.report({"ERROR"}, res.msg)
+                return {'CANCELLED'}
+            elif res is not None: # warnings
+                for ret in res:
+                    self.report({"INFO"}, ret.msg)
+
+            return {'FINISHED'}
+
+        return {'PASS_THROUGH'}
+
     @tracking.report_error
     def execute(self, context):
+        if env.global_lock:
+            self.report({'ERROR'}, "Another process is already running!")
+            return {'CANCELLED'}
+
         obj = context.active_object
 
         # We're only going to support CommonMCOBJ
@@ -66,8 +132,10 @@ class MCPREP_OT_reload_world_single(bpy.types.Operator, WorldImporterBase):
                 self.report({'ERROR'}, "Cannot get executable!")
                 return {'CANCELLED'}
 
-        path_obj = Path(obj["MCPREP_OBJ_FILE_PATH"])
-        builder = EXPORTER_INTERFACES[header.exporter](executable, path_obj, env.resource_packs)
+        self.path_obj = Path(obj["MCPREP_OBJ_FILE_PATH"])
+        self.original_import = obj
+
+        builder = EXPORTER_INTERFACES[header.exporter](executable, self.path_obj, env.resource_packs)
         steps: tuple[tuple[Callable[..., None | MCprepError], tuple[StepArgs, ...]], ...] = (
             (builder.set_world_path, (Path(header.world_path),)),
             (builder.set_export_bounds, (header.export_bounds_min, header.export_bounds_max)),
@@ -84,49 +152,24 @@ class MCPREP_OT_reload_world_single(bpy.types.Operator, WorldImporterBase):
                 self.report({'ERROR'}, res.msg)
                 return {'CANCELLED'}
 
+        env.global_lock = True
         if builder.interpreter is None:
-            res = util.run_executable(builder.executable_path, builder.args)
+            res = util.run_executable(builder.executable_path, builder.args, asynchronous=True)
         else:
             command = str(builder.interpreter.interpreter_exec)
             args = builder.interpreter.interpreter_args + [str(builder.executable_path)] + builder.args
-            res = util.run_executable(command, args)
+            res = util.run_executable(command, args, asynchronous=True)
 
-        if res:
+        if isinstance(res, MCprepError):
+            env.global_lock = False
             self.report({'ERROR'}, res.msg)
             return {'CANCELLED'}
 
-        # TODO: Figure out an operatorless way of doing this
-        with bpy.context.temp_override(selected_objects=[obj]):
-            bpy.ops.object.delete()
+        self.proc = res
 
-        # Since all of the world importer code
-        # has been abstracted to a simple base
-        # class, we can make this operator another
-        # world importer
-        path_res = self.validate_and_return_header(path_obj)
-        if isinstance(path_res, MCprepError):
-            self.report({"ERROR"}, path_res.msg)
-            return {'CANCELLED'}
-
-        path, header = path_res
-        if not isinstance(header, CommonMCOBJ):
-            self.report({"ERROR"}, "OBJ doesn't use the CommonMCOBJ spec, CommonMCOBJ is required!")
-            return {'CANCELLED'}
-
-        res = self.import_obj_file(context,
-                             path,
-                             header,
-                             None,
-                             mineways_fix_smooth_shading_artifacts=False)
-
-        if isinstance(res, MCprepError):
-            self.report({"ERROR"}, res.msg)
-            return {'CANCELLED'}
-        elif res is not None: # warnings
-            for ret in res:
-                self.report({"INFO"}, ret.msg)
-
-        return {'FINISHED'}
+        self._timer = context.window_manager.event_timer_add(0.1, window=context.window)
+        context.window_manager.modal_handler_add(self)
+        return {'RUNNING_MODAL'}
 
 classes = (MCPREP_OT_reload_world_single,)
 

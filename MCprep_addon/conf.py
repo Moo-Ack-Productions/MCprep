@@ -151,6 +151,12 @@ class MCprepEnv:
 		self.vivy_material_json: Dict = {}
 		self.vivy_enabled = False
 
+		# This is mainly intended for operations
+		# like world reloading, where the user can
+		# still move around the scene, but certain
+		# features shouldn't be used
+		self.global_lock: bool = False
+
 		# State for name changes in the Vivy config
 		#
 		# This is reverse, so the new name refers to the previous name

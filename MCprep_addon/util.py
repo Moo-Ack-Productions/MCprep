@@ -502,8 +502,9 @@ def open_program(executable: str) -> Optional[MCprepError]:
 
 # Abstracted function that simply runs
 # an executable with arguments, and returns
-# either nothing or a proper error object
-def run_executable(exec: Path | str, args: list[str]) -> None | MCprepError:
+# either nothing or a proper error object, or
+# a Popen object if asynchronous
+def run_executable(exec: Path | str, args: list[str], asynchronous: bool = False) -> None | subprocess.Popen | MCprepError:
 	# Important fallback, since there is an
 	# Android and iPad port of Blender in the
 	# works
@@ -517,6 +518,9 @@ def run_executable(exec: Path | str, args: list[str]) -> None | MCprepError:
 		elif exec.is_dir():
 			return MCprepError(IsADirectoryError(), line, file, f"Path is a directory: {str(exec)}")
 	try:
+		if asynchronous:
+			return subprocess.Popen([exec] + args)
+
 		cmd_res = subprocess.run([exec] + args, check=True, capture_output=True)
 		env.log(cmd_res.stdout.decode(), vv_only=True)
 	except subprocess.CalledProcessError as err:
