@@ -119,6 +119,7 @@ class Jmc2OBJExportBuilder(ExportBuilder):
                       f"--objfile={str(self.output_obj_path.name)}",
                       f"--mtlfile={str(self.output_obj_path.with_suffix('.mtl').name)}",
                       "--remove-dup",
-                      "--optimize-geometry"]
+                      "--optimize-geometry",
+                      "--block-randomization"]
         self.args += [f"--resource-pack={pack}" for pack in self.resource_packs]
         self.args.append(self.world_path)
