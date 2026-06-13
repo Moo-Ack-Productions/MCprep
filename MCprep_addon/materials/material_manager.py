@@ -420,10 +420,13 @@ class MCPREP_OT_replace_missing_textures(bpy.types.Operator):
 				count += 1
 				env.log(f"Updated {mat.name}")
 				if self.animateTextures:
-					sequences.animate_single_material(
+					_, _, err = sequences.animate_single_material(
 						mat,
 						context.scene.render.engine,
 						export_location=sequences.ExportLocation.ORIGINAL)
+					if err:
+						self.report({'ERROR'}, str(err))
+						return {'CANCELLED'}
 		if count == 0:
 			self.report(
 				{'INFO'},

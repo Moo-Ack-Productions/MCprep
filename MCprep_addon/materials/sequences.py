@@ -216,7 +216,7 @@ def generate_material_sequence(source_path: Path, image_path: Path, form: Option
 
 	perm_denied = (
 		"Permission denied, could not make folder - "
-		"try running blender as admin")
+		"check that the target folder has write permissions")
 
 	for img_pass in img_pass_dict:
 		passfile = str(img_pass_dict[img_pass])  # Convert from Path
@@ -313,7 +313,11 @@ def export_image_to_sequence(image_path: Path, params: Tuple[str, int, bool], ou
 	try:  # check parent folder exists/create if needed
 		os.mkdir(output_folder)
 	except OSError as exc:
-		if exc.errno != errno.EEXIST:
+		if exc.errno == errno.EACCES:
+			env.log("Permission denied, could not make folder - "
+				"check that the target folder has write permissions")
+			return None
+		elif exc.errno != errno.EEXIST:
 			raise
 
 	# ind = self.get_sequence_int_index(first_img)

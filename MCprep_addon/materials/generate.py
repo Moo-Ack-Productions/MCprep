@@ -458,7 +458,7 @@ def set_cycles_texture(
 				node.image = new_img
 				node.mute = False
 				node.hide = False
-				
+
 				res = util.apply_noncolor_data(node)
 				if res is not None:
 					env.log(f"TypeError on {res.line} in {res.file}: {res.err_type}")
@@ -501,7 +501,56 @@ def set_cycles_texture(
 
 		changed = True
 
+	# If extra passes exist but no labeled node was found, create them
+	if extra_passes and img_sets:
+		_create_missing_pass_nodes(material, img_sets)
+
 	return changed
+
+
+def _create_missing_pass_nodes(
+	material: Material, img_sets: dict) -> None:
+	"""Create missing normal/specular texture nodes if extra passes exist
+	but no labeled nodes are present in the material."""
+	if not material.node_tree:
+		return
+	nodes = material.node_tree.nodes
+
+	# Check if labeled nodes already exist
+	has_normal = any(
+		util.np_is_mcprep_node_prop(n, MCPREP_NORMAL)
+		for n in nodes if n.type == 'TEX_IMAGE')
+	has_specular = any(
+		util.np_is_mcprep_node_prop(n, MCPREP_SPECULAR)
+		for n in nodes if n.type == 'TEX_IMAGE')
+
+	# Create normal node if needed
+	if "normal" in img_sets and not has_normal:
+		new_img = util.loadTexture(img_sets["normal"])
+		node_nrm = create_node(
+			nodes, 'ShaderNodeTexImage',
+			name="Normal Texture",
+			label="Normal Texture")
+		node_nrm.mnp.MCPREP_normal = True
+		node_nrm.image = new_img
+		res = util.apply_noncolor_data(node_nrm)
+		if res is not None:
+			env.log(f"TypeError on {res.line} in {res.file}: {res.err_type}")
+		env.log("Created missing normal texture node for extra passes")
+
+	# Create specular node if needed
+	if "specular" in img_sets and not has_specular:
+		new_img = util.loadTexture(img_sets["specular"])
+		node_spec = create_node(
+			nodes, 'ShaderNodeTexImage',
+			name="Specular Texture",
+			label="Specular Texture")
+		node_spec.mnp.MCPREP_specular = True
+		node_spec.image = new_img
+		res = util.apply_noncolor_data(node_spec)
+		if res is not None:
+			env.log(f"TypeError on {res.line} in {res.file}: {res.err_type}")
+		env.log("Created missing specular texture node for extra passes")
 
 
 def get_node_for_pass(material: Material, pass_name: str) -> Optional[Node]:
@@ -522,9 +571,10 @@ def get_node_for_pass(material: Material, pass_name: str) -> Optional[Node]:
 			return_node = node
 		elif util.np_is_mcprep_node_prop(node, MCPREP_DISPLACE) and pass_name == "displace":
 			return_node = node
-		else:
-			if not return_node:
-				return_node = node
+		# Only use unlabeled fallback for diffuse pass, to avoid
+		# incorrectly applying normal/specular sequences to diffuse node
+		elif pass_name == "diffuse" and not return_node:
+			return_node = node
 	return return_node
 
 

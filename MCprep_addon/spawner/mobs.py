@@ -439,24 +439,32 @@ class MCPREP_OT_install_mob(bpy.types.Operator, ImportHelper):
 				icon_files += self.identify_icons(install_groups, icondir)
 			if icon_files:
 				dst = os.path.join(end_path, "icons")
+				perm_denied = False
 				if not os.path.isdir(dst):
 					try:
 						os.mkdir(dst)
 					except OSError as exc:
 						if exc.errno == errno.EACCES:
-							print("Permission denied, try running blender as admin")
-							print(exc)
+							perm_denied = True
+							self.report(
+								{'WARNING'},
+								"Permission denied, could not create icons folder "
+								"- check folder permissions")
+							env.log(f"Permission denied: {dst}")
 						elif exc.errno != errno.EEXIST:
 							print(f"Path does not exist: {dst}")
 							print(exc)
-				for icn in icon_files:
-					icn_base = os.path.basename(icn)
-					try:
-						shutil.copy2(icn, os.path.join(dst, icn_base))
-					except IOError as err:
-						print(f"Failed to copy over icon file {icn}")
-						print(f"to {os.path.join(icondir, icn_base)}")
-						print(err)
+				if perm_denied:
+					pass  # skip icon copy if folder creation failed
+				else:
+					for icn in icon_files:
+						icn_base = os.path.basename(icn)
+						try:
+							shutil.copy2(icn, os.path.join(dst, icn_base))
+						except IOError as err:
+							print(f"Failed to copy over icon file {icn}")
+							print(f"to {os.path.join(icondir, icn_base)}")
+							print(err)
 
 		# reload the cache
 		update_rig_list(context)
@@ -622,7 +630,7 @@ class MCPREP_OT_install_mob_icon(bpy.types.Operator, ImportHelper):
 				os.mkdir(icon_dir)
 			except OSError as exc:
 				if exc.errno == errno.EACCES:
-					print("Permission denied, try running blender as admin")
+					print("Permission denied, check folder permissions")
 				elif exc.errno != errno.EEXIST:
 					print(f"Path does not exist: {icon_dir}")
 

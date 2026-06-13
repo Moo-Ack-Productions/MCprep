@@ -114,8 +114,12 @@ def np_is_mcprep_node_prop(node: Node, prop: str) -> bool:
 		except Exception:
 			print(f"Could not get old {prop} prop")
 	else:
-		setattr(node.mnp, new_prop, prop in node)
-	return getattr(node.mnp, new_prop)
+		# Only set new property if old dict property exists.
+		# If old prop doesn't exist, preserve any value already
+		# set via node.mnp.X API (e.g. from generate_base_material)
+		if prop in node:
+			setattr(node.mnp, new_prop, True)
+	return getattr(node.mnp, new_prop, False)
 
 def apply_noncolor_data(node: Node) -> Optional[MCprepError]:
 	"""
@@ -134,7 +138,8 @@ def apply_noncolor_data(node: Node) -> Optional[MCprepError]:
 
 	if not node.image:
 		env.log("Node has no image applied yet, cannot change colorspace")
-	
+		return None
+
 	# Blender 2.8+
 	if hasattr(node.image, "colorspace_settings"):
 		# Avoid hard-coding values into the 

@@ -272,10 +272,13 @@ class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):
 				return {'CANCELLED'}
 
 			if self.animateTextures:
-				sequences.animate_single_material(
+				_, _, err = sequences.animate_single_material(
 					mat,
 					context.scene.render.engine,
 					export_location=sequences.ExportLocation.ORIGINAL)
+				if err:
+					self.report({'ERROR'}, str(err))
+					return {'CANCELLED'}
 
 		# Sync materials.
 		if self.syncMaterials is True:
@@ -509,13 +512,15 @@ class MCPREP_OT_swap_texture_pack(
 			self.preprocess_material(mat)
 			res += generate.set_texture_pack(mat, Path(folder), self.useExtraMaps)
 			if self.animateTextures:
-				sequences.animate_single_material(
+				_, _, err = sequences.animate_single_material(
 					mat,
 					context.scene.render.engine,
 					export_location=sequences.ExportLocation.ORIGINAL)
+				if err:
+					self.report({'ERROR'}, str(err))
+					return {'CANCELLED'}
 			# may be a double call if was animated tex
-			generate.set_saturation_material(mat)
-
+		generate.set_saturation_material(mat)
 		if self.prepMaterials:
 			bpy.ops.mcprep.prep_materials(
 				animateTextures=self.animateTextures,
@@ -660,10 +665,13 @@ class MCPREP_OT_load_material(bpy.types.Operator, McprepMaterialProps):
 		success = res == 0
 
 		if self.animateTextures:
-			sequences.animate_single_material(
+			_, _, err = sequences.animate_single_material(
 				mat,
 				context.scene.render.engine,
 				export_location=sequences.ExportLocation.ORIGINAL)
+			if err:
+				self.report({'ERROR'}, str(err))
+				return False, str(err)
 
 		return success, None
 

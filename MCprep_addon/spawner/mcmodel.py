@@ -221,7 +221,7 @@ def read_model(
 			obj_data = json.load(f)
 	except PermissionError as e:
 		print(e)
-		raise ModelException("Permission error, try running as admin") from e
+		raise ModelException("Permission error, check that you have read permissions for the file") from e
 	except UnicodeDecodeError as e:
 		print(e)
 		raise ModelException("Could not read file, select valid json file") from e
