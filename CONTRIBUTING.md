@@ -242,7 +242,7 @@ $ git commit --signoff -m "Commit message"
 
 If the change was given to you by someone else, and you have permission to contribute it here, that change must be signed off by the person who gave the change to you, and anyone before that (basically a chain of sign offs). Example:
 ```
-<commit message and summery by John Doe, who recieved the change from Jane Doe>
+<commit message and summary by John Doe, who received the change from Jane Doe>
 
 Signed-off-by: John Doe <johndoe@email.com>
 Signed-off-by: Jane Doe <janedoe@email.com>
