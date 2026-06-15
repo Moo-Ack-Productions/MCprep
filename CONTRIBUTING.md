@@ -38,7 +38,7 @@ Avoid the following:
 
 In addition, the following is not allowed, and will result in rejection:
 
-- Using AI tooling to directly interact with the projects, including, but not limited to:
+- Using AI tooling to directly interact with the project, including, but not limited to:
     - Bots/Agents opening pull requests
     - Bots/Agents creating issues in the bug tracker
     - Bots/Agents commenting on issues and/or pull requests
