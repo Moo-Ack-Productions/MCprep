@@ -1,21 +1,17 @@
 addon_folder: MCprep_addon
 build_name: MCprep_addon
 
-build_extension: false
-extension_settings:
-  build_legacy: true
+build_extension: true
 
 install_versions:
-  - 4.4+
-  - 2.83..4.3
+  - 5.1+
+  - 4.3..5.0
 
 build_actions:
   default: 
     script: "action-scripts/default.py"
   dev: 
     script: "action-scripts/dev.py"
-  extension:
-    script: "action-scripts/extension.py"
   debug:
     script: "action-scripts/debug-build.py"
   translate:

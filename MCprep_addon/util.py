@@ -23,11 +23,11 @@ import enum
 import json
 import operator
 import os
-import platform
 import random
 import re
 import subprocess
-from .commonmcobj_parser import CommonMCOBJTextureType
+import sys
+from .commonmcobj_parser import CommonMCOBJ, CommonMCOBJTextureType
 
 import bpy
 from bpy.types import (
@@ -338,6 +338,25 @@ def is_atlas_export(context: Context) -> bool:
 
 	return file_types["ATLAS"] == 0
 
+def return_commonmcobj_header(world_import: bpy.types.Object) -> CommonMCOBJ:
+	"""Given an imported world, find its parent empty and return the CommonMCOBJ header"""
+	empty = world_import["PARENTED_EMPTY"]
+	return CommonMCOBJ(
+			empty["version"],
+			empty["exporter"],
+			empty["world_name"],
+			empty["world_path"],
+			tuple(empty["export_bounds_min"]),
+			tuple(empty["export_bounds_max"]),
+			tuple(empty["export_offset"]),
+			empty["block_scale"],
+			tuple(empty["block_origin_offset"]),
+			empty["z_up"],
+			CommonMCOBJTextureType[empty["texture_type"]],
+			empty["has_split_blocks"],
+			empty["original_header"]
+		)
+
 
 def face_on_edge(faceLoc: Union[tuple, Vector]) -> bool:
 	"""Check if a face is on the boundary between two blocks (local coordinates)."""
@@ -481,6 +500,42 @@ def open_program(executable: str) -> Optional[MCprepError]:
 			return MCprepError(RuntimeError(), line, file, f"Error occured while trying to open executable: {err!r}")
 	return MCprepError(RuntimeError(), line, file, "Failed to open executable")
 
+# Abstracted function that simply runs
+# an executable with arguments, and returns
+# either nothing or a proper error object, or
+# a Popen object if asynchronous
+def run_executable(exec: Path | str, args: list[str], asynchronous: bool = False) -> None | subprocess.Popen | MCprepError:
+	# Important fallback, since there is an
+	# Android and iPad port of Blender in the
+	# works
+	if sys.platform not in ("win32", "darwin", "linux", "freebsd", "cygwin"):
+		line, file = env.current_line_and_file()
+		return MCprepError(RuntimeError(), line, file, f"MCprep does not support running executables on {sys.platform}")
+	if isinstance(exec, Path):
+		line, file = env.current_line_and_file()
+		if not exec.exists():
+			return MCprepError(FileNotFoundError(), line, file, f"Could not find {str(exec)}")
+		elif exec.is_dir():
+			return MCprepError(IsADirectoryError(), line, file, f"Path is a directory: {str(exec)}")
+	try:
+		if asynchronous:
+			return subprocess.Popen([exec] + args)
+
+		cmd_res = subprocess.run([exec] + args, check=True, capture_output=True)
+		env.log(cmd_res.stdout.decode(), vv_only=True)
+	except subprocess.CalledProcessError as err:
+		if err.stderr:
+			env.log(err.stderr.decode(), always_print=True)
+		elif err.stdout:
+			env.log(err.stdout.decode(), always_print=True)
+		else:
+			env.log(err.output.decode(), always_print=True)
+		line, file = env.current_line_and_file()
+		return MCprepError(err, line, file, f"{err.cmd} returned exit code {err.returncode}")
+	except Exception as err:
+		env.log(str(err), always_print=True)
+		line, file = env.current_line_and_file()
+		return MCprepError(err, line, file, f"An exception was thrown: {err}")
 
 def open_folder_crossplatform(folder: str) -> bool:
 	"""Cross platform way to open folder in host operating system."""

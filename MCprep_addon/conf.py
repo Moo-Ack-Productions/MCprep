@@ -151,10 +151,21 @@ class MCprepEnv:
 		self.vivy_material_json: Dict = {}
 		self.vivy_enabled = False
 
+		# This is mainly intended for operations
+		# like world reloading, where the user can
+		# still move around the scene, but certain
+		# features shouldn't be used
+		self.global_lock: bool = False
+
 		# State for name changes in the Vivy config
 		#
 		# This is reverse, so the new name refers to the previous name
-		self.vivy_name_changes: Dict[str, str] = {}		
+		self.vivy_name_changes: Dict[str, str] = {}
+
+		# NOTE: This is temporary
+		# TODO: Remove once we have this properly handled in the UI
+		self.resource_packs: list[Path] = []
+		self.reload_exporter_bridge_settings()
 
 	def reload_vivy_json(self, path: Path) -> None:
 		json_path = Path(path, "vivy_materials.json")
@@ -171,6 +182,19 @@ class MCprepEnv:
 		else: 
 			with open(json_path, 'r') as f:
 				self.vivy_material_json = json.load(f) if json_path.stat().st_size != 0 else {}
+
+	def reload_exporter_bridge_settings(self) -> None:
+		settings_path = Path(MCPREP_RESOURCES, "exporter_settings_bridge.json")
+		if not settings_path.exists():
+			return
+
+		data = {}
+		with open(settings_path, 'r') as f:
+			data = json.load(f)
+
+		# Expand ~ if it exists at this point
+		if "resource_packs" in data:
+			self.resource_packs = [Path(pack).expanduser() for pack in data["resource_packs"]]
 
 	def _load_translations(self) -> None:
 		"""Loads in mo file translation maps"""
@@ -268,8 +292,10 @@ class MCprepEnv:
 				print(e)
 		self.preview_collections.clear()
 
-	def log(self, statement: str, vv_only: bool = False):
-		if self.verbose and vv_only and self.very_verbose:
+	def log(self, statement: str, vv_only: bool = False, always_print: bool = False):
+		if always_print:
+			print(statement)
+		elif self.verbose and vv_only and self.very_verbose:
 			print(statement)
 		elif self.verbose:
 			print(statement)

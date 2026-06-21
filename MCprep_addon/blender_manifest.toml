@@ -1,10 +1,10 @@
 schema_version = "1.0.0"
 
 id = "mcprep"
-version = "3.6.0"
+version = "4.0.0"
 name = "MCprep"
 tagline = "An addon for Minecraft animation workflows"
-maintainer = "Patrick W. Crawford <support@theduckcow.com"
+maintainer = "Patrick W. Crawford <support@theduckcow.com>"
 type = "add-on"
 
 website = "https://TheDuckCow.com/MCprep"

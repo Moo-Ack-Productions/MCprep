@@ -15,3 +15,10 @@
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 # ##### END GPL LICENSE BLOCK #####
+
+from . import ExportBuilder
+from .jmc2obj import Jmc2OBJExportBuilder
+
+EXPORTER_INTERFACES: dict[str, type[ExportBuilder]] = {
+            "jmc2obj": Jmc2OBJExportBuilder
+        }

@@ -636,9 +636,9 @@ class WorldImporterBase:
 			res = None
 			if util.min_bv((3, 5)):
 				res = bpy.ops.wm.obj_import(
-					filepath=file_as_str, use_split_groups=True)
+					filepath=file_as_str, use_split_groups=True, mtl_name_collision_mode="REFERENCE_EXISTING")
 			else:
-				res = bpy.ops.import_scene.obj(
+				res = bpy.ops.wm.obj_import(
 					filepath=file_as_str, use_split_groups=True)
 
 		except MemoryError as err:
@@ -794,6 +794,7 @@ class WorldImporterBase:
 			if isinstance(header, CommonMCOBJ):
 				obj["COMMONMCOBJ_HEADER"] = True
 				obj["PARENTED_EMPTY"] = empty
+				obj["MCPREP_OBJ_FILE_PATH"] = str(filepath)
 				obj.parent = empty
 				obj.matrix_parent_inverse = empty.matrix_world.inverted()  # don't transform object
 				self.track_exporter = header.exporter
@@ -823,7 +824,7 @@ class WorldImporterBase:
 		val = header.exporter if isinstance(header, CommonMCOBJ) else header.exporter()
 		addon_prefs.MCprep_exporter_type = "Mineways" if val.lower().startswith("mineways") else "jmc2obj"
 
-		new_col = self.split_world_by_material(context)
+		new_col = self.split_world_by_material(context, filepath)
 		new_col.objects.link(empty)  # parent empty
 
 		if len(propogated_warnings):
@@ -842,10 +843,10 @@ class WorldImporterBase:
 			return
 		obj.name = util.nameGeneralize(mat.name)
 
-	def split_world_by_material(self, context: Context) -> bpy.types.Collection:
+	def split_world_by_material(self, context: Context, path: Path) -> bpy.types.Collection:
 		"""2.8-only function, split combined object into parts by material"""
-		world_name = os.path.basename(self.filepath)
-		world_name = os.path.splitext(world_name)[0]
+		world_name = path.name
+		world_name = path.stem
 
 		# Create the new world collection
 		prefs = util.get_user_preferences(context)
