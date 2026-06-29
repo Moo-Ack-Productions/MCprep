@@ -99,26 +99,45 @@ def add_element(
 	elm_to: VectorType = [16, 16, 16],
 	rot_origin: VectorType = [8, 8, 8],
 	rot_axis: str = 'y',
-	rot_angle: float = 0) -> Tuple[List[VectorType], List[Tuple[int, int]], List[Tuple[int, int, int, int]]]:
+	rot_angle: float = 0,
+	rot_rescale: bool = False) -> Tuple[List[VectorType], List[Tuple[int, int]], List[Tuple[int, int, int, int]]]:
 	"""Calculates and defines the verts, edge, and faces that to create."""
+	
 	verts = [
-		rotate_around(
-			rot_angle, [elm_from[0], elm_to[1], elm_from[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_to[0], elm_to[1], elm_from[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_to[0], elm_from[1], elm_from[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_from[0], elm_from[1], elm_from[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_from[0], elm_to[1], elm_to[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_to[0], elm_to[1], elm_to[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_to[0], elm_from[1], elm_to[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_from[0], elm_from[1], elm_to[2]], rot_origin, rot_axis),
+		[elm_from[0], elm_to[1], elm_from[2]],
+		[elm_to[0], elm_to[1], elm_from[2]],
+		[elm_to[0], elm_from[1], elm_from[2]],
+		[elm_from[0], elm_from[1], elm_from[2]],
+		[elm_from[0], elm_to[1], elm_to[2]],
+		[elm_to[0], elm_to[1], elm_to[2]],
+		[elm_to[0], elm_from[1], elm_to[2]],
+		[elm_from[0], elm_from[1], elm_to[2]]
 	]
+
+	# Rescale element if necessary
+	#
+	# According to the Minecraft Wiki,
+	# the element must be scaled by
+	# a factor of 1 / cos(angle) if
+	# set to true
+	factor = 1.0
+	if rot_rescale and rot_angle != 0:
+		factor = 1.0 / cos(radians(rot_angle))
+
+	for vert in verts:
+		if rot_axis == 'x':
+			component_1, component_2 = 1, 2
+		elif rot_axis == 'y':
+			component_1, component_2 = 0, 2
+		elif rot_axis == 'z':
+			component_1, component_2 = 0, 1
+		else:
+			raise ModelException("Rotation axis not a valid value!")
+
+		vert[component_1] = rot_origin[component_1] + (vert[component_1] - rot_origin[component_1]) * factor
+		vert[component_2] = rot_origin[component_2] + (vert[component_2] - rot_origin[component_2]) * factor
+
+	verts = [rotate_around(rot_angle, vert, rot_origin, rot_axis) for vert in verts]
 
 	edges: List[Tuple[int, int]] = []
 	faces: List[Tuple[int, int, int, int]] = [
@@ -575,9 +594,9 @@ def add_model(
 			rotation = e.get("rotation")
 			if rotation is None or not isinstance(rotation, Dict):
 				# rotation default
-				rotation = {"angle": 0, "axis": "y", "origin": [8, 8, 8]}
+				rotation = {"angle": 0, "axis": "y", "origin": [8, 8, 8], "rescale": False}
 
-			origin, axis, angle = rotation['origin'], rotation['axis'], rotation['angle']
+			origin, axis, angle, rescale = rotation['origin'], rotation['axis'], rotation['angle'], rotation.get('rescale', False)
 			
 			if not isinstance(origin, List):
 				raise ModelException(f"Rotation origin invaid: {origin}")
@@ -585,8 +604,10 @@ def add_model(
 				raise ModelException(f"Rotation axis invalild: {axis}")
 			elif not isinstance(angle, int) and not isinstance(angle, float):
 				raise ModelException(f"Rotation angle invalid: {angle}")
+			elif not isinstance (rescale, bool):
+				raise ModelException(f"Rotatio rescale invalid: {rescale}")
 
-			element = add_element(f_bounds, t_bounds, origin, axis, angle)
+			element = add_element(f_bounds, t_bounds, origin, axis, angle, rescale)
 			verts = [bm.verts.new(v) for v in element[0]]  # add a new vert
 
 			faces = e.get("faces")
