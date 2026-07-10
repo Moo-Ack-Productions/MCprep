@@ -799,7 +799,7 @@ class WorldImporterBase:
 				self.track_exporter = header.exporter
 
 				# Mineways workaround for smooth shading artifacts
-				if mineways_fix_smooth_shading_artifacts and header.exporter == "mineways":
+				if bpy.app.version < (5, 1, 0) and mineways_fix_smooth_shading_artifacts and header.exporter == "mineways":
 					obj.data.polygons.foreach_set('use_smooth',  [False] * len(obj.data.polygons))
 			elif isinstance(header, ObjHeaderOptions):
 				obj["MCPREP_OBJ_HEADER"] = True
@@ -816,7 +816,7 @@ class WorldImporterBase:
 				self.track_exporter = addon_prefs.MCprep_exporter_type  # Soft detect.
 				
 				# Mineways workaround for smooth shading artifacts
-				if mineways_fix_smooth_shading_artifacts and header.exporter() == "Mineways":
+				if bpy.app.version < (5, 1, 0) and mineways_fix_smooth_shading_artifacts and header.exporter() == "Mineways":
 					obj.data.polygons.foreach_set('use_smooth',  [False] * len(obj.data.polygons))
 
 		# One final assignment of the preferences, to avoid doing each loop
