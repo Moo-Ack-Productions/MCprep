@@ -38,7 +38,7 @@ from .spawner_gizmo import draw_callback
 TexFace = Dict[str, Dict[str, Union[str, List[int]]]]
 
 Element = Sequence[Union[Dict[str, VectorType], TexFace]]
-Texture = Dict[str, str]
+Texture = Dict[str, Union[str, Dict[str, str]]]
 
 try:
 	from bpy.types import FileHandler
@@ -99,26 +99,45 @@ def add_element(
 	elm_to: VectorType = [16, 16, 16],
 	rot_origin: VectorType = [8, 8, 8],
 	rot_axis: str = 'y',
-	rot_angle: float = 0) -> Tuple[List[VectorType], List[Tuple[int, int]], List[Tuple[int, int, int, int]]]:
+	rot_angle: float = 0,
+	rot_rescale: bool = False) -> Tuple[List[VectorType], List[Tuple[int, int]], List[Tuple[int, int, int, int]]]:
 	"""Calculates and defines the verts, edge, and faces that to create."""
+	
 	verts = [
-		rotate_around(
-			rot_angle, [elm_from[0], elm_to[1], elm_from[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_to[0], elm_to[1], elm_from[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_to[0], elm_from[1], elm_from[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_from[0], elm_from[1], elm_from[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_from[0], elm_to[1], elm_to[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_to[0], elm_to[1], elm_to[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_to[0], elm_from[1], elm_to[2]], rot_origin, rot_axis),
-		rotate_around(
-			rot_angle, [elm_from[0], elm_from[1], elm_to[2]], rot_origin, rot_axis),
+		[elm_from[0], elm_to[1], elm_from[2]],
+		[elm_to[0], elm_to[1], elm_from[2]],
+		[elm_to[0], elm_from[1], elm_from[2]],
+		[elm_from[0], elm_from[1], elm_from[2]],
+		[elm_from[0], elm_to[1], elm_to[2]],
+		[elm_to[0], elm_to[1], elm_to[2]],
+		[elm_to[0], elm_from[1], elm_to[2]],
+		[elm_from[0], elm_from[1], elm_to[2]]
 	]
+
+	# Rescale element if necessary
+	#
+	# According to the Minecraft Wiki,
+	# the element must be scaled by
+	# a factor of 1 / cos(angle) if
+	# set to true
+	factor = 1.0
+	if rot_rescale and rot_angle != 0:
+		factor = 1.0 / cos(radians(rot_angle))
+
+	for vert in verts:
+		if rot_axis == 'x':
+			component_1, component_2 = 1, 2
+		elif rot_axis == 'y':
+			component_1, component_2 = 0, 2
+		elif rot_axis == 'z':
+			component_1, component_2 = 0, 1
+		else:
+			raise ModelException("Rotation axis not a valid value!")
+
+		vert[component_1] = rot_origin[component_1] + (vert[component_1] - rot_origin[component_1]) * factor
+		vert[component_2] = rot_origin[component_2] + (vert[component_2] - rot_origin[component_2]) * factor
+
+	verts = [rotate_around(rot_angle, vert, rot_origin, rot_axis) for vert in verts]
 
 	edges: List[Tuple[int, int]] = []
 	faces: List[Tuple[int, int, int, int]] = [
@@ -213,8 +232,7 @@ def find_all_pack_roots(
 
 	return final
 
-def normalize_texture_path(
-	path: str) -> str:
+def normalize_texture_path(path: Union[str, Dict[str, str]]) -> str:
 	"""
 	Path normalizer.
 	Takes different and any weird path and rewrites it into a formatted, useable form.
@@ -228,6 +246,11 @@ def normalize_texture_path(
 		"block/foo.png"		-> "block/foo"
 		"minecraft:block/foo" stays unchanged except path cleanup
 	"""
+
+	if not isinstance(path, str) and "sprite" in path:
+		path = path["sprite"]
+
+	assert isinstance(path, str)
 
 	# Strip leading '#' if passed a reference by mistake
 	if path.startswith("#"):
@@ -295,7 +318,7 @@ def get_final_texture_key(
 	return key
 
 def locate_image(
-	context: Context, textures: Dict[str, str], img: str, model_filepath: str) -> Union[str, MCprepError]:
+	context: Context, textures: Dict[str, Union[str, Dict[str, str]]], img: str, model_filepath: str) -> Union[str, MCprepError]:
 	"""
 	Finds and returns the final texture path from a texture key/reference in the model JSON.
 	"""
@@ -317,10 +340,17 @@ def locate_image(
 	model_path = Path(model_filepath).resolve()
 
 	# RELATIVE PATH HANDLING ("./texture")
-	if local_path.startswith("."):
-		relative_candidate = (model_path.parent / cleaned_png).resolve()
-		if relative_candidate.is_file():
-			return str(relative_candidate)
+	if isinstance(local_path, str):
+		if local_path.startswith("."):
+			relative_candidate = (model_path.parent / cleaned_png).resolve()
+			if relative_candidate.is_file():
+				return str(relative_candidate)
+	else:
+		local_path_sprite = local_path["sprite"]
+		if local_path_sprite.startswith("."):
+			relative_candidate = (model_path.parent / cleaned_png).resolve()
+			if relative_candidate.is_file():
+				return str(relative_candidate)
 		# Continue to search order A -> B -> C if not found
 
 	# NAMESPACE SUPPORT
@@ -523,8 +553,14 @@ def add_model(
 
 				# 3. Create or retrieve the material only if its value is NOT a reference ('#')
 				mat = None
-				if not textures[img].startswith("#"):
-					mat = add_get_material(name, tex_pth, use_name=False)
+				texture_img = textures[img]
+				if isinstance(texture_img, str):
+					if not texture_img.startswith("#"):
+						mat = add_get_material(name, tex_pth, use_name=False)
+				else:
+					texture_img = texture_img["sprite"]
+					if not texture_img.startswith("#"):
+						mat = add_get_material(name, tex_pth, use_name=False)
 
 				# 4. If material creation failed (e.g., image not found) OR the texture value WAS a reference,
 				# try to retrieve a material with the expected name from Blender's database.
@@ -558,9 +594,9 @@ def add_model(
 			rotation = e.get("rotation")
 			if rotation is None or not isinstance(rotation, Dict):
 				# rotation default
-				rotation = {"angle": 0, "axis": "y", "origin": [8, 8, 8]}
+				rotation = {"angle": 0, "axis": "y", "origin": [8, 8, 8], "rescale": False}
 
-			origin, axis, angle = rotation['origin'], rotation['axis'], rotation['angle']
+			origin, axis, angle, rescale = rotation['origin'], rotation['axis'], rotation['angle'], rotation.get('rescale', False)
 			
 			if not isinstance(origin, List):
 				raise ModelException(f"Rotation origin invaid: {origin}")
@@ -568,8 +604,10 @@ def add_model(
 				raise ModelException(f"Rotation axis invalild: {axis}")
 			elif not isinstance(angle, int) and not isinstance(angle, float):
 				raise ModelException(f"Rotation angle invalid: {angle}")
+			elif not isinstance (rescale, bool):
+				raise ModelException(f"Rotatio rescale invalid: {rescale}")
 
-			element = add_element(f_bounds, t_bounds, origin, axis, angle)
+			element = add_element(f_bounds, t_bounds, origin, axis, angle, rescale)
 			verts = [bm.verts.new(v) for v in element[0]]  # add a new vert
 
 			faces = e.get("faces")
