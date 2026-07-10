@@ -1,9 +1,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: 3.6.2\n"
+"Project-Id-Version: 3.7.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Moo-Ack-Productions/MCprep/issues\n"
-"POT-Creation-Date: 2025-11-11 12:04-0800\n"
+"POT-Creation-Date: 2026-07-09 21:21-0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,6 +18,73 @@ msgstr ""
 
 #: MCprep_addon/util_operators.py:241
 msgid "Reset Save Folder Path"
+msgstr ""
+
+#: MCprep_addon/world_tools.py:883
+msgid "Center Import"
+msgstr ""
+
+#: MCprep_addon/world_tools.py:884
+msgid "Decide if the import should be centered, and if so, how"
+msgstr ""
+
+#: MCprep_addon/world_tools.py:886
+msgid "Keep Original Position"
+msgstr ""
+
+#: MCprep_addon/world_tools.py:886
+msgid "Keeps the position of the import as-is"
+msgstr ""
+
+#: MCprep_addon/world_tools.py:887 MCprep_addon/world_tools.py:965
+msgid "Center by XY Plane"
+msgstr ""
+
+#: MCprep_addon/world_tools.py:887
+msgid "Centers the import by X and Y only"
+msgstr ""
+
+#: MCprep_addon/world_tools.py:888 MCprep_addon/world_tools.py:966
+msgid "Center by all 3 axis"
+msgstr ""
+
+#: MCprep_addon/world_tools.py:888
+msgid "Centers the import by all 3 axis"
+msgstr ""
+
+#: MCprep_addon/world_tools.py:894 MCprep_addon/world_tools.py:971
+msgid "Mineways Shading Workaround"
+msgstr ""
+
+#: MCprep_addon/world_tools.py:895 MCprep_addon/world_tools.py:972
+msgid ""
+"Mineways imports have custom vertex normals defined, which may cause "
+"artifacts. If enabled, this option will enforce flat shading on Mineways "
+"imports."
+msgstr ""
+
+#: MCprep_addon/world_tools.py:961
+msgid "Center Final Assembly"
+msgstr ""
+
+#: MCprep_addon/world_tools.py:962
+msgid "Decide if the final assembly should be centered, and if so, how"
+msgstr ""
+
+#: MCprep_addon/world_tools.py:964
+msgid "Don't Center"
+msgstr ""
+
+#: MCprep_addon/world_tools.py:964
+msgid "Doesn't center the final assembly"
+msgstr ""
+
+#: MCprep_addon/world_tools.py:965
+msgid "Centers the final assembly by X and Y only"
+msgstr ""
+
+#: MCprep_addon/world_tools.py:966
+msgid "Centers the final assembly by all 3 axis"
 msgstr ""
 
 #: MCprep_addon/mcprep_ui.py:98

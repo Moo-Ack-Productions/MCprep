@@ -41,7 +41,7 @@ Disclaimer: This is not an official Google product
 bl_info = {
 	"name": "MCprep",
 	"category": "Object",
-	"version": (3, 6, 2),
+	"version": (3, 6, 3),
 	"blender": (2, 80, 3),
 	"location": "3D window toolshelf > MCprep tab",
 	"description": "Minecraft workflow addon for rendering and animation",
