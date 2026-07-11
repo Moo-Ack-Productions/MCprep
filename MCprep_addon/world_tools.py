@@ -1272,7 +1272,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 		if self.world_type in ("world_static_mesh", "world_static_only"):
 			# Create world dynamically (previous, simpler implementation)
 			new_sun = self.create_sunlamp(context)
-			new_objs.append(new_sun)	
+			new_objs.append(new_sun)
 			bpy.ops.mcprep.world(skipUsage=True)  # do rest of sky setup
 
 		elif engine == 'CYCLES' or engine == 'BLENDER_EEVEE' or engine == 'BLENDER_EEVEE_NEXT':
@@ -1286,7 +1286,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 			if wname in bpy.data.worlds:
 				prev_world = bpy.data.worlds[wname]
 				prev_world.name = "-old"
-			new_objs += self.create_dynamic_world(context, blendfile, wname)	
+			new_objs += self.create_dynamic_world(context, blendfile, wname)
 
 		if self.world_type in ("world_static_mesh", "world_mesh"):
 			if not os.path.isfile(blendfile):
@@ -1308,6 +1308,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 					# Sometimes would error, see report -MfO6dDjpxFF4lfqqYGM
 					moonmesh.parent = tobj
 				new_objs.append(moonmesh)
+				self.auto_cleanup_timeobj(context)
 			else:
 				self.report({'WARNING'}, "Could not add moon")
 
@@ -1320,6 +1321,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 				if tobj != moonmesh:
 					sunmesh.parent = tobj
 				new_objs.append(sunmesh)
+				self.auto_cleanup_timeobj(context)
 			else:
 				self.report({'WARNING'}, "Could not add sun")
 
@@ -1352,6 +1354,14 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 		self.track_param = self.world_type
 		self.track_param = engine
 		return {'FINISHED'}
+
+	def auto_cleanup_timeobj(self, context) -> None:
+		if "static" not in self.world_type or bpy.app.version < (3, 0):
+			# Pre 3.0, children don't import parents
+			return
+		tobj = get_time_object()
+		if tobj:
+			util.obj_unlink_remove(tobj, True, context)
 
 	def create_sunlamp(self, context: Context) -> bpy.types.Object:
 		"""Create new sun lamp from primitives"""

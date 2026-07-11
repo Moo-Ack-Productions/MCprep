@@ -361,7 +361,8 @@ class WorldToolsTest(unittest.TestCase):
                 self.assertGreater(
                     post_objs, pre_objs, "No timeobject imported")
                 obj = world_tools.get_time_object() is not None
-                if sub[0] == "world_static_only":
+                if sub[0] in ["world_static_mesh", "world_static_only"]:
+                    # Static worlds should not have a time object
                     self.assertFalse(obj, "Static scn should have no timeobj")
                 else:
                     self.assertTrue(obj, "Dynamic scn should have timeobj")
