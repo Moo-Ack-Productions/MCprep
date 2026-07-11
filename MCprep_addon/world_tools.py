@@ -1296,7 +1296,7 @@ class MCPREP_OT_add_mc_sky(bpy.types.Operator):
 				env.log(
 					f"Source MCprep world blend file does not exist: {blendfile}")
 				return {'CANCELLED'}
-			resource = f"{blendfile}/bpy.types.Object"
+			resource = f"{blendfile}/Object"
 
 			util.bAppendLink(resource, "MoonMesh", False)
 			non_empties = [
