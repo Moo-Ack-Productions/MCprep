@@ -16,6 +16,7 @@ mcprep_venv_*
 .python-version
 venv/
 .venv/
+venv39/
 *.sublime-*
 MCprep_addon/import_bridge/conf
 MCprep_addon/import_bridge/nbt
