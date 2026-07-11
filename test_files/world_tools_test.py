@@ -360,11 +360,22 @@ class WorldToolsTest(unittest.TestCase):
                 self.assertEqual(res, {'FINISHED'})
                 self.assertGreater(
                     post_objs, pre_objs, "No timeobject imported")
-                obj = world_tools.get_time_object()
-                if "static" in sub[0]:
+                obj = world_tools.get_time_object() is not None
+                if sub[0] == "world_static_only":
                     self.assertFalse(obj, "Static scn should have no timeobj")
                 else:
                     self.assertTrue(obj, "Dynamic scn should have timeobj")
+
+                has_moon = bool([ob.name.lower() for ob in bpy.data.objects
+                                if "moonmesh" in ob.name.lower()])
+                has_sun = bool([ob.name.lower() for ob in bpy.data.objects
+                                if "sunmesh" in ob.name.lower()])
+                if "mesh" in sub[0]:
+                    self.assertEqual(
+                        [has_moon, has_sun], [True, True], "Missing sun or moon mesh")
+                else:
+                    self.assertEqual(
+                        [has_moon, has_sun], [False, False], "Shouldn't have sun or moon mesh")
 
     def test_convert_mtl_simple(self):
         """Ensures that conversion of the mtl with other color space works."""
