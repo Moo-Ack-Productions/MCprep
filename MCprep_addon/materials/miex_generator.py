@@ -30,17 +30,10 @@ from .generate import checklist, find_additional_passes, get_mc_canonical_name
 from .miex_parser import (
     AttributeValue,
     MiExAttribute,
+    MiExMaterial,
     MiExNode,
     MiExTemplate,
 )
-
-
-@dataclass
-class MiExMaterial:
-    """A unified MiEx material representation for MiEx and OBJ exports."""
-    name: str
-    shading_group: dict[str, str] = field(default_factory=dict)
-    nodes: dict[str, MiExNode] = field(default_factory=dict)
 
 
 def matches_selection(texture_id: str, pattern: str) -> bool:
@@ -85,31 +78,30 @@ def find_matching_template(
     return matching[0]
 
 
-def collect_texture_passes(diffuse_path: Path | str) -> dict[str, str]:
+def collect_texture_passes(diffuse_path: Path) -> dict[str, Path]:
     """Uses MCprep's find_additional_passes to discover normal/specular/emission passes."""
-    path_obj = Path(diffuse_path)
-    found_passes = find_additional_passes(path_obj)
-    passes: dict[str, str] = {}
+    found_passes = find_additional_passes(diffuse_path)
+    passes: dict[str, Path] = {}
     for pass_name, pass_file in found_passes.items():
         if pass_file:
-            passes[pass_name] = str(pass_file)
+            passes[pass_name] = Path(pass_file)
 
     # Always ensure diffuse is set
-    passes["diffuse"] = str(path_obj)
+    passes["diffuse"] = diffuse_path
 
     # Check for emissive texture if not detected
-    parent_dir = path_obj.parent
-    stem = path_obj.stem
+    parent_dir = diffuse_path.parent
+    stem = diffuse_path.stem
     for suffix in ("_e", "_emission", "_emit"):
-        candidate = parent_dir / f"{stem}{suffix}{path_obj.suffix}"
+        candidate = parent_dir / f"{stem}{suffix}{diffuse_path.suffix}"
         if candidate.is_file():
-            passes["emission"] = str(candidate)
+            passes["emission"] = candidate
             break
 
     return passes
 
 
-def build_condition_flags(canon_name: str, texture_path: Path | str) -> dict[str, bool]:
+def build_condition_flags(canon_name: str, texture_path: Path) -> dict[str, bool]:
     """Constructs condition flags reusing MCprep's checklist and block properties."""
     flags: dict[str, bool] = {
         "emit": checklist(canon_name, "emit"),
@@ -127,7 +119,7 @@ def build_condition_flags(canon_name: str, texture_path: Path | str) -> dict[str
 def evaluate_condition_token(
     token: str,
     texture_id: str,
-    passes: dict[str, str],
+    passes: dict[str, Path],
     flags: dict[str, bool],
 ) -> bool:
     """Evaluates a single condition token against passes and checklist flags."""
@@ -163,7 +155,7 @@ def evaluate_condition_token(
 def evaluate_condition(
     condition: str,
     texture_id: str,
-    passes: dict[str, str],
+    passes: dict[str, Path],
     flags: dict[str, bool],
 ) -> bool:
     """Evaluates a compound condition string combining tokens with '&&'."""
@@ -180,11 +172,26 @@ def evaluate_condition(
 def resolve_attribute_value(
     value: AttributeValue | None,
     texture_id: str,
-    diffuse_path: str,
+    diffuse_path: Path | None,
+    passes: dict[str, Path] | None = None,
 ) -> AttributeValue | None:
-    """Replaces @texture@ placeholder with diffuse texture path."""
+    """Replaces @texture@ and related pass placeholders with texture paths."""
     if isinstance(value, str):
-        return value.replace("@texture@", diffuse_path or texture_id)
+        if passes:
+            if "emission" in passes and "@texture@_emission" in value:
+                value = value.replace("@texture@_emission", str(passes["emission"]))
+            if "emission" in passes and "@texture@_e" in value:
+                value = value.replace("@texture@_e", str(passes["emission"]))
+            if "normal" in passes and "@texture@_normal" in value:
+                value = value.replace("@texture@_normal", str(passes["normal"]))
+            if "normal" in passes and "@texture@_n" in value:
+                value = value.replace("@texture@_n", str(passes["normal"]))
+            if "specular" in passes and "@texture@_specular" in value:
+                value = value.replace("@texture@_specular", str(passes["specular"]))
+            if "specular" in passes and "@texture@_s" in value:
+                value = value.replace("@texture@_s", str(passes["specular"]))
+        replacement = str(diffuse_path) if diffuse_path is not None else texture_id
+        return value.replace("@texture@", replacement)
     return value
 
 
@@ -215,23 +222,23 @@ def resolve_connection_reference(
 
 def auto_generate_miex_material(
     material_name: str,
-    texture_paths: dict[str, str | Path] | str | Path,
+    texture_paths: dict[str, Path] | Path,
     templates: list[MiExTemplate],
     extra_flags: dict[str, bool] | None = None,
 ) -> MiExMaterial | None:
     """Auto-generates a unified MiEx material given texture paths and template list."""
-    if isinstance(texture_paths, (str, Path)):
+    if isinstance(texture_paths, Path):
         passes = collect_texture_passes(texture_paths)
     else:
-        passes = {k: str(v) for k, v in texture_paths.items()}
+        passes = dict(texture_paths)
 
-    diffuse_path = passes.get("diffuse", "")
-    diffuse_stem = Path(diffuse_path).stem if diffuse_path else material_name
+    diffuse_path = passes.get("diffuse")
+    diffuse_stem = diffuse_path.stem if diffuse_path else material_name
 
     canon_name, _ = get_mc_canonical_name(diffuse_stem or material_name)
     texture_id = f"minecraft:block/{canon_name}"
 
-    flags = build_condition_flags(canon_name, diffuse_path)
+    flags = build_condition_flags(canon_name, diffuse_path or Path(material_name))
     if extra_flags:
         flags.update(extra_flags)
 
@@ -261,7 +268,7 @@ def auto_generate_miex_material(
 
             for attr_name, attr in node.attributes.items():
                 conn = resolve_connection_reference(attr.connection, resolved_nodes)
-                resolved_val = resolve_attribute_value(attr.value, texture_id, diffuse_path)
+                resolved_val = resolve_attribute_value(attr.value, texture_id, diffuse_path, passes)
 
                 current_node.attributes[attr_name] = MiExAttribute(
                     name=attr.name,
@@ -271,8 +278,13 @@ def auto_generate_miex_material(
                     expression=attr.expression,
                 )
 
+    terminals: dict[str, str] = {}
+    for k, v in template.shading_group.items():
+        clean_k = k[5:] if k.startswith("json:") else k
+        terminals[clean_k] = str(v)
+
     return MiExMaterial(
         name=material_name,
-        shading_group=dict(template.shading_group),
-        nodes=resolved_nodes,
+        terminals=terminals,
+        network=resolved_nodes,
     )

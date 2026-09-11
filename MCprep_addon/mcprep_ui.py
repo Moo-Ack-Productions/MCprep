@@ -496,6 +496,11 @@ class McprepPreference(bpy.types.AddonPreferences):
 		default='//',
 		update=update_exp_vivy_file_path
 		)
+	exp_miex_material_system: bpy.props.BoolProperty(
+		name="Experimental: MiEx Material Pipeline",
+		description="Enable unified MiEx material templates and prep pipeline",
+		default=False,
+	)
 
 	# addon updater preferences
 
@@ -707,6 +712,7 @@ class McprepPreference(bpy.types.AddonPreferences):
 				box.label(text=env._("Early access features and requests for feedback"))
 				box.label(text=env._("will be made visible. Thank you for contributing."))
 				box.prop(self, "exp_vivy_material_system")
+				box.prop(self, "exp_miex_material_system")
 
 		elif self.preferences_tab == "tutorials":
 			layout.label(
@@ -840,7 +846,10 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 		split = layout.split()
 		col = split.column(align=True)
 
-		if util.is_vivy_enabled(context):
+		if util.is_miex_enabled(context):
+			col.label(text=env._("MiEx tools"))
+			col.operator("mcprep.miex_prep_materials", text=env._("Prep Materials"))
+		elif util.is_vivy_enabled(context):
 			col.label(text="Vivy tools")
 			col.operator("vivy.prep_materials", text="Prep materials")
 			col.operator("mcprep.open_file", text="Edit Vivy Material Library").file=str(vivy_materials.get_vivy_blend())
@@ -854,7 +863,12 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 				"mcprep.open_help", text="", icon="QUESTION", emboss=False
 			).url = "https://github.com/TheDuckCow/MCprep/blob/master/docs/common_errors.md#common-error-messages-and-what-they-mean"
 			row.label(text=env._("OBJ incompatible with textureswap"))
-		p = col.operator("vivy.swap_texture_pack") if util.is_vivy_enabled(context) else col.operator("mcprep.swap_texture_pack")
+		if util.is_miex_enabled(context):
+			p = col.operator("mcprep.miex_swap_texture_pack")
+		elif util.is_vivy_enabled(context):
+			p = col.operator("vivy.swap_texture_pack")
+		else:
+			p = col.operator("mcprep.swap_texture_pack")
 		p.filepath = context.scene.mcprep_texturepack_path
 		if context.mode == "OBJECT":
 			col.operator("mcprep.meshswap", text=env._("Mesh Swap"))

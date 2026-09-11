@@ -156,6 +156,11 @@ if "vivy_editor" in locals():
 else:
 	from . import vivy_editor
 
+if "miex_prep" in locals():
+	importlib.reload(miex_prep)
+else:
+	from .materials import miex_prep
+
 # Only include those with a register function, which is not all
 module_list = (
 	conf,
@@ -178,7 +183,8 @@ module_list = (
 	mcprep_ui,
 	vivy_materials,
 	vivy_ui,
-	vivy_editor
+	vivy_editor,
+	miex_prep,
 )
 
 

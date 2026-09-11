@@ -85,6 +85,10 @@ def is_vivy_enabled(context) -> bool:
 	addon_prefs = get_user_preferences(context)
 	return is_experimental(context) and addon_prefs.exp_vivy_material_system
 
+def is_miex_enabled(context) -> bool:
+	addon_prefs = get_user_preferences(context)
+	return is_experimental(context) and getattr(addon_prefs, "exp_miex_material_system", False)
+
 # TODO: Use Literal["MCPREP_diffuse", "MCPREP_specular", 
 # "MCPREP_normal","MCPREP_displace", "SATURATE"] when
 # we the min version of Blender changes to a version

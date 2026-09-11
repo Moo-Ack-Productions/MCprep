@@ -62,53 +62,69 @@ class TemplateJSON(TypedDict, total=False):
     network: dict[str, dict[str, NodeJSON]]
 
 
+class MaterialEntryJSON(TypedDict, total=False):
+    """Structure of an exported material entry in _materials.json."""
+    terminals: dict[str, str]
+    network: dict[str, NodeJSON]
+
+
+MaterialsFileJSON = dict[str, MaterialEntryJSON]
+
+
 @dataclass
 class BlenderCompactNodeInfo:
     """Represents node identity with BlenderCompact version syntax."""
     node_name: str
-    version: tuple[int, int]
+    version: tuple[int, int] | None = None
+    has_json_prefix: bool = False
 
     def __str__(self) -> str:
         """Returns the formatted MiEx node type string."""
-        return f"JSON:BlenderCompact-{self.version[0]}.{self.version[1]}-{self.node_name}"
+        prefix = "JSON:" if self.has_json_prefix else ""
+        if self.version is not None:
+            return f"{prefix}BlenderCompact-{self.version[0]}.{self.version[1]}-{self.node_name}"
+        return f"{prefix}{self.node_name}"
 
 
 def parse_compact_node_type(type_str: str) -> BlenderCompactNodeInfo:
-    """Parses node type string using string operations.
+    """Parses a MiEx node type string.
     
-    Strictly requires the format: 'JSON:BlenderCompact-X.Y-PythonNodeName'.
-    Raises ValueError if the syntax is not strictly adhered to.
+    Supports both template format (with 'JSON:' prefix) and exported materials JSON
+    (where MiEx drops the 'JSON:' prefix during export).
+    'BlenderCompact-X.Y-' provides version compatibility where needed.
     """
-    prefix = "JSON:BlenderCompact-"
-    if not type_str.startswith(prefix):
-        raise ValueError(
-            f"Invalid MiEx node type '{type_str}': must strictly follow 'JSON:BlenderCompact-X.Y-NodeName'"
-        )
+    has_json = False
+    remainder = type_str
+    if remainder.startswith("JSON:"):
+        has_json = True
+        remainder = remainder[5:]
 
-    remainder = type_str[len(prefix):]
-    parts = remainder.split("-", 1)
-    if len(parts) != 2:
-        raise ValueError(
-            f"Invalid MiEx node type '{type_str}': expected version and node name separated by '-'"
-        )
+    if remainder.startswith("BlenderCompact-"):
+        comp_remainder = remainder[15:]
+        parts = comp_remainder.split("-", 1)
+        if len(parts) != 2:
+            raise ValueError(
+                f"Invalid BlenderCompact node type '{type_str}': expected version and node name separated by '-'"
+            )
+        version_str, node_name = parts
+        v_parts = version_str.split(".", 1)
+        if len(v_parts) != 2 or not (v_parts[0].isdigit() and v_parts[1].isdigit()):
+            raise ValueError(
+                f"Invalid BlenderCompact node version in '{type_str}': expected X.Y numeric components"
+            )
+        version = (int(v_parts[0]), int(v_parts[1]))
+        return BlenderCompactNodeInfo(node_name=node_name, version=version, has_json_prefix=has_json)
 
-    version_str, node_name = parts
-    v_parts = version_str.split(".", 1)
-    if len(v_parts) != 2 or not (v_parts[0].isdigit() and v_parts[1].isdigit()):
-        raise ValueError(
-            f"Invalid MiEx node version in '{type_str}': expected X.Y with numeric components"
-        )
-
-    version = (int(v_parts[0]), int(v_parts[1]))
-    return BlenderCompactNodeInfo(node_name=node_name, version=version)
+    return BlenderCompactNodeInfo(node_name=remainder, version=None, has_json_prefix=has_json)
 
 
 def format_compact_node_type(
     node_name: str,
-    version: tuple[int, int] = (5, 1),
+    version: tuple[int, int] | None = (5, 1),
+    include_json_prefix: bool = True,
 ) -> str:
-    """Formats a python node name into JSON:BlenderCompact-X.Y-PythonNodeName."""
-    return str(BlenderCompactNodeInfo(node_name=node_name, version=version))
+    """Formats a python node name into (JSON:)BlenderCompact-X.Y-PythonNodeName."""
+    return str(BlenderCompactNodeInfo(node_name=node_name, version=version, has_json_prefix=include_json_prefix))
 
 
 @dataclass
@@ -231,17 +247,63 @@ class MiExTemplate:
         )
 
 
+@dataclass
+class MiExMaterial:
+    """A unified MiEx material representation for MiEx and OBJ exports."""
+    name: str
+    terminals: dict[str, str] = field(default_factory=dict)
+    network: dict[str, MiExNode] = field(default_factory=dict)
+
+
 def parse_template(data: TemplateJSON, name: str = "") -> MiExTemplate:
     """Parses a dictionary representing a MiEx material template."""
     return MiExTemplate.from_dict(data, name=name)
 
 
-def parse_template_file(filepath: Path | str) -> MiExTemplate:
+def parse_template_file(filepath: Path) -> MiExTemplate:
     """Reads and parses a MiEx material template JSON file."""
-    path = Path(filepath)
-    with path.open("r", encoding="utf-8") as f:
+    with filepath.open("r", encoding="utf-8") as f:
         data = json.load(f)
-    return parse_template(data, name=path.stem)
+    return parse_template(data, name=filepath.stem)
+
+
+def parse_materials_json(data: MaterialsFileJSON) -> dict[str, MiExMaterial]:
+    """Parses an exported MiEx _materials.json into a dict of MiExMaterial objects."""
+    materials: dict[str, MiExMaterial] = {}
+    for mat_name, mat_data in data.items():
+        if not isinstance(mat_data, dict):
+            continue
+        raw_terminals = mat_data.get("terminals", {})
+        terminals: dict[str, str] = {}
+        if isinstance(raw_terminals, dict):
+            for k, v in raw_terminals.items():
+                clean_k = k[5:] if k.startswith("json:") else k
+                terminals[clean_k] = str(v)
+
+        raw_network = mat_data.get("network", {})
+        network: dict[str, MiExNode] = {}
+        if isinstance(raw_network, dict):
+            for node_name, node_data in raw_network.items():
+                if isinstance(node_data, dict):
+                    network[node_name] = MiExNode.from_dict(node_name, node_data)
+
+        materials[mat_name] = MiExMaterial(
+            name=mat_name,
+            terminals=terminals,
+            network=network,
+        )
+    return materials
+
+
+def load_materials_json(filepath: Path) -> dict[str, MiExMaterial]:
+    """Reads and parses a MiEx _materials.json file."""
+    if not filepath.is_file():
+        return {}
+    with filepath.open("r", encoding="utf-8") as f:
+        data = json.load(f)
+    if not isinstance(data, dict):
+        return {}
+    return parse_materials_json(data)
 
 
 def resolve_includes(
@@ -277,7 +339,11 @@ def resolve_includes(
             if cond not in merged_network:
                 merged_network[cond] = {}
             for node_name, node in nodes.items():
-                merged_network[cond][node_name] = node
+                merged_network[cond][node_name] = MiExNode(
+                    name=node.name,
+                    node_type=node.node_type,
+                    attributes=dict(node.attributes),
+                )
 
     # Apply current template over includes
     merged_shading_group.update(template.shading_group)
@@ -286,14 +352,22 @@ def resolve_includes(
             merged_network[cond] = {}
         for node_name, node in nodes.items():
             if node_name not in merged_network[cond]:
-                merged_network[cond][node_name] = node
+                merged_network[cond][node_name] = MiExNode(
+                    name=node.name,
+                    node_type=node.node_type,
+                    attributes=dict(node.attributes),
+                )
                 continue
 
             existing = merged_network[cond][node_name]
-            if node.node_type:
-                existing.node_type = node.node_type
-            for attr_name, attr in node.attributes.items():
-                existing.attributes[attr_name] = attr
+            node_type = node.node_type if node.node_type else existing.node_type
+            new_attrs = dict(existing.attributes)
+            new_attrs.update(node.attributes)
+            merged_network[cond][node_name] = MiExNode(
+                name=existing.name,
+                node_type=node_type,
+                attributes=new_attrs,
+            )
 
     return MiExTemplate(
         name=template.name,
