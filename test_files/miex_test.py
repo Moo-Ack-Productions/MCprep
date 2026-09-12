@@ -46,6 +46,7 @@ from MCprep_addon.materials.miex_prep import (
     apply_miex_material,
     find_materials_json,
     find_texture_in_pack,
+    get_available_template_packs,
     get_default_templates,
     load_templates_from_dir,
     prep_single_material,
@@ -604,6 +605,191 @@ class MiExPrepTest(unittest.TestCase):
             self.assertTrue(mat.get("texture_swapped", False))
             self.assertIn("FILE", mat.node_tree.nodes)
             self.assertIsNotNone(mat.node_tree.nodes["FILE"].image)
+
+    def test_get_template_packs(self):
+        """Tests that all template packs can be discovered and loaded."""
+        packs = get_available_template_packs()
+        self.assertIn("simple", packs)
+        self.assertIn("specular", packs)
+        self.assertIn("seus", packs)
+
+        for pack in ("simple", "specular", "seus"):
+            templates = get_default_templates(pack)
+            self.assertEqual(len(templates), 8)
+            names = [t.name for t in templates]
+            self.assertIn("base", names)
+            self.assertIn("emission", names)
+            self.assertIn("foliage", names)
+            self.assertIn("glass", names)
+            self.assertIn("lava", names)
+            self.assertIn("metallic", names)
+            self.assertIn("reflective", names)
+            self.assertIn("water", names)
+
+    def test_specular_pack_generation_and_apply(self):
+        """Tests specular pack generates RGBCurve inverted normal and Invert roughness."""
+        templates = get_default_templates("specular")
+        mat_miex = auto_generate_miex_material(
+            material_name="minecraft:block/cobblestone",
+            texture_paths={
+                "diffuse": Path("textures/block/cobblestone.png"),
+                "normal": Path("textures/block/cobblestone_n.png"),
+                "specular": Path("textures/block/cobblestone_s.png"),
+            },
+            templates=templates,
+        )
+        self.assertIsNotNone(mat_miex)
+        self.assertIn("NORM_CURVE", mat_miex.network)
+        self.assertIn("NORM_MAP", mat_miex.network)
+        self.assertIn("SPEC_INV", mat_miex.network)
+
+        mat = bpy.data.materials.new(name="test_cobble_spec")
+        apply_miex_material(mat, mat_miex)
+
+        nodes = mat.node_tree.nodes
+        self.assertIn("NORM_CURVE", nodes)
+        self.assertIn("NORM_MAP", nodes)
+        self.assertIn("SPEC_INV", nodes)
+        self.assertIn("TEX_SPEC", nodes)
+        self.assertIn("TEX_NORM", nodes)
+
+        # Check that curve 1 is inverted (green channel inversion)
+        curve_node = nodes["NORM_CURVE"]
+        curve_g = curve_node.mapping.curves[1]
+        self.assertAlmostEqual(curve_g.points[0].location[1], 1.0, places=3)
+        self.assertAlmostEqual(curve_g.points[1].location[1], 0.0, places=3)
+
+        # Check links
+        links = mat.node_tree.links
+        norm_map_node = nodes["NORM_MAP"]
+        bsdf_node = nodes["MAT"]
+        spec_inv_node = nodes["SPEC_INV"]
+        tex_spec_node = nodes["TEX_SPEC"]
+
+        # NORM_MAP.Normal -> MAT.Normal
+        has_norm_link = any(
+            l.from_node == norm_map_node and l.from_socket.name == "Normal" and
+            l.to_node == bsdf_node and l.to_socket.name == "Normal"
+            for l in links
+        )
+        self.assertTrue(has_norm_link)
+
+        # SPEC_INV.Color -> MAT.Roughness
+        has_rough_link = any(
+            l.from_node == spec_inv_node and l.to_node == bsdf_node and l.to_socket.name == "Roughness"
+            for l in links
+        )
+        self.assertTrue(has_rough_link)
+
+        # TEX_SPEC.Color -> MAT.Specular IOR Level / Specular
+        spec_sock_name = "Specular IOR Level" if "Specular IOR Level" in bsdf_node.inputs else "Specular"
+        has_spec_link = any(
+            l.from_node == tex_spec_node and l.to_node == bsdf_node and l.to_socket.name == spec_sock_name
+            for l in links
+        )
+        self.assertTrue(has_spec_link)
+
+    def test_seus_pack_generation_and_apply(self):
+        """Tests SEUS pack generates SeparateColor and connects R->Invert->Roughness, G->Metallic, B->Emission."""
+        templates = get_default_templates("seus")
+        mat_miex = auto_generate_miex_material(
+            material_name="minecraft:block/iron_block",
+            texture_paths={
+                "diffuse": Path("textures/block/iron_block.png"),
+                "normal": Path("textures/block/iron_block_n.png"),
+                "specular": Path("textures/block/iron_block_s.png"),
+            },
+            templates=templates,
+        )
+        self.assertIsNotNone(mat_miex)
+        self.assertIn("SEP_COLOR", mat_miex.network)
+        self.assertIn("SPEC_INV", mat_miex.network)
+        self.assertIn("NORM_CURVE", mat_miex.network)
+
+        mat = bpy.data.materials.new(name="test_iron_seus")
+        apply_miex_material(mat, mat_miex)
+
+        nodes = mat.node_tree.nodes
+        self.assertIn("SEP_COLOR", nodes)
+        self.assertIn("SPEC_INV", nodes)
+        self.assertIn("NORM_CURVE", nodes)
+
+        sep_node = nodes["SEP_COLOR"]
+        spec_inv_node = nodes["SPEC_INV"]
+        bsdf_node = nodes["MAT"]
+        file_node = nodes["FILE"]
+        links = mat.node_tree.links
+
+        # Check Red -> Invert -> Roughness
+        has_red_to_inv = any(
+            l.from_node == sep_node and l.from_socket.name in ("Red", "R") and
+            l.to_node == spec_inv_node
+            for l in links
+        )
+        self.assertTrue(has_red_to_inv)
+
+        has_inv_to_rough = any(
+            l.from_node == spec_inv_node and l.to_node == bsdf_node and l.to_socket.name == "Roughness"
+            for l in links
+        )
+        self.assertTrue(has_inv_to_rough)
+
+        # Check Green -> Metallic
+        has_green_to_met = any(
+            l.from_node == sep_node and l.from_socket.name in ("Green", "G") and
+            l.to_node == bsdf_node and l.to_socket.name == "Metallic"
+            for l in links
+        )
+        self.assertTrue(has_green_to_met)
+
+        # Check Blue -> Emission Strength
+        has_blue_to_emit = any(
+            l.from_node == sep_node and l.from_socket.name in ("Blue", "B") and
+            l.to_node == bsdf_node and l.to_socket.name == "Emission Strength"
+            for l in links
+        )
+        self.assertTrue(has_blue_to_emit)
+
+        # Check FILE.Color -> Emission Color
+        has_file_to_emit_col = any(
+            l.from_node == file_node and l.to_node == bsdf_node and l.to_socket.name == "Emission Color"
+            for l in links
+        )
+        self.assertTrue(has_file_to_emit_col)
+
+    def test_prep_operator_with_pack_formats(self):
+        """Tests the MCPREP_OT_miex_prep_materials operator with specular and seus formats."""
+        mesh = bpy.data.meshes.new("TestOpPackMesh")
+        obj = bpy.data.objects.new("TestOpPackObj", mesh)
+        bpy.context.scene.collection.objects.link(obj)
+
+        mat = bpy.data.materials.new(name="minecraft:block/stone")
+        obj.data.materials.append(mat)
+
+        bpy.context.view_layer.objects.active = obj
+        obj.select_set(True)
+
+        res_spec = bpy.ops.mcprep.miex_prep_materials(pack_format="specular")
+        self.assertEqual(res_spec, {'FINISHED'})
+
+        res_seus = bpy.ops.mcprep.miex_prep_materials(pack_format="seus")
+        self.assertEqual(res_seus, {'FINISHED'})
+
+    def test_miex_ui_properties_and_helpers(self):
+        """Tests scene properties and helper operators for MiEx UI."""
+        scene = bpy.context.scene
+        self.assertTrue(hasattr(scene, "mcprep_miex_pack_format"))
+        self.assertTrue(hasattr(scene, "mcprep_miex_templates_path"))
+
+        scene.mcprep_miex_pack_format = "seus"
+        self.assertEqual(scene.mcprep_miex_pack_format, "seus")
+
+        scene.mcprep_miex_templates_path = "/custom/templates"
+        self.assertEqual(scene.mcprep_miex_templates_path, "/custom/templates")
+
+        res_reset = bpy.ops.mcprep.miex_reset_templates_path()
+        self.assertEqual(res_reset, {'FINISHED'})
+        self.assertEqual(scene.mcprep_miex_templates_path, "")
 
 
 if __name__ == "__main__":

@@ -26,6 +26,8 @@ from dataclasses import dataclass, field
 import fnmatch
 from pathlib import Path
 
+from .. import util
+from ..conf import env
 from .generate import checklist, find_additional_passes, get_mc_canonical_name
 from .miex_parser import (
     AttributeValue,
@@ -101,17 +103,34 @@ def collect_texture_passes(diffuse_path: Path) -> dict[str, Path]:
     return passes
 
 
+def get_mcprep_biome_color(canon_name: str) -> list[float] | None:
+    """Retrieves the RGBA color for a desaturated block from MCprep JSON."""
+    if not env.json_data or "blocks" not in env.json_data:
+        util.load_mcprep_json()
+    if not env.json_data or "blocks" not in env.json_data:
+        return None
+    desat_map = env.json_data["blocks"].get("desaturated", {})
+    clean = canon_name.split("/")[-1].split(":")[-1]
+    col = desat_map.get(clean) or desat_map.get(canon_name)
+    if col and len(col) >= 3:
+        alpha = col[3] if len(col) > 3 else 1.0
+        return [float(col[0]), float(col[1]), float(col[2]), float(alpha)]
+    return None
+
+
 def build_condition_flags(canon_name: str, texture_path: Path) -> dict[str, bool]:
     """Constructs condition flags reusing MCprep's checklist and block properties."""
+    clean_canon = canon_name.split("/")[-1].split(":")[-1]
     flags: dict[str, bool] = {
-        "emit": checklist(canon_name, "emit"),
-        "solid": checklist(canon_name, "solid"),
-        "reflective": checklist(canon_name, "reflective"),
-        "metallic": checklist(canon_name, "metallic"),
-        "glass": checklist(canon_name, "glass"),
-        "water": checklist(canon_name, "water"),
-        "backface_culling": checklist(canon_name, "backface_culling"),
-        "desaturated": checklist(canon_name, "desaturated"),
+        "emit": checklist(clean_canon, "emit"),
+        "solid": checklist(clean_canon, "solid"),
+        "reflective": checklist(clean_canon, "reflective"),
+        "metallic": checklist(clean_canon, "metallic"),
+        "glass": checklist(clean_canon, "glass"),
+        "water": checklist(clean_canon, "water"),
+        "backface_culling": checklist(clean_canon, "backface_culling"),
+        "desaturated": checklist(clean_canon, "desaturated"),
+        "biomeColor": False,
     }
     return flags
 
@@ -130,11 +149,15 @@ def evaluate_condition_token(
     if token.startswith("!"):
         return not evaluate_condition_token(token[1:], texture_id, passes, flags)
 
+    if token == "@texture@":
+        return "diffuse" in passes
+
+    if token == "@biomeColor@":
+        return bool(flags.get("biomeColor", False))
+
     if token.startswith("@") and token.endswith("@"):
         flag_name = token[1:-1]
-        if flag_name == "texture":
-            return "diffuse" in passes
-        return flags.get(flag_name, False)
+        return bool(flags.get(flag_name, False))
 
     if token.endswith(".cutout"):
         return flags.get("solid", False)
@@ -224,34 +247,74 @@ def auto_generate_miex_material(
     material_name: str,
     texture_paths: dict[str, Path] | Path,
     templates: list[MiExTemplate],
+    flags: dict[str, bool] | None = None,
     extra_flags: dict[str, bool] | None = None,
 ) -> MiExMaterial | None:
-    """Auto-generates a unified MiEx material given texture paths and template list."""
+    """Auto-generates a unified MiEx material using declarative template conditionals and fill-ins."""
     if isinstance(texture_paths, Path):
         passes = collect_texture_passes(texture_paths)
     else:
         passes = dict(texture_paths)
 
     diffuse_path = passes.get("diffuse")
-    diffuse_stem = diffuse_path.stem if diffuse_path else material_name
 
-    canon_name, _ = get_mc_canonical_name(diffuse_stem or material_name)
-    texture_id = f"minecraft:block/{canon_name}"
+    # Strip namespace prefix before canonical name lookup
+    mat_clean = material_name
+    if mat_clean.startswith("minecraft:block/"):
+        mat_clean = mat_clean[len("minecraft:block/"):]
+    elif mat_clean.startswith("minecraft:"):
+        mat_clean = mat_clean[len("minecraft:"):]
 
-    flags = build_condition_flags(canon_name, diffuse_path or Path(material_name))
-    if extra_flags:
-        flags.update(extra_flags)
+    # Determine canonical block name using MCprep's canonical name mapping
+    generic_stems = {"terrain", "texture", "textures", "block", "blocks", "atlas", "diffuse", "image", "world"}
+    mat_gen = util.nameGeneralize(mat_clean)
+    canon_name, _ = get_mc_canonical_name(mat_gen)
 
+    # Fallback: if material name was generic (e.g. "Material", "mat"), derive from diffuse image stem
+    if canon_name.lower().startswith("material") or canon_name.lower().startswith("mat"):
+        if diffuse_path and diffuse_path.stem.lower() not in generic_stems:
+            diff_gen = util.nameGeneralize(diffuse_path.stem)
+            tex_canon, _ = get_mc_canonical_name(diff_gen)
+            if tex_canon and tex_canon.lower() not in generic_stems:
+                canon_name = tex_canon
+
+    clean_canon = canon_name.split("/")[-1].split(":")[-1]
+    texture_id = f"minecraft:block/{clean_canon}"
+    bare_name = clean_canon
+
+    condition_flags = build_condition_flags(clean_canon, diffuse_path or Path(material_name))
+    passed_flags = flags if flags is not None else extra_flags
+    if passed_flags:
+        condition_flags.update(passed_flags)
+
+    # Find matching template using MiEx declarative priority matching
     template = find_matching_template(texture_id, templates)
+    if template is None or template.name == "base":
+        cand = find_matching_template(bare_name, templates)
+        if cand and cand.name != "base":
+            template = cand
+    if template is None or template.name == "base":
+        cand = find_matching_template(canon_name, templates)
+        if cand and cand.name != "base":
+            template = cand
+
     if template is None:
-        template = find_matching_template(canon_name, templates)
+        template = find_matching_template("*", templates)
     if template is None:
         return None
+
+    # If foliage template was matched for a block that isn't desaturated (e.g. flowers),
+    # and vertex colors aren't present, fall back to base template so flowers aren't tinted
+    if template.name == "foliage" and not condition_flags.get("biomeColor", False):
+        if not checklist(clean_canon, "desaturated"):
+            base_tpl = find_matching_template("*", templates)
+            if base_tpl:
+                template = base_tpl
 
     resolved_nodes: dict[str, MiExNode] = {}
 
     for condition, nodes in template.network.items():
-        if not evaluate_condition(condition, texture_id, passes, flags):
+        if not evaluate_condition(condition, texture_id, passes, condition_flags):
             continue
 
         for node_name, node in nodes.items():
@@ -269,6 +332,13 @@ def auto_generate_miex_material(
             for attr_name, attr in node.attributes.items():
                 conn = resolve_connection_reference(attr.connection, resolved_nodes)
                 resolved_val = resolve_attribute_value(attr.value, texture_id, diffuse_path, passes)
+
+                # MiEx fill-in: resolve biome color from MCprep JSON when vertex colors are not active
+                if node_name == "MIX_COLOR" and attr_name == "B" and not conn:
+                    if not condition_flags.get("biomeColor", False):
+                        biome_col = get_mcprep_biome_color(clean_canon) or get_mcprep_biome_color(canon_name)
+                        if biome_col:
+                            resolved_val = biome_col
 
                 current_node.attributes[attr_name] = MiExAttribute(
                     name=attr.name,

@@ -104,22 +104,28 @@ def np_is_mcprep_node_prop(node: Node, prop: str) -> bool:
 	MCPREP_specular, MCPREP_normal, MCPREP_displace, or SATURATE
 	"""
 	new_prop = prop if prop != "SATURATE" else "MCPREP_saturate"
+	if not hasattr(node, "mnp") or node.mnp is None:
+		if bv50():
+			try:
+				sys_props = node.bl_system_properties_get()
+				return (prop in sys_props.keys()) if sys_props else False
+			except Exception:
+				return False
+		return prop in node
+
 	if bv50():
 		# Blender 5.0 removes the old dict-like access
 		# to properties (hence why we moved to the new
 		# system).
-		#
-		# To make things future proof, we enclose
-		# this in a try-except statement
 		try:
-			old_props = tuple(node.bl_system_properties_get().keys())	
-			if prop in old_props:
+			sys_props = node.bl_system_properties_get()
+			if sys_props and prop in sys_props.keys():
 				setattr(node.mnp, new_prop, True)	
 		except Exception:
-			print(f"Could not get old {prop} prop")
+			pass
 	else:
 		setattr(node.mnp, new_prop, prop in node)
-	return getattr(node.mnp, new_prop)
+	return getattr(node.mnp, new_prop, False)
 
 def apply_noncolor_data(node: Node) -> Optional[MCprepError]:
 	"""

@@ -501,6 +501,22 @@ class McprepPreference(bpy.types.AddonPreferences):
 		description="Enable unified MiEx material templates and prep pipeline",
 		default=False,
 	)
+	exp_miex_pack_format: bpy.props.EnumProperty(
+		name="Default Template Pack",
+		description="Default MiEx template pack format to use",
+		items=[
+			("simple", "Simple (no PBR)", "Use simple shader setup with no PBR or emission falloff"),
+			("specular", "Specular", "Sets the pack format to Specular"),
+			("seus", "SEUS", "Sets the pack format to SEUS"),
+		],
+		default="simple",
+	)
+	exp_miex_templates_path: bpy.props.StringProperty(
+		name="Custom MiEx Templates Folder",
+		description="Optional default custom directory for MiEx templates",
+		subtype='DIR_PATH',
+		default="",
+	)
 
 	# addon updater preferences
 
@@ -604,6 +620,18 @@ class McprepPreference(bpy.types.AddonPreferences):
 				if not os.path.isdir(bpy.path.abspath(self.exp_vivy_file_path)):
 					row = box.row()
 					row.label(text=env._("Vivy folder not found"), icon="ERROR")
+
+			if util.is_miex_enabled(context):
+				split = util.layout_split(box, factor=factor_width)
+				col = split.column()
+				col.label(text=env._("MiEx Template Pack"))
+				col = split.column()
+				col.prop(self, "exp_miex_pack_format", text="")
+				split = util.layout_split(box, factor=factor_width)
+				col = split.column()
+				col.label(text=env._("MiEx Custom Templates"))
+				col = split.column()
+				col.prop(self, "exp_miex_templates_path", text="")
 
 			row = layout.row()
 			row.scale_y = 0.7
@@ -713,6 +741,10 @@ class McprepPreference(bpy.types.AddonPreferences):
 				box.label(text=env._("will be made visible. Thank you for contributing."))
 				box.prop(self, "exp_vivy_material_system")
 				box.prop(self, "exp_miex_material_system")
+				if self.exp_miex_material_system:
+					subbox = box.box()
+					subbox.prop(self, "exp_miex_pack_format")
+					subbox.prop(self, "exp_miex_templates_path")
 
 		elif self.preferences_tab == "tutorials":
 			layout.label(
@@ -931,6 +963,15 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 				b_col.label(text=env._("Vivy Path"))
 				row = b_col.row(align=True)
 				row.prop(context.scene, "vivy_file_path", text="")
+
+			if util.is_miex_enabled(context):
+				b_row = box.row()
+				b_col = b_row.column(align=False)
+				b_col.label(text=env._("MiEx Custom Templates"))
+				row = b_col.row(align=True)
+				row.prop(context.scene, "mcprep_miex_templates_path", text="")
+				row.operator("mcprep.miex_reset_templates_path", text="", icon=LOAD_FACTORY)
+				row.operator("mcprep.miex_open_templates_folder", text="", icon="FILE_FOLDER")
 
 			b_row = box.row()
 			b_col = b_row.column(align=True)
@@ -2195,6 +2236,20 @@ def register():
 		subtype='DIR_PATH',
 		update=update_vivy_variables,
 		default=addon_prefs.exp_vivy_file_path)
+	bpy.types.Scene.mcprep_miex_pack_format = bpy.props.EnumProperty(
+		name="MiEx Pack Format",
+		description="MiEx template pack format to use when prepping materials",
+		items=[
+			("simple", "Simple (no PBR)", "Use simple shader setup with no PBR or emission falloff"),
+			("specular", "Specular", "Sets the pack format to Specular"),
+			("seus", "SEUS", "Sets the pack format to SEUS"),
+		],
+		default=addon_prefs.exp_miex_pack_format if hasattr(addon_prefs, "exp_miex_pack_format") else "simple")
+	bpy.types.Scene.mcprep_miex_templates_path = bpy.props.StringProperty(
+		name="Custom MiEx Templates",
+		description="Optional directory containing custom MiEx template JSON files",
+		subtype='DIR_PATH',
+		default=addon_prefs.exp_miex_templates_path if hasattr(addon_prefs, "exp_miex_templates_path") else "")
 	env.verbose = addon_prefs.verbose
 	if hasattr(bpy.types, "VIEW3D_MT_add"):  # 2.8
 		bpy.types.VIEW3D_MT_add.append(draw_mcprepadd)
@@ -2229,3 +2284,7 @@ def unregister():
 	del bpy.types.Scene.mcprep_skin_path
 	del bpy.types.Scene.mcprep_texturepack_path
 	del bpy.types.Scene.vivy_file_path
+	if hasattr(bpy.types.Scene, "mcprep_miex_pack_format"):
+		del bpy.types.Scene.mcprep_miex_pack_format
+	if hasattr(bpy.types.Scene, "mcprep_miex_templates_path"):
+		del bpy.types.Scene.mcprep_miex_templates_path

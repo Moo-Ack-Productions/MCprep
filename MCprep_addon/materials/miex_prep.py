@@ -31,9 +31,10 @@ from bpy_extras.io_utils import ImportHelper
 
 from .. import tracking
 from .. import util
-from ..conf import MCPREP_RESOURCES, env
+from ..conf import MCPREP_RESOURCES, MCprepError, env
 from . import generate
-from .generate import get_mc_canonical_name
+from .generate import checklist, get_mc_canonical_name
+from .prep import McprepMaterialProps, draw_mats_common
 from .miex_generator import (
     auto_generate_miex_material,
     collect_texture_passes,
@@ -200,26 +201,79 @@ def find_materials_json(search_dir: Path) -> Path | None:
     return None
 
 
-def find_texture_in_pack(pack_dir: Path, canon_name: str) -> Path | None:
-    """Finds texture in pack directory matching the canonical name."""
+def find_texture_in_pack(
+    pack_dir: Path,
+    canon_name: str,
+    orig_path: str = "",
+) -> Path | None:
+    """Finds texture in pack directory matching canonical name or original texture path."""
     if not pack_dir.is_dir():
         return None
 
-    clean_name = canon_name.split(":")[-1].split("/")[-1]
-    filename = f"{clean_name}.png"
-    preferred_paths = [
-        pack_dir / "assets" / "minecraft" / "textures" / "block" / filename,
-        pack_dir / "minecraft" / "textures" / "block" / filename,
-        pack_dir / "textures" / "block" / filename,
-        pack_dir / filename,
-    ]
-    for p in preferred_paths:
-        if p.is_file():
-            return p
+    names_to_check: list[str] = []
 
-    for p in pack_dir.rglob(filename):
-        if p.is_file():
-            return p
+    clean_canon = canon_name.split(":")[-1].split("/")[-1]
+    if clean_canon:
+        names_to_check.append(clean_canon)
+        if "-" in clean_canon:
+            names_to_check.append(clean_canon.split("-")[-1])
+
+    if orig_path:
+        orig_p = Path(orig_path)
+        if orig_p.stem and orig_p.stem not in names_to_check:
+            names_to_check.append(orig_p.stem)
+
+    # Check relative subpaths if orig_path contained 'tex/' (e.g. "tex/minecraft/block/stone.png")
+    if orig_path:
+        norm_orig = orig_path.replace("\\", "/")
+        if "tex/" in norm_orig:
+            sub = norm_orig.split("tex/", 1)[1]
+            sub_p = Path(sub)
+            parts = sub_p.parts
+            if len(parts) >= 2:
+                namespace = parts[0]
+                rest = Path(*parts[1:])
+                candidates = [
+                    pack_dir / "assets" / namespace / "textures" / rest,
+                    pack_dir / namespace / "textures" / rest,
+                    pack_dir / "assets" / namespace / rest,
+                    pack_dir / "textures" / rest,
+                    pack_dir / rest,
+                    pack_dir / sub_p,
+                ]
+                for cand in candidates:
+                    if cand.is_file():
+                        return cand
+
+    # Check preferred pack paths first
+    for c_name in names_to_check:
+        fn = f"{c_name}.png"
+        preferred_paths = [
+            pack_dir / "assets" / "minecraft" / "textures" / "block" / fn,
+            pack_dir / "assets" / "minecraft" / "textures" / "item" / fn,
+            pack_dir / "assets" / "minecraft" / "textures" / "entity" / fn,
+            pack_dir / "assets" / "minecraft" / "textures" / "painting" / fn,
+            pack_dir / "assets" / "minecraft" / "textures" / fn,
+            pack_dir / "minecraft" / "textures" / "block" / fn,
+            pack_dir / "minecraft" / "textures" / "item" / fn,
+            pack_dir / "minecraft" / "textures" / "entity" / fn,
+            pack_dir / "textures" / "block" / fn,
+            pack_dir / "textures" / "item" / fn,
+            pack_dir / "textures" / "entity" / fn,
+            pack_dir / "textures" / fn,
+            pack_dir / fn,
+        ]
+        for p in preferred_paths:
+            if p.is_file():
+                return p
+
+    # Fall back to recursive search for candidate filenames
+    for c_name in names_to_check:
+        fn = f"{c_name}.png"
+        for p in pack_dir.rglob(fn):
+            if p.is_file():
+                return p
+
     return None
 
 
@@ -227,6 +281,7 @@ def apply_miex_material(
     material: Material,
     miex_mat: MiExMaterial,
     base_dir: Path | None = None,
+    original_passes: dict | None = None,
 ) -> None:
     """Configures a Blender Material node tree according to a MiExMaterial specification."""
     material.use_nodes = True
@@ -244,6 +299,12 @@ def apply_miex_material(
     created_nodes: dict[str, bpy.types.Node] = {}
     tex_y = 0.0
     shader_y = 0.0
+
+    tag_map = {
+        "FILE": "MCPREP_diffuse",
+        "TEX_NORM": "MCPREP_normal",
+        "TEX_SPEC": "MCPREP_specular",
+    }
 
     for node_name, miex_node in miex_mat.network.items():
         if not miex_node.node_type:
@@ -266,6 +327,18 @@ def apply_miex_material(
         bl_node = nodes.new(bl_type)
         bl_node.name = node_name
         bl_node.label = node_name
+
+        prop_name = tag_map.get(node_name)
+        if prop_name:
+            if hasattr(bl_node, "mnp"):
+                try:
+                    setattr(bl_node.mnp, prop_name, True)
+                except Exception:
+                    pass
+            try:
+                bl_node[prop_name] = True
+            except Exception:
+                pass
 
         if bl_type == "ShaderNodeRGBCurve" and node_name in ("NORM_CURVE", "Normal Inverse"):
             try:
@@ -299,29 +372,33 @@ def apply_miex_material(
         for attr_name, attr in miex_node.attributes.items():
             val = attr.value
 
-            if attr_name == "image" and hasattr(bl_node, "image"):
-                if isinstance(val, (str, Path)) and val:
-                    img_path = Path(val)
-                    if not img_path.is_absolute():
-                        if base_dir and (base_dir / img_path).is_file():
-                            img_path = base_dir / img_path
-                        elif bpy.data.filepath:
-                            blend_parent = Path(bpy.data.filepath).parent
-                            if (blend_parent / img_path).is_file():
-                                img_path = blend_parent / img_path
+            if attr_name == "image":
+                if not hasattr(bl_node, "image") or not val or not isinstance(val, (str, Path)):
+                    continue
+                img_path = Path(val)
+                if not img_path.is_absolute():
+                    if base_dir and (base_dir / img_path).is_file():
+                        img_path = base_dir / img_path
+                    elif bpy.data.filepath and (Path(bpy.data.filepath).parent / img_path).is_file():
+                        img_path = Path(bpy.data.filepath).parent / img_path
 
-                    if img_path.is_file():
-                        bl_node.image = bpy.data.images.load(str(img_path), check_existing=True)
-                    elif img_path.name in bpy.data.images:
-                        bl_node.image = bpy.data.images[img_path.name]
+                if img_path.is_file():
+                    bl_node.image = bpy.data.images.load(str(img_path), check_existing=True)
+                else:
+                    for cand in (img_path.name, f"{img_path.name}.png", f"{img_path.stem}.png"):
+                        if cand in bpy.data.images:
+                            bl_node.image = bpy.data.images[cand]
+                            break
                 continue
 
-            if attr_name == "interpolation" and hasattr(bl_node, "interpolation"):
-                if isinstance(val, str) and val in ("Closest", "Linear", "Cubic", "Smart"):
+            if attr_name == "interpolation":
+                if hasattr(bl_node, "interpolation") and isinstance(val, str) and val in ("Closest", "Linear", "Cubic", "Smart"):
                     bl_node.interpolation = val
                 continue
 
-            if attr_name in ("colorspace_settings", "colorspace") and hasattr(bl_node, "image") and bl_node.image:
+            if attr_name in ("colorspace_settings", "colorspace"):
+                if not hasattr(bl_node, "image") or not bl_node.image:
+                    continue
                 if str(val).lower() in ("non-color", "non_color", "non-color data"):
                     util.apply_noncolor_data(bl_node)
                 elif isinstance(val, list):
@@ -338,24 +415,26 @@ def apply_miex_material(
                         pass
                 continue
 
-            if attr_name == "curves" and hasattr(bl_node, "mapping") and hasattr(bl_node.mapping, "curves"):
-                if isinstance(val, dict):
-                    for curve_idx_str, points in val.items():
-                        try:
-                            idx = int(curve_idx_str)
-                            if idx < len(bl_node.mapping.curves):
-                                curve = bl_node.mapping.curves[idx]
-                                for pt_idx, pt in enumerate(points):
-                                    if pt_idx < len(curve.points):
-                                        curve.points[pt_idx].location = (float(pt[0]), float(pt[1]))
-                                    else:
-                                        curve.points.new(float(pt[0]), float(pt[1]))
-                        except Exception as ex:
-                            env.log(f"Failed setting curve {curve_idx_str}: {ex}")
-                    try:
-                        bl_node.mapping.update()
-                    except Exception:
-                        pass
+            if attr_name == "curves":
+                if not hasattr(bl_node, "mapping") or not hasattr(bl_node.mapping, "curves") or not isinstance(val, dict):
+                    continue
+                curves = bl_node.mapping.curves
+                for curve_idx_str, points in val.items():
+                    if not curve_idx_str.isdigit():
+                        continue
+                    idx = int(curve_idx_str)
+                    if idx >= len(curves):
+                        continue
+                    curve = curves[idx]
+                    for pt_idx, pt in enumerate(points):
+                        if pt_idx < len(curve.points):
+                            curve.points[pt_idx].location = (float(pt[0]), float(pt[1]))
+                        else:
+                            curve.points.new(float(pt[0]), float(pt[1]))
+                try:
+                    bl_node.mapping.update()
+                except Exception:
+                    pass
                 continue
 
             if hasattr(bl_node, attr_name) and not (hasattr(bl_node, "inputs") and attr_name in bl_node.inputs):
@@ -372,25 +451,23 @@ def apply_miex_material(
             elif attr_name.isdigit() and int(attr_name) < len(bl_node.inputs):
                 sock = bl_node.inputs[int(attr_name)]
 
-            if val is not None and sock is not None:
-                try:
-                    if sock.type == "RGBA":
-                        if isinstance(val, (list, tuple)):
-                            if len(val) == 3:
-                                sock.default_value = (float(val[0]), float(val[1]), float(val[2]), 1.0)
-                            elif len(val) >= 4:
-                                sock.default_value = (float(val[0]), float(val[1]), float(val[2]), float(val[3]))
-                        elif isinstance(val, (int, float)):
-                            fv = float(val)
-                            sock.default_value = (fv, fv, fv, 1.0)
-                    elif sock.type == "VALUE":
-                        if isinstance(val, (int, float, bool)):
-                            sock.default_value = float(val)
-                    elif sock.type == "VECTOR":
-                        if isinstance(val, (list, tuple)) and len(val) >= 3:
-                            sock.default_value = (float(val[0]), float(val[1]), float(val[2]))
-                except Exception as ex:
-                    env.log(f"Failed setting socket default {attr_name} on {node_name}: {ex}")
+            if val is None or sock is None:
+                continue
+
+            try:
+                if sock.type == "RGBA":
+                    if isinstance(val, (list, tuple)):
+                        alpha = float(val[3]) if len(val) >= 4 else 1.0
+                        sock.default_value = (float(val[0]), float(val[1]), float(val[2]), alpha)
+                    elif isinstance(val, (int, float)):
+                        fv = float(val)
+                        sock.default_value = (fv, fv, fv, 1.0)
+                elif sock.type == "VALUE" and isinstance(val, (int, float, bool)):
+                    sock.default_value = float(val)
+                elif sock.type == "VECTOR" and isinstance(val, (list, tuple)) and len(val) >= 3:
+                    sock.default_value = (float(val[0]), float(val[1]), float(val[2]))
+            except Exception as ex:
+                env.log(f"Failed setting socket default {attr_name} on {node_name}: {ex}")
 
     # Connect internal links
     for node_name, miex_node in miex_mat.network.items():
@@ -463,22 +540,51 @@ def apply_miex_material(
         material.use_backface_culling_shadow = use_backface_culling
     except Exception:
         pass
-    try:
-        material.blend_method = "HASHED"
-    except Exception:
-        pass
+    if original_passes:
+        for pass_key, pass_node_name in (("diffuse", "FILE"), ("normal", "TEX_NORM"), ("specular", "TEX_SPEC")):
+            pass_node = created_nodes.get(pass_node_name)
+            if pass_node and hasattr(pass_node, "image") and pass_node.image is None:
+                orig_val = original_passes.get(pass_key)
+                if isinstance(orig_val, bpy.types.Image):
+                    pass_node.image = orig_val
+                elif isinstance(orig_val, (str, Path)):
+                    p_val = Path(orig_val)
+                    if p_val.is_file():
+                        pass_node.image = bpy.data.images.load(str(p_val), check_existing=True)
+                    else:
+                        for cand in (p_val.name, f"{p_val.name}.png", f"{p_val.stem}.png"):
+                            if cand in bpy.data.images:
+                                pass_node.image = bpy.data.images[cand]
+                                break
 
 
 def prep_single_material(
     material: Material,
     templates: list[MiExTemplate],
     materials_cache: dict[Path, dict[str, MiExMaterial]] | None = None,
+    pack_format: str = "simple",
+    use_extra_maps: bool = True,
+    use_reflections: bool = True,
+    use_emission: bool = True,
+    only_solid: bool = False,
+    auto_find_missing: bool = False,
+    texturepack_path: Path | None = None,
 ) -> bool:
     """Preps a single Blender Material using the MiEx pipeline."""
     if not material or material.library or material.get("MCPREP_NO_PREP", False):
         return False
 
     passes = generate.get_textures(material)
+    if auto_find_missing:
+        for pass_name in list(passes.keys()):
+            if passes.get(pass_name):
+                res = generate.replace_missing_texture(passes[pass_name])
+                if res > 0:
+                    material["texture_swapped"] = True
+
+    mat_gen = util.nameGeneralize(material.name)
+    canon_name, _ = get_mc_canonical_name(mat_gen)
+
     diffuse_img = passes.get("diffuse")
     diff_path: Path | None = None
     if diffuse_img and diffuse_img.filepath:
@@ -486,6 +592,28 @@ def prep_single_material(
         if raw_path.is_file():
             diff_path = raw_path
 
+    # If diffuse texture not found on disk, attempt lookup in active texture pack
+    active_pack = texturepack_path
+    if not active_pack and hasattr(bpy.context.scene, "mcprep_texturepack_path") and bpy.context.scene.mcprep_texturepack_path:
+        p = Path(bpy.path.abspath(bpy.context.scene.mcprep_texturepack_path))
+        if p.is_dir():
+            active_pack = p
+
+    orig_fp = diffuse_img.filepath if (diffuse_img and diffuse_img.filepath) else (diffuse_img.name if diffuse_img else "")
+
+    if not diff_path and active_pack:
+        tex_res = find_texture_in_pack(active_pack, canon_name, orig_path=orig_fp)
+        if not tex_res:
+            tex_res = generate.find_from_texturepack(canon_name, active_pack)
+            if isinstance(tex_res, MCprepError) or not tex_res or not tex_res.is_file():
+                tex_res = None
+        if tex_res and tex_res.is_file():
+            diff_path = tex_res
+            if not diffuse_img:
+                diffuse_img = bpy.data.images.load(str(diff_path), check_existing=True)
+                passes["diffuse"] = diffuse_img
+
+    # Check for exported _materials.json (MiEx export workflow)
     if diff_path:
         mat_json_file = find_materials_json(diff_path.parent)
         if mat_json_file:
@@ -496,30 +624,62 @@ def prep_single_material(
                 if materials_cache is not None:
                     materials_cache[mat_json_file] = exported_mats
 
-            canon_name, _ = get_mc_canonical_name(material.name)
             miex_mat = exported_mats.get(material.name) or exported_mats.get(canon_name)
             if miex_mat:
-                apply_miex_material(material, miex_mat, base_dir=mat_json_file.parent)
+                apply_miex_material(material, miex_mat, base_dir=mat_json_file.parent, original_passes=passes)
                 material["MCPREP_MIEX_PREPPED"] = True
                 return True
 
+    # Discover texture passes
     texture_paths: dict[str, Path] = {}
     if diff_path:
-        texture_paths = collect_texture_passes(diff_path)
+        # Load additional passes from disk (like normal and spec maps)
+        if use_extra_maps and pack_format != "simple":
+            texture_paths = collect_texture_passes(diff_path)
+        else:
+            texture_paths = {"diffuse": diff_path}
+    elif diffuse_img:
+        texture_paths = {"diffuse": Path(diffuse_img.name)}
     else:
-        canon_name, _ = get_mc_canonical_name(material.name)
         texture_paths = {"diffuse": Path(canon_name)}
+
+    # Also pick up normal/specular images already attached to material
+    if use_extra_maps and pack_format != "simple":
+        if passes.get("normal") and passes["normal"].filepath:
+            np = Path(bpy.path.abspath(passes["normal"].filepath))
+            if np.is_file():
+                texture_paths["normal"] = np
+        if passes.get("specular") and passes["specular"].filepath:
+            sp = Path(bpy.path.abspath(passes["specular"].filepath))
+            if sp.is_file():
+                texture_paths["specular"] = sp
+
+    if not use_emission:
+        texture_paths.pop("emission", None)
+
+    extra_flags = {
+        "reflective": checklist(canon_name, "reflective") if use_reflections else False,
+        "metallic": checklist(canon_name, "metallic") if use_reflections else False,
+        "emit": (checklist(canon_name, "emit") or "emit" in material.name.lower()) if use_emission else False,
+        "solid": only_solid or checklist(canon_name, "solid"),
+    }
 
     miex_mat = auto_generate_miex_material(
         material_name=material.name,
         texture_paths=texture_paths,
         templates=templates,
+        extra_flags=extra_flags,
     )
     if not miex_mat:
         return False
 
     base_dir = diff_path.parent if diff_path else None
-    apply_miex_material(material, miex_mat, base_dir=base_dir)
+    apply_miex_material(material, miex_mat, base_dir=base_dir, original_passes=passes)
+
+    is_solid = only_solid or checklist(canon_name, "solid")
+    if hasattr(material, "blend_method"):
+        material.blend_method = 'OPAQUE' if is_solid else 'HASHED'
+
     material["MCPREP_MIEX_PREPPED"] = True
     return True
 
@@ -536,37 +696,49 @@ def arrange_material_nodes(node_tree: bpy.types.NodeTree) -> None:
         env.log(f"nodearrange layout error: {ex}")
 
 
-class MCPREP_OT_miex_prep_materials(bpy.types.Operator):
+class MCPREP_OT_miex_prep_materials(bpy.types.Operator, McprepMaterialProps):
     """Preps materials on selected objects using MiEx material templates or exported materials JSON"""
     bl_idname = "mcprep.miex_prep_materials"
-    bl_label = "Prep MiEx Materials"
+    bl_label = "Prep Materials"
     bl_description = "Convert materials on selected objects using MiEx templates or exported _materials.json"
     bl_options = {'REGISTER', 'UNDO'}
 
-    pack_format: bpy.props.EnumProperty(
-        name="Pack Format",
-        description="MiEx template pack format to use",
-        items=[
-            ("simple", "Simple (no PBR)", "Use simple shader setup with no PBR or emission falloff"),
-            ("specular", "Specular", "Sets the pack format to Specular"),
-            ("seus", "SEUS", "Sets the pack format to SEUS"),
-        ],
-        default="simple",
+    pack_format: bpy.props.StringProperty(
+        name="Pack Format Alias",
+        description="Alias for packFormat",
+        default="",
+        options={'HIDDEN'},
     )
-
     templates_dir: bpy.props.StringProperty(
         name="Templates Directory",
         description="Optional directory containing custom MiEx template JSON files",
         subtype="DIR_PATH",
         default="",
+        options={'HIDDEN'},
     )
 
     track_function = "miex_prep_materials"
     track_param = None
     track_exporter = None
 
+    def invoke(self, context: Context, event: bpy.types.Event):
+        if hasattr(context.scene, "mcprep_miex_pack_format"):
+            self.packFormat = context.scene.mcprep_miex_pack_format
+        if hasattr(context.scene, "mcprep_miex_templates_path") and context.scene.mcprep_miex_templates_path:
+            self.templates_dir = context.scene.mcprep_miex_templates_path
+        return context.window_manager.invoke_props_dialog(
+            self, width=300 * util.ui_scale()
+        )
+
+    def draw(self, context: Context):
+        draw_mats_common(self, context)
+
     @tracking.report_error
     def execute(self, context: Context):
+        active_pack = self.pack_format if self.pack_format else self.packFormat
+        if hasattr(context.scene, "mcprep_miex_pack_format"):
+            context.scene.mcprep_miex_pack_format = active_pack
+
         obj_list = context.selected_objects
         if not obj_list:
             self.report({'ERROR'}, "No objects selected")
@@ -577,9 +749,10 @@ class MCPREP_OT_miex_prep_materials(bpy.types.Operator):
             self.report({'ERROR'}, "No materials found on selected objects")
             return {'CANCELLED'}
 
-        templates = get_default_templates(self.pack_format)
-        if self.templates_dir:
-            custom_dir = Path(bpy.path.abspath(self.templates_dir))
+        templates = get_default_templates(active_pack)
+        custom_dir_str = self.templates_dir or getattr(context.scene, "mcprep_miex_templates_path", "")
+        if custom_dir_str:
+            custom_dir = Path(bpy.path.abspath(custom_dir_str))
             if custom_dir.is_dir():
                 custom_templates = load_templates_from_dir(custom_dir)
                 if custom_templates:
@@ -588,11 +761,62 @@ class MCPREP_OT_miex_prep_materials(bpy.types.Operator):
         materials_cache: dict[Path, dict[str, MiExMaterial]] = {}
         prepped_count = 0
 
+        texpack_path = None
+        if hasattr(context.scene, "mcprep_texturepack_path") and context.scene.mcprep_texturepack_path:
+            p = Path(bpy.path.abspath(context.scene.mcprep_texturepack_path))
+            if p.is_dir():
+                texpack_path = p
+
         for mat in mat_list:
-            if prep_single_material(mat, templates, materials_cache):
+            if prep_single_material(
+                mat,
+                templates=templates,
+                materials_cache=materials_cache,
+                pack_format=active_pack,
+                use_extra_maps=self.useExtraMaps,
+                use_reflections=self.useReflections,
+                use_emission=self.useEmission,
+                only_solid=self.makeSolid,
+                auto_find_missing=self.autoFindMissingTextures,
+                texturepack_path=texpack_path,
+            ):
                 prepped_count += 1
                 if mat.node_tree:
                     arrange_material_nodes(mat.node_tree)
+
+            if self.animateTextures:
+                try:
+                    from . import sequences
+                    sequences.animate_single_material(
+                        mat,
+                        context.scene.render.engine,
+                        export_location=sequences.ExportLocation.ORIGINAL,
+                    )
+                except Exception as ex:
+                    env.log(f"Failed to animate texture on {mat.name}: {ex}")
+
+        # Sync materials
+        if self.syncMaterials and hasattr(bpy.ops.mcprep, "sync_materials"):
+            try:
+                bpy.ops.mcprep.sync_materials(
+                    selected=True, link=False, replace_materials=False, skipUsage=True
+                )
+            except Exception as ex:
+                env.log(f"Failed to sync materials: {ex}")
+
+        # Combine materials
+        if self.combineMaterials and hasattr(bpy.ops.mcprep, "combine_materials"):
+            try:
+                bpy.ops.mcprep.combine_materials(selection_only=True, skipUsage=True)
+            except Exception as ex:
+                env.log(f"Failed to combine materials: {ex}")
+
+        # Improve UI
+        if self.improveUiSettings and hasattr(bpy.ops.mcprep, "improve_ui"):
+            try:
+                bpy.ops.mcprep.improve_ui()
+            except Exception as err:
+                env.log(f"Failed to improve UI: {err}")
 
         self.report({'INFO'}, f"Prepped {prepped_count} material(s) with MiEx pipeline")
         return {'FINISHED'}
@@ -623,14 +847,29 @@ class MCPREP_OT_miex_swap_texture_pack(bpy.types.Operator, ImportHelper):
     use_filter_folder = True
     fileselectparams = "use_filter_blender"
     filepath: bpy.props.StringProperty(subtype="DIR_PATH")
+    folder: bpy.props.StringProperty(subtype="DIR_PATH")
+    texturepack_path: bpy.props.StringProperty(subtype="DIR_PATH")
+    prep_materials: bpy.props.BoolProperty(
+        name="Prep materials",
+        description="Preps materials if not already prepped",
+        default=True,
+    )
 
     track_function = "miex_swap_texture_pack"
     track_param = None
     track_exporter = None
 
+    def draw(self, context: Context):
+        layout = self.layout
+        layout.prop(self, "pack_format")
+
     @tracking.report_error
     def execute(self, context: Context):
-        raw_path = self.filepath
+        if hasattr(context.scene, "mcprep_miex_pack_format"):
+            context.scene.mcprep_miex_pack_format = self.pack_format
+        raw_path = self.filepath or self.folder or self.texturepack_path
+        if not raw_path and hasattr(context.scene, "mcprep_texturepack_path"):
+            raw_path = context.scene.mcprep_texturepack_path
         if not raw_path:
             self.report({'ERROR'}, "No folder selected")
             return {'CANCELLED'}
@@ -674,11 +913,12 @@ class MCPREP_OT_miex_swap_texture_pack(bpy.types.Operator, ImportHelper):
 
             passes = generate.get_textures(mat)
             diff_img = passes.get("diffuse")
-            stem = Path(diff_img.filepath).stem if diff_img and diff_img.filepath else mat.name
+            stem = Path(diff_img.filepath).stem if diff_img and diff_img.filepath else (Path(diff_img.name).stem if diff_img else mat.name)
             clean_stem = stem.split(":")[-1].split("/")[-1]
             canon_name, _ = get_mc_canonical_name(clean_stem)
+            orig_fp = diff_img.filepath if (diff_img and diff_img.filepath) else (diff_img.name if diff_img else "")
 
-            new_tex_path = find_texture_in_pack(pack_dir, canon_name)
+            new_tex_path = find_texture_in_pack(pack_dir, canon_name, orig_path=orig_fp)
             if not new_tex_path:
                 continue
 
@@ -691,7 +931,7 @@ class MCPREP_OT_miex_swap_texture_pack(bpy.types.Operator, ImportHelper):
             if not miex_mat:
                 continue
 
-            apply_miex_material(mat, miex_mat, base_dir=new_tex_path.parent)
+            apply_miex_material(mat, miex_mat, base_dir=new_tex_path.parent, original_passes=new_passes)
             if mat.node_tree:
                 arrange_material_nodes(mat.node_tree)
             mat["MCPREP_MIEX_PREPPED"] = True
@@ -702,9 +942,44 @@ class MCPREP_OT_miex_swap_texture_pack(bpy.types.Operator, ImportHelper):
         return {'FINISHED'}
 
 
+class MCPREP_OT_miex_reset_templates_path(bpy.types.Operator):
+    """Resets the custom MiEx templates path"""
+    bl_idname = "mcprep.miex_reset_templates_path"
+    bl_label = "Reset MiEx Templates Path"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context: Context):
+        if hasattr(context.scene, "mcprep_miex_templates_path"):
+            context.scene.mcprep_miex_templates_path = ""
+        return {'FINISHED'}
+
+
+class MCPREP_OT_miex_open_templates_folder(bpy.types.Operator):
+    """Opens the active MiEx template folder in file manager"""
+    bl_idname = "mcprep.miex_open_templates_folder"
+    bl_label = "Open Template Folder"
+    bl_options = {'REGISTER'}
+
+    def execute(self, context: Context):
+        if hasattr(context.scene, "mcprep_miex_templates_path") and context.scene.mcprep_miex_templates_path:
+            custom_path = Path(bpy.path.abspath(context.scene.mcprep_miex_templates_path))
+            if custom_path.is_dir():
+                util.open_folder_crossplatform(str(custom_path))
+                return {'FINISHED'}
+        pack_format = getattr(context.scene, "mcprep_miex_pack_format", "simple")
+        target_dir = MIEX_TEMPLATES_DIR / pack_format
+        if not target_dir.is_dir():
+            target_dir = MIEX_TEMPLATES_DIR / "simple"
+        if target_dir.is_dir():
+            util.open_folder_crossplatform(str(target_dir))
+        return {'FINISHED'}
+
+
 classes = (
     MCPREP_OT_miex_prep_materials,
     MCPREP_OT_miex_swap_texture_pack,
+    MCPREP_OT_miex_reset_templates_path,
+    MCPREP_OT_miex_open_templates_folder,
 )
 
 
