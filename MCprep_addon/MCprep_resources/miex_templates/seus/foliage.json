@@ -98,6 +98,10 @@
                     "Roughness": {
                         "type": "Float",
                         "value": 0.85
+                    },
+                    "Emission Strength": {
+                        "type": "Float",
+                        "value": 0.0
                     }
                 }
             }

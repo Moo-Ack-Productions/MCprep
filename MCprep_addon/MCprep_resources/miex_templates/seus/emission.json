@@ -55,7 +55,7 @@
         "json:Surface": "MAT.BSDF"
     },
     "network": {
-        "@texture@ && @emitsBlockLight@": {
+        "@texture@ && @emitsBlockLight@ && !@texture@_specular": {
             "MAT": {
                 "attributes": {
                     "Emission Color": {
@@ -65,6 +65,20 @@
                     "Emission Strength": {
                         "type": "Float",
                         "value": 1.0
+                    }
+                }
+            }
+        },
+        "@texture@_specular && @emitsBlockLight@": {
+            "MAT": {
+                "attributes": {
+                    "Emission Color": {
+                        "type": "Color",
+                        "connection": "FILE.Color"
+                    },
+                    "Emission Strength": {
+                        "type": "Float",
+                        "connection": "SEP_COLOR.Blue"
                     }
                 }
             }

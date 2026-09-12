@@ -181,7 +181,13 @@
                     "Metallic": {
                         "type": "Float",
                         "connection": "SEP_COLOR.Green"
-                    },
+                    }
+                }
+            }
+        },
+        "@texture@_specular && @emitsBlockLight@": {
+            "MAT": {
+                "attributes": {
                     "Emission Strength": {
                         "type": "Float",
                         "connection": "SEP_COLOR.Blue"

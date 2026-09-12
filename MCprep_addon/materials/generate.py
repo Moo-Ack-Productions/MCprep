@@ -1567,7 +1567,7 @@ def matgen_cycles_principled(mat: Material, options: PrepOptions) -> Optional[bo
 	if options.pack_format == PackFormat.SPECULAR:
 		texgen_specular(mat, options.passes, nodeInputs, options.use_reflections)
 	elif options.pack_format == PackFormat.SEUS:
-		texgen_seus(mat, options.passes, nodeInputs, options.use_reflections, options.use_emission_nodes)
+		texgen_seus(mat, options.passes, nodeInputs, options.use_reflections, options.use_emission_nodes and options.use_emission)
 
 	if options.only_solid is True or checklist(canon, "solid"):
 		nodes.remove(nodeTrans)
@@ -1796,7 +1796,7 @@ def matgen_cycles_original(mat: Material, options: PrepOptions):
 	if options.pack_format == PackFormat.SPECULAR:
 		texgen_specular(mat, options.passes, nodeInputs, options.use_reflections)
 	elif options.pack_format == PackFormat.SEUS:
-		texgen_seus(mat, options.passes, nodeInputs, options.use_reflections, options.use_emission_nodes)
+		texgen_seus(mat, options.passes, nodeInputs, options.use_reflections, options.use_emission_nodes and options.use_emission)
 
 	if options.only_solid is True or checklist(canon, "solid"):
 		nodes.remove(nodeTrans)

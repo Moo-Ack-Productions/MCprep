@@ -931,20 +931,70 @@ class MiExPrepTest(unittest.TestCase):
         )
         self.assertTrue(has_green_to_met)
 
-        # Check Blue -> Emission Strength
+        # Non-emissive block (iron_block) should NOT connect Blue to Emission Strength
         has_blue_to_emit = any(
             l.from_node == sep_node and l.from_socket.name in ("Blue", "B") and
             l.to_node == bsdf_node and l.to_socket.name == "Emission Strength"
             for l in links
         )
-        self.assertTrue(has_blue_to_emit)
+        self.assertFalse(has_blue_to_emit)
 
-        # Check FILE.Color -> Emission Color
-        has_file_to_emit_col = any(
-            l.from_node == file_node and l.to_node == bsdf_node and l.to_socket.name == "Emission Color"
-            for l in links
+        # Emissive block (glowstone) with specular map SHOULD connect Blue to Emission Strength
+        mat_glow_miex = auto_generate_miex_material(
+            material_name="minecraft:block/glowstone",
+            texture_paths={
+                "diffuse": Path("textures/block/glowstone.png"),
+                "specular": Path("textures/block/glowstone_s.png"),
+            },
+            templates=templates,
         )
-        self.assertTrue(has_file_to_emit_col)
+        self.assertIsNotNone(mat_glow_miex)
+        mat_glow = bpy.data.materials.new(name="test_glowstone_seus")
+        apply_miex_material(mat_glow, mat_glow_miex)
+
+        glow_nodes = mat_glow.node_tree.nodes
+        glow_links = mat_glow.node_tree.links
+        glow_sep = glow_nodes.get("SEP_COLOR")
+        glow_bsdf = glow_nodes.get("MAT")
+        self.assertIsNotNone(glow_sep)
+        self.assertIsNotNone(glow_bsdf)
+
+        glow_blue_to_emit = any(
+            l.from_node == glow_sep and l.from_socket.name in ("Blue", "B") and
+            l.to_node == glow_bsdf and l.to_socket.name == "Emission Strength"
+            for l in glow_links
+        )
+        self.assertTrue(glow_blue_to_emit)
+
+    def test_seus_foliage_no_emission_with_specular_map(self):
+        """Tests that foliage (e.g. oak_leaves) prepped with SEUS and a specular map does not emit."""
+        templates = get_default_templates("seus")
+        mat_miex = auto_generate_miex_material(
+            material_name="minecraft:block/oak_leaves",
+            texture_paths={
+                "diffuse": Path("textures/block/oak_leaves.png"),
+                "specular": Path("textures/block/oak_leaves_s.png"),
+            },
+            templates=templates,
+        )
+        self.assertIsNotNone(mat_miex)
+        mat = bpy.data.materials.new(name="test_foliage_seus")
+        apply_miex_material(mat, mat_miex)
+
+        bsdf_node = mat.node_tree.nodes.get("MAT")
+        self.assertIsNotNone(bsdf_node)
+
+        # Ensure no links into Emission Strength
+        emit_strength_sock = bsdf_node.inputs.get("Emission Strength")
+        self.assertIsNotNone(emit_strength_sock)
+        self.assertEqual(len(emit_strength_sock.links), 0)
+        self.assertEqual(emit_strength_sock.default_value, 0.0)
+
+        # Ensure no links into Emission Color
+        emit_color_sock = bsdf_node.inputs.get("Emission Color")
+        if emit_color_sock is not None:
+            self.assertEqual(len(emit_color_sock.links), 0)
+
 
     def test_prep_operator_with_pack_formats(self):
         """Tests the MCPREP_OT_miex_prep_materials operator with specular and seus formats."""
