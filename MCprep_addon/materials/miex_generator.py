@@ -163,13 +163,51 @@ def evaluate_condition_token(
     if token == "@biomeColor@":
         return bool(flags.get("biomeColor", False))
 
-    if token == "@emit@":
+    if token == "@emitsBlockLight@":
+        if "emitsBlockLight" in flags:
+            return bool(flags["emitsBlockLight"]) and flags.get("use_emission", True)
         return bool(flags.get("emit", False)) if flags.get("use_emission", True) else False
+
+    if token == "@doubleSided@":
+        if "doubleSided" in flags:
+            return bool(flags["doubleSided"])
+        return not bool(flags.get("backface_culling", False))
+
+    if token.startswith("@color.") and token.endswith("@"):
+        set_name = token[7:-1].lower()
+        color_sets = flags.get("color_sets")
+        if color_sets is not None:
+            set_names = {
+                s.lower()
+                for s in (color_sets.keys() if isinstance(color_sets, dict) else color_sets)
+            }
+            if set_name in set_names:
+                return True
+            if set_name == "ao" and "cdao" in set_names:
+                return True
+            if set_name == "cdao" and "ao" in set_names:
+                return True
+            return False
+        if set_name in ("biome", "foliage", "grass", "water", "dry_foliage"):
+            return bool(flags.get("biomeColor", False))
+        return False
+
+    if token.startswith("@shadingMode.") and token.endswith("@"):
+        target_mode = token[13:-1].lower()
+        active_mode = str(flags.get("shading_mode", flags.get("pack_format", ""))).lower()
+        if not active_mode:
+            return False
+        if target_mode == active_mode:
+            return True
+        if target_mode == "pbr" and active_mode in ("seus", "specular", "labpbr"):
+            return True
+        return False
+
+    if token.endswith(".animated") or token.endswith(".interpolated"):
+        return bool(flags.get("miex_uv_anim", False))
 
     if token.startswith("@") and token.endswith("@"):
         flag_name = token[1:-1]
-        if flag_name == "emit" and not flags.get("use_emission", True):
-            return False
         if flag_name in ("reflective", "metallic") and not flags.get("use_reflections", True):
             return False
         if flag_name == "solid":

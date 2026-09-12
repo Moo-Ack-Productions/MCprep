@@ -55,7 +55,7 @@
         "json:Surface": "MAT.BSDF"
     },
     "network": {
-        "@texture@ && @emit@": {
+        "@texture@ && @emitsBlockLight@": {
             "MAT": {
                 "attributes": {
                     "Emission Color": {

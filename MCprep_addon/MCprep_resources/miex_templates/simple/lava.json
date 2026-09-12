@@ -23,7 +23,7 @@
                 }
             }
         },
-        "@emit@": {
+        "@emitsBlockLight@": {
             "MAT": {
                 "attributes": {
                     "Emission Color": {

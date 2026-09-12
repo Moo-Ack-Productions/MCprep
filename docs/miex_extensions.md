@@ -16,7 +16,6 @@ are:
 
 | Token | Description |
 | :--- | :--- |
-| `@emit@` | Evaluates true if the block is classified as light-emitting in MCprep and the `Emission` prep setting (`useEmission`) is enabled. |
 | `@reflective@` | Evaluates true if the block has reflective properties (e.g. ice, polished blocks) and the `Reflections` prep setting (`useReflections`) is enabled. |
 | `@metallic@` | Evaluates true if the block is metallic (e.g. iron, gold, copper) and `useReflections` is enabled. |
 | `@solid@` | Evaluates true if the block is fully opaque, or if the `Make Solid` prep setting (`makeSolid`) is enabled. |

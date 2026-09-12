@@ -296,6 +296,7 @@ def apply_miex_material(
     nodes = node_tree.nodes
     links = node_tree.links
 
+    anim_data = generate.copy_texture_animation_pass_settings(material)
     nodes.clear()
 
     output_node = nodes.new("ShaderNodeOutputMaterial")
@@ -310,6 +311,7 @@ def apply_miex_material(
     tag_map = {
         "FILE": "MCPREP_diffuse",
         "TEX_NORM": "MCPREP_normal",
+        "NORM_MAP": "MCPREP_normal",
         "TEX_SPEC": "MCPREP_specular",
     }
 
@@ -336,8 +338,21 @@ def apply_miex_material(
         bl_node.label = node_name
 
         prop_name = tag_map.get(node_name)
+        if not prop_name and "TexImage" in bl_type:
+            img_val = ""
+            if "image" in miex_node.attributes:
+                raw_img = miex_node.attributes["image"].value
+                img_val = str(raw_img).lower() if raw_img else ""
+            lower_name = node_name.lower()
+            if "diffuse" in lower_name or "@texture@" in img_val or "diffuse" in img_val:
+                prop_name = "MCPREP_diffuse"
+            elif "normal" in lower_name or "norm" in lower_name or "normal" in img_val:
+                prop_name = "MCPREP_normal"
+            elif "specular" in lower_name or "spec" in lower_name or "specular" in img_val:
+                prop_name = "MCPREP_specular"
+
         if prop_name:
-            if hasattr(bl_node, "mnp"):
+            if hasattr(bl_node, "mnp") and bl_node.mnp is not None:
                 try:
                     setattr(bl_node.mnp, prop_name, True)
                 except Exception:
@@ -370,6 +385,23 @@ def apply_miex_material(
             tex_y -= 200.0
 
         created_nodes[node_name] = bl_node
+
+    has_diffuse_tag = any(
+        util.np_is_mcprep_node_prop(n, "MCPREP_diffuse") for n in created_nodes.values()
+    )
+    if not has_diffuse_tag:
+        for bl_node in created_nodes.values():
+            if bl_node.type == "TEX_IMAGE":
+                if hasattr(bl_node, "mnp") and bl_node.mnp is not None:
+                    try:
+                        bl_node.mnp.MCPREP_diffuse = True
+                    except Exception:
+                        pass
+                try:
+                    bl_node["MCPREP_diffuse"] = True
+                except Exception:
+                    pass
+                break
 
     for node_name, miex_node in miex_mat.network.items():
         bl_node = created_nodes.get(node_name)
@@ -564,6 +596,12 @@ def apply_miex_material(
                                 pass_node.image = bpy.data.images[cand]
                                 break
 
+    if anim_data:
+        try:
+            generate.apply_texture_animation_pass_settings(material, anim_data)
+        except Exception as ex:
+            env.log(f"Failed restoring animation pass settings on {material.name}: {ex}")
+
 
 def prep_single_material(
     material: Material,
@@ -578,6 +616,7 @@ def prep_single_material(
     texturepack_path: Path | None = None,
     normal_intensity: float = 1.0,
     explicit_diffuse_path: Path | None = None,
+    animate_textures: bool = False,
 ) -> bool:
     """Preps a single Blender Material using the MiEx pipeline."""
     if not material or material.library or material.get("MCPREP_NO_PREP", False):
@@ -647,6 +686,18 @@ def prep_single_material(
             material["MCPREP_MIEX_PREPPED"] = True
             if explicit_diffuse_path:
                 material["texture_swapped"] = True
+            if animate_textures:
+                try:
+                    from . import sequences
+
+                    engine = bpy.context.scene.render.engine if bpy.context and bpy.context.scene else 'CYCLES'
+                    sequences.animate_single_material(
+                        material,
+                        engine,
+                        export_location=sequences.ExportLocation.ORIGINAL,
+                    )
+                except Exception as ex:
+                    env.log(f"Failed to animate texture on {material.name}: {ex}")
             return True
 
     # Discover texture passes
@@ -687,6 +738,9 @@ def prep_single_material(
         "metallic": checklist(canon_name, "metallic") if use_reflections else False,
         "emit": (checklist(canon_name, "emit") or "emit" in material.name.lower()) if use_emission else False,
         "solid": is_solid,
+        "backface_culling": checklist(canon_name, "backface_culling"),
+        "pack_format": pack_format,
+        "shading_mode": pack_format,
     }
 
     miex_mat = auto_generate_miex_material(
@@ -709,6 +763,20 @@ def prep_single_material(
     material["MCPREP_MIEX_PREPPED"] = True
     if explicit_diffuse_path:
         material["texture_swapped"] = True
+
+    if animate_textures:
+        try:
+            from . import sequences
+
+            engine = bpy.context.scene.render.engine if bpy.context and bpy.context.scene else 'CYCLES'
+            sequences.animate_single_material(
+                material,
+                engine,
+                export_location=sequences.ExportLocation.ORIGINAL,
+            )
+        except Exception as ex:
+            env.log(f"Failed to animate texture on {material.name}: {ex}")
+
     return True
 
 
@@ -796,7 +864,7 @@ class MCPREP_OT_miex_prep_materials(bpy.types.Operator, McprepMaterialProps):
                 texpack_path = p
 
         for mat in mat_list:
-            if prep_single_material(
+            prepped = prep_single_material(
                 mat,
                 templates=templates,
                 materials_cache=materials_cache,
@@ -808,12 +876,13 @@ class MCPREP_OT_miex_prep_materials(bpy.types.Operator, McprepMaterialProps):
                 auto_find_missing=self.autoFindMissingTextures,
                 texturepack_path=texpack_path,
                 normal_intensity=self.normalIntensity,
-            ):
+                animate_textures=self.animateTextures,
+            )
+            if prepped:
                 prepped_count += 1
                 if mat.node_tree:
                     arrange_material_nodes(mat.node_tree)
-
-            if self.animateTextures:
+            elif self.animateTextures:
                 try:
                     from . import sequences
                     sequences.animate_single_material(
@@ -1024,27 +1093,39 @@ class MCPREP_OT_miex_swap_texture_pack(
                     texturepack_path=pack_dir,
                     normal_intensity=self.normalIntensity,
                     explicit_diffuse_path=new_tex_path,
+                    animate_textures=self.animateTextures,
                 ):
                     if mat.node_tree:
                         arrange_material_nodes(mat.node_tree)
                     swapped_count += 1
+                elif self.animateTextures:
+                    try:
+                        from . import sequences
+
+                        sequences.animate_single_material(
+                            mat,
+                            context.scene.render.engine,
+                            export_location=sequences.ExportLocation.ORIGINAL,
+                        )
+                    except Exception as ex:
+                        env.log(f"Failed to animate texture on {mat.name}: {ex}")
             else:
                 new_img = util.loadTexture(str(new_tex_path))
                 if generate.set_cycles_texture(new_img, mat, extra_passes=self.useExtraMaps):
                     mat["texture_swapped"] = True
                     swapped_count += 1
 
-            if self.animateTextures:
-                try:
-                    from . import sequences
+                if self.animateTextures:
+                    try:
+                        from . import sequences
 
-                    sequences.animate_single_material(
-                        mat,
-                        context.scene.render.engine,
-                        export_location=sequences.ExportLocation.ORIGINAL,
-                    )
-                except Exception as ex:
-                    env.log(f"Failed to animate texture on {mat.name}: {ex}")
+                        sequences.animate_single_material(
+                            mat,
+                            context.scene.render.engine,
+                            export_location=sequences.ExportLocation.ORIGINAL,
+                        )
+                    except Exception as ex:
+                        env.log(f"Failed to animate texture on {mat.name}: {ex}")
 
         # Post-prep operations
         if do_prep:

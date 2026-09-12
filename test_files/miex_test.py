@@ -23,13 +23,17 @@ import unittest
 
 import bpy
 
+from MCprep_addon import util
 from MCprep_addon.materials.miex_generator import (
     auto_generate_miex_material,
     dereference_attribute,
+    evaluate_condition,
+    evaluate_condition_token,
     find_matching_template,
     matches_selection,
     resolve_connection_reference,
 )
+from MCprep_addon.materials import generate, sequences
 from MCprep_addon.materials.miex_parser import (
     BlenderCompactNodeInfo,
     MaterialsFileJSON,
@@ -355,6 +359,123 @@ class MiExGeneratorTest(unittest.TestCase):
             "textures/block/furnace_front_on_e.png",
         )
         self.assertEqual(mat.network["MAT"].attributes["Emission Strength"].value, 1.0)
+
+    def test_advanced_condition_emits_block_light(self):
+        """Tests @emitsBlockLight@ token evaluation and emission toggling."""
+        passes = {"diffuse": Path("textures/block/glowstone.png")}
+        # When emit=True and use_emission=True -> True
+        self.assertTrue(evaluate_condition_token("@emitsBlockLight@", "glowstone", passes, {"emit": True, "use_emission": True}))
+        # When emit=True but use_emission=False -> False
+        self.assertFalse(evaluate_condition_token("@emitsBlockLight@", "glowstone", passes, {"emit": True, "use_emission": False}))
+        # When emit=False -> False
+        self.assertFalse(evaluate_condition_token("@emitsBlockLight@", "stone", passes, {"emit": False, "use_emission": True}))
+        # Explicit emitsBlockLight override in flags
+        self.assertTrue(evaluate_condition_token("@emitsBlockLight@", "custom", passes, {"emitsBlockLight": True, "use_emission": True}))
+        self.assertFalse(evaluate_condition_token("@emitsBlockLight@", "custom", passes, {"emitsBlockLight": False, "use_emission": True}))
+        # Negation
+        self.assertFalse(evaluate_condition_token("!@emitsBlockLight@", "glowstone", passes, {"emit": True, "use_emission": True}))
+        self.assertTrue(evaluate_condition_token("!@emitsBlockLight@", "stone", passes, {"emit": False, "use_emission": True}))
+
+    def test_advanced_condition_double_sided(self):
+        """Tests @doubleSided@ token evaluation based on backface_culling or explicit flag."""
+        passes = {"diffuse": Path("textures/block/oak_leaves.png")}
+        # When backface_culling is False -> doubleSided is True
+        self.assertTrue(evaluate_condition_token("@doubleSided@", "leaves", passes, {"backface_culling": False}))
+        # When backface_culling is True -> doubleSided is False
+        self.assertFalse(evaluate_condition_token("@doubleSided@", "leaves", passes, {"backface_culling": True}))
+        # Explicit doubleSided override
+        self.assertTrue(evaluate_condition_token("@doubleSided@", "custom", passes, {"doubleSided": True, "backface_culling": True}))
+        self.assertFalse(evaluate_condition_token("@doubleSided@", "custom", passes, {"doubleSided": False, "backface_culling": False}))
+        # Negation
+        self.assertFalse(evaluate_condition_token("!@doubleSided@", "leaves", passes, {"backface_culling": False}))
+        self.assertTrue(evaluate_condition_token("!@doubleSided@", "leaves", passes, {"backface_culling": True}))
+
+    def test_advanced_condition_color_sets(self):
+        """Tests @color.<set>@ token evaluation including ao/cdao aliasing and biome color sets."""
+        passes = {"diffuse": Path("textures/block/grass_block.png")}
+        # Direct set match
+        self.assertTrue(evaluate_condition_token("@color.ao@", "block", passes, {"color_sets": ["ao"]}))
+        self.assertTrue(evaluate_condition_token("@color.foliage@", "block", passes, {"color_sets": {"foliage"}}))
+        # ao <-> cdao aliasing
+        self.assertTrue(evaluate_condition_token("@color.ao@", "block", passes, {"color_sets": ["cdao"]}))
+        self.assertTrue(evaluate_condition_token("@color.cdao@", "block", passes, {"color_sets": ["ao"]}))
+        # Set missing
+        self.assertFalse(evaluate_condition_token("@color.water@", "block", passes, {"color_sets": ["ao"]}))
+        # Biome color fallback when color_sets is omitted
+        self.assertTrue(evaluate_condition_token("@color.foliage@", "block", passes, {"biomeColor": True}))
+        self.assertTrue(evaluate_condition_token("@color.grass@", "block", passes, {"biomeColor": True}))
+        self.assertFalse(evaluate_condition_token("@color.grass@", "block", passes, {"biomeColor": False}))
+        # Negation
+        self.assertFalse(evaluate_condition_token("!@color.ao@", "block", passes, {"color_sets": ["ao"]}))
+        self.assertTrue(evaluate_condition_token("!@color.ao@", "block", passes, {"color_sets": []}))
+
+    def test_advanced_condition_shading_mode(self):
+        """Tests @shadingMode.<mode>@ token evaluation against shading_mode or pack_format."""
+        passes = {"diffuse": Path("textures/block/stone.png")}
+        # Exact match via pack_format or shading_mode
+        self.assertTrue(evaluate_condition_token("@shadingMode.simple@", "stone", passes, {"pack_format": "simple"}))
+        self.assertTrue(evaluate_condition_token("@shadingMode.seus@", "stone", passes, {"shading_mode": "seus"}))
+        # PBR group matching seus, specular, labpbr
+        self.assertTrue(evaluate_condition_token("@shadingMode.pbr@", "stone", passes, {"pack_format": "specular"}))
+        self.assertTrue(evaluate_condition_token("@shadingMode.pbr@", "stone", passes, {"pack_format": "seus"}))
+        self.assertTrue(evaluate_condition_token("@shadingMode.pbr@", "stone", passes, {"pack_format": "labpbr"}))
+        self.assertFalse(evaluate_condition_token("@shadingMode.pbr@", "stone", passes, {"pack_format": "simple"}))
+        # Mismatched mode
+        self.assertFalse(evaluate_condition_token("@shadingMode.flat@", "stone", passes, {"shading_mode": "smooth"}))
+        # Negation
+        self.assertTrue(evaluate_condition_token("!@shadingMode.flat@", "stone", passes, {"shading_mode": "smooth"}))
+        self.assertFalse(evaluate_condition_token("!@shadingMode.seus@", "stone", passes, {"shading_mode": "seus"}))
+
+    def test_animated_texture_uv_suppression(self):
+        """Tests .animated and .interpolated conditions are suppressed to route to native sequences."""
+        passes = {"diffuse": Path("textures/block/water_still.png")}
+        # Default behavior: miex_uv_anim is False -> .animated evaluates to False
+        self.assertFalse(evaluate_condition_token("@texture@.animated", "water_still", passes, {}))
+        self.assertFalse(evaluate_condition_token("@texture@.interpolated", "water_still", passes, {}))
+        # Negation selects static UV branch
+        self.assertTrue(evaluate_condition_token("!@texture@.animated", "water_still", passes, {}))
+        # When miex_uv_anim explicitly enabled
+        self.assertTrue(evaluate_condition_token("@texture@.animated", "water_still", passes, {"miex_uv_anim": True}))
+
+        # Template-level test: template defines static pass and an animated UV atlas pass
+        template_json: TemplateJSON = {
+            "name": "animated_test",
+            "selection": ["minecraft:block/water*"],
+            "shadingGroup": {"json:Surface": "MAT.BSDF"},
+            "network": {
+                "": {
+                    "MAT": {
+                        "type": "JSON:BlenderCompact-5.1-ShaderNodeBsdfPrincipled",
+                        "attributes": {},
+                    }
+                },
+                "@texture@": {
+                    "FILE": {
+                        "type": "JSON:BlenderCompact-5.1-ShaderNodeTexImage",
+                        "attributes": {
+                            "image": {"type": "asset", "value": "@texture@"},
+                        }
+                    }
+                },
+                "@texture@.animated": {
+                    "UVOFFSETANIM": {
+                        "type": "JSON:BlenderCompact-5.1-ShaderNodeMapping",
+                        "attributes": {},
+                    }
+                }
+            }
+        }
+        tpl = parse_template(template_json)
+        mat = auto_generate_miex_material(
+            material_name="water_still",
+            texture_paths=passes,
+            templates=[tpl],
+        )
+        self.assertIsNotNone(mat)
+        # Static FILE node is created
+        self.assertIn("FILE", mat.network)
+        # Upstream UV atlas offset node UVOFFSETANIM is suppressed in favor of native Blender sequences
+        self.assertNotIn("UVOFFSETANIM", mat.network)
 
 
 class MiExGeneratedMaterialTest(unittest.TestCase):
@@ -954,6 +1075,61 @@ class MiExPrepTest(unittest.TestCase):
         norm_node = mat.node_tree.nodes.get("NORM_MAP")
         self.assertIsNotNone(norm_node)
         self.assertAlmostEqual(norm_node.inputs["Strength"].default_value, 0.5, places=3)
+
+    def test_animated_texture_native_sequence_routing_and_node_tagging(self):
+        """Tests diffuse node tagging and preservation of native image sequence settings."""
+        templates = get_default_templates("simple")
+        mat_miex = auto_generate_miex_material(
+            material_name="prismarine",
+            texture_paths={"diffuse": Path("textures/block/prismarine.png")},
+            templates=templates,
+        )
+        self.assertIsNotNone(mat_miex)
+
+        mat = bpy.data.materials.new(name="minecraft:block/prismarine")
+        apply_miex_material(mat, mat_miex)
+
+        diffuse_node = generate.get_node_for_pass(mat, "diffuse")
+        self.assertIsNotNone(diffuse_node, "Diffuse node must be retrievable via get_node_for_pass")
+        self.assertTrue(
+            util.np_is_mcprep_node_prop(diffuse_node, "MCPREP_diffuse"),
+            "Diffuse node must have MCPREP_diffuse annotated",
+        )
+
+        # Create dummy image and configure as an image sequence
+        dummy_img = bpy.data.images.new(name="prismarine_seq.png", width=16, height=16)
+        dummy_img.source = 'SEQUENCE'
+        diffuse_node.image = dummy_img
+        diffuse_node.image_user.frame_duration = 16
+        diffuse_node.image_user.frame_start = 1
+        diffuse_node.image_user.frame_offset = 4
+
+        # Re-prepping the material should preserve existing image sequence animation settings
+        apply_miex_material(mat, mat_miex, original_passes={"diffuse": dummy_img})
+
+        reprepped_diffuse = generate.get_node_for_pass(mat, "diffuse")
+        self.assertIsNotNone(reprepped_diffuse)
+        self.assertEqual(reprepped_diffuse.image, dummy_img)
+        self.assertEqual(reprepped_diffuse.image_user.frame_duration, 16)
+        self.assertEqual(reprepped_diffuse.image_user.frame_start, 1)
+        self.assertEqual(reprepped_diffuse.image_user.frame_offset, 4)
+        self.assertTrue(reprepped_diffuse.image_user.use_auto_refresh)
+        self.assertTrue(reprepped_diffuse.image_user.use_cyclic)
+
+    def test_prep_single_material_with_animate_textures(self):
+        """Tests prep_single_material accepts animate_textures=True cleanly."""
+        templates = get_default_templates("simple")
+        mat = bpy.data.materials.new(name="minecraft:block/stone_anim")
+        res = prep_single_material(
+            mat,
+            templates=templates,
+            animate_textures=True,
+        )
+        self.assertTrue(res)
+        self.assertTrue(mat.get("MCPREP_MIEX_PREPPED", False))
+        diffuse_node = generate.get_node_for_pass(mat, "diffuse")
+        self.assertIsNotNone(diffuse_node)
+        self.assertTrue(util.np_is_mcprep_node_prop(diffuse_node, "MCPREP_diffuse"))
 
 
 if __name__ == "__main__":
