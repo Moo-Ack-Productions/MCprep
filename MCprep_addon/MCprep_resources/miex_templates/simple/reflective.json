@@ -17,10 +17,10 @@
         "base"
     ],
     "shadingGroup": {
-        "json:surface": "MAT.BSDF"
+        "json:Surface": "MAT.BSDF"
     },
     "network": {
-        "": {
+        "@reflective@": {
             "MAT": {
                 "attributes": {
                     "Roughness": {

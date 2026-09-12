@@ -11,10 +11,10 @@
         "base"
     ],
     "shadingGroup": {
-        "json:surface": "MAT.BSDF"
+        "json:Surface": "MAT.BSDF"
     },
     "network": {
-        "": {
+        "!@solid@": {
             "MAT": {
                 "attributes": {
                     "Transmission Weight": {

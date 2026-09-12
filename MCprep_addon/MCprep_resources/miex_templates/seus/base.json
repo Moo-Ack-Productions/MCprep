@@ -4,7 +4,7 @@
         "*"
     ],
     "shadingGroup": {
-        "json:surface": "MAT.BSDF"
+        "json:Surface": "MAT.BSDF"
     },
     "network": {
         "": {
@@ -41,7 +41,13 @@
                     "Base Color": {
                         "type": "Color",
                         "connection": "FILE.Color"
-                    },
+                    }
+                }
+            }
+        },
+        "@texture@.a": {
+            "MAT": {
+                "attributes": {
                     "Alpha": {
                         "type": "Float",
                         "connection": "FILE.Alpha"

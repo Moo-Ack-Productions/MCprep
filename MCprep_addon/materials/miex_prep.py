@@ -31,8 +31,10 @@ from bpy_extras.io_utils import ImportHelper
 
 from .. import tracking
 from .. import util
+from .. import world_tools
 from ..conf import MCPREP_RESOURCES, MCprepError, env
 from . import generate
+from . import uv_tools
 from .generate import checklist, get_mc_canonical_name
 from .prep import McprepMaterialProps, draw_mats_common
 from .miex_generator import (
@@ -282,6 +284,11 @@ def apply_miex_material(
     miex_mat: MiExMaterial,
     base_dir: Path | None = None,
     original_passes: dict | None = None,
+    use_emission: bool = True,
+    use_reflections: bool = True,
+    only_solid: bool = False,
+    use_extra_maps: bool = True,
+    normal_intensity: float = 1.0,
 ) -> None:
     """Configures a Blender Material node tree according to a MiExMaterial specification."""
     material.use_nodes = True
@@ -569,6 +576,8 @@ def prep_single_material(
     only_solid: bool = False,
     auto_find_missing: bool = False,
     texturepack_path: Path | None = None,
+    normal_intensity: float = 1.0,
+    explicit_diffuse_path: Path | None = None,
 ) -> bool:
     """Preps a single Blender Material using the MiEx pipeline."""
     if not material or material.library or material.get("MCPREP_NO_PREP", False):
@@ -587,7 +596,11 @@ def prep_single_material(
 
     diffuse_img = passes.get("diffuse")
     diff_path: Path | None = None
-    if diffuse_img and diffuse_img.filepath:
+    if explicit_diffuse_path and explicit_diffuse_path.is_file():
+        diff_path = explicit_diffuse_path
+        diffuse_img = bpy.data.images.load(str(diff_path), check_existing=True)
+        passes["diffuse"] = diffuse_img
+    elif diffuse_img and diffuse_img.filepath:
         raw_path = Path(bpy.path.abspath(diffuse_img.filepath))
         if raw_path.is_file():
             diff_path = raw_path
@@ -614,21 +627,27 @@ def prep_single_material(
                 passes["diffuse"] = diffuse_img
 
     # Check for exported _materials.json (MiEx export workflow)
+    mat_json_file = None
     if diff_path:
         mat_json_file = find_materials_json(diff_path.parent)
-        if mat_json_file:
-            if materials_cache is not None and mat_json_file in materials_cache:
-                exported_mats = materials_cache[mat_json_file]
-            else:
-                exported_mats = load_materials_json(mat_json_file)
-                if materials_cache is not None:
-                    materials_cache[mat_json_file] = exported_mats
+    if not mat_json_file and active_pack:
+        mat_json_file = find_materials_json(active_pack)
 
-            miex_mat = exported_mats.get(material.name) or exported_mats.get(canon_name)
-            if miex_mat:
-                apply_miex_material(material, miex_mat, base_dir=mat_json_file.parent, original_passes=passes)
-                material["MCPREP_MIEX_PREPPED"] = True
-                return True
+    if mat_json_file:
+        if materials_cache is not None and mat_json_file in materials_cache:
+            exported_mats = materials_cache[mat_json_file]
+        else:
+            exported_mats = load_materials_json(mat_json_file)
+            if materials_cache is not None:
+                materials_cache[mat_json_file] = exported_mats
+
+        miex_mat = exported_mats.get(material.name) or exported_mats.get(canon_name)
+        if miex_mat:
+            apply_miex_material(material, miex_mat, base_dir=mat_json_file.parent, original_passes=passes)
+            material["MCPREP_MIEX_PREPPED"] = True
+            if explicit_diffuse_path:
+                material["texture_swapped"] = True
+            return True
 
     # Discover texture passes
     texture_paths: dict[str, Path] = {}
@@ -657,11 +676,17 @@ def prep_single_material(
     if not use_emission:
         texture_paths.pop("emission", None)
 
+    is_solid = only_solid or checklist(canon_name, "solid")
     extra_flags = {
+        "use_emission": use_emission,
+        "use_reflections": use_reflections,
+        "use_extra_maps": use_extra_maps,
+        "only_solid": only_solid,
+        "normal_intensity": normal_intensity,
         "reflective": checklist(canon_name, "reflective") if use_reflections else False,
         "metallic": checklist(canon_name, "metallic") if use_reflections else False,
         "emit": (checklist(canon_name, "emit") or "emit" in material.name.lower()) if use_emission else False,
-        "solid": only_solid or checklist(canon_name, "solid"),
+        "solid": is_solid,
     }
 
     miex_mat = auto_generate_miex_material(
@@ -676,11 +701,14 @@ def prep_single_material(
     base_dir = diff_path.parent if diff_path else None
     apply_miex_material(material, miex_mat, base_dir=base_dir, original_passes=passes)
 
-    is_solid = only_solid or checklist(canon_name, "solid")
     if hasattr(material, "blend_method"):
         material.blend_method = 'OPAQUE' if is_solid else 'HASHED'
+    if hasattr(material, "shadow_method"):
+        material.shadow_method = 'OPAQUE' if is_solid else 'HASHED'
 
     material["MCPREP_MIEX_PREPPED"] = True
+    if explicit_diffuse_path:
+        material["texture_swapped"] = True
     return True
 
 
@@ -779,6 +807,7 @@ class MCPREP_OT_miex_prep_materials(bpy.types.Operator, McprepMaterialProps):
                 only_solid=self.makeSolid,
                 auto_find_missing=self.autoFindMissingTextures,
                 texturepack_path=texpack_path,
+                normal_intensity=self.normalIntensity,
             ):
                 prepped_count += 1
                 if mat.node_tree:
@@ -822,22 +851,20 @@ class MCPREP_OT_miex_prep_materials(bpy.types.Operator, McprepMaterialProps):
         return {'FINISHED'}
 
 
-class MCPREP_OT_miex_swap_texture_pack(bpy.types.Operator, ImportHelper):
+class MCPREP_OT_miex_swap_texture_pack(
+    bpy.types.Operator, ImportHelper, McprepMaterialProps
+):
     """Swap current textures for that of a texture pack folder using MiEx templates"""
     bl_idname = "mcprep.miex_swap_texture_pack"
     bl_label = "Swap Texture Pack (MiEx)"
     bl_description = "Change the texture pack for materials on selected objects and rebuild via MiEx"
     bl_options = {'REGISTER', 'UNDO'}
 
-    pack_format: bpy.props.EnumProperty(
-        name="Pack Format",
-        description="MiEx template pack format to use if pack does not include templates",
-        items=[
-            ("simple", "Simple (no PBR)", "Use simple shader setup with no PBR or emission falloff"),
-            ("specular", "Specular", "Sets the pack format to Specular"),
-            ("seus", "SEUS", "Sets the pack format to SEUS"),
-        ],
-        default="simple",
+    pack_format: bpy.props.StringProperty(
+        name="Pack Format Alias",
+        description="Alias for packFormat",
+        default="",
+        options={"HIDDEN"},
     )
 
     filter_glob: bpy.props.StringProperty(
@@ -849,10 +876,25 @@ class MCPREP_OT_miex_swap_texture_pack(bpy.types.Operator, ImportHelper):
     filepath: bpy.props.StringProperty(subtype="DIR_PATH")
     folder: bpy.props.StringProperty(subtype="DIR_PATH")
     texturepack_path: bpy.props.StringProperty(subtype="DIR_PATH")
-    prep_materials: bpy.props.BoolProperty(
-        name="Prep materials",
-        description="Preps materials if not already prepped",
+    filter_image: bpy.props.BoolProperty(
         default=True,
+        options={"HIDDEN", "SKIP_SAVE"},
+    )
+    filter_folder: bpy.props.BoolProperty(
+        default=True,
+        options={"HIDDEN", "SKIP_SAVE"},
+    )
+
+    prepMaterials: bpy.props.BoolProperty(
+        name="Prep materials",
+        description="Runs prep materials after texture swap to regenerate materials",
+        default=True,
+    )
+    prep_materials: bpy.props.BoolProperty(
+        name="Prep materials alias",
+        description="Alias for prepMaterials",
+        default=True,
+        options={"HIDDEN"},
     )
 
     track_function = "miex_swap_texture_pack"
@@ -861,12 +903,32 @@ class MCPREP_OT_miex_swap_texture_pack(bpy.types.Operator, ImportHelper):
 
     def draw(self, context: Context):
         layout = self.layout
-        layout.prop(self, "pack_format")
+        col = layout.column()
+        subcol = col.column()
+        subcol.scale_y = 0.7
+        subcol.label(text="Select any subfolder of an")
+        subcol.label(text="unzipped texture pack, then")
+        subcol.label(text="press 'Swap Texture Pack'")
+        subcol.label(text="after confirming these")
+        subcol.label(text="settings below:")
+        col.prop(self, "useExtraMaps")
+        col.prop(self, "animateTextures")
+        col.prop(self, "prepMaterials")
+        if self.prepMaterials:
+            col.prop(self, "packFormat")
+            col.prop(self, "useReflections")
+            col.prop(self, "makeSolid")
+            col.prop(self, "autoFindMissingTextures")
+            col.prop(self, "syncMaterials")
+            col.prop(self, "improveUiSettings")
+            col.prop(self, "combineMaterials")
+            col.prop(self, "useEmission")
 
     @tracking.report_error
     def execute(self, context: Context):
+        active_pack = self.pack_format if self.pack_format else self.packFormat
         if hasattr(context.scene, "mcprep_miex_pack_format"):
-            context.scene.mcprep_miex_pack_format = self.pack_format
+            context.scene.mcprep_miex_pack_format = active_pack
         raw_path = self.filepath or self.folder or self.texturepack_path
         if not raw_path and hasattr(context.scene, "mcprep_texturepack_path"):
             raw_path = context.scene.mcprep_texturepack_path
@@ -881,6 +943,8 @@ class MCPREP_OT_miex_swap_texture_pack(bpy.types.Operator, ImportHelper):
             self.report({'ERROR'}, "Selected folder does not exist")
             return {'CANCELLED'}
 
+        context.scene.mcprep_texturepack_path = str(pack_dir)
+
         obj_list = context.selected_objects
         if not obj_list:
             self.report({'ERROR'}, "No objects selected")
@@ -891,7 +955,19 @@ class MCPREP_OT_miex_swap_texture_pack(bpy.types.Operator, ImportHelper):
             self.report({'ERROR'}, "No materials found on selected objects")
             return {'CANCELLED'}
 
-        templates = get_default_templates(self.pack_format)
+        invalid_uv = False
+        if not world_tools.is_commonmc_obj(context):
+            invalid_uv, _ = uv_tools.detect_invalid_uvs_from_objs(obj_list)
+
+        templates = get_default_templates(active_pack)
+        custom_dir_str = getattr(context.scene, "mcprep_miex_templates_path", "")
+        if custom_dir_str:
+            custom_dir = Path(bpy.path.abspath(custom_dir_str))
+            if custom_dir.is_dir():
+                custom_templates = load_templates_from_dir(custom_dir)
+                if custom_templates:
+                    templates = custom_templates + templates
+
         template_candidates = [
             pack_dir / "materials" / "minecraft" / "templates",
             pack_dir / "materials" / "templates",
@@ -906,37 +982,94 @@ class MCPREP_OT_miex_swap_texture_pack(bpy.types.Operator, ImportHelper):
                     templates = pack_templates + templates
                     break
 
+        do_prep = self.prepMaterials and self.prep_materials
+        materials_cache: dict[Path, dict[str, MiExMaterial]] = {}
         swapped_count = 0
+
         for mat in mat_list:
             if not mat or mat.library or mat.get("MCPREP_NO_PREP", False):
                 continue
 
             passes = generate.get_textures(mat)
             diff_img = passes.get("diffuse")
-            stem = Path(diff_img.filepath).stem if diff_img and diff_img.filepath else (Path(diff_img.name).stem if diff_img else mat.name)
+            stem = (
+                Path(diff_img.filepath).stem
+                if diff_img and diff_img.filepath
+                else (Path(diff_img.name).stem if diff_img else mat.name)
+            )
             clean_stem = stem.split(":")[-1].split("/")[-1]
             canon_name, _ = get_mc_canonical_name(clean_stem)
             orig_fp = diff_img.filepath if (diff_img and diff_img.filepath) else (diff_img.name if diff_img else "")
 
             new_tex_path = find_texture_in_pack(pack_dir, canon_name, orig_path=orig_fp)
             if not new_tex_path:
+                tex_res = generate.find_from_texturepack(canon_name, pack_dir)
+                if tex_res and not isinstance(tex_res, MCprepError) and tex_res.is_file():
+                    new_tex_path = tex_res
+
+            if not new_tex_path:
                 continue
 
-            new_passes = collect_texture_passes(new_tex_path)
-            miex_mat = auto_generate_miex_material(
-                material_name=mat.name,
-                texture_paths=new_passes,
-                templates=templates,
-            )
-            if not miex_mat:
-                continue
+            if do_prep:
+                if prep_single_material(
+                    mat,
+                    templates=templates,
+                    materials_cache=materials_cache,
+                    pack_format=active_pack,
+                    use_extra_maps=self.useExtraMaps,
+                    use_reflections=self.useReflections,
+                    use_emission=self.useEmission,
+                    only_solid=self.makeSolid,
+                    auto_find_missing=self.autoFindMissingTextures,
+                    texturepack_path=pack_dir,
+                    normal_intensity=self.normalIntensity,
+                    explicit_diffuse_path=new_tex_path,
+                ):
+                    if mat.node_tree:
+                        arrange_material_nodes(mat.node_tree)
+                    swapped_count += 1
+            else:
+                new_img = util.loadTexture(str(new_tex_path))
+                if generate.set_cycles_texture(new_img, mat, extra_passes=self.useExtraMaps):
+                    mat["texture_swapped"] = True
+                    swapped_count += 1
 
-            apply_miex_material(mat, miex_mat, base_dir=new_tex_path.parent, original_passes=new_passes)
-            if mat.node_tree:
-                arrange_material_nodes(mat.node_tree)
-            mat["MCPREP_MIEX_PREPPED"] = True
-            mat["texture_swapped"] = True
-            swapped_count += 1
+            if self.animateTextures:
+                try:
+                    from . import sequences
+
+                    sequences.animate_single_material(
+                        mat,
+                        context.scene.render.engine,
+                        export_location=sequences.ExportLocation.ORIGINAL,
+                    )
+                except Exception as ex:
+                    env.log(f"Failed to animate texture on {mat.name}: {ex}")
+
+        # Post-prep operations
+        if do_prep:
+            if self.syncMaterials and hasattr(bpy.ops.mcprep, "sync_materials"):
+                try:
+                    bpy.ops.mcprep.sync_materials(
+                        selected=True, link=False, replace_materials=False, skipUsage=True
+                    )
+                except Exception as ex:
+                    env.log(f"Failed to sync materials: {ex}")
+
+            if self.combineMaterials and hasattr(bpy.ops.mcprep, "combine_materials"):
+                try:
+                    bpy.ops.mcprep.combine_materials(selection_only=True, skipUsage=True)
+                except Exception as ex:
+                    env.log(f"Failed to combine materials: {ex}")
+
+            if self.improveUiSettings and hasattr(bpy.ops.mcprep, "improve_ui"):
+                try:
+                    bpy.ops.mcprep.improve_ui()
+                except Exception as err:
+                    env.log(f"Failed to improve UI: {err}")
+
+        if invalid_uv:
+            self.report({'WARNING'}, "Detected scaled UVs, incompatible with swap textures")
 
         self.report({'INFO'}, f"Swapped textures on {swapped_count} material(s) via MiEx")
         return {'FINISHED'}

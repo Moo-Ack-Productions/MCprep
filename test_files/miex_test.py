@@ -25,6 +25,7 @@ import bpy
 
 from MCprep_addon.materials.miex_generator import (
     auto_generate_miex_material,
+    dereference_attribute,
     find_matching_template,
     matches_selection,
     resolve_connection_reference,
@@ -250,6 +251,73 @@ class MiExGeneratorTest(unittest.TestCase):
 
         unrelated = resolve_connection_reference("NORMAL.Normal", nodes)
         self.assertEqual(unrelated, "NORMAL.Normal")
+
+        # Test value dereferencing
+        node_val = MiExNode(
+            name="SOURCE",
+            attributes={"Base Color": MiExAttribute(name="Base Color", value=[0.2, 0.4, 0.6, 1.0])},
+        )
+        nodes["SOURCE"] = node_val
+        conn_v, val_v, _ = dereference_attribute("${SOURCE.Base Color}", None, None, nodes)
+        self.assertIsNone(conn_v)
+        self.assertEqual(val_v, [0.2, 0.4, 0.6, 1.0])
+
+        # Test chained connection dereferencing
+        node_mid = MiExNode(
+            name="MID",
+            attributes={"Color": MiExAttribute(name="Color", connection="${FILE.Color}")},
+        )
+        nodes["MID"] = node_mid
+        conn_c, _, _ = dereference_attribute("${MID.Color}", None, None, nodes)
+        self.assertEqual(conn_c, "SRC.Color")
+
+    def test_include_aliasing_and_self_include(self):
+        """Tests that include resolution handles json_ prefix aliases and ignores self-includes."""
+        base_tpl = parse_template({
+            "priority": 0,
+            "selection": ["*"],
+            "shadingGroup": {"json:Surface": "MAT.BSDF"},
+            "network": {
+                "@texture@": {
+                    "MAT": {
+                        "type": "JSON:ShaderNodeBsdfPrincipled",
+                        "attributes": {"Base Color": {"type": "Color", "connection": "FILE.Color"}},
+                    },
+                },
+            },
+        }, name="json_base")
+
+        # emission includes 'base' (unprefixed) while library has 'json_base', and self-includes 'json_emission'
+        emission_tpl = parse_template({
+            "priority": 1,
+            "selection": ["minecraft:block/glowstone"],
+            "include": ["base", "json_emission"],
+            "shadingGroup": {"json:Surface": "MAT.BSDF"},
+            "network": {
+                "@texture@": {
+                    "MAT": {
+                        "attributes": {
+                            "Emission Color": {"type": "Color", "connection": "${MAT.Base Color}"},
+                            "Base Color": {"type": "Color", "value": [0.0, 0.0, 0.0, 1.0]},
+                        },
+                    },
+                },
+            },
+        }, name="json_emission")
+
+        resolved = resolve_includes(emission_tpl, {"json_base": base_tpl})
+        self.assertEqual(resolved.priority, 1)
+        self.assertIn("json:Surface", resolved.shading_group)
+
+        # Generate material and verify dynamic reference resolved to FILE.Color before Base Color became black
+        mat = auto_generate_miex_material(
+            material_name="minecraft:block/glowstone",
+            texture_paths={"diffuse": Path("textures/glowstone.png")},
+            templates=[resolved],
+        )
+        self.assertIsNotNone(mat)
+        self.assertEqual(mat.network["MAT"].attributes["Emission Color"].connection, "FILE.Color")
+        self.assertEqual(mat.network["MAT"].attributes["Base Color"].value, [0.0, 0.0, 0.0, 1.0])
 
     def test_auto_generate_base_material(self):
         """Tests auto-generating MiEx material for standard texture."""
@@ -790,6 +858,102 @@ class MiExPrepTest(unittest.TestCase):
         res_reset = bpy.ops.mcprep.miex_reset_templates_path()
         self.assertEqual(res_reset, {'FINISHED'})
         self.assertEqual(scene.mcprep_miex_templates_path, "")
+
+    def test_prep_options_emission(self):
+        """Tests useEmission=False disables emission connections and nodes."""
+        templates = get_default_templates("simple")
+        mat_miex_no_emit = auto_generate_miex_material(
+            material_name="glowstone",
+            texture_paths={"diffuse": Path("textures/block/glowstone.png")},
+            templates=templates,
+            extra_flags={"use_emission": False},
+        )
+        self.assertIsNotNone(mat_miex_no_emit)
+        bsdf_attrs = mat_miex_no_emit.network["MAT"].attributes
+        self.assertNotIn("Emission Color", bsdf_attrs)
+        self.assertNotIn("Emission Strength", bsdf_attrs)
+
+        mat_miex_with_emit = auto_generate_miex_material(
+            material_name="glowstone",
+            texture_paths={"diffuse": Path("textures/block/glowstone.png")},
+            templates=templates,
+            extra_flags={"use_emission": True},
+        )
+        self.assertIsNotNone(mat_miex_with_emit)
+        bsdf_attrs_emit = mat_miex_with_emit.network["MAT"].attributes
+        self.assertIn("Emission Color", bsdf_attrs_emit)
+
+    def test_prep_options_reflections(self):
+        """Tests useReflections=False disables metallic and reflective settings."""
+        templates = get_default_templates("simple")
+        mat_miex_no_ref = auto_generate_miex_material(
+            material_name="iron_block",
+            texture_paths={"diffuse": Path("textures/block/iron_block.png")},
+            templates=templates,
+            extra_flags={"use_reflections": False},
+        )
+        self.assertIsNotNone(mat_miex_no_ref)
+        bsdf_attrs = mat_miex_no_ref.network["MAT"].attributes
+        self.assertNotIn("Metallic", bsdf_attrs)
+
+        mat_miex_with_ref = auto_generate_miex_material(
+            material_name="iron_block",
+            texture_paths={"diffuse": Path("textures/block/iron_block.png")},
+            templates=templates,
+            extra_flags={"use_reflections": True},
+        )
+        self.assertIsNotNone(mat_miex_with_ref)
+        self.assertEqual(mat_miex_with_ref.network["MAT"].attributes["Metallic"].value, 1.0)
+
+    def test_prep_options_make_solid(self):
+        """Tests makeSolid=True disables Alpha transparency connection and solidifies glass."""
+        templates = get_default_templates("simple")
+        mat_solid = bpy.data.materials.new(name="minecraft:block/oak_leaves")
+        prep_single_material(
+            mat_solid,
+            templates=templates,
+            only_solid=True,
+        )
+        bsdf_solid = mat_solid.node_tree.nodes.get("MAT")
+        self.assertIsNotNone(bsdf_solid)
+        alpha_sock_solid = bsdf_solid.inputs.get("Alpha")
+        self.assertIsNotNone(alpha_sock_solid)
+        self.assertEqual(len(alpha_sock_solid.links), 0)
+
+        # Contrast with only_solid=False
+        mat_cutout = bpy.data.materials.new(name="minecraft:block/oak_leaves_cutout")
+        prep_single_material(
+            mat_cutout,
+            templates=templates,
+            only_solid=False,
+        )
+        bsdf_cutout = mat_cutout.node_tree.nodes.get("MAT")
+        self.assertIsNotNone(bsdf_cutout)
+        alpha_sock_cutout = bsdf_cutout.inputs.get("Alpha")
+        self.assertIsNotNone(alpha_sock_cutout)
+        self.assertGreater(len(alpha_sock_cutout.links), 0)
+
+    def test_prep_options_normal_intensity(self):
+        """Tests normalIntensity sets Strength socket default value on NormalMap node."""
+        templates = get_default_templates("specular")
+        mat_miex = auto_generate_miex_material(
+            material_name="stone",
+            texture_paths={
+                "diffuse": Path("textures/block/stone.png"),
+                "normal": Path("textures/block/stone_n.png"),
+            },
+            templates=templates,
+            extra_flags={"normal_intensity": 0.5},
+        )
+        self.assertIsNotNone(mat_miex)
+        self.assertIn("NORM_MAP", mat_miex.network)
+        self.assertEqual(mat_miex.network["NORM_MAP"].attributes["Strength"].value, 0.5)
+
+        mat = bpy.data.materials.new(name="test_norm_int")
+        apply_miex_material(mat, mat_miex)
+        norm_node = mat.node_tree.nodes.get("NORM_MAP")
+        self.assertIsNotNone(norm_node)
+        self.assertAlmostEqual(norm_node.inputs["Strength"].default_value, 0.5, places=3)
 
 
 if __name__ == "__main__":

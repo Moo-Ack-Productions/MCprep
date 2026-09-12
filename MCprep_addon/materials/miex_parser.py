@@ -196,6 +196,8 @@ class MiExTemplate:
     shading_group: dict[str, str] = field(default_factory=dict)
     # network maps condition string -> dict of node name -> MiExNode
     network: dict[str, dict[str, MiExNode]] = field(default_factory=dict)
+    # network_passes preserves the ordered list of condition passes for sequential evaluation and dynamic references
+    network_passes: list[tuple[str, dict[str, MiExNode]]] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, data: TemplateJSON, name: str = "") -> "MiExTemplate":
@@ -216,6 +218,7 @@ class MiExTemplate:
         )
 
         network: dict[str, dict[str, MiExNode]] = {}
+        network_passes: list[tuple[str, dict[str, MiExNode]]] = []
         raw_net = data.get("network")
         if not isinstance(raw_net, dict):
             return cls(
@@ -225,6 +228,7 @@ class MiExTemplate:
                 include=include,
                 shading_group=shading_group,
                 network=network,
+                network_passes=network_passes,
             )
 
         for condition, nodes_dict in raw_net.items():
@@ -236,6 +240,7 @@ class MiExTemplate:
                     continue
                 network_part[node_name] = MiExNode.from_dict(node_name, node_data)
             network[condition] = network_part
+            network_passes.append((condition, network_part))
 
         return cls(
             name=name,
@@ -244,6 +249,7 @@ class MiExTemplate:
             include=include,
             shading_group=shading_group,
             network=network,
+            network_passes=network_passes,
         )
 
 
@@ -326,15 +332,22 @@ def resolve_includes(
 
     merged_shading_group: dict[str, str] = {}
     merged_network: dict[str, dict[str, MiExNode]] = {}
+    merged_passes: list[tuple[str, dict[str, MiExNode]]] = []
 
     for inc_name in template.include:
-        if inc_name == template.name:
+        # MiEx self-override loop prevention: if a template includes itself (e.g. json_emission includes json_emission)
+        if inc_name == template.name or inc_name.removeprefix("json_") == template.name.removeprefix("json_"):
             continue
-        inc_tpl = library.get(inc_name)
+        inc_tpl = (
+            library.get(inc_name)
+            or library.get(f"json_{inc_name}")
+            or library.get(inc_name.removeprefix("json_"))
+        )
         if inc_tpl is None:
             continue
         resolved_inc = resolve_includes(inc_tpl, library, visited.copy())
         merged_shading_group.update(resolved_inc.shading_group)
+        merged_passes.extend(resolved_inc.network_passes)
         for cond, nodes in resolved_inc.network.items():
             if cond not in merged_network:
                 merged_network[cond] = {}
@@ -347,6 +360,7 @@ def resolve_includes(
 
     # Apply current template over includes
     merged_shading_group.update(template.shading_group)
+    merged_passes.extend(template.network_passes)
     for cond, nodes in template.network.items():
         if cond not in merged_network:
             merged_network[cond] = {}
@@ -376,4 +390,5 @@ def resolve_includes(
         include=list(template.include),
         shading_group=merged_shading_group,
         network=merged_network,
+        network_passes=merged_passes,
     )

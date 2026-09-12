@@ -55,10 +55,13 @@ def matches_selection(texture_id: str, pattern: str) -> bool:
     if fnmatch.fnmatch(texture_id, pattern):
         return True
 
-    # Fallback for OBJ exports without minecraft:block/ namespace prefix
-    bare_name = texture_id.rsplit("/", 1)[-1].rsplit(":", 1)[-1]
-    pattern_bare = pattern.rsplit("/", 1)[-1].rsplit(":", 1)[-1]
-    return fnmatch.fnmatch(bare_name, pattern_bare)
+    # Fallback for OBJ exports where texture_id has no namespace or path prefix
+    if "/" not in texture_id and ":" not in texture_id:
+        pattern_bare = pattern.rsplit("/", 1)[-1].rsplit(":", 1)[-1]
+        if pattern_bare != "*":
+            return fnmatch.fnmatch(texture_id, pattern_bare)
+
+    return False
 
 
 def find_matching_template(
@@ -131,6 +134,11 @@ def build_condition_flags(canon_name: str, texture_path: Path) -> dict[str, bool
         "backface_culling": checklist(clean_canon, "backface_culling"),
         "desaturated": checklist(clean_canon, "desaturated"),
         "biomeColor": False,
+        "use_emission": True,
+        "use_reflections": True,
+        "only_solid": False,
+        "use_extra_maps": True,
+        "normal_intensity": 1.0,
     }
     return flags
 
@@ -155,21 +163,36 @@ def evaluate_condition_token(
     if token == "@biomeColor@":
         return bool(flags.get("biomeColor", False))
 
+    if token == "@emit@":
+        return bool(flags.get("emit", False)) if flags.get("use_emission", True) else False
+
     if token.startswith("@") and token.endswith("@"):
         flag_name = token[1:-1]
+        if flag_name == "emit" and not flags.get("use_emission", True):
+            return False
+        if flag_name in ("reflective", "metallic") and not flags.get("use_reflections", True):
+            return False
+        if flag_name == "solid":
+            return bool(flags.get("solid", False))
         return bool(flags.get(flag_name, False))
 
     if token.endswith(".cutout"):
-        return flags.get("solid", False)
+        return bool(flags.get("solid", False))
     if token.endswith(".a"):
-        return not flags.get("solid", False)
+        return not bool(flags.get("solid", False))
 
     resolved_id = token.replace("@texture@", texture_id)
     if resolved_id.endswith("_emission") or resolved_id.endswith("_e"):
+        if not flags.get("use_emission", True):
+            return False
         return "emission" in passes or flags.get("emit", False)
     if resolved_id.endswith("_normal") or resolved_id.endswith("_n"):
+        if not flags.get("use_extra_maps", True):
+            return False
         return "normal" in passes
     if resolved_id.endswith("_specular") or resolved_id.endswith("_s"):
+        if not flags.get("use_extra_maps", True) or not flags.get("use_reflections", True):
+            return False
         return "specular" in passes
 
     return resolved_id in passes
@@ -218,29 +241,62 @@ def resolve_attribute_value(
     return value
 
 
+def dereference_attribute(
+    connection: str | None,
+    current_value: AttributeValue | None,
+    current_expr: str | None,
+    resolved_nodes: dict[str, MiExNode],
+    visited: set[str] | None = None,
+) -> tuple[str | None, AttributeValue | None, str | None]:
+    """Resolves dynamic ${node.attribute} references against currently resolved nodes.
+    
+    Matches MiEx Materials.java reference resolution during template flattening:
+    - If the referenced attribute has a value, sets value and clears connection.
+    - If the referenced attribute has a connection, sets connection (resolving recursively).
+    - If the referenced attribute has an expression, sets expression and clears connection.
+    """
+    if not connection or not (connection.startswith("${") and connection.endswith("}")):
+        return connection, current_value, current_expr
+
+    if visited is None:
+        visited = set()
+    if connection in visited:
+        return connection, current_value, current_expr
+    visited.add(connection)
+
+    ref = connection[2:-1]
+    ref_parts = ref.split(".", 1)
+    if len(ref_parts) != 2:
+        return connection, current_value, current_expr
+
+    ref_node_name, ref_attr_name = ref_parts
+    ref_node = resolved_nodes.get(ref_node_name)
+    if not ref_node:
+        return connection, current_value, current_expr
+
+    ref_attr = ref_node.attributes.get(ref_attr_name)
+    if not ref_attr:
+        return connection, current_value, current_expr
+
+    if ref_attr.value is not None:
+        return None, ref_attr.value, None
+    elif ref_attr.connection is not None:
+        if ref_attr.connection.startswith("${") and ref_attr.connection.endswith("}"):
+            return dereference_attribute(ref_attr.connection, current_value, current_expr, resolved_nodes, visited)
+        return ref_attr.connection, None, None
+    elif ref_attr.expression is not None:
+        return None, None, ref_attr.expression
+
+    return connection, current_value, current_expr
+
+
 def resolve_connection_reference(
     connection: str | None,
     resolved_nodes: dict[str, MiExNode],
 ) -> str | None:
     """Resolves dynamic ${node.attribute} connection references."""
-    if not connection or not (connection.startswith("${") and connection.endswith("}")):
-        return connection
-
-    ref = connection[2:-1]
-    ref_parts = ref.split(".", 1)
-    if len(ref_parts) != 2:
-        return connection
-
-    ref_node_name, ref_attr_name = ref_parts
-    ref_node = resolved_nodes.get(ref_node_name)
-    if not ref_node:
-        return connection
-
-    ref_attr = ref_node.attributes.get(ref_attr_name)
-    if not ref_attr or not ref_attr.connection:
-        return connection
-
-    return ref_attr.connection
+    conn, _, _ = dereference_attribute(connection, None, None, resolved_nodes)
+    return conn
 
 
 def auto_generate_miex_material(
@@ -287,6 +343,15 @@ def auto_generate_miex_material(
     if passed_flags:
         condition_flags.update(passed_flags)
 
+    # Synchronize condition flags with prep options
+    if not condition_flags.get("use_emission", True):
+        condition_flags["emit"] = False
+    if not condition_flags.get("use_reflections", True):
+        condition_flags["reflective"] = False
+        condition_flags["metallic"] = False
+    if condition_flags.get("only_solid", False):
+        condition_flags["solid"] = True
+
     # Find matching template using MiEx declarative priority matching
     template = find_matching_template(texture_id, templates)
     if template is None or template.name == "base":
@@ -312,8 +377,11 @@ def auto_generate_miex_material(
                 template = base_tpl
 
     resolved_nodes: dict[str, MiExNode] = {}
+    passes_to_evaluate = (
+        template.network_passes if template.network_passes else list(template.network.items())
+    )
 
-    for condition, nodes in template.network.items():
+    for condition, nodes in passes_to_evaluate:
         if not evaluate_condition(condition, texture_id, passes, condition_flags):
             continue
 
@@ -330,8 +398,16 @@ def auto_generate_miex_material(
                 current_node.node_type = node.node_type
 
             for attr_name, attr in node.attributes.items():
-                conn = resolve_connection_reference(attr.connection, resolved_nodes)
                 resolved_val = resolve_attribute_value(attr.value, texture_id, diffuse_path, passes)
+                conn = attr.connection
+                expr = attr.expression
+
+                if conn and conn.startswith("${") and conn.endswith("}"):
+                    conn, ref_val, ref_expr = dereference_attribute(conn, resolved_val, expr, resolved_nodes)
+                    if ref_val is not None:
+                        resolved_val = ref_val
+                    if ref_expr is not None:
+                        expr = ref_expr
 
                 # MiEx fill-in: resolve biome color from MCprep JSON when vertex colors are not active
                 if node_name == "MIX_COLOR" and attr_name == "B" and not conn:
@@ -345,8 +421,16 @@ def auto_generate_miex_material(
                     attr_type=attr.attr_type,
                     value=resolved_val,
                     connection=conn,
-                    expression=attr.expression,
+                    expression=expr,
                 )
+
+            if current_node.node_type and "NormalMap" in current_node.node_type:
+                if "normal_intensity" in condition_flags:
+                    current_node.attributes["Strength"] = MiExAttribute(
+                        name="Strength",
+                        attr_type="float",
+                        value=float(condition_flags["normal_intensity"]),
+                    )
 
     terminals: dict[str, str] = {}
     for k, v in template.shading_group.items():

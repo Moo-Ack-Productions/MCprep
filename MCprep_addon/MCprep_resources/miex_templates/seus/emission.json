@@ -52,10 +52,10 @@
         "base"
     ],
     "shadingGroup": {
-        "json:surface": "MAT.BSDF"
+        "json:Surface": "MAT.BSDF"
     },
     "network": {
-        "@texture@": {
+        "@texture@ && @emit@": {
             "MAT": {
                 "attributes": {
                     "Emission Color": {

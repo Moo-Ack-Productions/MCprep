@@ -29,10 +29,10 @@
         "base"
     ],
     "shadingGroup": {
-        "json:surface": "MAT.BSDF"
+        "json:Surface": "MAT.BSDF"
     },
     "network": {
-        "": {
+        "@metallic@": {
             "MAT": {
                 "attributes": {
                     "Metallic": {
