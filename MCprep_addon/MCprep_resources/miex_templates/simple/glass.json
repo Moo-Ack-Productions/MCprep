@@ -1,0 +1,36 @@
+{
+    "priority": 10,
+    "selection": [
+        "minecraft:block/*glass*",
+        "minecraft:block/tinted_glass",
+        "minecraft:block/glass*",
+        "*glass*",
+        "*glass_pane*"
+    ],
+    "include": [
+        "base"
+    ],
+    "shadingGroup": {
+        "json:surface": "MAT.BSDF"
+    },
+    "network": {
+        "": {
+            "MAT": {
+                "attributes": {
+                    "Transmission Weight": {
+                        "type": "Float",
+                        "value": 1.0
+                    },
+                    "Roughness": {
+                        "type": "Float",
+                        "value": 0.05
+                    },
+                    "IOR": {
+                        "type": "Float",
+                        "value": 1.5
+                    }
+                }
+            }
+        }
+    }
+}

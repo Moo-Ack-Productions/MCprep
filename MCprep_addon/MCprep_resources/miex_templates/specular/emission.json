@@ -1,0 +1,73 @@
+{
+    "priority": 5,
+    "selection": [
+        "minecraft:block/glowstone",
+        "minecraft:block/sea_lantern",
+        "minecraft:block/shroomlight",
+        "minecraft:block/lantern",
+        "minecraft:block/soul_lantern",
+        "minecraft:block/torch",
+        "minecraft:block/soul_torch",
+        "minecraft:block/redstone_torch",
+        "minecraft:block/redstone_lamp_on",
+        "minecraft:block/redstone_block",
+        "minecraft:block/jack_o_lantern",
+        "minecraft:block/beacon",
+        "minecraft:block/campfire_fire",
+        "minecraft:block/soul_campfire_fire",
+        "minecraft:block/crying_obsidian",
+        "minecraft:block/magma",
+        "minecraft:block/ochre_froglight",
+        "minecraft:block/verdant_froglight",
+        "minecraft:block/pearlescent_froglight",
+        "minecraft:block/candle_lit",
+        "minecraft:block/*_candle_lit",
+        "minecraft:block/amethyst_cluster",
+        "minecraft:block/fire",
+        "minecraft:block/fire_*",
+        "minecraft:block/soul_fire_*",
+        "minecraft:block/nether_portal",
+        "minecraft:block/respawn_anchor_*",
+        "minecraft:block/blast_furnace_front_on",
+        "minecraft:block/furnace_front_on",
+        "minecraft:block/smoker_front_on",
+        "minecraft:block/cave_vines*lit*",
+        "*glowstone*",
+        "*sea_lantern*",
+        "*shroomlight*",
+        "*lantern*",
+        "*torch*",
+        "*redstone_lamp_on*",
+        "*jack_o_lantern*",
+        "*froglight*",
+        "*fire*",
+        "*portal*",
+        "*campfire*",
+        "*crying_obsidian*",
+        "*magma*",
+        "*candle_lit*",
+        "*amethyst*"
+    ],
+    "include": [
+        "base"
+    ],
+    "shadingGroup": {
+        "json:surface": "MAT.BSDF"
+    },
+    "network": {
+        "@texture@": {
+            "MAT": {
+                "attributes": {
+                    "Emission Color": {
+                        "type": "Color",
+                        "connection": "FILE.Color"
+                    },
+                    "Emission Strength": {
+                        "type": "Float",
+                        "value": 1.0
+                    }
+                }
+            }
+        }
+    }
+}

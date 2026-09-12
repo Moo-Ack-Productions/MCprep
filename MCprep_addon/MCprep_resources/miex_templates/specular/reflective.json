@@ -1,0 +1,38 @@
+{
+    "priority": 8,
+    "selection": [
+        "minecraft:block/ice",
+        "minecraft:block/packed_ice",
+        "minecraft:block/blue_ice",
+        "minecraft:block/frosted_ice*",
+        "minecraft:block/emerald_block",
+        "minecraft:block/lapis_block",
+        "minecraft:block/amethyst_block",
+        "*ice*",
+        "*emerald_block*",
+        "*lapis_block*",
+        "*amethyst_block*"
+    ],
+    "include": [
+        "base"
+    ],
+    "shadingGroup": {
+        "json:surface": "MAT.BSDF"
+    },
+    "network": {
+        "": {
+            "MAT": {
+                "attributes": {
+                    "Roughness": {
+                        "type": "Float",
+                        "value": 0.1
+                    },
+                    "IOR": {
+                        "type": "Float",
+                        "value": 1.45
+                    }
+                }
+            }
+        }
+    }
+}

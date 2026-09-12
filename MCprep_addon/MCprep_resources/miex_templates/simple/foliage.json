@@ -1,0 +1,125 @@
+{
+    "priority": 5,
+    "selection": [
+        "minecraft:block/*leaves*",
+        "minecraft:block/*grass*",
+        "minecraft:block/fern",
+        "minecraft:block/large_fern",
+        "minecraft:block/large_fern_*",
+        "minecraft:block/vine",
+        "minecraft:block/lily_pad",
+        "minecraft:block/lilypad",
+        "minecraft:block/*sapling*",
+        "minecraft:block/*stem*",
+        "minecraft:block/sugar_cane",
+        "minecraft:block/kelp*",
+        "minecraft:block/seagrass*",
+        "minecraft:block/*azalea*",
+        "minecraft:block/*flower*",
+        "minecraft:block/*tulip*",
+        "minecraft:block/*orchid*",
+        "minecraft:block/*allium*",
+        "minecraft:block/*bluet*",
+        "minecraft:block/*poppy*",
+        "minecraft:block/*dandelion*",
+        "minecraft:block/*rose*",
+        "minecraft:block/*sunflower*",
+        "minecraft:block/*lilac*",
+        "minecraft:block/*peony*",
+        "*leaves*",
+        "*grass*",
+        "*fern*",
+        "*vine*",
+        "*lily_pad*",
+        "*lilypad*",
+        "*sapling*",
+        "*stem*",
+        "*sugar_cane*",
+        "*flower*",
+        "*tulip*",
+        "*orchid*",
+        "*allium*",
+        "*bluet*",
+        "*poppy*",
+        "*dandelion*",
+        "*rose*",
+        "*sunflower*",
+        "*lilac*",
+        "*peony*"
+    ],
+    "include": [
+        "base"
+    ],
+    "shadingGroup": {
+        "json:surface": "MAT.BSDF"
+    },
+    "network": {
+        "@texture@": {
+            "MIX_COLOR": {
+                "type": "JSON:BlenderCompact-5.1-ShaderNodeMix",
+                "attributes": {
+                    "data_type": {
+                        "type": "string",
+                        "value": "RGBA"
+                    },
+                    "blend_type": {
+                        "type": "string",
+                        "value": "MULTIPLY"
+                    },
+                    "clamp_result": {
+                        "type": "bool",
+                        "value": false
+                    },
+                    "Factor": {
+                        "type": "Float",
+                        "value": 1.0
+                    },
+                    "A": {
+                        "type": "Color",
+                        "connection": "FILE.Color"
+                    },
+                    "B": {
+                        "type": "Color",
+                        "value": [
+                            0.227161,
+                            0.614651,
+                            0.089036,
+                            1.0
+                        ]
+                    }
+                }
+            },
+            "MAT": {
+                "attributes": {
+                    "Base Color": {
+                        "type": "Color",
+                        "connection": "MIX_COLOR.Result"
+                    },
+                    "Roughness": {
+                        "type": "Float",
+                        "value": 0.85
+                    }
+                }
+            }
+        },
+        "@biomeColor@": {
+            "COLOR_ATTR": {
+                "type": "JSON:BlenderCompact-5.1-ShaderNodeAttribute",
+                "attributes": {
+                    "attribute_name": {
+                        "type": "string",
+                        "value": "Color"
+                    }
+                }
+            },
+            "MIX_COLOR": {
+                "attributes": {
+                    "B": {
+                        "type": "Color",
+                        "connection": "COLOR_ATTR.Color"
+                    }
+                }
+            }
+        }
+    }
+}

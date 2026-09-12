@@ -1,0 +1,143 @@
+{
+    "priority": 0,
+    "selection": [
+        "*"
+    ],
+    "shadingGroup": {
+        "json:surface": "MAT.BSDF"
+    },
+    "network": {
+        "": {
+            "MAT": {
+                "type": "JSON:BlenderCompact-5.1-ShaderNodeBsdfPrincipled",
+                "attributes": {
+                    "Roughness": {
+                        "type": "Float",
+                        "value": 0.7
+                    },
+                    "IOR": {
+                        "type": "Float",
+                        "value": 1.5
+                    }
+                }
+            }
+        },
+        "@texture@": {
+            "FILE": {
+                "type": "JSON:BlenderCompact-5.1-ShaderNodeTexImage",
+                "attributes": {
+                    "image": {
+                        "type": "asset",
+                        "value": "@texture@"
+                    },
+                    "interpolation": {
+                        "type": "string",
+                        "value": "Closest"
+                    }
+                }
+            },
+            "MAT": {
+                "attributes": {
+                    "Base Color": {
+                        "type": "Color",
+                        "connection": "FILE.Color"
+                    },
+                    "Alpha": {
+                        "type": "Float",
+                        "connection": "FILE.Alpha"
+                    }
+                }
+            }
+        },
+        "@texture@_emission": {
+            "TEX_EMIT": {
+                "type": "JSON:BlenderCompact-5.1-ShaderNodeTexImage",
+                "attributes": {
+                    "image": {
+                        "type": "asset",
+                        "value": "@texture@_emission"
+                    },
+                    "interpolation": {
+                        "type": "string",
+                        "value": "Closest"
+                    }
+                }
+            },
+            "MAT": {
+                "attributes": {
+                    "Emission Color": {
+                        "type": "Color",
+                        "connection": "TEX_EMIT.Color"
+                    },
+                    "Emission Strength": {
+                        "type": "Float",
+                        "value": 1.0
+                    }
+                }
+            }
+        },
+        "@texture@_normal": {
+            "TEX_NORM": {
+                "type": "JSON:BlenderCompact-5.1-ShaderNodeTexImage",
+                "attributes": {
+                    "image": {
+                        "type": "asset",
+                        "value": "@texture@_normal"
+                    },
+                    "interpolation": {
+                        "type": "string",
+                        "value": "Closest"
+                    },
+                    "colorspace": {
+                        "type": "string",
+                        "value": "Non-Color"
+                    }
+                }
+            },
+            "NORM_MAP": {
+                "type": "JSON:BlenderCompact-5.1-ShaderNodeNormalMap",
+                "attributes": {
+                    "Color": {
+                        "type": "Color",
+                        "connection": "TEX_NORM.Color"
+                    }
+                }
+            },
+            "MAT": {
+                "attributes": {
+                    "Normal": {
+                        "type": "Vector",
+                        "connection": "NORM_MAP.Normal"
+                    }
+                }
+            }
+        },
+        "@texture@_specular": {
+            "TEX_SPEC": {
+                "type": "JSON:BlenderCompact-5.1-ShaderNodeTexImage",
+                "attributes": {
+                    "image": {
+                        "type": "asset",
+                        "value": "@texture@_specular"
+                    },
+                    "interpolation": {
+                        "type": "string",
+                        "value": "Closest"
+                    },
+                    "colorspace": {
+                        "type": "string",
+                        "value": "Non-Color"
+                    }
+                }
+            },
+            "MAT": {
+                "attributes": {
+                    "Roughness": {
+                        "type": "Float",
+                        "connection": "TEX_SPEC.Color"
+                    }
+                }
+            }
+        }
+    }
+}

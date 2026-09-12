@@ -36,7 +36,7 @@ from pathlib import Path
 from typing import TypedDict
 
 # Concrete type for attribute values in material templates
-AttributeValue = float | int | str | bool | list[float] | list[int] | list[str]
+AttributeValue = float | int | str | bool | list[float] | list[int] | list[str] | dict | list
 
 
 class AttributeJSON(TypedDict, total=False):
@@ -141,7 +141,7 @@ class MiExAttribute:
         attr_type = str(data.get("type", ""))
         val = data.get("value")
         raw_val: AttributeValue | None = None
-        if isinstance(val, (float, int, str, bool, list)):
+        if isinstance(val, (float, int, str, bool, list, dict)):
             raw_val = val
 
         conn = data.get("connection")

@@ -31,7 +31,7 @@ from bpy_extras.io_utils import ImportHelper
 
 from .. import tracking
 from .. import util
-from ..conf import env
+from ..conf import MCPREP_RESOURCES, env
 from . import generate
 from .generate import get_mc_canonical_name
 from .miex_generator import (
@@ -69,6 +69,7 @@ SOCKET_NAME_MAP: dict[str, str] = {
     "transmission_weight": "Transmission Weight",
     "specular": "Specular IOR Level",
     "specular_ior_level": "Specular IOR Level",
+    "Specular IOR Level": "Specular",
 }
 
 SRC_SOCKET_NAME_MAP: dict[str, str] = {
@@ -78,6 +79,12 @@ SRC_SOCKET_NAME_MAP: dict[str, str] = {
     "alpha": "Alpha",
     "result": "Result",
     "out": "BSDF",
+    "red": "Red",
+    "green": "Green",
+    "blue": "Blue",
+    "r": "Red",
+    "g": "Green",
+    "b": "Blue",
 }
 
 
@@ -98,7 +105,22 @@ def map_output_socket_name(name: str, node: bpy.types.Node) -> str:
     """Maps source output socket name to the matching node output socket."""
     if name in node.outputs:
         return name
-    mapped = SRC_SOCKET_NAME_MAP.get(name)
+    lower = name.lower()
+    for out_name in node.outputs.keys():
+        if out_name.lower() == lower:
+            return out_name
+    rgb_map = {
+        "red": "R", "green": "G", "blue": "B",
+        "r": "Red", "g": "Green", "b": "Blue",
+    }
+    if lower in rgb_map:
+        target = rgb_map[lower]
+        if target in node.outputs:
+            return target
+        for out_name in node.outputs.keys():
+            if out_name.lower() == target.lower():
+                return out_name
+    mapped = SRC_SOCKET_NAME_MAP.get(name) or SRC_SOCKET_NAME_MAP.get(lower)
     if mapped and mapped in node.outputs:
         return mapped
     mapped_cap = name.capitalize()
@@ -107,14 +129,36 @@ def map_output_socket_name(name: str, node: bpy.types.Node) -> str:
     return name
 
 
-TEMPLATES_DIR: Path = Path(__file__).parent / "minecraft" / "templates"
+MIEX_TEMPLATES_DIR: Path = MCPREP_RESOURCES / "miex_templates"
+TEMPLATES_DIR: Path = MIEX_TEMPLATES_DIR / "simple"
 
 
-def get_default_templates() -> list[MiExTemplate]:
-    """Returns built-in default templates for MCprep loaded from disk."""
+def get_default_templates(pack_name: str | generate.PackFormat = "simple") -> list[MiExTemplate]:
+    """Returns built-in templates for MCprep loaded from disk."""
+    if isinstance(pack_name, generate.PackFormat):
+        pack_name = pack_name.name.lower()
+    else:
+        pack_name = str(pack_name).lower()
+
+    pack_dir = MIEX_TEMPLATES_DIR / pack_name
+    if pack_dir.is_dir():
+        return load_templates_from_dir(pack_dir)
     if TEMPLATES_DIR.is_dir():
         return load_templates_from_dir(TEMPLATES_DIR)
     return []
+
+
+def get_template_pack(pack_name: str | generate.PackFormat) -> list[MiExTemplate]:
+    """Returns templates for the specified template pack."""
+    return get_default_templates(pack_name)
+
+
+def get_available_template_packs() -> list[str]:
+    """Returns the names of available built-in MiEx template packs."""
+    if not MIEX_TEMPLATES_DIR.is_dir():
+        return ["simple"]
+    packs = [p.name for p in MIEX_TEMPLATES_DIR.iterdir() if p.is_dir()]
+    return sorted(packs) if packs else ["simple"]
 
 
 def load_templates_from_dir(dir_path: Path) -> list[MiExTemplate]:
@@ -212,6 +256,8 @@ def apply_miex_material(
 
         if bl_type == "UsdPreviewSurface":
             bl_type = "ShaderNodeBsdfPrincipled"
+        elif bl_type == "ShaderNodeSeparateColor" and not hasattr(bpy.types, "ShaderNodeSeparateColor"):
+            bl_type = "ShaderNodeSeparateRGB"
 
         if not hasattr(bpy.types, bl_type):
             env.log(f"Unknown Blender node type: {bl_type}, skipping node {node_name}")
@@ -220,6 +266,16 @@ def apply_miex_material(
         bl_node = nodes.new(bl_type)
         bl_node.name = node_name
         bl_node.label = node_name
+
+        if bl_type == "ShaderNodeRGBCurve" and node_name in ("NORM_CURVE", "Normal Inverse"):
+            try:
+                c1 = bl_node.mapping.curves[1]
+                if c1.points[0].location[1] == 0.0 and c1.points[1].location[1] == 1.0:
+                    c1.points[0].location = (0.0, 1.0)
+                    c1.points[1].location = (1.0, 0.0)
+                    bl_node.mapping.update()
+            except Exception:
+                pass
 
         if "TexImage" in bl_type:
             bl_node.location = (-400.0, tex_y)
@@ -266,7 +322,9 @@ def apply_miex_material(
                 continue
 
             if attr_name in ("colorspace_settings", "colorspace") and hasattr(bl_node, "image") and bl_node.image:
-                if isinstance(val, list):
+                if str(val).lower() in ("non-color", "non_color", "non-color data"):
+                    util.apply_noncolor_data(bl_node)
+                elif isinstance(val, list):
                     for cs in val:
                         try:
                             bl_node.image.colorspace_settings.name = str(cs)
@@ -276,6 +334,26 @@ def apply_miex_material(
                 elif isinstance(val, str):
                     try:
                         bl_node.image.colorspace_settings.name = val
+                    except Exception:
+                        pass
+                continue
+
+            if attr_name == "curves" and hasattr(bl_node, "mapping") and hasattr(bl_node.mapping, "curves"):
+                if isinstance(val, dict):
+                    for curve_idx_str, points in val.items():
+                        try:
+                            idx = int(curve_idx_str)
+                            if idx < len(bl_node.mapping.curves):
+                                curve = bl_node.mapping.curves[idx]
+                                for pt_idx, pt in enumerate(points):
+                                    if pt_idx < len(curve.points):
+                                        curve.points[pt_idx].location = (float(pt[0]), float(pt[1]))
+                                    else:
+                                        curve.points.new(float(pt[0]), float(pt[1]))
+                        except Exception as ex:
+                            env.log(f"Failed setting curve {curve_idx_str}: {ex}")
+                    try:
+                        bl_node.mapping.update()
                     except Exception:
                         pass
                 continue
@@ -465,6 +543,17 @@ class MCPREP_OT_miex_prep_materials(bpy.types.Operator):
     bl_description = "Convert materials on selected objects using MiEx templates or exported _materials.json"
     bl_options = {'REGISTER', 'UNDO'}
 
+    pack_format: bpy.props.EnumProperty(
+        name="Pack Format",
+        description="MiEx template pack format to use",
+        items=[
+            ("simple", "Simple (no PBR)", "Use simple shader setup with no PBR or emission falloff"),
+            ("specular", "Specular", "Sets the pack format to Specular"),
+            ("seus", "SEUS", "Sets the pack format to SEUS"),
+        ],
+        default="simple",
+    )
+
     templates_dir: bpy.props.StringProperty(
         name="Templates Directory",
         description="Optional directory containing custom MiEx template JSON files",
@@ -488,7 +577,7 @@ class MCPREP_OT_miex_prep_materials(bpy.types.Operator):
             self.report({'ERROR'}, "No materials found on selected objects")
             return {'CANCELLED'}
 
-        templates = get_default_templates()
+        templates = get_default_templates(self.pack_format)
         if self.templates_dir:
             custom_dir = Path(bpy.path.abspath(self.templates_dir))
             if custom_dir.is_dir():
@@ -515,6 +604,17 @@ class MCPREP_OT_miex_swap_texture_pack(bpy.types.Operator, ImportHelper):
     bl_label = "Swap Texture Pack (MiEx)"
     bl_description = "Change the texture pack for materials on selected objects and rebuild via MiEx"
     bl_options = {'REGISTER', 'UNDO'}
+
+    pack_format: bpy.props.EnumProperty(
+        name="Pack Format",
+        description="MiEx template pack format to use if pack does not include templates",
+        items=[
+            ("simple", "Simple (no PBR)", "Use simple shader setup with no PBR or emission falloff"),
+            ("specular", "Specular", "Sets the pack format to Specular"),
+            ("seus", "SEUS", "Sets the pack format to SEUS"),
+        ],
+        default="simple",
+    )
 
     filter_glob: bpy.props.StringProperty(
         default="",
@@ -552,12 +652,13 @@ class MCPREP_OT_miex_swap_texture_pack(bpy.types.Operator, ImportHelper):
             self.report({'ERROR'}, "No materials found on selected objects")
             return {'CANCELLED'}
 
-        templates = get_default_templates()
+        templates = get_default_templates(self.pack_format)
         template_candidates = [
             pack_dir / "materials" / "minecraft" / "templates",
             pack_dir / "materials" / "templates",
             pack_dir / "templates",
             pack_dir / "materials",
+            pack_dir,
         ]
         for cand in template_candidates:
             if cand.is_dir():

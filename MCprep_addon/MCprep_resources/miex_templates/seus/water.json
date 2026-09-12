@@ -1,0 +1,36 @@
+{
+    "priority": 10,
+    "selection": [
+        "minecraft:block/water",
+        "minecraft:block/water_still",
+        "minecraft:block/water_flow",
+        "minecraft:block/water_overlay",
+        "*water*"
+    ],
+    "include": [
+        "base"
+    ],
+    "shadingGroup": {
+        "json:surface": "MAT.BSDF"
+    },
+    "network": {
+        "": {
+            "MAT": {
+                "attributes": {
+                    "Transmission Weight": {
+                        "type": "Float",
+                        "value": 1.0
+                    },
+                    "Roughness": {
+                        "type": "Float",
+                        "value": 0.05
+                    },
+                    "IOR": {
+                        "type": "Float",
+                        "value": 1.333
+                    }
+                }
+            }
+        }
+    }
+}

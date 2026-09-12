@@ -1,0 +1,50 @@
+{
+    "priority": 10,
+    "selection": [
+        "minecraft:block/iron_block",
+        "minecraft:block/gold_block",
+        "minecraft:block/diamond_block",
+        "minecraft:block/emerald_block",
+        "minecraft:block/netherite_block",
+        "minecraft:block/copper_block",
+        "minecraft:block/exposed_copper",
+        "minecraft:block/weathered_copper",
+        "minecraft:block/oxidized_copper",
+        "minecraft:block/waxed_*copper*",
+        "minecraft:block/iron_bars",
+        "minecraft:block/iron_door*",
+        "minecraft:block/door_iron_*",
+        "minecraft:block/iron_trapdoor",
+        "minecraft:block/heavy_core",
+        "*iron_block*",
+        "*gold_block*",
+        "*diamond_block*",
+        "*emerald_block*",
+        "*netherite_block*",
+        "*copper_block*",
+        "*iron_bars*",
+        "*iron_trapdoor*"
+    ],
+    "include": [
+        "base"
+    ],
+    "shadingGroup": {
+        "json:surface": "MAT.BSDF"
+    },
+    "network": {
+        "": {
+            "MAT": {
+                "attributes": {
+                    "Metallic": {
+                        "type": "Float",
+                        "value": 1.0
+                    },
+                    "Roughness": {
+                        "type": "Float",
+                        "value": 0.2
+                    }
+                }
+            }
+        }
+    }
+}

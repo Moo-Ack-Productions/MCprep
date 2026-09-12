@@ -1,0 +1,35 @@
+{
+    "priority": 10,
+    "selection": [
+        "minecraft:block/lava",
+        "minecraft:block/lava_still",
+        "minecraft:block/lava_flow",
+        "*lava*"
+    ],
+    "include": [
+        "base"
+    ],
+    "shadingGroup": {
+        "json:surface": "MAT.BSDF"
+    },
+    "network": {
+        "": {
+            "MAT": {
+                "attributes": {
+                    "Emission Color": {
+                        "type": "Color",
+                        "connection": "FILE.Color"
+                    },
+                    "Emission Strength": {
+                        "type": "Float",
+                        "value": 5.0
+                    },
+                    "Roughness": {
+                        "type": "Float",
+                        "value": 0.4
+                    }
+                }
+            }
+        }
+    }
+}
