@@ -2,9 +2,10 @@
 
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import shutil
 import sys
+from typing import Dict, List, Optional, Tuple
 import urllib.request
 import xml.etree.ElementTree as ET
 import zipfile
@@ -20,7 +21,7 @@ MINEWAYS_URL = "https://raw.githubusercontent.com/erich666/Mineways/master/Win/t
 # jmc2obj, it will be less of an issue.
 # JMC_1_13 = "https://raw.githubusercontent.com/jmc2obj/j-mc-2-obj/master/conf/texsplit_1.13.conf"
 JMC_1_13 = "https://raw.githubusercontent.com/jmc2obj/j-mc-2-obj/0fb2bd742f0d64b0f7f0dc3cafdba76ebd3a1cc3/conf/texsplit_1.13.conf"
-PARENT_PATH = os.path.dirname(__file__)
+PARENT_PATH = Path(__file__).parent
 
 def save_file_str(url):
 	"""Save to temp location next to script."""
@@ -340,125 +341,128 @@ def mineways2mc(name, vanilla):
 	return None
 
 
-def get_vanilla_list(copy_file=False, versions_path=""):
+def get_vanilla_list(copy_file=False, versions_path="") -> Dict[str, Optional[str]]:
 	"""Get the list of material names from vanilla Minecraft (local install)"""
-	outlist = {}
+	outlist: Dict[str, Optional[str]] = {}
 
 	# OSX path
-	path = os.path.join(
-		os.path.expanduser('~'),
-		"Library", "Application Support", "minecraft", "versions") if versions_path == "" else versions_path
-	if not os.path.isdir(path):
+	path = Path.joinpath(
+		Path.home(),
+		"Library", "Application Support", "minecraft", "versions") if versions_path == "" else Path(versions_path)
+	if not path.is_dir():
 		raise Exception('Could not get vanilla path')
 
-	versions = [ver for ver in os.listdir(path)
-				if os.path.isdir(os.path.join(path, ver))]
+	versions = [ver for ver in path.iterdir() if ver.is_dir()]
 
-	# turn into sortable tuples
-	verion_tuples = []
-	for ver in versions:
-		temp = []
-		for itm in ver.split('.'):
+	def parse_version(path: Path) -> Tuple[int, ...]:
+		result: List[int] = []
+		for part in path.name.split('.'):
 			try:
-				temp.append(int(itm))
-			except:
+				result.append(int(part))
+			except ValueError:
 				break
-		verion_tuples.append(tuple(temp))
-
-	# parallel sort the list based on the generated tuple
-	verion_tuples, versions = zip(*sorted(zip(verion_tuples, versions)))
+		return tuple(result)
+	versions.sort(key=parse_version)
 	print(versions)
 
-	jarfile = None
-	for i, ver in reversed(list(enumerate(verion_tuples))):
-		ver_folder = os.path.join(path, versions[i])
-		any_jar = [jar for jar in os.listdir(ver_folder)
-			if jar.lower().endswith('.jar')]
-		if any_jar:
-			jarfile = os.path.join(path, versions[i], any_jar[0])
+	jarfile: Optional[Path] = None
+	for ver_path in reversed(versions):
+		jar = next((j for j in ver_path.iterdir() if j.is_file() and j.suffix == '.jar'), None)
+		if jar:
+			jarfile = jar
 			break
-
+	
 	if not jarfile:
 		raise Exception("Could not get most recent jar version")
-	else:
-		print("Extracting from jar " + jarfile)
+	print("Extracting from jar " + str(jarfile))
 
-	mc_version = Path(jarfile).parent.name
-	with open(os.path.join(PARENT_PATH, "MCprep_resources", "mc_version.txt"), 'w') as f:
-		f.write(mc_version)
-	
-	mcprep_resources = os.path.join(
-		PARENT_PATH, "MCprep_resources",
-		"resourcepacks", "mcprep_default")
-	tprefix = os.path.join("assets", "minecraft", "textures")
-	mprefix = os.path.join("assets", "minecraft", "models")
-	t_subfolders = [
+	mcprep_resources = PARENT_PATH / "MCprep_resources" / "resourcepacks" / "mcprep_default"
+
+	mc_version_dir = jarfile.parent
+	ver_txt = mc_version_dir / "MCprep_resources" / "mc_version.txt"
+	with open(ver_txt, 'w') as f:
+		f.write(str(mc_version_dir.name))
+
+	# These are strings and not path objects
+	# since they're also used in the extraction
+	# process. See the comment in the extraction
+	# loop for more details.
+	#
+	# Trailing slashes are also not included for
+	# this reason.
+	tprefix = "assets/minecraft/textures"
+	mprefix = "assets/minecraft/models"
+
+	t_subfolders = (
 		"block", "entity", "environment", "item", "mob_effect", "models",
-		"painting", "particle"]
-	m_subfolders = ["block", "item"]  # Folders of json files to copy.
+		"painting", "particle"
+	)
+	m_subfolders = ("block", "item")
+
 	if copy_file:
 		for sub in t_subfolders:
 			if sub == "block":
-				continue  # Avoid deleting animated textures used by meshswap.
-			checkpath = os.path.join(mcprep_resources, tprefix, sub)
-			if os.path.isdir(checkpath):
-				# print("Removing MCprep resources folder: " + sub)
+				continue
+			checkpath = mcprep_resources / tprefix / sub
+			if checkpath.is_dir():
 				shutil.rmtree(checkpath)
 			else:
-				print("Error! Could not find " + checkpath)
+				print("Error! Could not find", str(checkpath))
 
-		# Now we also need to copy the model files (json files)
 		for sub in m_subfolders:
-			checkpath = os.path.join(mcprep_resources, mprefix, sub)
-			if os.path.isdir(checkpath):
-				# print("Removing MCprep models folder: " + sub)
+			checkpath = mcprep_resources / mprefix / sub
+			if checkpath.is_dir():
 				shutil.rmtree(checkpath)
 			else:
-				print("Error! Could not find " + checkpath)
-		print("Removed MCprep resource folders, will copy over replacements")
+				print("Error! Could not find", str(checkpath))
+		print("Removed MCprep resource folders, will copy over replacements!")
 
-	print("Got jar version: {}".format(os.path.basename(jarfile)))
-	archive = zipfile.ZipFile(jarfile, 'r')
+	with zipfile.ZipFile(jarfile, 'r') as archive:
+		for name in archive.namelist():
+			if not (name.endswith('.png') or name.endswith('.mcmeta') or name.endswith('.json')):
+				continue
 
-	for name in archive.namelist():
-		if not (name.endswith('.png') or name.endswith('.mcmeta') or name.endswith('.json')):
-			continue
-		base = os.path.splitext(os.path.basename(name))[0]
-		tsub = name.startswith(tprefix) and os.path.basename(os.path.dirname(name)) in t_subfolders
-		msub = name.startswith(mprefix) and os.path.basename(os.path.dirname(name)) in m_subfolders
-		tsubsub = name.startswith(tprefix) and os.path.basename(os.path.dirname(os.path.dirname(name))) in t_subfolders
+			# ZIP requires forward slashes, but Windows
+			# wants to be special and use back slashes
+			# for standard file paths. Thus, we need to
+			# specifically use POSIX paths to make sure
+			# we don't get issues.
+			p = PurePosixPath(name)
+			base = p.stem
 
-		if copy_file is True and (tsub or msub or tsubsub) is True:
-			# TODO: Further ensure subfolder is one of mcp_subfolders
-			# copy file to MCprep resource directory
-			new_path = os.path.join(mcprep_resources, name)
-			os.makedirs(os.path.dirname(new_path), exist_ok=True)
-			with archive.open(name) as zf, open(new_path, 'wb') as f:
-				shutil.copyfileobj(zf, f)
-			# print("\tCopied "+name)
+			tsub = False
+			msub = False
+			tsubsub = False
 
-		# limit to textures only hereafter
-		if not name.endswith('.png'):
-			continue
+			if name.startswith(tprefix + "/"):
+				tsub = p.parent.name in t_subfolders
+				tsubsub = p.parent.parent.name in t_subfolders
+			elif name.startswith(mprefix + "/"):
+				msub = p.parent.name in m_subfolders
 
-		if name.startswith(tprefix + os.sep + "block"):
-			outlist[base] = base
-		elif base in outlist:
-			continue  # don't duplicate for non blocks textures
-		elif name.startswith(tprefix + os.sep + "item"):
-			continue  # skip adding duplicative item mappings
-		elif name.startswith(tprefix):  # at least in textures folder
-			if 'lava' in name and 'particle' in name:
-				continue  # hack to avoid clash with jmc2obj lava:lava_still
-			outlist[base] = name[len(tprefix) + 1:-4]
-		else:
-			outlist[base] = None
-			# print("Not in textures folder: "+name)
-			# mostly just "realms" stuff
+			if copy_file and (tsub or msub or tsubsub):
+				dest_file = mcprep_resources / Path(name)
+				dest_file.parent.mkdir(parents=True, exist_ok=True)
+				with archive.open(name) as zf, open(dest_file, 'wb') as f:
+					shutil.copyfileobj(zf, f)
 
-	archive.close()
+			if not name.endswith('.png'):
+				continue
+
+			if name.startswith(tprefix + "/block/"):
+				outlist[base] = base
+			elif base in outlist:
+				continue
+			elif name.startswith(tprefix + "/item/"):
+				continue
+			elif name.startswith(tprefix + "/"):
+				if 'lava' in name and 'particle' in name:
+					continue
+				outlist[base] = name[len(tprefix) + 1:-4]
+			else:
+				outlist[base] = None
+
 	return outlist
-
 
 def vanilla_overrides(vanilla_map):
 	"""go through and create the mapping with special overrides"""
