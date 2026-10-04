@@ -377,9 +377,8 @@ def get_vanilla_list(copy_file=False, versions_path="") -> Dict[str, Optional[st
 	print("Extracting from jar " + str(jarfile))
 
 	mcprep_resources = PARENT_PATH / "MCprep_resources" / "resourcepacks" / "mcprep_default"
-
 	mc_version_dir = jarfile.parent
-	ver_txt = mc_version_dir / "MCprep_resources" / "mc_version.txt"
+	ver_txt = PARENT_PATH / "MCprep_resources" / "mc_version.txt"
 	with open(ver_txt, 'w') as f:
 		f.write(str(mc_version_dir.name))
 
